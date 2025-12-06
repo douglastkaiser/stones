@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
 import 'models/models.dart';
+import 'version.dart';
 
 void main() {
   runApp(const ProviderScope(child: StonesApp()));
@@ -32,72 +34,79 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Title
-                Text(
-                  'STONES',
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.brown.shade800,
-                        letterSpacing: 8,
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Title
+                      Text(
+                        'STONES',
+                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.brown.shade800,
+                              letterSpacing: 8,
+                            ),
                       ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'A game of roads and flats',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.brown.shade600,
+                      const SizedBox(height: 8),
+                      Text(
+                        'A game of roads and flats',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.brown.shade600,
+                            ),
                       ),
-                ),
-                const SizedBox(height: 64),
+                      const SizedBox(height: 64),
 
-                // Board size selector
-                Text(
-                  'Select Board Size',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (int size = 3; size <= 8; size++)
-                      _BoardSizeButton(size: size),
-                  ],
-                ),
-                const SizedBox(height: 48),
+                      // Board size selector
+                      Text(
+                        'Select Board Size',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          for (int size = 3; size <= 8; size++)
+                            _BoardSizeButton(size: size),
+                        ],
+                      ),
+                      const SizedBox(height: 48),
 
-                // Continue current game button
-                Consumer(
-                  builder: (context, ref, _) {
-                    final gameState = ref.watch(gameStateProvider);
-                    if (gameState.turnNumber == 1 &&
-                        gameState.board.occupiedPositions.isEmpty) {
-                      return const SizedBox();
-                    }
-                    return TextButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const GameScreen(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Continue Game'),
-                    );
-                  },
+                      // Continue current game button
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final gameState = ref.watch(gameStateProvider);
+                          if (gameState.turnNumber == 1 &&
+                              gameState.board.occupiedPositions.isEmpty) {
+                            return const SizedBox();
+                          }
+                          return TextButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const GameScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Continue Game'),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
+            const VersionFooter(),
+          ],
         ),
       ),
     );
@@ -328,6 +337,9 @@ class GameScreen extends ConsumerWidget {
 
               // Piece counts
               _PieceCountsBar(gameState: gameState),
+
+              // Version footer
+              const VersionFooter(),
             ],
           ),
 
@@ -1469,5 +1481,51 @@ class _WinOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Version footer shown at the bottom of all pages
+class VersionFooter extends StatelessWidget {
+  const VersionFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final commitUrl = AppVersion.commitUrl;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: commitUrl != null
+            ? MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => _launchUrl(commitUrl),
+                  child: Text(
+                    AppVersion.displayVersion,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+              )
+            : Text(
+                AppVersion.displayVersion,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }
