@@ -45,7 +45,7 @@ void main() {
     });
 
     test('hasPiece returns correct value', () {
-      final pieces = PlayerPieces(
+      const pieces = PlayerPieces(
         color: PlayerColor.white,
         flatStones: 1,
         capstones: 0,
@@ -56,7 +56,7 @@ void main() {
     });
 
     test('usePiece decrements correct count', () {
-      final pieces = PlayerPieces(
+      const pieces = PlayerPieces(
         color: PlayerColor.white,
         flatStones: 5,
         capstones: 1,
@@ -122,7 +122,7 @@ void main() {
       const standing = Piece(type: PieceType.standing, color: PlayerColor.black);
       const cap = Piece(type: PieceType.capstone, color: PlayerColor.white);
 
-      final emptyStack = PieceStack.empty;
+      const emptyStack = PieceStack.empty;
       final flatStack = emptyStack.push(flat);
       final standingStack = emptyStack.push(standing);
       final capStack = emptyStack.push(cap);
