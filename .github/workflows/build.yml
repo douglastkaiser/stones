@@ -67,8 +67,11 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Ensure web support
+        run: flutter create . --platforms web
+
       - name: Build web
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: flutter build web --release --base-href "/stones/"
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
@@ -80,10 +83,26 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Download current pages content
+        continue-on-error: true
+        run: |
+          wget -q -r -np -nH --cut-dirs=1 -P deploy-existing \
+            "https://${{ github.repository_owner }}.github.io/stones/" 2>/dev/null || true
+
+      - name: Prepare deployment with PR previews
+        run: |
+          mkdir -p deploy
+          # Copy main build
+          cp -r build/web/* deploy/
+          # Preserve existing PR previews
+          if [ -d "deploy-existing/pr" ]; then
+            cp -r deploy-existing/pr deploy/
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: deploy
 
   deploy:
     name: Deploy to GitHub Pages

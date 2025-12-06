@@ -1,0 +1,76 @@
+name: PR Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  cleanup-preview:
+    name: Remove PR Preview
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Ensure web support
+        run: flutter create . --platforms web
+
+      - name: Build main web
+        run: flutter build web --release --base-href "/stones/"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Download current pages content
+        continue-on-error: true
+        run: |
+          wget -q -r -np -nH --cut-dirs=1 -P deploy-existing \
+            "https://${{ github.repository_owner }}.github.io/stones/" 2>/dev/null || true
+
+      - name: Prepare deployment without closed PR
+        run: |
+          mkdir -p deploy
+          # Copy main build
+          cp -r build/web/* deploy/
+
+          # Copy existing PR previews except the closed one
+          if [ -d "deploy-existing/pr" ]; then
+            mkdir -p deploy/pr
+            for dir in deploy-existing/pr/*/; do
+              pr_num=$(basename "$dir")
+              if [ "$pr_num" != "${{ github.event.pull_request.number }}" ]; then
+                cp -r "$dir" "deploy/pr/"
+              fi
+            done
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: deploy
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
