@@ -35,6 +35,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Ensure web support
+        run: flutter create . --platforms web
+
       - name: Build main web
         run: flutter build web --release --base-href "/stones/"
 
