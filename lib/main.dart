@@ -173,6 +173,31 @@ class UIState {
     this.piecesPickedUp = 0,
   });
 
+  /// Get the positions where pieces have been dropped so far
+  List<Position> getDropPath() {
+    if (selectedPosition == null || selectedDirection == null) return [];
+
+    final path = <Position>[];
+    var pos = selectedPosition!;
+    for (var i = 0; i < drops.length; i++) {
+      pos = selectedDirection!.apply(pos);
+      path.add(pos);
+    }
+    return path;
+  }
+
+  /// Get the current "hand" position (where next drop would go)
+  Position? getCurrentHandPosition() {
+    if (selectedPosition == null || selectedDirection == null) return null;
+    if (piecesPickedUp == 0) return null;
+
+    var pos = selectedPosition!;
+    for (var i = 0; i < drops.length; i++) {
+      pos = selectedDirection!.apply(pos);
+    }
+    return selectedDirection!.apply(pos);
+  }
+
   UIState copyWith({
     Position? selectedPosition,
     InteractionMode? mode,
@@ -296,6 +321,7 @@ class GameScreen extends ConsumerWidget {
                 onPieceSelected: (type) => _placePiece(ref, type),
                 onDirectionSelected: (dir) => _selectDirection(ref, dir),
                 onDropSelected: (count) => _addDrop(ref, count),
+                onPieceCountChanged: (count) => ref.read(uiStateProvider.notifier).setPiecesPickedUp(count),
                 onConfirmMove: () => _confirmMove(ref),
                 onCancel: () => ref.read(uiStateProvider.notifier).reset(),
               ),
@@ -309,6 +335,7 @@ class GameScreen extends ConsumerWidget {
           if (isGameOver)
             _WinOverlay(
               result: gameState.result!,
+              winReason: gameState.winReason,
               onNewGame: () => _showNewGameDialog(context, ref),
               onHome: () => Navigator.pop(context),
             ),
@@ -529,6 +556,9 @@ class _GameBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dropPath = uiState.getDropPath();
+    final nextDropPos = uiState.getCurrentHandPosition();
+
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(8),
@@ -544,12 +574,16 @@ class _GameBoard extends StatelessWidget {
         final pos = Position(row, col);
         final stack = gameState.board.stackAt(pos);
         final isSelected = uiState.selectedPosition == pos;
+        final isInDropPath = dropPath.contains(pos);
+        final isNextDrop = nextDropPos == pos;
 
         return GestureDetector(
           onTap: () => onCellTap(pos),
           child: _BoardCell(
             stack: stack,
             isSelected: isSelected,
+            isInDropPath: isInDropPath,
+            isNextDrop: isNextDrop,
             canSelect: !gameState.isGameOver,
           ),
         );
@@ -562,23 +596,42 @@ class _GameBoard extends StatelessWidget {
 class _BoardCell extends StatelessWidget {
   final PieceStack stack;
   final bool isSelected;
+  final bool isInDropPath;
+  final bool isNextDrop;
   final bool canSelect;
 
   const _BoardCell({
     required this.stack,
     required this.isSelected,
+    this.isInDropPath = false,
+    this.isNextDrop = false,
     required this.canSelect,
   });
 
   @override
   Widget build(BuildContext context) {
+    Color bgColor;
+    Border? border;
+
+    if (isSelected) {
+      bgColor = Colors.amber.shade200;
+      border = Border.all(color: Colors.amber.shade700, width: 3);
+    } else if (isNextDrop) {
+      bgColor = Colors.green.shade200;
+      border = Border.all(color: Colors.green.shade600, width: 2);
+    } else if (isInDropPath) {
+      bgColor = Colors.blue.shade100;
+      border = Border.all(color: Colors.blue.shade400, width: 2);
+    } else {
+      bgColor = Colors.brown.shade100;
+      border = null;
+    }
+
     return Container(
       decoration: BoxDecoration(
-        color: isSelected ? Colors.amber.shade200 : Colors.brown.shade100,
+        color: bgColor,
         borderRadius: BorderRadius.circular(4),
-        border: isSelected
-            ? Border.all(color: Colors.amber.shade700, width: 3)
-            : null,
+        border: border,
       ),
       child: Center(
         child: _buildStackDisplay(stack),
@@ -670,6 +723,7 @@ class _BottomControls extends StatelessWidget {
   final Function(PieceType) onPieceSelected;
   final Function(Direction) onDirectionSelected;
   final Function(int) onDropSelected;
+  final Function(int) onPieceCountChanged;
   final VoidCallback onConfirmMove;
   final VoidCallback onCancel;
 
@@ -679,6 +733,7 @@ class _BottomControls extends StatelessWidget {
     required this.onPieceSelected,
     required this.onDirectionSelected,
     required this.onDropSelected,
+    required this.onPieceCountChanged,
     required this.onConfirmMove,
     required this.onCancel,
   });
@@ -790,6 +845,8 @@ class _BottomControls extends StatelessWidget {
   Widget _buildDirectionSelector() {
     final pos = uiState.selectedPosition!;
     final boardSize = gameState.boardSize;
+    final stackHeight = gameState.board.stackAt(pos).height;
+    final maxPickup = stackHeight > boardSize ? boardSize : stackHeight;
 
     // Check which directions are valid
     final canUp = pos.row > 0 && _canMoveInDirection(Direction.up);
@@ -807,12 +864,8 @@ class _BottomControls extends StatelessWidget {
             Text('Pick up', style: TextStyle(fontSize: 12, color: Colors.brown.shade600)),
             _PieceCountSelector(
               current: uiState.piecesPickedUp,
-              max: gameState.board.stackAt(pos).height > boardSize
-                  ? boardSize
-                  : gameState.board.stackAt(pos).height,
-              onChanged: (count) {
-                // This would need a ref, so we'll handle it differently
-              },
+              max: maxPickup,
+              onChanged: onPieceCountChanged,
             ),
           ],
         ),
@@ -892,38 +945,54 @@ class _BottomControls extends StatelessWidget {
     final drops = uiState.drops;
     final canConfirm = remaining == 0 && drops.isNotEmpty;
 
+    // Check if we can continue moving after this drop
+    final canContinue = _canContinueAfterDrop();
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Drop pieces: ${drops.join(' -> ')}',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-            Text(
-              'Remaining: $remaining',
-              style: TextStyle(fontSize: 12, color: Colors.brown.shade600),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                drops.isEmpty ? 'Choose how many to drop' : 'Drops: ${drops.join(' → ')}',
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              Text(
+                'Holding: $remaining piece${remaining == 1 ? '' : 's'}${!canContinue && remaining > 0 ? ' (must drop all)' : ''}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: !canContinue && remaining > 0 ? Colors.red.shade600 : Colors.brown.shade600,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(width: 16),
-        // Drop count buttons
-        for (int i = 1; i <= remaining && i <= 4; i++) ...[
-          _DropButton(
-            count: i,
-            onTap: () => onDropSelected(i),
-          ),
-          const SizedBox(width: 4),
+        const SizedBox(width: 8),
+        // Drop count buttons - limit shown buttons
+        if (remaining > 0) ...[
+          for (int i = 1; i <= remaining && i <= 3; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: _DropButton(
+                count: i,
+                onTap: () => onDropSelected(i),
+                enabled: canContinue || i == remaining,
+              ),
+            ),
+          if (remaining > 3)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: _DropButton(
+                count: remaining,
+                label: 'All ($remaining)',
+                onTap: () => onDropSelected(remaining),
+                enabled: true,
+              ),
+            ),
         ],
-        if (remaining > 4)
-          _DropButton(
-            count: remaining,
-            label: 'All',
-            onTap: () => onDropSelected(remaining),
-          ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 8),
         if (canConfirm)
           ElevatedButton(
             onPressed: onConfirmMove,
@@ -931,7 +1000,7 @@ class _BottomControls extends StatelessWidget {
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Move'),
+            child: const Text('Confirm'),
           )
         else
           IconButton(
@@ -941,6 +1010,32 @@ class _BottomControls extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  /// Check if we can continue moving after the current drops
+  bool _canContinueAfterDrop() {
+    final pos = uiState.selectedPosition;
+    final dir = uiState.selectedDirection;
+    if (pos == null || dir == null) return false;
+
+    // Calculate current position after all drops so far
+    var currentPos = pos;
+    for (var i = 0; i < uiState.drops.length; i++) {
+      currentPos = dir.apply(currentPos);
+    }
+
+    // Check if the next position is valid
+    final nextPos = dir.apply(currentPos);
+    if (!gameState.board.isValidPosition(nextPos)) return false;
+
+    // Check if we can move onto the next cell
+    final stack = gameState.board.stackAt(pos);
+    if (stack.isEmpty) return false;
+
+    final targetStack = gameState.board.stackAt(nextPos);
+    final topPiece = stack.topPiece!;
+
+    return targetStack.canMoveOnto(topPiece);
   }
 }
 
@@ -1080,17 +1175,19 @@ class _DropButton extends StatelessWidget {
   final int count;
   final String? label;
   final VoidCallback onTap;
+  final bool enabled;
 
   const _DropButton({
     required this.count,
     this.label,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: onTap,
+      onPressed: enabled ? onTap : null,
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(40, 36),
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1113,16 +1210,44 @@ class _PieceCountSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.brown.shade100,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        '$current',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: current > 1 ? () => onChanged(current - 1) : null,
+          icon: const Icon(Icons.remove, size: 16),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.brown.shade200,
+            foregroundColor: Colors.brown.shade800,
+            minimumSize: const Size(28, 28),
+            padding: EdgeInsets.zero,
+          ),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.brown.shade100,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            '$current',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+        IconButton(
+          onPressed: current < max ? () => onChanged(current + 1) : null,
+          icon: const Icon(Icons.add, size: 16),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.brown.shade200,
+            foregroundColor: Colors.brown.shade800,
+            minimumSize: const Size(28, 28),
+            padding: EdgeInsets.zero,
+          ),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        ),
+      ],
     );
   }
 }
@@ -1249,11 +1374,13 @@ class _PlayerPieceCounts extends StatelessWidget {
 /// Win overlay shown when game ends
 class _WinOverlay extends StatelessWidget {
   final GameResult result;
+  final WinReason? winReason;
   final VoidCallback onNewGame;
   final VoidCallback onHome;
 
   const _WinOverlay({
     required this.result,
+    required this.winReason,
     required this.onNewGame,
     required this.onHome,
   });
@@ -1264,6 +1391,12 @@ class _WinOverlay extends StatelessWidget {
       GameResult.whiteWins => ('White Wins!', Colors.white),
       GameResult.blackWins => ('Black Wins!', Colors.black),
       GameResult.draw => ('Draw!', Colors.grey),
+    };
+
+    final reasonText = switch (winReason) {
+      WinReason.road => 'by building a road',
+      WinReason.flats => 'by flat count',
+      null => '',
     };
 
     final textColor = result == GameResult.blackWins ? Colors.white : Colors.black;
@@ -1292,7 +1425,7 @@ class _WinOverlay extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.emoji_events,
+                    winReason == WinReason.road ? Icons.route : Icons.emoji_events,
                     size: 40,
                     color: textColor,
                   ),
@@ -1304,6 +1437,15 @@ class _WinOverlay extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
+                if (reasonText.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    reasonText,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
+                  ),
+                ],
                 const SizedBox(height: 32),
                 Row(
                   mainAxisSize: MainAxisSize.min,
