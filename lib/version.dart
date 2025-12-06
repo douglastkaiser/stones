@@ -1,6 +1,6 @@
-/// Auto-generated version information.
-/// This file is updated during CI/CD builds with git information.
-/// Do not edit manually - changes will be overwritten.
+// Auto-generated version information.
+// This file is updated during CI/CD builds with git information.
+// Do not edit manually - changes will be overwritten.
 
 class AppVersion {
   /// Full version string (e.g., "v1.0.0+3.g404a5eb.d20251206")
