@@ -9,6 +9,12 @@ enum GameResult {
   draw,
 }
 
+/// Why the game ended
+enum WinReason {
+  road,
+  flats,
+}
+
 /// Current phase of the game
 enum GamePhase {
   /// First two turns: players place opponent's flat stone
@@ -28,6 +34,7 @@ class GameState {
   final int turnNumber;
   final GamePhase phase;
   final GameResult? result;
+  final WinReason? winReason;
 
   const GameState({
     required this.board,
@@ -37,6 +44,7 @@ class GameState {
     required this.turnNumber,
     required this.phase,
     this.result,
+    this.winReason,
   });
 
   /// Create initial game state
@@ -82,6 +90,7 @@ class GameState {
     int? turnNumber,
     GamePhase? phase,
     GameResult? result,
+    WinReason? winReason,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -91,6 +100,7 @@ class GameState {
       turnNumber: turnNumber ?? this.turnNumber,
       phase: phase ?? this.phase,
       result: result ?? this.result,
+      winReason: winReason ?? this.winReason,
     );
   }
 
@@ -130,7 +140,8 @@ class GameState {
           blackPieces == other.blackPieces &&
           turnNumber == other.turnNumber &&
           phase == other.phase &&
-          result == other.result;
+          result == other.result &&
+          winReason == other.winReason;
 
   @override
   int get hashCode => Object.hash(
@@ -141,6 +152,7 @@ class GameState {
         turnNumber,
         phase,
         result,
+        winReason,
       );
 
   @override

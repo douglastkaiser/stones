@@ -120,6 +120,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
           result: color == PlayerColor.white
               ? GameResult.whiteWins
               : GameResult.blackWins,
+          winReason: WinReason.road,
         );
         return;
       }
@@ -159,6 +160,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
       state = state.copyWith(
         phase: GamePhase.finished,
         result: result,
+        winReason: WinReason.flats,
       );
     }
   }
