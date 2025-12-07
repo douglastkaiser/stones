@@ -27,29 +27,62 @@ class GameColors {
   static const Color darkPieceBorder = Color(0xFF6B6B6B);
 
   // ==========================================================================
-  // Board Colors
+  // Board Colors - Wooden Theme
   // ==========================================================================
 
-  /// Board background (outer frame)
-  static const Color boardBackground = Color(0xFF8B7355);
+  /// Board frame outer color (dark wood)
+  static const Color boardFrameOuter = Color(0xFF5D4037);
 
-  /// Cell background (empty cell)
-  static const Color cellBackground = Color(0xFFD4C4A8);
+  /// Board frame inner color (medium wood)
+  static const Color boardFrameInner = Color(0xFF795548);
 
-  /// Cell background when selected
+  /// Board background (outer frame) - warm brown
+  static const Color boardBackground = Color(0xFF6D4C41);
+
+  /// Grid line color (darker inset wood grain)
+  static const Color gridLine = Color(0xFF4E342E);
+
+  /// Grid line shadow (for inset effect)
+  static const Color gridLineShadow = Color(0xFF3E2723);
+
+  /// Grid line highlight (for inset effect)
+  static const Color gridLineHighlight = Color(0xFF8D6E63);
+
+  /// Cell background (empty cell) - warm tan wood
+  static const Color cellBackground = Color(0xFFD7CCC8);
+
+  /// Cell background light (for gradient)
+  static const Color cellBackgroundLight = Color(0xFFEFEBE9);
+
+  /// Cell background dark (for gradient)
+  static const Color cellBackgroundDark = Color(0xFFBCAAA4);
+
+  /// Wood grain accent color
+  static const Color woodGrainAccent = Color(0xFFC9B8A8);
+
+  /// Cell background when selected (golden glow)
   static const Color cellSelected = Color(0xFFFFE082);
+
+  /// Cell selected outer glow
+  static const Color cellSelectedGlow = Color(0xFFFFD54F);
 
   /// Cell border when selected
   static const Color cellSelectedBorder = Color(0xFFFFA000);
 
-  /// Cell background for drop path
+  /// Cell background for drop path (soft blue)
   static const Color cellDropPath = Color(0xFFBBDEFB);
+
+  /// Cell drop path glow
+  static const Color cellDropPathGlow = Color(0xFF90CAF9);
 
   /// Cell border for drop path
   static const Color cellDropPathBorder = Color(0xFF42A5F5);
 
-  /// Cell background for next drop position
+  /// Cell background for next drop position (soft green)
   static const Color cellNextDrop = Color(0xFFC8E6C9);
+
+  /// Cell next drop glow
+  static const Color cellNextDropGlow = Color(0xFFA5D6A7);
 
   /// Cell border for next drop position
   static const Color cellNextDropBorder = Color(0xFF66BB6A);
