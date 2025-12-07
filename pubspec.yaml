@@ -50,13 +50,11 @@ flutter_native_splash:
   branding: "assets/splash/branding.png"
   branding_mode: bottom
 
-  android_12:
-    color: "#795548"
-    image: "assets/icon/app_icon.png"
-    branding: "assets/splash/branding.png"
-    branding_mode: bottom
+  # Enable web splash (uses same settings as above)
+  web: true
 
-  web:
+  # Android 12+ specific settings
+  android_12:
     color: "#795548"
     image: "assets/icon/app_icon.png"
     branding: "assets/splash/branding.png"
