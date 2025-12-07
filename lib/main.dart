@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
 import 'models/models.dart';
+import 'theme/theme.dart';
 import 'version.dart';
 
 void main() {
@@ -18,7 +21,7 @@ class StonesApp extends StatelessWidget {
     return MaterialApp(
       title: 'Stones',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
+        colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
         useMaterial3: true,
       ),
       home: const HomeScreen(),
@@ -48,7 +51,7 @@ class HomeScreen extends ConsumerWidget {
                         'STONES',
                         style: Theme.of(context).textTheme.displayLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.brown.shade800,
+                              color: GameColors.titleColor,
                               letterSpacing: 8,
                             ),
                       ),
@@ -56,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
                       Text(
                         'A game of roads and flats',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.brown.shade600,
+                              color: GameColors.subtitleColor,
                             ),
                       ),
                       const SizedBox(height: 64),
@@ -148,7 +151,7 @@ class _BoardSizeButton extends ConsumerWidget {
               '${counts.flatStones}F ${counts.capstones}C',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.brown.shade600,
+                color: GameColors.subtitleColor,
               ),
             ),
           ],
@@ -310,7 +313,7 @@ class GameScreen extends ConsumerWidget {
                     child: Container(
                       margin: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.brown.shade300,
+                        color: GameColors.boardBackground,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: _GameBoard(
@@ -472,9 +475,10 @@ class _GameInfoBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWhite = gameState.currentPlayer == PlayerColor.white;
-    final bgColor = isWhite ? Colors.grey.shade200 : Colors.grey.shade800;
+    final bgColor = isWhite ? GameColors.turnIndicatorLight : GameColors.turnIndicatorDark;
     final textColor = isWhite ? Colors.black : Colors.white;
     final secondaryColor = isWhite ? Colors.black54 : Colors.white70;
+    final pieceColors = GameColors.forPlayer(isWhite);
 
     String statusText;
     if (gameState.isGameOver) {
@@ -495,9 +499,9 @@ class _GameInfoBar extends StatelessWidget {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: isWhite ? Colors.white : Colors.black,
+              color: pieceColors.primary,
               border: Border.all(
-                color: isWhite ? Colors.black : Colors.white,
+                color: pieceColors.border,
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(4),
@@ -626,16 +630,16 @@ class _BoardCell extends StatelessWidget {
     Border? border;
 
     if (isSelected) {
-      bgColor = Colors.amber.shade200;
-      border = Border.all(color: Colors.amber.shade700, width: 3);
+      bgColor = GameColors.cellSelected;
+      border = Border.all(color: GameColors.cellSelectedBorder, width: 3);
     } else if (isNextDrop) {
-      bgColor = Colors.green.shade200;
-      border = Border.all(color: Colors.green.shade600, width: 2);
+      bgColor = GameColors.cellNextDrop;
+      border = Border.all(color: GameColors.cellNextDropBorder, width: 2);
     } else if (isInDropPath) {
-      bgColor = Colors.blue.shade100;
-      border = Border.all(color: Colors.blue.shade400, width: 2);
+      bgColor = GameColors.cellDropPath;
+      border = Border.all(color: GameColors.cellDropPathBorder, width: 2);
     } else {
-      bgColor = Colors.brown.shade100;
+      bgColor = GameColors.cellBackground;
       border = null;
     }
 
@@ -655,9 +659,8 @@ class _BoardCell extends StatelessWidget {
     if (stack.isEmpty) return const SizedBox();
 
     final top = stack.topPiece!;
-    final color = top.color == PlayerColor.white ? Colors.white : Colors.black;
-    final borderColor =
-        top.color == PlayerColor.white ? Colors.black : Colors.white;
+    final isLightPlayer = top.color == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -675,13 +678,13 @@ class _BoardCell extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.brown.shade700,
+                    color: GameColors.stackBadge,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${stack.height}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: GameColors.stackBadgeText,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -689,41 +692,86 @@ class _BoardCell extends StatelessWidget {
                 ),
               ),
             // Piece display
-            Container(
-              width: pieceSize,
-              height: top.type == PieceType.standing ? pieceSize : pieceSize * 0.6,
-              decoration: BoxDecoration(
-                color: color,
-                border: Border.all(color: borderColor, width: 2),
-                borderRadius: top.type == PieceType.capstone
-                    ? BorderRadius.circular(pieceSize / 2)
-                    : BorderRadius.circular(4),
-                boxShadow: top.type == PieceType.standing
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          offset: const Offset(2, 2),
-                          blurRadius: 2,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: top.type == PieceType.capstone
-                  ? Center(
-                      child: Container(
-                        width: pieceSize * 0.3,
-                        height: pieceSize * 0.3,
-                        decoration: BoxDecoration(
-                          color: borderColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
+            _buildPiece(top.type, pieceSize, pieceColors),
           ],
         );
       },
+    );
+  }
+
+  /// Build a piece widget based on type
+  Widget _buildPiece(PieceType type, double size, PieceColors colors) {
+    switch (type) {
+      case PieceType.flat:
+        return _buildFlatStone(size, colors);
+      case PieceType.standing:
+        return _buildStandingStone(size, colors);
+      case PieceType.capstone:
+        return _buildCapstone(size, colors);
+    }
+  }
+
+  /// Flat stone: rounded rectangle with subtle gradient and slight shadow
+  Widget _buildFlatStone(double size, PieceColors colors) {
+    return Container(
+      width: size,
+      height: size * 0.5,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors.gradientColors,
+        ),
+        border: Border.all(color: colors.border, width: 1.5),
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: GameColors.flatStoneShadow,
+            offset: const Offset(1, 2),
+            blurRadius: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Standing stone (wall): taller rectangle with prominent shadow to look upright
+  Widget _buildStandingStone(double size, PieceColors colors) {
+    return Container(
+      width: size * 0.35,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: colors.gradientColors,
+        ),
+        border: Border.all(color: colors.border, width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          // Main shadow for depth
+          BoxShadow(
+            color: GameColors.standingStoneShadow,
+            offset: const Offset(3, 3),
+            blurRadius: 4,
+          ),
+          // Subtle bottom shadow for grounding
+          BoxShadow(
+            color: GameColors.standingStoneShadow,
+            offset: const Offset(1, 4),
+            blurRadius: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Capstone: hexagon shape, slightly larger
+  Widget _buildCapstone(double size, PieceColors colors) {
+    final capSize = size * 0.85;
+    return CustomPaint(
+      size: Size(capSize, capSize),
+      painter: _HexagonPainter(colors: colors),
     );
   }
 }
@@ -760,9 +808,9 @@ class _BottomControls extends StatelessWidget {
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.brown.shade50,
+        color: GameColors.controlPanelBg,
         border: Border(
-          top: BorderSide(color: Colors.brown.shade200),
+          top: BorderSide(color: GameColors.controlPanelBorder),
         ),
       ),
       child: _buildControls(context),
@@ -791,7 +839,7 @@ class _BottomControls extends StatelessWidget {
       child: Text(
         hint,
         style: TextStyle(
-          color: Colors.brown.shade600,
+          color: GameColors.subtitleColor,
           fontStyle: FontStyle.italic,
         ),
         textAlign: TextAlign.center,
@@ -873,7 +921,7 @@ class _BottomControls extends StatelessWidget {
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Pick up', style: TextStyle(fontSize: 12, color: Colors.brown.shade600)),
+            Text('Pick up', style: TextStyle(fontSize: 12, color: GameColors.subtitleColor)),
             _PieceCountSelector(
               current: uiState.piecesPickedUp,
               max: maxPickup,
@@ -975,7 +1023,7 @@ class _BottomControls extends StatelessWidget {
                 'Holding: $remaining piece${remaining == 1 ? '' : 's'}${!canContinue && remaining > 0 ? ' (must drop all)' : ''}',
                 style: TextStyle(
                   fontSize: 12,
-                  color: !canContinue && remaining > 0 ? Colors.red.shade600 : Colors.brown.shade600,
+                  color: !canContinue && remaining > 0 ? Colors.red.shade600 : GameColors.subtitleColor,
                 ),
               ),
             ],
@@ -1078,7 +1126,7 @@ class _PieceButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.brown.shade300),
+            border: Border.all(color: GameColors.controlPanelBorder),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -1092,7 +1140,7 @@ class _PieceButton extends StatelessWidget {
               ),
               Text(
                 '($count)',
-                style: TextStyle(fontSize: 10, color: Colors.brown.shade600),
+                style: TextStyle(fontSize: 10, color: GameColors.subtitleColor),
               ),
             ],
           ),
@@ -1114,41 +1162,84 @@ class _PieceIcon extends StatelessWidget {
       case PieceType.flat:
         return Container(
           width: size,
-          height: size * 0.6,
+          height: size * 0.5,
           decoration: BoxDecoration(
-            color: Colors.brown.shade200,
-            border: Border.all(color: Colors.brown.shade600),
-            borderRadius: BorderRadius.circular(2),
+            color: GameColors.pieceIconFill,
+            border: Border.all(color: GameColors.pieceIconBorder),
+            borderRadius: BorderRadius.circular(4),
+            boxShadow: [
+              BoxShadow(
+                color: GameColors.flatStoneShadow,
+                offset: const Offset(1, 1),
+                blurRadius: 1,
+              ),
+            ],
           ),
         );
       case PieceType.standing:
         return Container(
-          width: size,
+          width: size * 0.4,
           height: size,
           decoration: BoxDecoration(
-            color: Colors.brown.shade200,
-            border: Border.all(color: Colors.brown.shade600),
+            color: GameColors.pieceIconFill,
+            border: Border.all(color: GameColors.pieceIconBorder),
             borderRadius: BorderRadius.circular(2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: GameColors.standingStoneShadow,
                 offset: const Offset(2, 2),
+                blurRadius: 2,
               ),
             ],
           ),
         );
       case PieceType.capstone:
-        return Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: Colors.brown.shade200,
-            border: Border.all(color: Colors.brown.shade600),
-            shape: BoxShape.circle,
-          ),
+        return CustomPaint(
+          size: Size(size, size),
+          painter: _HexagonIconPainter(),
         );
     }
   }
+}
+
+/// Simple hexagon painter for piece icons (neutral color)
+class _HexagonIconPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final path = _createHexagonPath(center, radius * 0.85);
+
+    // Fill
+    final fillPaint = Paint()..color = GameColors.pieceIconFill;
+    canvas.drawPath(path, fillPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = GameColors.pieceIconBorder
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawPath(path, borderPaint);
+  }
+
+  Path _createHexagonPath(Offset center, double radius) {
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * 60 - 90) * math.pi / 180;
+      final x = center.dx + radius * math.cos(angle);
+      final y = center.dy + radius * math.sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _DirectionButton extends StatelessWidget {
@@ -1229,8 +1320,8 @@ class _PieceCountSelector extends StatelessWidget {
           onPressed: current > 1 ? () => onChanged(current - 1) : null,
           icon: const Icon(Icons.remove, size: 16),
           style: IconButton.styleFrom(
-            backgroundColor: Colors.brown.shade200,
-            foregroundColor: Colors.brown.shade800,
+            backgroundColor: GameColors.pieceIconFill,
+            foregroundColor: GameColors.pieceIconBorder,
             minimumSize: const Size(28, 28),
             padding: EdgeInsets.zero,
           ),
@@ -1240,7 +1331,7 @@ class _PieceCountSelector extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.brown.shade100,
+            color: GameColors.controlPanelBorder,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Text(
@@ -1252,8 +1343,8 @@ class _PieceCountSelector extends StatelessWidget {
           onPressed: current < max ? () => onChanged(current + 1) : null,
           icon: const Icon(Icons.add, size: 16),
           style: IconButton.styleFrom(
-            backgroundColor: Colors.brown.shade200,
-            foregroundColor: Colors.brown.shade800,
+            backgroundColor: GameColors.pieceIconFill,
+            foregroundColor: GameColors.pieceIconBorder,
             minimumSize: const Size(28, 28),
             padding: EdgeInsets.zero,
           ),
@@ -1284,9 +1375,9 @@ class _PieceCountsBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _PlayerPieceCounts(
-            label: 'White',
+            label: 'Light',
             pieces: gameState.whitePieces,
-            color: Colors.white,
+            isLightPlayer: true,
             isCurrentPlayer: gameState.currentPlayer == PlayerColor.white,
           ),
           Container(
@@ -1295,9 +1386,9 @@ class _PieceCountsBar extends StatelessWidget {
             color: Colors.grey.shade300,
           ),
           _PlayerPieceCounts(
-            label: 'Black',
+            label: 'Dark',
             pieces: gameState.blackPieces,
-            color: Colors.black,
+            isLightPlayer: false,
             isCurrentPlayer: gameState.currentPlayer == PlayerColor.black,
           ),
         ],
@@ -1309,25 +1400,25 @@ class _PieceCountsBar extends StatelessWidget {
 class _PlayerPieceCounts extends StatelessWidget {
   final String label;
   final PlayerPieces pieces;
-  final Color color;
+  final bool isLightPlayer;
   final bool isCurrentPlayer;
 
   const _PlayerPieceCounts({
     required this.label,
     required this.pieces,
-    required this.color,
+    required this.isLightPlayer,
     required this.isCurrentPlayer,
   });
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = color == Colors.white ? Colors.black : Colors.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: isCurrentPlayer
           ? BoxDecoration(
-              color: Colors.amber.shade100,
+              color: GameColors.currentPlayerHighlight,
               borderRadius: BorderRadius.circular(8),
             )
           : null,
@@ -1347,11 +1438,13 @@ class _PlayerPieceCounts extends StatelessWidget {
               // Flat stone icon
               Container(
                 width: 18,
-                height: 12,
+                height: 10,
                 decoration: BoxDecoration(
-                  color: color,
-                  border: Border.all(color: borderColor, width: 1),
-                  borderRadius: BorderRadius.circular(2),
+                  gradient: LinearGradient(
+                    colors: pieceColors.gradientColors,
+                  ),
+                  border: Border.all(color: pieceColors.border, width: 1),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
               const SizedBox(width: 4),
@@ -1360,15 +1453,10 @@ class _PlayerPieceCounts extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               const SizedBox(width: 12),
-              // Capstone icon
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: color,
-                  border: Border.all(color: borderColor, width: 1),
-                  shape: BoxShape.circle,
-                ),
+              // Capstone icon (small hexagon)
+              CustomPaint(
+                size: const Size(14, 14),
+                painter: _SmallHexagonPainter(colors: pieceColors),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1380,6 +1468,55 @@ class _PlayerPieceCounts extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Small hexagon painter for piece count display
+class _SmallHexagonPainter extends CustomPainter {
+  final PieceColors colors;
+
+  _SmallHexagonPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final path = _createHexagonPath(center, radius * 0.85);
+
+    // Fill with gradient
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        colors: colors.gradientColors,
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawPath(path, gradientPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = colors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawPath(path, borderPaint);
+  }
+
+  Path _createHexagonPath(Offset center, double radius) {
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * 60 - 90) * math.pi / 180;
+      final x = center.dx + radius * math.cos(angle);
+      final y = center.dy + radius * math.sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldRepaint(covariant _SmallHexagonPainter oldDelegate) {
+    return oldDelegate.colors != colors;
   }
 }
 
@@ -1399,10 +1536,14 @@ class _WinOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (title, color) = switch (result) {
-      GameResult.whiteWins => ('White Wins!', Colors.white),
-      GameResult.blackWins => ('Black Wins!', Colors.black),
-      GameResult.draw => ('Draw!', Colors.grey),
+    final (title, pieceColors) = switch (result) {
+      GameResult.whiteWins => ('Light Wins!', GameColors.lightPlayerColors),
+      GameResult.blackWins => ('Dark Wins!', GameColors.darkPlayerColors),
+      GameResult.draw => ('Draw!', const PieceColors(
+        primary: Colors.grey,
+        secondary: Colors.grey,
+        border: Color(0xFF757575),
+      )),
     };
 
     final reasonText = switch (winReason) {
@@ -1427,11 +1568,13 @@ class _WinOverlay extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: color,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: pieceColors.gradientColors,
+                    ),
                     border: Border.all(
-                      color: result == GameResult.draw
-                          ? Colors.grey.shade600
-                          : (result == GameResult.whiteWins ? Colors.black : Colors.white),
+                      color: pieceColors.border,
                       width: 4,
                     ),
                     shape: BoxShape.circle,
@@ -1527,5 +1670,73 @@ class VersionFooter extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+/// Custom painter for hexagon-shaped capstone
+class _HexagonPainter extends CustomPainter {
+  final PieceColors colors;
+
+  _HexagonPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Create hexagon path
+    final path = _createHexagonPath(center, radius * 0.9);
+
+    // Draw shadow
+    final shadowPath = _createHexagonPath(
+      Offset(center.dx + 2, center.dy + 2),
+      radius * 0.9,
+    );
+    final shadowPaint = Paint()
+      ..color = GameColors.capstoneShadow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawPath(shadowPath, shadowPaint);
+
+    // Draw gradient fill
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: colors.gradientColors,
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawPath(path, gradientPaint);
+
+    // Draw border
+    final borderPaint = Paint()
+      ..color = colors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+
+    // Draw small inner circle for visual interest
+    final innerCirclePaint = Paint()..color = colors.border.withValues(alpha: 0.3);
+    canvas.drawCircle(center, radius * 0.25, innerCirclePaint);
+  }
+
+  Path _createHexagonPath(Offset center, double radius) {
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      // Start from top point (rotate -90 degrees so flat side is at bottom)
+      final angle = (i * 60 - 90) * math.pi / 180;
+      final x = center.dx + radius * math.cos(angle);
+      final y = center.dy + radius * math.sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldRepaint(covariant _HexagonPainter oldDelegate) {
+    return oldDelegate.colors != colors;
   }
 }
