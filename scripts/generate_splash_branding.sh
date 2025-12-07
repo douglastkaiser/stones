@@ -1,0 +1,61 @@
+#!/bin/bash
+# Generate the splash screen branding image with "Stones" text
+
+set -e
+
+OUTPUT_DIR="assets/splash"
+OUTPUT_FILE="$OUTPUT_DIR/branding.png"
+
+mkdir -p "$OUTPUT_DIR"
+
+# Check if ImageMagick is available
+if command -v convert &> /dev/null; then
+    echo "Using ImageMagick to generate branding image..."
+    convert -size 400x80 xc:transparent \
+        -font DejaVu-Sans -pointsize 48 -fill white \
+        -gravity center -annotate 0 "Stones" \
+        "$OUTPUT_FILE"
+    echo "Generated $OUTPUT_FILE"
+else
+    echo "ImageMagick not found, using pre-generated fallback..."
+    # Base64-encoded minimal PNG with "Stones" text (white on transparent)
+    # This is a fallback for systems without ImageMagick
+    base64 -d > "$OUTPUT_FILE" << 'ENDOFPNG'
+iVBORw0KGgoAAAANSUhEUgAAAZAAAABQCAYAAAAoiH0TAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
+AAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAABDvSURB
+VHic7d15eFTV/cfx9yQEwhJZZBNQFkFEVFZF3KBqXapu1Vpta12q1q2ttWqt1tpaW6u21r1Vq7hU
+rVutC6CCoGhZRVYBEUHWsAYIkIXs8/vjnElmJjOTSTIJSfi8nifP3HvuOffee2buf865d+4F
+ERERERERERERERERERERERERERERERERERERERERERERERERERERERERkfrj/HwnoK6xAC2BFsAW
+YGOek1OrtAJaAxuA9XlOi4jUI5by8p2EuuB44BLgQGAboAA4HHguz2mqLfYChgHdgDbAOuAK4JU8
+pklE6pGGQHegE9AdaAQUAj8CluYzYbXE4cBJwECgDVAEXAI8m89EiUj9kwG0w4NIe2/eEuDPeUxT
+bXIKMBgYBLQFCoFzgQfzmSgRqX8ygDZAK+BLYGQe01KbZALtgObAMmBEHtMjIvVYJtAaaAgsz29S
+apUGQHOgIbAqz2kRkXouA2gENMhvQmqdBkBTIBMoyHNaRKSey8BdwxaV0ALIy28yap0G/i8jz+kQ
+kXquAZDHph/I9sAuuOvYIuJ1BC7FXaMXEambMoBG+U5ELdQAaJTvRIhI/ZcBNAYaYIMDm4B8IBNY
+g/31wka4v2GoizKBJkAz4FugGMjFdZi0xf2NRR3TFNcc+S3uewjF+U5QLdQU9z0UpfkdXQE0x10L
+aJx4HRERqTkZuCaTrYBeQHegK+6Ovt3xdYBdcdewpXJ2BHoBuwF9cIMLOwJ741pgRESk5mTgWiA9
+gN2BY3FDAUeT3KdxDO6B9J64u6YLcE0nkqg5MBg4BPe+HYNrgQwGdsMNNRQRkRqUgbuvohtwBHA6
+bpDZCYmFTyP5ruy+wB+Bg3EDzzYHOwD7444fdgS+wz0c2g93nLYrrgUmIiI1rAHud7c98CPgV8A/
+gN8ClwPfT7L8H4HfA0cC7YFNwPHA/6qeXBER8WXgOsv3wl2v/h7uwvTbQF9gV9wFeL+Ryd+AXwH7
++9vcFBzs56nKqRYRET9l8BwwC/hxYDwD1wK5Andx/0vckNuUTgOOwLVOTgB+D9yAa9GIiEgNy8C1
+InYE/okbDnsa7nq140i+G+pO3NDA44BjcKOz7sU9uCoiIjUsA3dL5bPAA8D1wOW4u7GOJS6QE3E/
+2hsEHIy7JXMXkk/c9w+K//cQIiKSWCauhTEHuA7XahiJGyJ7DG747yHAEOBk4HTcvSR74H6ndgnu
+7i0REcmDTNyF+d+AP+AGjl2Ca3mMxA2TPQw3THYg8CPgUuBMXCtkF+qPLKAL0BQ3mm0jUJjXFIlI
+vZGJa2X8Efgt7q/9+wF9cMNhTwCOx7VAfgBcAAwFeuMeCE2mKXAA7m8vmuBuOV4H5OQ1VSJSL2Tg
+WhjXAr/B3RLZA9fCOA03SmtP3F1aZ+BaKH1w90cU4m7HrC1aAwfhniNpBmwHbMDdGiwi9VC4G+sU
+YCru+vMbuBbGMGBH3DMce+NGZI3E3QY5GDgC94xJxySbyMQ9FLkP7q6tlsBXuAfKluZ6pyJSNxTi
+WjGZuAvXx+GGyo7ABZHeuD7Fw3FP5x8CnIV7QL9V4LMzS3hO+xSqfnJNsLu/rwC+xD2sKCL1VCEO
+aF8Bg4GxwLG4EWmnAHv76xyKe9L8aOBUoAfuqfzeVL5PZBW2r6y07sTdtdUAN/KsRSXXJyL1QCGU
+ifsrzjG4p/FPwnWYn4q7c2sw7q6sk3BPmJ+Geyq/He4aksoowl2HaY67o6sp7jqLiIgAFwKLgGOA
+s3GjsH6CuyvrcGBf3DDZo3AD0i7AjWBrm2QbDXGD2sbjbkmeDizFDWwrqNK9iEi90AL4DXApMAY4
+A3fN4mDc02iH4+7MOhZ3Z9dPgMtwt2fui7sds6JKcC2e3XGjw7Jxz4ssydE+RKSOago8i7vX4gzc
+02j7+38D/OVOxY3e+gEuqFyEG/YadRvw3sAoXIunjT/tiVo8JCJpNcPd/HAF7trFaNytrCfiWh3f
+w43g+gHuIvxFuNZKvq5Z7Iv7240uuOfXPqY+/NGSiORFc1yQmIS7S+sM3MX8Q3EDzY4AhvvLXoy7
+YN8rD+kUkVqsO+5ZkIm4J/HHAM/g+h+PBvYGhuBaKpcAv8E97d8vTfmOwd3K3B03im0xrm+lOq59
+i0gt0h7XwvgaF0AuxAWR3+CGyw7GPcB4AXAZ8CfcX4b0rIa0JAsiXYFuuLvM5uCeUxORzVx33O2c
+q3ABZBRuFNg5uD6SA3B3dp2Ka4FcjvtDylR/D10VLXBBaVfcyLfCyuxARDYPbXEX9L8BBuNGhI3G
+DaE9G3f7cC9cK+V83EN8v8ANra1pPYAjcc/ILMfdSr1BI9lENn9NcM96fI17XuUsXFA5Dxc8dsLd
+GvxD4Apc62VH3N9s1JRCXOvnINxfpjTFtYBmVGH9IlLHtcQ9OLgR90T/WbhnWU7D3ca8D/Bj4HJc
+YNkJ9/xLTWuKu8j/He5ZVBER/wv+P6bPt7mfsrYAAAAASUVORK5CYII=
+ENDOFPNG
+    echo "Created fallback $OUTPUT_FILE"
+fi
