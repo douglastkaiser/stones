@@ -12,6 +12,7 @@ dependencies:
   flutter_riverpod: ^2.4.9
   riverpod_annotation: ^2.3.3
   url_launcher: ^6.2.1
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -19,6 +20,40 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   riverpod_generator: ^2.3.9
   build_runner: ^2.4.7
+  flutter_launcher_icons: ^0.14.2
+  flutter_native_splash: ^2.4.3
+
+# App icon configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#795548"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#795548"
+    theme_color: "#795548"
+  windows:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+
+# Splash screen configuration
+flutter_native_splash:
+  color: "#795548"
+  image: "assets/splash/splash_logo.png"
+  android_12:
+    color: "#795548"
+    image: "assets/splash/splash_logo.png"
+  web: true
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sounds/
+    - assets/icon/
+    - assets/splash/

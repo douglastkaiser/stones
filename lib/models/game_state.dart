@@ -1,4 +1,5 @@
 import 'board.dart';
+import 'move.dart';
 import 'piece.dart';
 import 'player.dart';
 
@@ -35,6 +36,10 @@ class GameState {
   final GamePhase phase;
   final GameResult? result;
   final WinReason? winReason;
+  final List<MoveRecord> moveHistory;
+  final Position? lastMoveFrom;
+  final Position? lastMoveTo;
+  final Set<Position> roadPositions; // Positions that form the winning road
 
   const GameState({
     required this.board,
@@ -45,6 +50,10 @@ class GameState {
     required this.phase,
     this.result,
     this.winReason,
+    this.moveHistory = const [],
+    this.lastMoveFrom,
+    this.lastMoveTo,
+    this.roadPositions = const {},
   });
 
   /// Create initial game state
@@ -91,6 +100,11 @@ class GameState {
     GamePhase? phase,
     GameResult? result,
     WinReason? winReason,
+    List<MoveRecord>? moveHistory,
+    Position? lastMoveFrom,
+    Position? lastMoveTo,
+    Set<Position>? roadPositions,
+    bool clearLastMove = false,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -101,6 +115,10 @@ class GameState {
       phase: phase ?? this.phase,
       result: result ?? this.result,
       winReason: winReason ?? this.winReason,
+      moveHistory: moveHistory ?? this.moveHistory,
+      lastMoveFrom: clearLastMove ? null : (lastMoveFrom ?? this.lastMoveFrom),
+      lastMoveTo: clearLastMove ? null : (lastMoveTo ?? this.lastMoveTo),
+      roadPositions: roadPositions ?? this.roadPositions,
     );
   }
 
@@ -130,6 +148,9 @@ class GameState {
         : copyWith(blackPieces: pieces);
   }
 
+  /// Check if undo is possible
+  bool get canUndo => moveHistory.isNotEmpty;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -141,7 +162,9 @@ class GameState {
           turnNumber == other.turnNumber &&
           phase == other.phase &&
           result == other.result &&
-          winReason == other.winReason;
+          winReason == other.winReason &&
+          lastMoveFrom == other.lastMoveFrom &&
+          lastMoveTo == other.lastMoveTo;
 
   @override
   int get hashCode => Object.hash(
@@ -153,6 +176,8 @@ class GameState {
         phase,
         result,
         winReason,
+        lastMoveFrom,
+        lastMoveTo,
       );
 
   @override

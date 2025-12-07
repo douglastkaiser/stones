@@ -8,13 +8,38 @@ final gameStateProvider =
   return GameStateNotifier();
 });
 
+/// History stack for undo functionality
+final _historyStackProvider = StateProvider<List<GameState>>((ref) => []);
+
 /// Notifier that manages game state mutations
 class GameStateNotifier extends StateNotifier<GameState> {
+  final List<GameState> _history = [];
+
   GameStateNotifier() : super(GameState.initial(5)); // Default 5x5
 
   /// Start a new game with the given board size
   void newGame(int boardSize) {
+    _history.clear();
     state = GameState.initial(boardSize);
+  }
+
+  /// Undo the last move
+  bool undo() {
+    if (_history.isEmpty) return false;
+    state = _history.removeLast();
+    return true;
+  }
+
+  /// Check if undo is available
+  bool get canUndo => _history.isNotEmpty;
+
+  /// Save current state to history before making a move
+  void _saveToHistory() {
+    _history.add(state);
+    // Limit history to prevent memory issues
+    if (_history.length > 100) {
+      _history.removeAt(0);
+    }
   }
 
   /// Place a piece at the given position
@@ -25,6 +50,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
     final stack = state.board.stackAt(pos);
     if (!stack.canPlaceOn) return false;
+
+    _saveToHistory();
 
     // During opening phase, can only place flat stones of opponent's color
     if (state.isOpeningPhase) {
@@ -38,8 +65,26 @@ class GameStateNotifier extends StateNotifier<GameState> {
       final opponentPieces = state.piecesFor(opponentColor);
       final newOpponentPieces = opponentPieces.usePiece(PieceType.flat);
 
+      // Create move record
+      final move = PlacementMove(
+        position: pos,
+        pieceType: type,
+        player: opponentColor,
+      );
+      final record = MoveRecord(
+        move: move,
+        notation: move.toNotation(state.boardSize),
+        turnNumber: state.turnNumber,
+        player: state.currentPlayer,
+      );
+
       state = state
-          .copyWith(board: newBoard)
+          .copyWith(
+            board: newBoard,
+            moveHistory: [...state.moveHistory, record],
+            lastMoveFrom: null,
+            lastMoveTo: pos,
+          )
           .updatePieces(opponentColor, newOpponentPieces)
           .nextTurn();
 
@@ -54,8 +99,26 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final newBoard = state.board.placePiece(pos, piece);
     final newPieces = playerPieces.usePiece(type);
 
+    // Create move record
+    final move = PlacementMove(
+      position: pos,
+      pieceType: type,
+      player: state.currentPlayer,
+    );
+    final record = MoveRecord(
+      move: move,
+      notation: move.toNotation(state.boardSize),
+      turnNumber: state.turnNumber,
+      player: state.currentPlayer,
+    );
+
     state = state
-        .copyWith(board: newBoard)
+        .copyWith(
+          board: newBoard,
+          moveHistory: [...state.moveHistory, record],
+          lastMoveFrom: null,
+          lastMoveTo: pos,
+        )
         .updatePieces(state.currentPlayer, newPieces)
         .nextTurn();
 
@@ -77,26 +140,39 @@ class GameStateNotifier extends StateNotifier<GameState> {
     if (totalPicked > stack.height) return false;
     if (totalPicked > state.boardSize) return false; // Carry limit
 
+    _saveToHistory();
+
     // Validate the move path
     var currentPos = from;
     final (remaining, pickedUp) = stack.pop(totalPicked);
     var board = state.board.setStack(from, remaining);
     var pieceIndex = 0;
+    var flattenedWall = false;
+    Position finalPos = from;
 
     for (final dropCount in drops) {
       currentPos = direction.apply(currentPos);
+      finalPos = currentPos;
 
-      if (!board.isValidPosition(currentPos)) return false;
+      if (!board.isValidPosition(currentPos)) {
+        // Restore history since move failed
+        _history.removeLast();
+        return false;
+      }
 
       var targetStack = board.stackAt(currentPos);
       final movingPiece = pickedUp[pieceIndex];
 
-      if (!targetStack.canMoveOnto(movingPiece)) return false;
+      if (!targetStack.canMoveOnto(movingPiece)) {
+        _history.removeLast();
+        return false;
+      }
 
       // If capstone flattening a wall
       if (targetStack.topPiece?.type == PieceType.standing &&
           movingPiece.canFlattenWalls) {
         targetStack = targetStack.flattenTop();
+        flattenedWall = true;
       }
 
       // Drop pieces
@@ -105,7 +181,28 @@ class GameStateNotifier extends StateNotifier<GameState> {
       pieceIndex += dropCount;
     }
 
-    state = state.copyWith(board: board).nextTurn();
+    // Create move record
+    final move = StackMove(
+      from: from,
+      direction: direction,
+      drops: drops,
+      piecesPickedUp: totalPicked,
+      flattenedWall: flattenedWall,
+    );
+    final record = MoveRecord(
+      move: move,
+      notation: move.toNotation(state.boardSize),
+      turnNumber: state.turnNumber,
+      player: state.currentPlayer,
+    );
+
+    state = state.copyWith(
+      board: board,
+      moveHistory: [...state.moveHistory, record],
+      lastMoveFrom: from,
+      lastMoveTo: finalPos,
+    ).nextTurn();
+
     _checkWinCondition();
     return true;
   }
@@ -114,13 +211,15 @@ class GameStateNotifier extends StateNotifier<GameState> {
   void _checkWinCondition() {
     // Check road win for both players
     for (final color in PlayerColor.values) {
-      if (_hasRoad(color)) {
+      final roadPath = _findRoad(color);
+      if (roadPath != null) {
         state = state.copyWith(
           phase: GamePhase.finished,
           result: color == PlayerColor.white
               ? GameResult.whiteWins
               : GameResult.blackWins,
           winReason: WinReason.road,
+          roadPositions: roadPath,
         );
         return;
       }
@@ -165,8 +264,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
   }
 
-  /// Check if a player has a road (connected path edge to edge)
-  bool _hasRoad(PlayerColor color) {
+  /// Find a winning road for a player, returns the positions or null
+  Set<Position>? _findRoad(PlayerColor color) {
     final size = state.boardSize;
 
     // Check horizontal road (left to right)
@@ -179,9 +278,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
 
     for (final start in leftEdge) {
-      if (_canReachEdge(start, color, (p) => p.col == size - 1)) {
-        return true;
-      }
+      final path = _findPathToEdge(start, color, (p) => p.col == size - 1);
+      if (path != null) return path;
     }
 
     // Check vertical road (top to bottom)
@@ -194,16 +292,14 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
 
     for (final start in topEdge) {
-      if (_canReachEdge(start, color, (p) => p.row == size - 1)) {
-        return true;
-      }
+      final path = _findPathToEdge(start, color, (p) => p.row == size - 1);
+      if (path != null) return path;
     }
 
-    return false;
+    return null;
   }
 
   /// Check if position is controlled by player for road purposes
-  /// (flat stones and capstones count, standing stones don't)
   bool _controlsForRoad(Position pos, PlayerColor color) {
     final top = state.board.stackAt(pos).topPiece;
     if (top == null) return false;
@@ -211,13 +307,14 @@ class GameStateNotifier extends StateNotifier<GameState> {
     return top.type != PieceType.standing;
   }
 
-  /// BFS to check if we can reach the target edge
-  bool _canReachEdge(
+  /// BFS to find path to target edge, returns path positions or null
+  Set<Position>? _findPathToEdge(
     Position start,
     PlayerColor color,
     bool Function(Position) isTargetEdge,
   ) {
     final visited = <Position>{};
+    final parent = <Position, Position?>{start: null};
     final queue = [start];
 
     while (queue.isNotEmpty) {
@@ -225,16 +322,53 @@ class GameStateNotifier extends StateNotifier<GameState> {
       if (visited.contains(current)) continue;
       visited.add(current);
 
-      if (isTargetEdge(current)) return true;
+      if (isTargetEdge(current)) {
+        // Reconstruct path
+        final path = <Position>{};
+        Position? pos = current;
+        while (pos != null) {
+          path.add(pos);
+          pos = parent[pos];
+        }
+        return path;
+      }
 
       for (final neighbor in current.adjacentPositions(state.boardSize)) {
         if (!visited.contains(neighbor) && _controlsForRoad(neighbor, color)) {
+          parent[neighbor] = current;
           queue.add(neighbor);
         }
       }
     }
 
-    return false;
+    return null;
+  }
+
+  /// Get valid moves for a position (for highlighting legal moves)
+  Set<Position> getValidMoveTargets(Position from, int piecesToMove) {
+    final targets = <Position>{};
+    final stack = state.board.stackAt(from);
+
+    if (stack.isEmpty || stack.controller != state.currentPlayer) {
+      return targets;
+    }
+
+    final topPiece = stack.topPiece!;
+
+    for (final direction in Direction.values) {
+      var pos = from;
+      for (var step = 0; step < piecesToMove; step++) {
+        pos = direction.apply(pos);
+        if (!state.board.isValidPosition(pos)) break;
+
+        final targetStack = state.board.stackAt(pos);
+        if (!targetStack.canMoveOnto(topPiece)) break;
+
+        targets.add(pos);
+      }
+    }
+
+    return targets;
   }
 }
 
@@ -273,4 +407,14 @@ final whitePiecesProvider = Provider<PlayerPieces>((ref) {
 /// Black player's remaining pieces
 final blackPiecesProvider = Provider<PlayerPieces>((ref) {
   return ref.watch(gameStateProvider.select((s) => s.blackPieces));
+});
+
+/// Move history
+final moveHistoryProvider = Provider<List<MoveRecord>>((ref) {
+  return ref.watch(gameStateProvider.select((s) => s.moveHistory));
+});
+
+/// Can undo
+final canUndoProvider = Provider<bool>((ref) {
+  return ref.read(gameStateProvider.notifier).canUndo;
 });
