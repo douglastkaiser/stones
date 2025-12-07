@@ -31,6 +31,12 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate splash branding
+        run: ./scripts/generate_splash_branding.sh
+
+      - name: Generate splash screen
+        run: dart run flutter_native_splash:create
+
       - name: Run analyzer
         run: flutter analyze --fatal-infos
 
