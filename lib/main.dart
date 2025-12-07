@@ -149,7 +149,7 @@ class _BoardSizeButton extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               '${counts.flatStones}F ${counts.capstones}C',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: GameColors.subtitleColor,
               ),
@@ -807,7 +807,7 @@ class _BottomControls extends StatelessWidget {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: GameColors.controlPanelBg,
         border: Border(
           top: BorderSide(color: GameColors.controlPanelBorder),
@@ -838,7 +838,7 @@ class _BottomControls extends StatelessWidget {
     return Center(
       child: Text(
         hint,
-        style: TextStyle(
+        style: const TextStyle(
           color: GameColors.subtitleColor,
           fontStyle: FontStyle.italic,
         ),
@@ -921,7 +921,7 @@ class _BottomControls extends StatelessWidget {
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Pick up', style: TextStyle(fontSize: 12, color: GameColors.subtitleColor)),
+            const Text('Pick up', style: TextStyle(fontSize: 12, color: GameColors.subtitleColor)),
             _PieceCountSelector(
               current: uiState.piecesPickedUp,
               max: maxPickup,
@@ -1140,7 +1140,7 @@ class _PieceButton extends StatelessWidget {
               ),
               Text(
                 '($count)',
-                style: TextStyle(fontSize: 10, color: GameColors.subtitleColor),
+                style: const TextStyle(fontSize: 10, color: GameColors.subtitleColor),
               ),
             ],
           ),
