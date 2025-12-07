@@ -692,7 +692,7 @@ class _BoardCell extends StatelessWidget {
                 ),
               ),
             // Piece display
-            _buildPiece(top.type, pieceSize, pieceColors),
+            _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer),
           ],
         );
       },
@@ -700,10 +700,10 @@ class _BoardCell extends StatelessWidget {
   }
 
   /// Build a piece widget based on type
-  Widget _buildPiece(PieceType type, double size, PieceColors colors) {
+  Widget _buildPiece(PieceType type, double size, PieceColors colors, bool isLightPlayer) {
     switch (type) {
       case PieceType.flat:
-        return _buildFlatStone(size, colors);
+        return _buildFlatStone(size, colors, isLightPlayer);
       case PieceType.standing:
         return _buildStandingStone(size, colors);
       case PieceType.capstone:
@@ -711,58 +711,21 @@ class _BoardCell extends StatelessWidget {
     }
   }
 
-  /// Flat stone: rounded rectangle with subtle gradient and slight shadow
-  Widget _buildFlatStone(double size, PieceColors colors) {
-    return Container(
-      width: size,
-      height: size * 0.5,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors.gradientColors,
-        ),
-        border: Border.all(color: colors.border, width: 1.5),
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: GameColors.flatStoneShadow,
-            offset: const Offset(1, 2),
-            blurRadius: 2,
-          ),
-        ],
-      ),
+  /// Flat stone: trapezoid for light, semi-circle for dark
+  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer) {
+    return CustomPaint(
+      size: Size(size, size * 0.5),
+      painter: isLightPlayer
+          ? _TrapezoidPainter(colors: colors)
+          : _SemiCirclePainter(colors: colors),
     );
   }
 
-  /// Standing stone (wall): taller rectangle with prominent shadow to look upright
+  /// Standing stone (wall): diagonal bar across the cell
   Widget _buildStandingStone(double size, PieceColors colors) {
-    return Container(
-      width: size * 0.35,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: colors.gradientColors,
-        ),
-        border: Border.all(color: colors.border, width: 1.5),
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: [
-          // Main shadow for depth
-          BoxShadow(
-            color: GameColors.standingStoneShadow,
-            offset: const Offset(3, 3),
-            blurRadius: 4,
-          ),
-          // Subtle bottom shadow for grounding
-          BoxShadow(
-            color: GameColors.standingStoneShadow,
-            offset: const Offset(1, 4),
-            blurRadius: 2,
-          ),
-        ],
-      ),
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _DiagonalWallPainter(colors: colors),
     );
   }
 
@@ -1670,6 +1633,177 @@ class VersionFooter extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+/// Trapezoid painter for light player flat stones
+class _TrapezoidPainter extends CustomPainter {
+  final PieceColors colors;
+
+  _TrapezoidPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Trapezoid: wider at bottom, narrower at top
+    final inset = w * 0.15;
+    final path = Path()
+      ..moveTo(inset, 0) // top left
+      ..lineTo(w - inset, 0) // top right
+      ..lineTo(w, h) // bottom right
+      ..lineTo(0, h) // bottom left
+      ..close();
+
+    // Shadow
+    final shadowPath = Path()
+      ..moveTo(inset + 2, 2)
+      ..lineTo(w - inset + 2, 2)
+      ..lineTo(w + 2, h + 2)
+      ..lineTo(2, h + 2)
+      ..close();
+    final shadowPaint = Paint()
+      ..color = GameColors.flatStoneShadow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawPath(shadowPath, shadowPaint);
+
+    // Gradient fill
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: colors.gradientColors,
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawPath(path, gradientPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = colors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrapezoidPainter oldDelegate) {
+    return oldDelegate.colors != colors;
+  }
+}
+
+/// Semi-circle painter for dark player flat stones
+/// The chord is slightly below the diameter (more than a half circle)
+class _SemiCirclePainter extends CustomPainter {
+  final PieceColors colors;
+
+  _SemiCirclePainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+
+    // Semi-circle with chord below diameter (about 60% of circle showing)
+    // The arc spans more than 180 degrees
+    final radius = w * 0.5;
+    final chordY = h * 0.1; // Where the chord (flat bottom) sits
+
+    final path = Path();
+    // Start from left side of chord
+    path.moveTo(centerX - radius * 0.95, h - chordY);
+    // Arc over the top
+    path.arcToPoint(
+      Offset(centerX + radius * 0.95, h - chordY),
+      radius: Radius.circular(radius),
+      largeArc: true,
+    );
+    // Close with the chord
+    path.close();
+
+    // Shadow
+    canvas.save();
+    canvas.translate(1, 2);
+    final shadowPaint = Paint()
+      ..color = GameColors.flatStoneShadow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawPath(path, shadowPaint);
+    canvas.restore();
+
+    // Gradient fill
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: colors.gradientColors,
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawPath(path, gradientPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = colors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SemiCirclePainter oldDelegate) {
+    return oldDelegate.colors != colors;
+  }
+}
+
+/// Diagonal wall painter - a bar laying diagonally across the cell
+class _DiagonalWallPainter extends CustomPainter {
+  final PieceColors colors;
+
+  _DiagonalWallPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Diagonal bar from bottom-left to top-right
+    final barWidth = w * 0.25;
+    final margin = w * 0.1;
+
+    final path = Path()
+      ..moveTo(margin, h - margin - barWidth) // bottom-left top corner
+      ..lineTo(margin + barWidth, h - margin) // bottom-left bottom corner
+      ..lineTo(w - margin, margin + barWidth) // top-right bottom corner
+      ..lineTo(w - margin - barWidth, margin) // top-right top corner
+      ..close();
+
+    // Shadow (offset down-right)
+    canvas.save();
+    canvas.translate(2, 3);
+    final shadowPaint = Paint()
+      ..color = GameColors.standingStoneShadow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawPath(path, shadowPaint);
+    canvas.restore();
+
+    // Gradient fill (along the diagonal)
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: colors.gradientColors,
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawPath(path, gradientPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = colors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalWallPainter oldDelegate) {
+    return oldDelegate.colors != colors;
   }
 }
 
