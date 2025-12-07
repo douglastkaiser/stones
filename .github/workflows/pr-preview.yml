@@ -40,6 +40,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
+
       - name: Build web for PR preview
         run: flutter build web --release --base-href "/stones/pr/${{ github.event.pull_request.number }}/"
 
