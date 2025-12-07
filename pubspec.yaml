@@ -19,6 +19,25 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   riverpod_generator: ^2.3.9
   build_runner: ^2.4.7
+  flutter_launcher_icons: ^0.14.2
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/
+
+flutter_launcher_icons:
+  android: true
+  ios: false  # Enable when iOS project is scaffolded with: flutter create . --platforms=ios
+  remove_alpha_ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#46505A"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+  windows:
+    generate: false
+  macos:
+    generate: false
