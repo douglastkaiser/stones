@@ -297,6 +297,7 @@ class UIState {
 
   /// Get all valid destination cells when selecting move direction
   /// Returns a set of positions that can be reached in each direction
+  /// Limited by the number of pieces that can be picked up (min of stack height and board size)
   Set<Position> getValidMoveDestinations(GameState gameState) {
     if (selectedPosition == null) return {};
     if (mode != InteractionMode.selectingMoveDirection) return {};
@@ -307,20 +308,30 @@ class UIState {
     final topPiece = stack.topPiece!;
     final validDestinations = <Position>{};
 
+    // Maximum distance is limited by pieces we can pick up (carry limit)
+    final maxDistance = stack.height > gameState.boardSize
+        ? gameState.boardSize
+        : stack.height;
+
     // Check each direction
     for (final direction in Direction.values) {
       var pos = selectedPosition!;
-      pos = direction.apply(pos);
+      var distance = 0;
 
       // Keep checking positions in this direction until we can't move further
-      while (gameState.board.isValidPosition(pos)) {
+      // or we've reached the maximum distance based on pieces we can pick up
+      while (distance < maxDistance) {
+        pos = direction.apply(pos);
+        distance++;
+
+        if (!gameState.board.isValidPosition(pos)) break;
+
         final targetStack = gameState.board.stackAt(pos);
 
         // Check if we can move onto this cell
         if (targetStack.canMoveOnto(topPiece)) {
           validDestinations.add(pos);
-          // Continue checking further in this direction (for multi-step moves)
-          pos = direction.apply(pos);
+          // Continue checking further in this direction
         } else if (targetStack.topPiece?.type == PieceType.standing &&
             topPiece.canFlattenWalls) {
           // Capstone can flatten a wall as final move
