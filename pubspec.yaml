@@ -1,5 +1,5 @@
 name: stones
-description: A two-player abstract strategy game based on Tak mechanics.
+description: A two-player abstract strategy game inspired by classic connection and stacking games.
 publish_to: 'none'
 version: 1.0.0+1
 

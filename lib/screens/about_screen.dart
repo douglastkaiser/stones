@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/theme.dart';
 import '../version.dart';
 
-/// About screen with game credits, links, and licenses
+/// About screen with game information and licenses
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
-
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
 
   void _showLicenses(BuildContext context) {
     showLicensePage(
@@ -30,9 +22,7 @@ class AboutScreen extends StatelessWidget {
           ),
         ),
       ),
-      applicationLegalese: '\u00a9 2024 Stones Contributors\n\n'
-          'Tak is a game designed by James Ernest and Patrick Rothfuss, '
-          'published by Cheapass Games.',
+      applicationLegalese: '\u00a9 2024 Stones Contributors',
     );
   }
 
@@ -77,7 +67,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'A game of roads and flats',
+                  'An abstract strategy game',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: GameColors.subtitleColor,
                       ),
@@ -87,63 +77,22 @@ class AboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 40),
 
-          // About Tak Section
+          // About Stones Section
           const _AboutCard(
-            title: 'About Tak',
+            title: 'About Stones',
             children: [
               Text(
-                'Stones is an implementation of Tak, the beautiful game from '
-                'Patrick Rothfuss\'s "The Wise Man\'s Fear."',
+                'Stones is an original abstract strategy game inspired by '
+                'classic connection and stacking games.',
                 style: TextStyle(height: 1.5),
               ),
               SizedBox(height: 16),
               Text(
-                'Tak was designed and developed into a playable game by:',
+                'Build roads across the board to connect opposite edges, '
+                'or control the most territory with your flat stones. '
+                'Use standing stones to block your opponent and capstones '
+                'to flatten walls in your path.',
                 style: TextStyle(height: 1.5),
-              ),
-              SizedBox(height: 12),
-              _CreditItem(
-                name: 'James Ernest',
-                role: 'Game Designer',
-              ),
-              SizedBox(height: 8),
-              _CreditItem(
-                name: 'Patrick Rothfuss',
-                role: 'Creator & Author',
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Published by Cheapass Games under license from '
-                'Crab Fragment Labs.',
-                style: TextStyle(height: 1.5),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Links Section
-          _AboutCard(
-            title: 'Links',
-            children: [
-              _LinkTile(
-                icon: Icons.public,
-                title: 'Crab Fragment Labs',
-                subtitle: 'Official Tak website',
-                onTap: () => _launchUrl('https://crabfragmentlabs.com'),
-              ),
-              const SizedBox(height: 8),
-              _LinkTile(
-                icon: Icons.shopping_bag,
-                title: 'Buy Tak',
-                subtitle: 'Get the physical board game',
-                onTap: () => _launchUrl('https://cheapass.com/tak/'),
-              ),
-              const SizedBox(height: 8),
-              _LinkTile(
-                icon: Icons.book,
-                title: 'The Wise Man\'s Fear',
-                subtitle: 'Patrick Rothfuss\'s novel',
-                onTap: () => _launchUrl('https://www.patrickrothfuss.com/content/books.html'),
               ),
             ],
           ),
@@ -158,18 +107,6 @@ class AboutScreen extends StatelessWidget {
                 title: 'Open Source Licenses',
                 subtitle: 'View third-party licenses',
                 onTap: () => _showLicenses(context),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Tak\u2122 is a trademark of Crab Fragment Labs. '
-                'This app is an unofficial fan project and is not '
-                'affiliated with or endorsed by Crab Fragment Labs, '
-                'Cheapass Games, or Patrick Rothfuss.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  height: 1.5,
-                ),
               ),
             ],
           ),
@@ -221,52 +158,6 @@ class _AboutCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Credit item widget
-class _CreditItem extends StatelessWidget {
-  final String name;
-  final String role;
-
-  const _CreditItem({
-    required this.name,
-    required this.role,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: GameColors.boardFrameInner,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              role,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

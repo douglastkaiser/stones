@@ -1,6 +1,6 @@
 import 'piece.dart';
 
-/// Piece counts based on board size (standard Tak rules)
+/// Piece counts based on board size
 class PieceCounts {
   final int flatStones;
   final int capstones;
