@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,19 +18,38 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Stones - A two-player abstract strategy game">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Stones - A two-player abstract strategy board game based on Tak mechanics">
+
+  <!-- PWA Theme Color -->
+  <meta name="theme-color" content="#795548">
+  <meta name="msapplication-navbutton-color" content="#795548">
+  <meta name="msapplication-TileColor" content="#46505A">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Stones">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- Apple Touch Icons (multiple sizes for different devices) -->
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/Icon-192.png">
+
+  <!-- Apple Splash Screens -->
+  <link rel="apple-touch-startup-image" href="icons/Icon-512.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
 
   <title>Stones</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Prevent phone number detection -->
+  <meta name="format-detection" content="telephone=no">
 
   <script>
     // The value below is injected by flutter build, do not touch.
@@ -38,8 +57,46 @@
   </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
+
+  <style>
+    /* Loading indicator styles */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #46505A;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #795548;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-text {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* Hide loading once app is ready */
+    body.loaded .loading-container {
+      display: none;
+    }
+  </style>
 </head>
 <body>
+  <div class="loading-container">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading Stones...</div>
+  </div>
+
   <script>
     window.addEventListener('load', function(ev) {
       // Download main.dart.js
@@ -50,9 +107,24 @@
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
             appRunner.runApp();
+            // Hide loading indicator once app starts
+            document.body.classList.add('loaded');
           });
         }
       });
+    });
+
+    // Handle PWA install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Store the event for later use
+      deferredPrompt = e;
+    });
+
+    // Track successful installation
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      console.log('Stones PWA was installed');
     });
   </script>
 </body>
