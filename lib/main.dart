@@ -313,8 +313,34 @@ class GameScreen extends ConsumerWidget {
                     child: Container(
                       margin: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: GameColors.boardBackground,
-                        borderRadius: BorderRadius.circular(8),
+                        // Wooden frame gradient
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            GameColors.boardFrameInner,
+                            GameColors.boardFrameOuter,
+                            GameColors.boardFrameInner,
+                          ],
+                          stops: [0.0, 0.5, 1.0],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: GameColors.boardFrameOuter,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(2, 4),
+                          ),
+                          BoxShadow(
+                            color: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                            blurRadius: 2,
+                            offset: const Offset(-1, -1),
+                          ),
+                        ],
                       ),
                       child: _GameBoard(
                         gameState: gameState,
@@ -558,7 +584,7 @@ class _GameInfoBar extends StatelessWidget {
   }
 }
 
-/// The game board grid
+/// The game board grid with wooden inset styling
 class _GameBoard extends StatelessWidget {
   final GameState gameState;
   final UIState uiState;
@@ -574,47 +600,82 @@ class _GameBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dropPath = uiState.getDropPath();
     final nextDropPos = uiState.getCurrentHandPosition();
+    final boardSize = gameState.boardSize;
 
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(8),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: gameState.boardSize,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
-      ),
-      itemCount: gameState.boardSize * gameState.boardSize,
-      itemBuilder: (context, index) {
-        final row = index ~/ gameState.boardSize;
-        final col = index % gameState.boardSize;
-        final pos = Position(row, col);
-        final stack = gameState.board.stackAt(pos);
-        final isSelected = uiState.selectedPosition == pos;
-        final isInDropPath = dropPath.contains(pos);
-        final isNextDrop = nextDropPos == pos;
+    // Calculate responsive spacing based on board size
+    // Larger boards get smaller spacing to fit well
+    final spacing = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
+    final padding = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 8.0 : 6.0);
 
-        return GestureDetector(
-          onTap: () => onCellTap(pos),
-          child: _BoardCell(
-            stack: stack,
-            isSelected: isSelected,
-            isInDropPath: isInDropPath,
-            isNextDrop: isNextDrop,
-            canSelect: !gameState.isGameOver,
+    return Container(
+      // Inner board area with inset shadow effect
+      margin: EdgeInsets.all(padding),
+      decoration: BoxDecoration(
+        color: GameColors.gridLine,
+        borderRadius: BorderRadius.circular(6),
+        // Inset shadow effect for the grid area
+        boxShadow: [
+          // Inner shadow (dark)
+          BoxShadow(
+            color: GameColors.gridLineShadow.withValues(alpha: 0.6),
+            blurRadius: 4,
+            spreadRadius: 1,
+            offset: const Offset(2, 2),
           ),
-        );
-      },
+          // Highlight edge
+          BoxShadow(
+            color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
+            blurRadius: 2,
+            offset: const Offset(-1, -1),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.all(spacing),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: boardSize,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+          ),
+          itemCount: boardSize * boardSize,
+          itemBuilder: (context, index) {
+            final row = index ~/ boardSize;
+            final col = index % boardSize;
+            final pos = Position(row, col);
+            final stack = gameState.board.stackAt(pos);
+            final isSelected = uiState.selectedPosition == pos;
+            final isInDropPath = dropPath.contains(pos);
+            final isNextDrop = nextDropPos == pos;
+
+            return GestureDetector(
+              onTap: () => onCellTap(pos),
+              child: _BoardCell(
+                stack: stack,
+                isSelected: isSelected,
+                isInDropPath: isInDropPath,
+                isNextDrop: isNextDrop,
+                canSelect: !gameState.isGameOver,
+                boardSize: boardSize,
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
 
-/// A single cell on the board
+/// A single cell on the board with wooden style and glow effects
 class _BoardCell extends StatelessWidget {
   final PieceStack stack;
   final bool isSelected;
   final bool isInDropPath;
   final bool isNextDrop;
   final bool canSelect;
+  final int boardSize;
 
   const _BoardCell({
     required this.stack,
@@ -622,33 +683,117 @@ class _BoardCell extends StatelessWidget {
     this.isInDropPath = false,
     this.isNextDrop = false,
     required this.canSelect,
+    required this.boardSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    Color bgColor;
-    Border? border;
+    // Calculate responsive border radius based on board size
+    final borderRadius = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
+    final borderWidth = boardSize <= 4 ? 2.5 : (boardSize <= 6 ? 2.0 : 1.5);
+
+    // Build decoration based on state
+    BoxDecoration decoration;
 
     if (isSelected) {
-      bgColor = GameColors.cellSelected;
-      border = Border.all(color: GameColors.cellSelectedBorder, width: 3);
+      decoration = BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            GameColors.cellSelected,
+            GameColors.cellSelectedGlow,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: GameColors.cellSelectedBorder, width: borderWidth),
+        boxShadow: [
+          // Glow effect
+          BoxShadow(
+            color: GameColors.cellSelectedGlow.withValues(alpha: 0.6),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+          // Inner highlight
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.3),
+            blurRadius: 2,
+            offset: const Offset(-1, -1),
+          ),
+        ],
+      );
     } else if (isNextDrop) {
-      bgColor = GameColors.cellNextDrop;
-      border = Border.all(color: GameColors.cellNextDropBorder, width: 2);
+      decoration = BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            GameColors.cellNextDrop,
+            GameColors.cellNextDropGlow,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: GameColors.cellNextDropBorder, width: borderWidth),
+        boxShadow: [
+          BoxShadow(
+            color: GameColors.cellNextDropGlow.withValues(alpha: 0.5),
+            blurRadius: 6,
+            spreadRadius: 0,
+          ),
+        ],
+      );
     } else if (isInDropPath) {
-      bgColor = GameColors.cellDropPath;
-      border = Border.all(color: GameColors.cellDropPathBorder, width: 2);
+      decoration = BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            GameColors.cellDropPath,
+            GameColors.cellDropPathGlow,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: GameColors.cellDropPathBorder, width: borderWidth * 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: GameColors.cellDropPathGlow.withValues(alpha: 0.4),
+            blurRadius: 4,
+            spreadRadius: 0,
+          ),
+        ],
+      );
     } else {
-      bgColor = GameColors.cellBackground;
-      border = null;
+      // Default wood-grain cell look
+      decoration = BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            GameColors.cellBackgroundLight,
+            GameColors.cellBackground,
+            GameColors.cellBackgroundDark,
+          ],
+          stops: [0.0, 0.4, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        // Subtle inset effect
+        boxShadow: [
+          BoxShadow(
+            color: GameColors.gridLineShadow.withValues(alpha: 0.3),
+            blurRadius: 1,
+            offset: const Offset(1, 1),
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.5),
+            blurRadius: 1,
+            offset: const Offset(-0.5, -0.5),
+          ),
+        ],
+      );
     }
 
     return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
-        border: border,
-      ),
+      decoration: decoration,
       child: Center(
         child: _buildStackDisplay(stack),
       ),
@@ -661,41 +806,127 @@ class _BoardCell extends StatelessWidget {
     final top = stack.topPiece!;
     final isLightPlayer = top.color == PlayerColor.white;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final height = stack.height;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellSize = constraints.maxWidth;
         final pieceSize = cellSize * 0.7;
 
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Stack height indicator
-            if (stack.height > 1)
-              Positioned(
-                bottom: 2,
-                right: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: GameColors.stackBadge,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${stack.height}',
-                    style: const TextStyle(
-                      color: GameColors.stackBadgeText,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            // Piece display
-            _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer),
-          ],
-        );
+        // For stacks, show depth visualization
+        if (height > 1) {
+          return _buildStackWithDepth(stack, cellSize, pieceSize, pieceColors, isLightPlayer);
+        }
+
+        // Single piece - just show it centered
+        return _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer);
       },
+    );
+  }
+
+  /// Build a stack visualization showing actual pieces stacked with depth
+  Widget _buildStackWithDepth(
+    PieceStack stack,
+    double cellSize,
+    double pieceSize,
+    PieceColors topColors,
+    bool isLightPlayer,
+  ) {
+    final height = stack.height;
+
+    // Calculate responsive values based on board size
+    // Vertical offset between pieces to show stacking
+    final verticalOffset = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.5 : 3.0);
+    final badgeFontSize = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 9.0 : 8.0);
+    final badgePadding = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.0 : 2.5);
+
+    // Show up to 3 pieces visually, use badge for taller stacks
+    const maxVisiblePieces = 3;
+    final visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
+
+    // Get the pieces to display (top N pieces of the stack)
+    // pieces[0] is bottom, pieces[height-1] is top
+    final startIndex = height - visibleCount;
+
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        // Render pieces from bottom to top
+        // Bottom pieces are rendered first (lower in visual stack)
+        for (int i = 0; i < visibleCount; i++)
+          Transform.translate(
+            // Each piece moves up as we go higher in the stack
+            // i=0 is the lowest visible piece, i=visibleCount-1 is the top
+            offset: Offset(0, (visibleCount - 1 - i) * verticalOffset),
+            child: _buildStackPiece(
+              stack.pieces[startIndex + i],
+              pieceSize,
+              // Fade lower pieces slightly
+              i < visibleCount - 1 ? 0.7 + (0.1 * i) : 1.0,
+            ),
+          ),
+
+        // Stack height badge (always show for stacks > 1)
+        Positioned(
+          bottom: 1,
+          right: 1,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: badgePadding,
+              vertical: badgePadding * 0.5,
+            ),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF6D4C41),
+                  GameColors.stackBadge,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(badgePadding),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 0.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 2,
+                  offset: const Offset(0.5, 0.5),
+                ),
+              ],
+            ),
+            child: Text(
+              '$height',
+              style: TextStyle(
+                color: GameColors.stackBadgeText,
+                fontSize: badgeFontSize,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    blurRadius: 1,
+                    offset: const Offset(0.5, 0.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build a single piece in a stack with optional opacity
+  Widget _buildStackPiece(Piece piece, double pieceSize, double opacity) {
+    final isLightPlayer = piece.color == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
+
+    return Opacity(
+      opacity: opacity,
+      child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
     );
   }
 
