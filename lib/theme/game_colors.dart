@@ -93,6 +93,15 @@ class GameColors {
   /// Last move highlight glow
   static const Color lastMoveGlow = Color(0xFFB39DDB);
 
+  /// Legal move hint background (soft cyan/teal)
+  static const Color cellLegalMove = Color(0xFFB2EBF2);
+
+  /// Legal move hint glow
+  static const Color cellLegalMoveGlow = Color(0xFF80DEEA);
+
+  /// Legal move hint border
+  static const Color cellLegalMoveBorder = Color(0xFF26C6DA);
+
   // ==========================================================================
   // UI Colors
   // ==========================================================================
