@@ -841,7 +841,7 @@ class _BoardCell extends StatelessWidget {
     final badgePadding = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.0 : 2.5);
 
     // Show up to 3 pieces visually, use badge for taller stacks
-    final maxVisiblePieces = 3;
+    const maxVisiblePieces = 3;
     final visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
 
     // Get the pieces to display (top N pieces of the stack)
