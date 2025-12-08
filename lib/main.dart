@@ -274,14 +274,35 @@ final uiStateProvider = StateNotifierProvider<UIStateNotifier, UIState>((ref) {
 });
 
 /// Main game screen
-class GameScreen extends ConsumerWidget {
+class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends ConsumerState<GameScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Set up road win callback
+    ref.read(gameStateProvider.notifier).onRoadWin = (roadPositions, winner) {
+      ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
+    };
+  }
+
+  @override
+  void dispose() {
+    ref.read(gameStateProvider.notifier).onRoadWin = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final gameState = ref.watch(gameStateProvider);
     final uiState = ref.watch(uiStateProvider);
     final isGameOver = ref.watch(isGameOverProvider);
+    final animationState = ref.watch(animationStateProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -345,6 +366,7 @@ class GameScreen extends ConsumerWidget {
                       child: _GameBoard(
                         gameState: gameState,
                         uiState: uiState,
+                        animationState: animationState,
                         onCellTap: (pos) => _handleCellTap(context, ref, pos),
                       ),
                     ),
@@ -430,7 +452,13 @@ class GameScreen extends ConsumerWidget {
     final pos = uiState.selectedPosition;
     if (pos == null) return;
 
-    ref.read(gameStateProvider.notifier).placePiece(pos, type);
+    final gameState = ref.read(gameStateProvider);
+    final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
+
+    final success = ref.read(gameStateProvider.notifier).placePiece(pos, type);
+    if (success) {
+      ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
+    }
     ref.read(uiStateProvider.notifier).reset();
   }
 
@@ -450,7 +478,33 @@ class GameScreen extends ConsumerWidget {
 
     if (pos == null || dir == null || drops.isEmpty) return;
 
-    ref.read(gameStateProvider.notifier).moveStack(pos, dir, drops);
+    // Calculate drop positions for animation
+    final dropPositions = <Position>[];
+    var currentPos = pos;
+    for (var i = 0; i < drops.length; i++) {
+      currentPos = dir.apply(currentPos);
+      dropPositions.add(currentPos);
+    }
+
+    // Check for wall flattening before the move
+    final gameState = ref.read(gameStateProvider);
+    final stack = gameState.board.stackAt(pos);
+    final topPiece = stack.topPiece;
+    Position? flattenedWallPos;
+    if (topPiece != null && topPiece.canFlattenWalls && dropPositions.isNotEmpty) {
+      final targetStack = gameState.board.stackAt(dropPositions.last);
+      if (targetStack.topPiece?.type == PieceType.standing) {
+        flattenedWallPos = dropPositions.last;
+      }
+    }
+
+    final success = ref.read(gameStateProvider.notifier).moveStack(pos, dir, drops);
+    if (success) {
+      ref.read(animationStateProvider.notifier).stackMoved(pos, dir, drops, dropPositions);
+      if (flattenedWallPos != null) {
+        ref.read(animationStateProvider.notifier).wallFlattened(flattenedWallPos);
+      }
+    }
     ref.read(uiStateProvider.notifier).reset();
   }
 
@@ -473,6 +527,7 @@ class GameScreen extends ConsumerWidget {
                     onPressed: () {
                       ref.read(gameStateProvider.notifier).newGame(size);
                       ref.read(uiStateProvider.notifier).reset();
+                      ref.read(animationStateProvider.notifier).reset();
                       Navigator.pop(context);
                     },
                     child: Text('${size}x$size'),
@@ -588,11 +643,13 @@ class _GameInfoBar extends StatelessWidget {
 class _GameBoard extends StatelessWidget {
   final GameState gameState;
   final UIState uiState;
+  final AnimationState animationState;
   final Function(Position) onCellTap;
 
   const _GameBoard({
     required this.gameState,
     required this.uiState,
+    required this.animationState,
     required this.onCellTap,
   });
 
@@ -650,15 +707,37 @@ class _GameBoard extends StatelessWidget {
             final isInDropPath = dropPath.contains(pos);
             final isNextDrop = nextDropPos == pos;
 
+            // Check for animation events on this position
+            final lastEvent = animationState.lastEvent;
+            final isNewlyPlaced = lastEvent is PiecePlacedEvent && lastEvent.position == pos;
+            final isInWinningRoad = animationState.winningRoad?.contains(pos) ?? false;
+
+            // Check if this cell received pieces from a stack move
+            bool isStackDropTarget = false;
+            if (lastEvent is StackMovedEvent) {
+              isStackDropTarget = lastEvent.dropPositions.contains(pos);
+            }
+
+            // Check for wall flattening
+            bool wasWallFlattened = false;
+            if (lastEvent is WallFlattenedEvent && lastEvent.position == pos) {
+              wasWallFlattened = true;
+            }
+
             return GestureDetector(
               onTap: () => onCellTap(pos),
               child: _BoardCell(
+                key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${lastEvent?.timestamp.millisecondsSinceEpoch ?? 0}'),
                 stack: stack,
                 isSelected: isSelected,
                 isInDropPath: isInDropPath,
                 isNextDrop: isNextDrop,
                 canSelect: !gameState.isGameOver,
                 boardSize: boardSize,
+                isNewlyPlaced: isNewlyPlaced,
+                isInWinningRoad: isInWinningRoad,
+                isStackDropTarget: isStackDropTarget,
+                wasWallFlattened: wasWallFlattened,
               ),
             );
           },
@@ -669,33 +748,164 @@ class _GameBoard extends StatelessWidget {
 }
 
 /// A single cell on the board with wooden style and glow effects
-class _BoardCell extends StatelessWidget {
+class _BoardCell extends StatefulWidget {
   final PieceStack stack;
   final bool isSelected;
   final bool isInDropPath;
   final bool isNextDrop;
   final bool canSelect;
   final int boardSize;
+  final bool isNewlyPlaced;
+  final bool isInWinningRoad;
+  final bool isStackDropTarget;
+  final bool wasWallFlattened;
 
   const _BoardCell({
+    super.key,
     required this.stack,
     required this.isSelected,
     this.isInDropPath = false,
     this.isNextDrop = false,
     required this.canSelect,
     required this.boardSize,
+    this.isNewlyPlaced = false,
+    this.isInWinningRoad = false,
+    this.isStackDropTarget = false,
+    this.wasWallFlattened = false,
   });
+
+  @override
+  State<_BoardCell> createState() => _BoardCellState();
+}
+
+class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
+  // Animation controllers
+  late AnimationController _placementController;
+  late AnimationController _slideController;
+  late AnimationController _flattenController;
+  late AnimationController _winPulseController;
+
+  // Animations
+  late Animation<double> _placementScale;
+  late Animation<double> _slideScale;
+  late Animation<double> _flattenScale;
+  late Animation<double> _winPulse;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Placement animation: scale with bounce (200ms)
+    _placementController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _placementScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _placementController,
+        curve: Curves.elasticOut,
+      ),
+    );
+
+    // Slide animation: scale in from direction (150ms)
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _slideScale = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    // Flatten animation: quick squash (150ms)
+    _flattenController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _flattenScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.6), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(
+      parent: _flattenController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Win pulse animation: continuous glow (800ms loop)
+    _winPulseController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _winPulse = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _winPulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Start animations based on initial state
+    if (widget.isNewlyPlaced) {
+      _placementController.forward();
+    }
+    if (widget.isStackDropTarget) {
+      _slideController.forward();
+    }
+    if (widget.wasWallFlattened) {
+      _flattenController.forward();
+    }
+    if (widget.isInWinningRoad) {
+      _winPulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_BoardCell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Trigger placement animation
+    if (widget.isNewlyPlaced && !oldWidget.isNewlyPlaced) {
+      _placementController.forward(from: 0);
+    }
+
+    // Trigger slide animation
+    if (widget.isStackDropTarget && !oldWidget.isStackDropTarget) {
+      _slideController.forward(from: 0);
+    }
+
+    // Trigger flatten animation
+    if (widget.wasWallFlattened && !oldWidget.wasWallFlattened) {
+      _flattenController.forward(from: 0);
+    }
+
+    // Start/stop win pulse
+    if (widget.isInWinningRoad && !oldWidget.isInWinningRoad) {
+      _winPulseController.repeat(reverse: true);
+    } else if (!widget.isInWinningRoad && oldWidget.isInWinningRoad) {
+      _winPulseController.stop();
+      _winPulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _placementController.dispose();
+    _slideController.dispose();
+    _flattenController.dispose();
+    _winPulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     // Calculate responsive border radius based on board size
-    final borderRadius = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
-    final borderWidth = boardSize <= 4 ? 2.5 : (boardSize <= 6 ? 2.0 : 1.5);
+    final borderRadius = widget.boardSize <= 4 ? 6.0 : (widget.boardSize <= 6 ? 5.0 : 4.0);
+    final borderWidth = widget.boardSize <= 4 ? 2.5 : (widget.boardSize <= 6 ? 2.0 : 1.5);
 
     // Build decoration based on state
     BoxDecoration decoration;
 
-    if (isSelected) {
+    if (widget.isSelected) {
       decoration = BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -722,7 +932,7 @@ class _BoardCell extends StatelessWidget {
           ),
         ],
       );
-    } else if (isNextDrop) {
+    } else if (widget.isNextDrop) {
       decoration = BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -742,7 +952,7 @@ class _BoardCell extends StatelessWidget {
           ),
         ],
       );
-    } else if (isInDropPath) {
+    } else if (widget.isInDropPath) {
       decoration = BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -792,12 +1002,38 @@ class _BoardCell extends StatelessWidget {
       );
     }
 
-    return Container(
+    // Add winning road glow effect
+    Widget cellContent = Container(
       decoration: decoration,
       child: Center(
-        child: _buildStackDisplay(stack),
+        child: _buildStackDisplay(widget.stack),
       ),
     );
+
+    // Wrap with win pulse animation if part of winning road
+    if (widget.isInWinningRoad) {
+      cellContent = AnimatedBuilder(
+        animation: _winPulse,
+        builder: (context, child) {
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(borderRadius),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.amber.withValues(alpha: _winPulse.value * 0.8),
+                  blurRadius: 12 * _winPulse.value,
+                  spreadRadius: 2 * _winPulse.value,
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: cellContent,
+      );
+    }
+
+    return cellContent;
   }
 
   Widget _buildStackDisplay(PieceStack stack) {
@@ -813,13 +1049,46 @@ class _BoardCell extends StatelessWidget {
         final cellSize = constraints.maxWidth;
         final pieceSize = cellSize * 0.7;
 
+        Widget content;
         // For stacks, show depth visualization
         if (height > 1) {
-          return _buildStackWithDepth(stack, cellSize, pieceSize, pieceColors, isLightPlayer);
+          content = _buildStackWithDepth(stack, cellSize, pieceSize, pieceColors, isLightPlayer);
+        } else {
+          // Single piece - just show it centered
+          content = _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer);
         }
 
-        // Single piece - just show it centered
-        return _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer);
+        // Apply placement animation (scale with bounce)
+        if (widget.isNewlyPlaced) {
+          content = ScaleTransition(
+            scale: _placementScale,
+            child: content,
+          );
+        }
+
+        // Apply slide animation for stack drops
+        if (widget.isStackDropTarget) {
+          content = ScaleTransition(
+            scale: _slideScale,
+            child: content,
+          );
+        }
+
+        // Apply flatten animation
+        if (widget.wasWallFlattened) {
+          content = AnimatedBuilder(
+            animation: _flattenScale,
+            builder: (context, child) {
+              return Transform.scale(
+                scaleY: _flattenScale.value,
+                child: child,
+              );
+            },
+            child: content,
+          );
+        }
+
+        return content;
       },
     );
   }
@@ -836,9 +1105,9 @@ class _BoardCell extends StatelessWidget {
 
     // Calculate responsive values based on board size
     // Vertical offset between pieces to show stacking
-    final verticalOffset = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.5 : 3.0);
-    final badgeFontSize = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 9.0 : 8.0);
-    final badgePadding = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.0 : 2.5);
+    final verticalOffset = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.5 : 3.0);
+    final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+    final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
     // Show up to 3 pieces visually, use badge for taller stacks
     const maxVisiblePieces = 3;

@@ -8,6 +8,96 @@ final gameStateProvider =
   return GameStateNotifier();
 });
 
+/// Animation event types
+class AnimationEvent {
+  final DateTime timestamp;
+  AnimationEvent() : timestamp = DateTime.now();
+}
+
+/// Event when a piece is placed
+class PiecePlacedEvent extends AnimationEvent {
+  final Position position;
+  final PieceType type;
+  final PlayerColor color;
+  PiecePlacedEvent(this.position, this.type, this.color);
+}
+
+/// Event when a stack is moved
+class StackMovedEvent extends AnimationEvent {
+  final Position from;
+  final Direction direction;
+  final List<int> drops;
+  final List<Position> dropPositions;
+  StackMovedEvent(this.from, this.direction, this.drops, this.dropPositions);
+}
+
+/// Event when a wall is flattened
+class WallFlattenedEvent extends AnimationEvent {
+  final Position position;
+  WallFlattenedEvent(this.position);
+}
+
+/// Event when game is won with a road
+class RoadWinEvent extends AnimationEvent {
+  final Set<Position> roadPositions;
+  final PlayerColor winner;
+  RoadWinEvent(this.roadPositions, this.winner);
+}
+
+/// Animation state tracking
+class AnimationState {
+  final AnimationEvent? lastEvent;
+  final Set<Position>? winningRoad;
+
+  const AnimationState({this.lastEvent, this.winningRoad});
+
+  AnimationState copyWith({
+    AnimationEvent? lastEvent,
+    Set<Position>? winningRoad,
+    bool clearWinningRoad = false,
+  }) {
+    return AnimationState(
+      lastEvent: lastEvent ?? this.lastEvent,
+      winningRoad: clearWinningRoad ? null : (winningRoad ?? this.winningRoad),
+    );
+  }
+
+  static const initial = AnimationState();
+}
+
+/// Animation state notifier
+class AnimationStateNotifier extends StateNotifier<AnimationState> {
+  AnimationStateNotifier() : super(AnimationState.initial);
+
+  void piecePlaced(Position pos, PieceType type, PlayerColor color) {
+    state = state.copyWith(lastEvent: PiecePlacedEvent(pos, type, color));
+  }
+
+  void stackMoved(Position from, Direction dir, List<int> drops, List<Position> dropPositions) {
+    state = state.copyWith(lastEvent: StackMovedEvent(from, dir, drops, dropPositions));
+  }
+
+  void wallFlattened(Position pos) {
+    state = state.copyWith(lastEvent: WallFlattenedEvent(pos));
+  }
+
+  void roadWin(Set<Position> roadPositions, PlayerColor winner) {
+    state = state.copyWith(
+      lastEvent: RoadWinEvent(roadPositions, winner),
+      winningRoad: roadPositions,
+    );
+  }
+
+  void reset() {
+    state = AnimationState.initial;
+  }
+}
+
+/// Provider for animation state
+final animationStateProvider = StateNotifierProvider<AnimationStateNotifier, AnimationState>((ref) {
+  return AnimationStateNotifier();
+});
+
 /// Notifier that manages game state mutations
 class GameStateNotifier extends StateNotifier<GameState> {
   GameStateNotifier() : super(GameState.initial(5)); // Default 5x5
@@ -110,11 +200,15 @@ class GameStateNotifier extends StateNotifier<GameState> {
     return true;
   }
 
+  /// Callback for when a road win is detected (for animations)
+  void Function(Set<Position> roadPositions, PlayerColor winner)? onRoadWin;
+
   /// Check for win conditions (road win or flat win)
   void _checkWinCondition() {
     // Check road win for both players
     for (final color in PlayerColor.values) {
-      if (_hasRoad(color)) {
+      final roadPositions = _findRoad(color);
+      if (roadPositions != null) {
         state = state.copyWith(
           phase: GamePhase.finished,
           result: color == PlayerColor.white
@@ -122,6 +216,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
               : GameResult.blackWins,
           winReason: WinReason.road,
         );
+        onRoadWin?.call(roadPositions, color);
         return;
       }
     }
@@ -165,8 +260,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
   }
 
-  /// Check if a player has a road (connected path edge to edge)
-  bool _hasRoad(PlayerColor color) {
+  /// Find a winning road for a player, returns the positions or null if no road
+  Set<Position>? _findRoad(PlayerColor color) {
     final size = state.boardSize;
 
     // Check horizontal road (left to right)
@@ -179,8 +274,9 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
 
     for (final start in leftEdge) {
-      if (_canReachEdge(start, color, (p) => p.col == size - 1)) {
-        return true;
+      final path = _findPathToEdge(start, color, (p) => p.col == size - 1);
+      if (path != null) {
+        return path;
       }
     }
 
@@ -194,12 +290,13 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
 
     for (final start in topEdge) {
-      if (_canReachEdge(start, color, (p) => p.row == size - 1)) {
-        return true;
+      final path = _findPathToEdge(start, color, (p) => p.row == size - 1);
+      if (path != null) {
+        return path;
       }
     }
 
-    return false;
+    return null;
   }
 
   /// Check if position is controlled by player for road purposes
@@ -211,30 +308,42 @@ class GameStateNotifier extends StateNotifier<GameState> {
     return top.type != PieceType.standing;
   }
 
-  /// BFS to check if we can reach the target edge
-  bool _canReachEdge(
+  /// BFS to find a path to the target edge, returns positions in path or null
+  Set<Position>? _findPathToEdge(
     Position start,
     PlayerColor color,
     bool Function(Position) isTargetEdge,
   ) {
     final visited = <Position>{};
+    final parent = <Position, Position?>{};
     final queue = [start];
+    parent[start] = null;
 
     while (queue.isNotEmpty) {
       final current = queue.removeAt(0);
       if (visited.contains(current)) continue;
       visited.add(current);
 
-      if (isTargetEdge(current)) return true;
+      if (isTargetEdge(current)) {
+        // Reconstruct path
+        final path = <Position>{};
+        Position? pos = current;
+        while (pos != null) {
+          path.add(pos);
+          pos = parent[pos];
+        }
+        return path;
+      }
 
       for (final neighbor in current.adjacentPositions(state.boardSize)) {
         if (!visited.contains(neighbor) && _controlsForRoad(neighbor, color)) {
           queue.add(neighbor);
+          parent[neighbor] ??= current;
         }
       }
     }
 
-    return false;
+    return null;
   }
 }
 
