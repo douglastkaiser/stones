@@ -9,6 +9,7 @@ import 'models/models.dart';
 import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
+import 'screens/main_menu_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: StonesApp()));
@@ -25,7 +26,7 @@ class StonesApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const MainMenuScreen(),
     );
   }
 }
