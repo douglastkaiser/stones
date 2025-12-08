@@ -323,6 +323,8 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
+  bool _showHistory = false;
+
   @override
   void initState() {
     super.initState();
@@ -338,6 +340,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     super.dispose();
   }
 
+  void _undo() {
+    final gameNotifier = ref.read(gameStateProvider.notifier);
+    if (gameNotifier.canUndo) {
+      // Remove from move history
+      ref.read(moveHistoryProvider.notifier).removeLast();
+      // Undo game state
+      gameNotifier.undo();
+      // Reset UI state
+      ref.read(uiStateProvider.notifier).reset();
+      // Update last move highlight
+      final history = ref.read(moveHistoryProvider);
+      if (history.isNotEmpty) {
+        ref.read(lastMoveProvider.notifier).state = history.last.affectedPositions;
+      } else {
+        ref.read(lastMoveProvider.notifier).state = null;
+      }
+      // Reset animation state
+      ref.read(animationStateProvider.notifier).reset();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameStateProvider);
@@ -345,6 +368,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isGameOver = ref.watch(isGameOverProvider);
     final animationState = ref.watch(animationStateProvider);
     final isMuted = ref.watch(isMutedProvider);
+    final moveHistory = ref.watch(moveHistoryProvider);
+    final lastMovePositions = ref.watch(lastMoveProvider);
+    final canUndo = ref.read(gameStateProvider.notifier).canUndo;
 
     return Scaffold(
       appBar: AppBar(
@@ -354,6 +380,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          // Undo button
+          IconButton(
+            icon: Icon(
+              Icons.undo,
+              color: canUndo ? null : Colors.grey.shade400,
+            ),
+            tooltip: canUndo ? 'Undo last move' : 'No moves to undo',
+            onPressed: canUndo ? _undo : null,
+          ),
+          // History toggle button
+          IconButton(
+            icon: Icon(_showHistory ? Icons.history_toggle_off : Icons.history),
+            tooltip: _showHistory ? 'Hide move history' : 'Show move history',
+            onPressed: () => setState(() => _showHistory = !_showHistory),
+          ),
           IconButton(
             icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
             tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
@@ -372,76 +413,92 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ),
       body: Stack(
         children: [
-          Column(
+          Row(
             children: [
-              // Game info bar
-              _GameInfoBar(gameState: gameState),
-
-              // Board
+              // Main game area
               Expanded(
-                child: Center(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Container(
-                      margin: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        // Wooden frame gradient
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            GameColors.boardFrameInner,
-                            GameColors.boardFrameOuter,
-                            GameColors.boardFrameInner,
-                          ],
-                          stops: [0.0, 0.5, 1.0],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: GameColors.boardFrameOuter,
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(2, 4),
+                child: Column(
+                  children: [
+                    // Game info bar
+                    _GameInfoBar(gameState: gameState),
+
+                    // Board
+                    Expanded(
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            margin: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              // Wooden frame gradient
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  GameColors.boardFrameInner,
+                                  GameColors.boardFrameOuter,
+                                  GameColors.boardFrameInner,
+                                ],
+                                stops: [0.0, 0.5, 1.0],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: GameColors.boardFrameOuter,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(2, 4),
+                                ),
+                                BoxShadow(
+                                  color: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                                  blurRadius: 2,
+                                  offset: const Offset(-1, -1),
+                                ),
+                              ],
+                            ),
+                            child: _GameBoard(
+                              gameState: gameState,
+                              uiState: uiState,
+                              animationState: animationState,
+                              lastMovePositions: lastMovePositions,
+                              onCellTap: (pos) => _handleCellTap(context, ref, pos),
+                            ),
                           ),
-                          BoxShadow(
-                            color: GameColors.boardFrameInner.withValues(alpha: 0.5),
-                            blurRadius: 2,
-                            offset: const Offset(-1, -1),
-                          ),
-                        ],
-                      ),
-                      child: _GameBoard(
-                        gameState: gameState,
-                        uiState: uiState,
-                        animationState: animationState,
-                        onCellTap: (pos) => _handleCellTap(context, ref, pos),
+                        ),
                       ),
                     ),
-                  ),
+
+                    // Bottom controls
+                    _BottomControls(
+                      gameState: gameState,
+                      uiState: uiState,
+                      onPieceSelected: (type) => _placePiece(ref, type),
+                      onDirectionSelected: (dir) => _selectDirection(ref, dir),
+                      onDropSelected: (count) => _addDrop(ref, count),
+                      onPieceCountChanged: (count) => ref.read(uiStateProvider.notifier).setPiecesPickedUp(count),
+                      onConfirmMove: () => _confirmMove(ref),
+                      onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+                    ),
+
+                    // Piece counts
+                    _PieceCountsBar(gameState: gameState),
+
+                    // Version footer
+                    const VersionFooter(),
+                  ],
                 ),
               ),
 
-              // Bottom controls
-              _BottomControls(
-                gameState: gameState,
-                uiState: uiState,
-                onPieceSelected: (type) => _placePiece(ref, type),
-                onDirectionSelected: (dir) => _selectDirection(ref, dir),
-                onDropSelected: (count) => _addDrop(ref, count),
-                onPieceCountChanged: (count) => ref.read(uiStateProvider.notifier).setPiecesPickedUp(count),
-                onConfirmMove: () => _confirmMove(ref),
-                onCancel: () => ref.read(uiStateProvider.notifier).reset(),
-              ),
-
-              // Piece counts
-              _PieceCountsBar(gameState: gameState),
-
-              // Version footer
-              const VersionFooter(),
+              // Move history panel (collapsible sidebar)
+              if (_showHistory)
+                _MoveHistoryPanel(
+                  moveHistory: moveHistory,
+                  boardSize: gameState.boardSize,
+                  onClose: () => setState(() => _showHistory = false),
+                ),
             ],
           ),
 
@@ -506,9 +563,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.read(gameStateProvider);
     final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
     final soundManager = ref.read(soundManagerProvider);
+    final gameNotifier = ref.read(gameStateProvider.notifier);
 
-    final success = ref.read(gameStateProvider.notifier).placePiece(pos, type);
+    final success = gameNotifier.placePiece(pos, type);
     if (success) {
+      // Record move in history
+      final moveRecord = gameNotifier.lastMoveRecord;
+      if (moveRecord != null) {
+        ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
+        ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+      }
+
       ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
       soundManager.playPiecePlace();
       // Check if this move caused a win
@@ -558,8 +623,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     final soundManager = ref.read(soundManagerProvider);
-    final success = ref.read(gameStateProvider.notifier).moveStack(pos, dir, drops);
+    final gameNotifier = ref.read(gameStateProvider.notifier);
+    final success = gameNotifier.moveStack(pos, dir, drops);
     if (success) {
+      // Record move in history
+      final moveRecord = gameNotifier.lastMoveRecord;
+      if (moveRecord != null) {
+        ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
+        ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+      }
+
       ref.read(animationStateProvider.notifier).stackMoved(pos, dir, drops, dropPositions);
       if (flattenedWallPos != null) {
         ref.read(animationStateProvider.notifier).wallFlattened(flattenedWallPos);
@@ -597,6 +670,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       ref.read(gameStateProvider.notifier).newGame(size);
                       ref.read(uiStateProvider.notifier).reset();
                       ref.read(animationStateProvider.notifier).reset();
+                      ref.read(moveHistoryProvider.notifier).clear();
+                      ref.read(lastMoveProvider.notifier).state = null;
                       Navigator.pop(context);
                     },
                     child: Text('${size}x$size'),
@@ -713,6 +788,7 @@ class _GameBoard extends StatelessWidget {
   final GameState gameState;
   final UIState uiState;
   final AnimationState animationState;
+  final Set<Position>? lastMovePositions;
   final Function(Position) onCellTap;
 
   const _GameBoard({
@@ -720,6 +796,7 @@ class _GameBoard extends StatelessWidget {
     required this.uiState,
     required this.animationState,
     required this.onCellTap,
+    this.lastMovePositions,
   });
 
   @override
@@ -793,6 +870,9 @@ class _GameBoard extends StatelessWidget {
               wasWallFlattened = true;
             }
 
+            // Check if this is part of the last move
+            final isLastMove = lastMovePositions?.contains(pos) ?? false;
+
             return GestureDetector(
               onTap: () => onCellTap(pos),
               child: _BoardCell(
@@ -807,6 +887,7 @@ class _GameBoard extends StatelessWidget {
                 isInWinningRoad: isInWinningRoad,
                 isStackDropTarget: isStackDropTarget,
                 wasWallFlattened: wasWallFlattened,
+                isLastMove: isLastMove,
               ),
             );
           },
@@ -828,6 +909,7 @@ class _BoardCell extends StatefulWidget {
   final bool isInWinningRoad;
   final bool isStackDropTarget;
   final bool wasWallFlattened;
+  final bool isLastMove;
 
   const _BoardCell({
     super.key,
@@ -841,6 +923,7 @@ class _BoardCell extends StatefulWidget {
     this.isInWinningRoad = false,
     this.isStackDropTarget = false,
     this.wasWallFlattened = false,
+    this.isLastMove = false,
   });
 
   @override
@@ -1098,6 +1181,28 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: child,
           );
         },
+        child: cellContent,
+      );
+    }
+
+    // Add last move highlighting (subtle outline)
+    // Only show if not already highlighted by another state
+    if (widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad) {
+      cellContent = Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: GameColors.lastMoveBorder,
+            width: borderWidth * 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: GameColors.lastMoveGlow.withValues(alpha: 0.3),
+              blurRadius: 4,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         child: cellContent,
       );
     }
@@ -1996,6 +2101,171 @@ class _PlayerPieceCounts extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Move history panel - collapsible sidebar showing moves in Tak notation
+class _MoveHistoryPanel extends StatelessWidget {
+  final List<MoveRecord> moveHistory;
+  final int boardSize;
+  final VoidCallback onClose;
+
+  const _MoveHistoryPanel({
+    required this.moveHistory,
+    required this.boardSize,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 200,
+      decoration: BoxDecoration(
+        color: GameColors.controlPanelBg,
+        border: const Border(
+          left: BorderSide(color: GameColors.controlPanelBorder, width: 2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(-2, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: const BoxDecoration(
+              color: GameColors.boardFrameInner,
+              border: Border(
+                bottom: BorderSide(color: GameColors.controlPanelBorder),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Move History',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                  onPressed: onClose,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                ),
+              ],
+            ),
+          ),
+
+          // Move list
+          Expanded(
+            child: moveHistory.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No moves yet',
+                      style: TextStyle(
+                        color: GameColors.subtitleColor,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: (moveHistory.length + 1) ~/ 2, // Number of turn pairs
+                    itemBuilder: (context, turnIndex) {
+                      return _buildTurnRow(turnIndex);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTurnRow(int turnIndex) {
+    // Each turn has white's move and potentially black's move
+    final whiteIndex = turnIndex * 2;
+    final blackIndex = whiteIndex + 1;
+
+    final hasWhiteMove = whiteIndex < moveHistory.length;
+    final hasBlackMove = blackIndex < moveHistory.length;
+
+    final turnNumber = turnIndex + 1;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Row(
+        children: [
+          // Turn number
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$turnNumber.',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: GameColors.subtitleColor,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          // White's move
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: hasWhiteMove ? GameColors.lightPiece.withValues(alpha: 0.5) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+                border: hasWhiteMove
+                    ? Border.all(color: GameColors.lightPieceBorder.withValues(alpha: 0.3))
+                    : null,
+              ),
+              child: Text(
+                hasWhiteMove ? moveHistory[whiteIndex].notation : '',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: hasWhiteMove ? Colors.black87 : Colors.transparent,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // Black's move
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: hasBlackMove ? GameColors.darkPiece.withValues(alpha: 0.3) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+                border: hasBlackMove
+                    ? Border.all(color: GameColors.darkPieceBorder.withValues(alpha: 0.3))
+                    : null,
+              ),
+              child: Text(
+                hasBlackMove ? moveHistory[blackIndex].notation : '',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: hasBlackMove ? Colors.white : Colors.transparent,
+                ),
+              ),
+            ),
           ),
         ],
       ),

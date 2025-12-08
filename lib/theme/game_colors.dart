@@ -87,6 +87,12 @@ class GameColors {
   /// Cell border for next drop position
   static const Color cellNextDropBorder = Color(0xFF66BB6A);
 
+  /// Last move highlight border (subtle purple/violet)
+  static const Color lastMoveBorder = Color(0xFF9575CD);
+
+  /// Last move highlight glow
+  static const Color lastMoveGlow = Color(0xFFB39DDB);
+
   // ==========================================================================
   // UI Colors
   // ==========================================================================

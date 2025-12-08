@@ -8,6 +8,104 @@ final gameStateProvider =
   return GameStateNotifier();
 });
 
+// =============================================================================
+// Move History & Notation
+// =============================================================================
+
+/// A record of a single move with Tak notation
+class MoveRecord {
+  final String notation;
+  final PlayerColor player;
+  final int turnNumber;
+  final Set<Position> affectedPositions;
+  final GameState stateBefore;
+
+  const MoveRecord({
+    required this.notation,
+    required this.player,
+    required this.turnNumber,
+    required this.affectedPositions,
+    required this.stateBefore,
+  });
+}
+
+/// Convert a position to Tak notation (e.g., Position(0, 0) -> "a1")
+String positionToNotation(Position pos, int boardSize) {
+  final col = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
+  final row = (boardSize - pos.row).toString();
+  return '$col$row';
+}
+
+/// Convert direction to Tak notation symbol
+String directionToNotation(Direction dir) {
+  return switch (dir) {
+    Direction.up => '+',
+    Direction.down => '-',
+    Direction.left => '<',
+    Direction.right => '>',
+  };
+}
+
+/// Generate Tak notation for a placement move
+String placementNotation(Position pos, PieceType type, int boardSize) {
+  final posStr = positionToNotation(pos, boardSize);
+  return switch (type) {
+    PieceType.flat => posStr,
+    PieceType.standing => 'S$posStr',
+    PieceType.capstone => 'C$posStr',
+  };
+}
+
+/// Generate Tak notation for a stack move
+String stackMoveNotation(
+  Position from,
+  Direction direction,
+  List<int> drops,
+  int totalPicked,
+  int boardSize,
+) {
+  final posStr = positionToNotation(from, boardSize);
+  final dirStr = directionToNotation(direction);
+
+  // If picking up just 1 piece, omit the count prefix
+  final countPrefix = totalPicked > 1 ? totalPicked.toString() : '';
+
+  // If all pieces are dropped at once (single drop), omit the drop sequence
+  final dropSequence = drops.length == 1 ? '' : drops.join('');
+
+  return '$countPrefix$posStr$dirStr$dropSequence';
+}
+
+/// Provider for move history
+final moveHistoryProvider = StateNotifierProvider<MoveHistoryNotifier, List<MoveRecord>>((ref) {
+  return MoveHistoryNotifier();
+});
+
+/// Notifier for move history
+class MoveHistoryNotifier extends StateNotifier<List<MoveRecord>> {
+  MoveHistoryNotifier() : super([]);
+
+  void addMove(MoveRecord move) {
+    state = [...state, move];
+  }
+
+  MoveRecord? removeLast() {
+    if (state.isEmpty) return null;
+    final last = state.last;
+    state = state.sublist(0, state.length - 1);
+    return last;
+  }
+
+  void clear() {
+    state = [];
+  }
+
+  bool get canUndo => state.isNotEmpty;
+}
+
+/// Provider to track last move for highlighting
+final lastMoveProvider = StateProvider<Set<Position>?>((ref) => null);
+
 /// Animation event types
 class AnimationEvent {
   final DateTime timestamp;
@@ -102,9 +200,50 @@ final animationStateProvider = StateNotifierProvider<AnimationStateNotifier, Ani
 class GameStateNotifier extends StateNotifier<GameState> {
   GameStateNotifier() : super(GameState.initial(5)); // Default 5x5
 
+  /// History of game states for undo functionality (stores state before each move)
+  final List<GameState> _history = [];
+
+  /// Maximum history depth (unlimited by default, can be set to limit memory)
+  int maxHistoryDepth = -1; // -1 = unlimited
+
+  /// Callback for when history changes (for undo button state)
+  void Function(bool canUndo)? onHistoryChanged;
+
+  /// Information about the last move for history tracking
+  MoveRecord? _lastMoveRecord;
+  MoveRecord? get lastMoveRecord => _lastMoveRecord;
+
+  /// Check if undo is available
+  bool get canUndo => _history.isNotEmpty;
+
   /// Start a new game with the given board size
   void newGame(int boardSize) {
+    _history.clear();
+    _lastMoveRecord = null;
     state = GameState.initial(boardSize);
+    onHistoryChanged?.call(false);
+  }
+
+  /// Undo the last move
+  bool undo() {
+    if (_history.isEmpty) return false;
+
+    state = _history.removeLast();
+    _lastMoveRecord = null;
+    onHistoryChanged?.call(_history.isNotEmpty);
+    return true;
+  }
+
+  /// Save current state to history before making a move
+  void _saveToHistory() {
+    _history.add(state);
+
+    // Limit history depth if configured
+    if (maxHistoryDepth > 0 && _history.length > maxHistoryDepth) {
+      _history.removeAt(0);
+    }
+
+    onHistoryChanged?.call(true);
   }
 
   /// Place a piece at the given position
@@ -116,9 +255,17 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final stack = state.board.stackAt(pos);
     if (!stack.canPlaceOn) return false;
 
+    // Save state before making the move
+    final stateBefore = state;
+    _saveToHistory();
+
     // During opening phase, can only place flat stones of opponent's color
     if (state.isOpeningPhase) {
-      if (type != PieceType.flat) return false;
+      if (type != PieceType.flat) {
+        _history.removeLast(); // Rollback history save
+        onHistoryChanged?.call(_history.isNotEmpty);
+        return false;
+      }
 
       final opponentColor = state.opponent;
       final piece = Piece(type: PieceType.flat, color: opponentColor);
@@ -127,6 +274,16 @@ class GameStateNotifier extends StateNotifier<GameState> {
       // Deduct from opponent's pieces
       final opponentPieces = state.piecesFor(opponentColor);
       final newOpponentPieces = opponentPieces.usePiece(PieceType.flat);
+
+      // Record move notation
+      final notation = placementNotation(pos, type, state.boardSize);
+      _lastMoveRecord = MoveRecord(
+        notation: notation,
+        player: state.currentPlayer,
+        turnNumber: state.turnNumber,
+        affectedPositions: {pos},
+        stateBefore: stateBefore,
+      );
 
       state = state
           .copyWith(board: newBoard)
@@ -138,11 +295,25 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
     // Normal placement
     final playerPieces = state.currentPlayerPieces;
-    if (!playerPieces.hasPiece(type)) return false;
+    if (!playerPieces.hasPiece(type)) {
+      _history.removeLast(); // Rollback history save
+      onHistoryChanged?.call(_history.isNotEmpty);
+      return false;
+    }
 
     final piece = Piece(type: type, color: state.currentPlayer);
     final newBoard = state.board.placePiece(pos, piece);
     final newPieces = playerPieces.usePiece(type);
+
+    // Record move notation
+    final notation = placementNotation(pos, type, state.boardSize);
+    _lastMoveRecord = MoveRecord(
+      notation: notation,
+      player: state.currentPlayer,
+      turnNumber: state.turnNumber,
+      affectedPositions: {pos},
+      stateBefore: stateBefore,
+    );
 
     state = state
         .copyWith(board: newBoard)
@@ -167,7 +338,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
     if (totalPicked > stack.height) return false;
     if (totalPicked > state.boardSize) return false; // Carry limit
 
-    // Validate the move path
+    // Save state before making the move
+    final stateBefore = state;
+    _saveToHistory();
+
+    // Validate the move path and collect affected positions
+    final affectedPositions = <Position>{from};
     var currentPos = from;
     final (remaining, pickedUp) = stack.pop(totalPicked);
     var board = state.board.setStack(from, remaining);
@@ -175,13 +351,22 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
     for (final dropCount in drops) {
       currentPos = direction.apply(currentPos);
+      affectedPositions.add(currentPos);
 
-      if (!board.isValidPosition(currentPos)) return false;
+      if (!board.isValidPosition(currentPos)) {
+        _history.removeLast(); // Rollback history save
+        onHistoryChanged?.call(_history.isNotEmpty);
+        return false;
+      }
 
       var targetStack = board.stackAt(currentPos);
       final movingPiece = pickedUp[pieceIndex];
 
-      if (!targetStack.canMoveOnto(movingPiece)) return false;
+      if (!targetStack.canMoveOnto(movingPiece)) {
+        _history.removeLast(); // Rollback history save
+        onHistoryChanged?.call(_history.isNotEmpty);
+        return false;
+      }
 
       // If capstone flattening a wall
       if (targetStack.topPiece?.type == PieceType.standing &&
@@ -194,6 +379,16 @@ class GameStateNotifier extends StateNotifier<GameState> {
       board = board.setStack(currentPos, targetStack.pushAll(piecesToDrop));
       pieceIndex += dropCount;
     }
+
+    // Record move notation
+    final notation = stackMoveNotation(from, direction, drops, totalPicked, state.boardSize);
+    _lastMoveRecord = MoveRecord(
+      notation: notation,
+      player: state.currentPlayer,
+      turnNumber: state.turnNumber,
+      affectedPositions: affectedPositions,
+      stateBefore: stateBefore,
+    );
 
     state = state.copyWith(board: board).nextTurn();
     _checkWinCondition();
