@@ -171,13 +171,7 @@ class _BoardSizeButton extends ConsumerWidget {
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         ),
-        onPressed: () {
-          ref.read(gameStateProvider.notifier).newGame(size);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const GameScreen()),
-          );
-        },
+        onPressed: () => _startNewGame(context, ref),
         child: Column(
           children: [
             Text(
@@ -198,6 +192,56 @@ class _BoardSizeButton extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _startNewGame(BuildContext context, WidgetRef ref) {
+    final gameState = ref.read(gameStateProvider);
+    final isGameInProgress = !gameState.isGameOver &&
+        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+
+    if (isGameInProgress) {
+      // Show confirmation dialog
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Start New Game?'),
+          content: const Text(
+            'You have a game in progress. Starting a new game will discard your current game.\n\nAre you sure you want to continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _doStartNewGame(context, ref);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start New Game'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _doStartNewGame(context, ref);
+    }
+  }
+
+  void _doStartNewGame(BuildContext context, WidgetRef ref) {
+    ref.read(gameStateProvider.notifier).newGame(size);
+    ref.read(uiStateProvider.notifier).reset();
+    ref.read(animationStateProvider.notifier).reset();
+    ref.read(moveHistoryProvider.notifier).clear();
+    ref.read(lastMoveProvider.notifier).state = null;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const GameScreen()),
     );
   }
 }
@@ -249,6 +293,46 @@ class UIState {
       pos = selectedDirection!.apply(pos);
     }
     return selectedDirection!.apply(pos);
+  }
+
+  /// Get all valid destination cells when selecting move direction
+  /// Returns a set of positions that can be reached in each direction
+  Set<Position> getValidMoveDestinations(GameState gameState) {
+    if (selectedPosition == null) return {};
+    if (mode != InteractionMode.selectingMoveDirection) return {};
+
+    final stack = gameState.board.stackAt(selectedPosition!);
+    if (stack.isEmpty) return {};
+
+    final topPiece = stack.topPiece!;
+    final validDestinations = <Position>{};
+
+    // Check each direction
+    for (final direction in Direction.values) {
+      var pos = selectedPosition!;
+      pos = direction.apply(pos);
+
+      // Keep checking positions in this direction until we can't move further
+      while (gameState.board.isValidPosition(pos)) {
+        final targetStack = gameState.board.stackAt(pos);
+
+        // Check if we can move onto this cell
+        if (targetStack.canMoveOnto(topPiece)) {
+          validDestinations.add(pos);
+          // Continue checking further in this direction (for multi-step moves)
+          pos = direction.apply(pos);
+        } else if (targetStack.topPiece?.type == PieceType.standing &&
+            topPiece.canFlattenWalls) {
+          // Capstone can flatten a wall as final move
+          validDestinations.add(pos);
+          break; // Can't continue past a wall even after flattening
+        } else {
+          break; // Can't move onto this cell
+        }
+      }
+    }
+
+    return validDestinations;
   }
 
   UIState copyWith({
@@ -465,6 +549,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               animationState: animationState,
                               lastMovePositions: lastMovePositions,
                               onCellTap: (pos) => _handleCellTap(context, ref, pos),
+                              onCellLongPress: (pos, stack) => _showStackViewer(context, pos, stack, gameState.boardSize),
                             ),
                           ),
                         ),
@@ -651,6 +736,44 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _showNewGameDialog(BuildContext context, WidgetRef ref) {
+    final gameState = ref.read(gameStateProvider);
+    final isGameInProgress = !gameState.isGameOver &&
+        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+
+    if (isGameInProgress) {
+      // Show confirmation dialog first
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Start New Game?'),
+          content: const Text(
+            'You have a game in progress. Starting a new game will discard your current game.\n\nAre you sure you want to continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showBoardSizeDialog(context, ref);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start New Game'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _showBoardSizeDialog(context, ref);
+    }
+  }
+
+  void _showBoardSizeDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -686,6 +809,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             child: const Text('Cancel'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showStackViewer(BuildContext context, Position pos, PieceStack stack, int boardSize) {
+    showDialog(
+      context: context,
+      builder: (context) => _StackViewerDialog(
+        position: pos,
+        stack: stack,
+        boardSize: boardSize,
       ),
     );
   }
@@ -790,12 +924,14 @@ class _GameBoard extends StatelessWidget {
   final AnimationState animationState;
   final Set<Position>? lastMovePositions;
   final Function(Position) onCellTap;
+  final Function(Position, PieceStack) onCellLongPress;
 
   const _GameBoard({
     required this.gameState,
     required this.uiState,
     required this.animationState,
     required this.onCellTap,
+    required this.onCellLongPress,
     this.lastMovePositions,
   });
 
@@ -803,6 +939,7 @@ class _GameBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dropPath = uiState.getDropPath();
     final nextDropPos = uiState.getCurrentHandPosition();
+    final validMoveDestinations = uiState.getValidMoveDestinations(gameState);
     final boardSize = gameState.boardSize;
 
     // Calculate responsive spacing based on board size
@@ -873,8 +1010,12 @@ class _GameBoard extends StatelessWidget {
             // Check if this is part of the last move
             final isLastMove = lastMovePositions?.contains(pos) ?? false;
 
+            // Check if this is a valid move destination (legal move hint)
+            final isLegalMoveHint = validMoveDestinations.contains(pos);
+
             return GestureDetector(
               onTap: () => onCellTap(pos),
+              onLongPress: stack.isNotEmpty ? () => onCellLongPress(pos, stack) : null,
               child: _BoardCell(
                 key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${lastEvent?.timestamp.millisecondsSinceEpoch ?? 0}'),
                 stack: stack,
@@ -888,6 +1029,7 @@ class _GameBoard extends StatelessWidget {
                 isStackDropTarget: isStackDropTarget,
                 wasWallFlattened: wasWallFlattened,
                 isLastMove: isLastMove,
+                isLegalMoveHint: isLegalMoveHint,
               ),
             );
           },
@@ -910,6 +1052,7 @@ class _BoardCell extends StatefulWidget {
   final bool isStackDropTarget;
   final bool wasWallFlattened;
   final bool isLastMove;
+  final bool isLegalMoveHint;
 
   const _BoardCell({
     super.key,
@@ -924,6 +1067,7 @@ class _BoardCell extends StatefulWidget {
     this.isStackDropTarget = false,
     this.wasWallFlattened = false,
     this.isLastMove = false,
+    this.isLegalMoveHint = false,
   });
 
   @override
@@ -1120,6 +1264,27 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           BoxShadow(
             color: GameColors.cellDropPathGlow.withValues(alpha: 0.4),
             blurRadius: 4,
+            spreadRadius: 0,
+          ),
+        ],
+      );
+    } else if (widget.isLegalMoveHint) {
+      // Legal move destination hint (cyan/teal highlight)
+      decoration = BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            GameColors.cellLegalMove,
+            GameColors.cellLegalMoveGlow,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: GameColors.cellLegalMoveBorder, width: borderWidth * 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: GameColors.cellLegalMoveGlow.withValues(alpha: 0.5),
+            blurRadius: 6,
             spreadRadius: 0,
           ),
         ],
@@ -2319,6 +2484,229 @@ class _SmallHexagonPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SmallHexagonPainter oldDelegate) {
     return oldDelegate.colors != colors;
+  }
+}
+
+/// Stack viewer dialog - shows full stack contents from bottom to top
+class _StackViewerDialog extends StatelessWidget {
+  final Position position;
+  final PieceStack stack;
+  final int boardSize;
+
+  const _StackViewerDialog({
+    required this.position,
+    required this.stack,
+    required this.boardSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final posNotation = _positionToNotation(position);
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.layers, size: 24),
+          const SizedBox(width: 8),
+          Text('Stack at $posNotation'),
+        ],
+      ),
+      content: SizedBox(
+        width: 200,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${stack.height} piece${stack.height == 1 ? '' : 's'}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'TOP',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: GameColors.subtitleColor,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Show pieces from top to bottom
+                    for (int i = stack.height - 1; i >= 0; i--)
+                      _StackPieceRow(
+                        piece: stack.pieces[i],
+                        index: i,
+                        isTop: i == stack.height - 1,
+                        isBottom: i == 0,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'BOTTOM',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: GameColors.subtitleColor,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  String _positionToNotation(Position pos) {
+    final col = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
+    final row = (boardSize - pos.row).toString();
+    return '$col$row';
+  }
+}
+
+/// A single piece row in the stack viewer
+class _StackPieceRow extends StatelessWidget {
+  final Piece piece;
+  final int index;
+  final bool isTop;
+  final bool isBottom;
+
+  const _StackPieceRow({
+    required this.piece,
+    required this.index,
+    required this.isTop,
+    required this.isBottom,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isLightPlayer = piece.color == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final playerName = isLightPlayer ? 'Light' : 'Dark';
+    final typeName = piece.type.name[0].toUpperCase() + piece.type.name.substring(1);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            pieceColors.primary.withValues(alpha: 0.3),
+            pieceColors.secondary.withValues(alpha: 0.2),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: pieceColors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Piece icon
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: pieceColors.gradientColors),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: pieceColors.border, width: 1.5),
+            ),
+            child: Center(
+              child: _getPieceIcon(piece.type),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  typeName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  playerName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isTop)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Text(
+                'CTRL',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber.shade800,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getPieceIcon(PieceType type) {
+    switch (type) {
+      case PieceType.flat:
+        return Container(
+          width: 16,
+          height: 8,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      case PieceType.standing:
+        return Container(
+          width: 6,
+          height: 16,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      case PieceType.capstone:
+        return Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.5),
+            shape: BoxShape.circle,
+          ),
+        );
+    }
   }
 }
 
