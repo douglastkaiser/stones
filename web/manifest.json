@@ -1,13 +1,17 @@
 {
-    "name": "Stones",
+    "name": "Stones - Strategy Board Game",
     "short_name": "Stones",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#795548",
+    "background_color": "#46505A",
     "theme_color": "#795548",
-    "description": "A two-player abstract strategy game based on Tak mechanics.",
-    "orientation": "portrait-primary",
+    "description": "A two-player abstract strategy game based on Tak mechanics. Build roads and walls to outmaneuver your opponent.",
+    "orientation": "any",
     "prefer_related_applications": false,
+    "categories": ["games", "entertainment"],
+    "scope": ".",
+    "lang": "en",
+    "id": "stones-game",
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -30,6 +34,15 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "New Game",
+            "short_name": "New Game",
+            "description": "Start a new game of Stones",
+            "url": "./?action=new_game"
         }
     ]
 }
