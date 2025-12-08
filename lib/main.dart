@@ -2285,7 +2285,7 @@ class _PlayerPieceCounts extends StatelessWidget {
   }
 }
 
-/// Move history panel - collapsible sidebar showing moves in Tak notation
+/// Move history panel - collapsible sidebar showing moves in algebraic notation
 class _MoveHistoryPanel extends StatelessWidget {
   final List<MoveRecord> moveHistory;
   final int boardSize;

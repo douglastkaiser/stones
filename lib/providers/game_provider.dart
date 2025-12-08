@@ -12,7 +12,7 @@ final gameStateProvider =
 // Move History & Notation
 // =============================================================================
 
-/// A record of a single move with Tak notation
+/// A record of a single move with portable notation
 class MoveRecord {
   final String notation;
   final PlayerColor player;
@@ -29,14 +29,14 @@ class MoveRecord {
   });
 }
 
-/// Convert a position to Tak notation (e.g., Position(0, 0) -> "a1")
+/// Convert a position to algebraic notation (e.g., Position(0, 0) -> "a1")
 String positionToNotation(Position pos, int boardSize) {
   final col = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
   final row = (boardSize - pos.row).toString();
   return '$col$row';
 }
 
-/// Convert direction to Tak notation symbol
+/// Convert direction to notation symbol
 String directionToNotation(Direction dir) {
   return switch (dir) {
     Direction.up => '+',
@@ -46,7 +46,7 @@ String directionToNotation(Direction dir) {
   };
 }
 
-/// Generate Tak notation for a placement move
+/// Generate notation for a placement move
 String placementNotation(Position pos, PieceType type, int boardSize) {
   final posStr = positionToNotation(pos, boardSize);
   return switch (type) {
@@ -56,7 +56,7 @@ String placementNotation(Position pos, PieceType type, int boardSize) {
   };
 }
 
-/// Generate Tak notation for a stack move
+/// Generate notation for a stack move
 String stackMoveNotation(
   Position from,
   Direction direction,
