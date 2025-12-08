@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
 import 'models/models.dart';
+import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
 
@@ -30,15 +31,55 @@ class StonesApp extends StatelessWidget {
 }
 
 /// Home screen with settings and start game
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize sound manager
+    _initializeSounds();
+  }
+
+  Future<void> _initializeSounds() async {
+    final soundManager = ref.read(soundManagerProvider);
+    await soundManager.initialize();
+    // Sync mute state with provider
+    ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMuted = ref.watch(isMutedProvider);
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
+            // Sound toggle in top right
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: IconButton(
+                  icon: Icon(
+                    isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: GameColors.subtitleColor,
+                  ),
+                  tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
+                  onPressed: () async {
+                    final soundManager = ref.read(soundManagerProvider);
+                    await soundManager.toggleMute();
+                    ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+                  },
+                ),
+              ),
+            ),
             Expanded(
               child: Center(
                 child: Padding(
@@ -303,6 +344,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiState = ref.watch(uiStateProvider);
     final isGameOver = ref.watch(isGameOverProvider);
     final animationState = ref.watch(animationStateProvider);
+    final isMuted = ref.watch(isMutedProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -312,6 +354,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
+            tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
+            onPressed: () async {
+              final soundManager = ref.read(soundManagerProvider);
+              await soundManager.toggleMute();
+              ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'New Game',
@@ -454,10 +505,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final gameState = ref.read(gameStateProvider);
     final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
+    final soundManager = ref.read(soundManagerProvider);
 
     final success = ref.read(gameStateProvider.notifier).placePiece(pos, type);
     if (success) {
       ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
+      soundManager.playPiecePlace();
+      // Check if this move caused a win
+      if (ref.read(isGameOverProvider)) {
+        soundManager.playWin();
+      }
+    } else {
+      soundManager.playIllegalMove();
     }
     ref.read(uiStateProvider.notifier).reset();
   }
@@ -498,12 +557,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
     }
 
+    final soundManager = ref.read(soundManagerProvider);
     final success = ref.read(gameStateProvider.notifier).moveStack(pos, dir, drops);
     if (success) {
       ref.read(animationStateProvider.notifier).stackMoved(pos, dir, drops, dropPositions);
       if (flattenedWallPos != null) {
         ref.read(animationStateProvider.notifier).wallFlattened(flattenedWallPos);
+        soundManager.playWallFlatten();
+      } else {
+        soundManager.playStackMove();
       }
+      // Check if this move caused a win
+      if (ref.read(isGameOverProvider)) {
+        soundManager.playWin();
+      }
+    } else {
+      soundManager.playIllegalMove();
     }
     ref.read(uiStateProvider.notifier).reset();
   }
