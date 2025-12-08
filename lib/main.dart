@@ -824,7 +824,7 @@ class _BoardCell extends StatelessWidget {
     );
   }
 
-  /// Build a stack visualization showing depth with offset pieces
+  /// Build a stack visualization showing actual pieces stacked with depth
   Widget _buildStackWithDepth(
     PieceStack stack,
     double cellSize,
@@ -833,53 +833,41 @@ class _BoardCell extends StatelessWidget {
     bool isLightPlayer,
   ) {
     final height = stack.height;
-    final top = stack.topPiece!;
 
     // Calculate responsive values based on board size
-    final offsetAmount = boardSize <= 4 ? 3.0 : (boardSize <= 6 ? 2.5 : 2.0);
+    // Vertical offset between pieces to show stacking
+    final verticalOffset = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.5 : 3.0);
     final badgeFontSize = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 9.0 : 8.0);
     final badgePadding = boardSize <= 4 ? 4.0 : (boardSize <= 6 ? 3.0 : 2.5);
 
-    // For tall stacks (>3), show badge instead of all pieces
-    final showBadge = height > 3;
-    final visiblePieces = showBadge ? 3 : height;
+    // Show up to 3 pieces visually, use badge for taller stacks
+    final maxVisiblePieces = 3;
+    final visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
+
+    // Get the pieces to display (top N pieces of the stack)
+    // pieces[0] is bottom, pieces[height-1] is top
+    final startIndex = height - visibleCount;
 
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        // Show offset shadow pieces for depth
-        for (int i = visiblePieces - 1; i > 0; i--)
-          Positioned(
-            bottom: i * offsetAmount,
-            left: i * offsetAmount * 0.5,
-            child: Opacity(
-              opacity: 0.3 + (0.2 * (visiblePieces - i) / visiblePieces),
-              child: Container(
-                width: pieceSize * 0.9,
-                height: pieceSize * 0.3,
-                decoration: BoxDecoration(
-                  color: _getStackPieceColor(stack, height - i),
-                  borderRadius: BorderRadius.circular(pieceSize * 0.1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 1,
-                      offset: const Offset(0.5, 0.5),
-                    ),
-                  ],
-                ),
-              ),
+        // Render pieces from bottom to top
+        // Bottom pieces are rendered first (lower in visual stack)
+        for (int i = 0; i < visibleCount; i++)
+          Transform.translate(
+            // Each piece moves up as we go higher in the stack
+            // i=0 is the lowest visible piece, i=visibleCount-1 is the top
+            offset: Offset(0, (visibleCount - 1 - i) * verticalOffset),
+            child: _buildStackPiece(
+              stack.pieces[startIndex + i],
+              pieceSize,
+              // Fade lower pieces slightly
+              i < visibleCount - 1 ? 0.7 + (0.1 * i) : 1.0,
             ),
           ),
 
-        // Top piece with slight offset
-        Positioned(
-          bottom: 0,
-          child: _buildPiece(top.type, pieceSize, topColors, isLightPlayer),
-        ),
-
-        // Stack height badge for stacks > 3 or always show count
+        // Stack height badge (always show for stacks > 1)
         Positioned(
           bottom: 1,
           right: 1,
@@ -931,15 +919,15 @@ class _BoardCell extends StatelessWidget {
     );
   }
 
-  /// Get the color for a piece at a certain position in the stack
-  Color _getStackPieceColor(PieceStack stack, int index) {
-    if (index < 0 || index >= stack.height) {
-      return GameColors.cellBackground;
-    }
-    final piece = stack.pieces[index];
-    return piece.color == PlayerColor.white
-        ? GameColors.lightPieceSecondary
-        : GameColors.darkPieceSecondary;
+  /// Build a single piece in a stack with optional opacity
+  Widget _buildStackPiece(Piece piece, double pieceSize, double opacity) {
+    final isLightPlayer = piece.color == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
+
+    return Opacity(
+      opacity: opacity,
+      child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+    );
   }
 
   /// Build a piece widget based on type
