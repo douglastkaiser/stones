@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/providers.dart';
+import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
 import 'settings_screen.dart';
@@ -119,7 +120,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         MaterialPageRoute(builder: (_) => const AboutScreen()),
                       );
                     },
-                    child: Text(
+                    child: const Text(
                       'About',
                       style: TextStyle(
                         color: GameColors.subtitleColor,
@@ -128,7 +129,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   ),
                   // Settings gear on the right
                   IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.settings,
                       color: GameColors.subtitleColor,
                     ),
@@ -196,7 +197,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                             label: const Text('Continue Game'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: GameColors.subtitleColor,
-                              side: BorderSide(color: GameColors.subtitleColor),
+                              side: const BorderSide(color: GameColors.subtitleColor),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -260,7 +261,7 @@ class _LogoPainter extends CustomPainter {
   }
 
   void _drawFlatStone(Canvas canvas, double x, double y, double width, Color fill, Color border) {
-    final height = 10.0;
+    const height = 10.0;
     final rect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(x, y), width: width, height: height),
       const Radius.circular(2),

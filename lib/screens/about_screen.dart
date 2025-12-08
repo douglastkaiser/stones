@@ -88,31 +88,31 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 40),
 
           // About Tak Section
-          _AboutCard(
+          const _AboutCard(
             title: 'About Tak',
             children: [
-              const Text(
+              Text(
                 'Stones is an implementation of Tak, the beautiful game from '
                 'Patrick Rothfuss\'s "The Wise Man\'s Fear."',
                 style: TextStyle(height: 1.5),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Tak was designed and developed into a playable game by:',
                 style: TextStyle(height: 1.5),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _CreditItem(
                 name: 'James Ernest',
                 role: 'Game Designer',
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _CreditItem(
                 name: 'Patrick Rothfuss',
                 role: 'Creator & Author',
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Published by Cheapass Games under license from '
                 'Crab Fragment Labs.',
                 style: TextStyle(height: 1.5),
@@ -242,7 +242,7 @@ class _CreditItem extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: GameColors.boardFrameInner,
             shape: BoxShape.circle,
           ),

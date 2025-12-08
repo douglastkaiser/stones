@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
 import '../providers/providers.dart';
+import '../services/services.dart';
 import '../theme/theme.dart';
 
 /// Settings screen with board size picker, sound toggle, and theme toggle
@@ -23,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           // Board Size Section
-          _SectionHeader(title: 'Board Size'),
+          const _SectionHeader(title: 'Board Size'),
           const SizedBox(height: 12),
           _BoardSizePicker(
             selectedSize: settings.boardSize,
@@ -34,7 +35,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 32),
 
           // Sound Section
-          _SectionHeader(title: 'Audio'),
+          const _SectionHeader(title: 'Audio'),
           const SizedBox(height: 12),
           _SettingsTile(
             icon: settings.isSoundMuted ? Icons.volume_off : Icons.volume_up,
@@ -48,13 +49,13 @@ class SettingsScreen extends ConsumerWidget {
                 await soundManager.setMuted(!value);
                 ref.read(isMutedProvider.notifier).state = !value;
               },
-              activeColor: GameColors.boardFrameInner,
+              activeTrackColor: GameColors.boardFrameInner,
             ),
           ),
           const SizedBox(height: 32),
 
           // Theme Section
-          _SectionHeader(title: 'Appearance'),
+          const _SectionHeader(title: 'Appearance'),
           const SizedBox(height: 12),
           _SettingsTile(
             icon: settings.isDarkTheme ? Icons.dark_mode : Icons.light_mode,
@@ -65,7 +66,7 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (value) async {
                 await ref.read(appSettingsProvider.notifier).setDarkTheme(value);
               },
-              activeColor: GameColors.boardFrameInner,
+              activeTrackColor: GameColors.boardFrameInner,
             ),
           ),
           const SizedBox(height: 8),
