@@ -6,6 +6,7 @@ import '../services/ai/ai.dart';
 enum GameMode {
   local,
   vsComputer,
+  online,
 }
 
 /// Session configuration for the current game

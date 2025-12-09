@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,8 +12,13 @@ import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
 import 'screens/main_menu_screen.dart';
+import 'firebase_options.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const ProviderScope(child: StonesApp()));
 }
 
@@ -290,6 +296,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (ref.read(aiThinkingProvider)) return;
     final session = ref.read(gameSessionProvider);
     final gameState = ref.read(gameStateProvider);
+    if (session.mode == GameMode.online) {
+      return;
+    }
     if (session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black) {
       return;
     }
@@ -323,12 +332,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isMuted = ref.watch(isMutedProvider);
     final moveHistory = ref.watch(moveHistoryProvider);
     final lastMovePositions = ref.watch(lastMoveProvider);
-    final canUndo = ref.read(gameStateProvider.notifier).canUndo;
     final session = ref.watch(gameSessionProvider);
     final isAiThinking = ref.watch(aiThinkingProvider);
     final isAiTurn =
         session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
-    final inputLocked = isAiTurn || isAiThinking;
+    final onlineState = ref.watch(onlineGameProvider);
+    final isOnline = session.mode == GameMode.online;
+    final isRemoteTurn = isOnline && !onlineState.isLocalTurn;
+    final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
+    final canUndo = !isOnline && ref.read(gameStateProvider.notifier).canUndo;
+    final inputLocked = isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
 
     return Scaffold(
       appBar: AppBar(
@@ -353,6 +366,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             tooltip: _showHistory ? 'Hide move history' : 'Show move history',
             onPressed: () => setState(() => _showHistory = !_showHistory),
           ),
+          if (session.mode == GameMode.online)
+            IconButton(
+              icon: const Icon(Icons.flag),
+              tooltip: 'Resign',
+              onPressed: () => _confirmResign(context),
+            ),
           IconButton(
             icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
             tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
@@ -365,7 +384,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'New Game',
-            onPressed: () => _showNewGameDialog(context, ref),
+            onPressed: session.mode == GameMode.online
+                ? null
+                : () => _showNewGameDialog(context, ref),
           ),
         ],
       ),
@@ -480,8 +501,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             _WinOverlay(
               result: gameState.result!,
               winReason: gameState.winReason,
-              onNewGame: () => _showNewGameDialog(context, ref),
+              onNewGame: session.mode == GameMode.online
+                  ? () => ref.read(onlineGameProvider.notifier).requestRematch()
+                  : () => _showNewGameDialog(context, ref),
               onHome: () => Navigator.pop(context),
+            ),
+          if (session.mode == GameMode.online && waitingForOpponent)
+            _OnlineStatusBanner(
+              message:
+                  'Waiting for opponent... Room code: ${onlineState.roomCode ?? '---'}',
+            ),
+          if (session.mode == GameMode.online && onlineState.opponentInactive)
+            const _OnlineStatusBanner(
+              message: 'Opponent left? No activity for 60 seconds.',
             ),
         ],
       ),
@@ -493,6 +525,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiState = ref.read(uiStateProvider);
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final session = ref.read(gameSessionProvider);
+    if (session.mode == GameMode.online) {
+      final onlineState = ref.read(onlineGameProvider);
+      if (!onlineState.isLocalTurn || onlineState.waitingForOpponent) {
+        uiNotifier.reset();
+        return;
+      }
+    }
 
     final isAiTurn =
         session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
@@ -574,6 +613,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
         ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+        _syncOnlineMove(moveRecord);
       }
 
       ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
@@ -617,6 +657,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
         ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+        _syncOnlineMove(moveRecord);
       }
 
       ref.read(animationStateProvider.notifier).stackMoved(from, dir, drops, dropPositions);
@@ -680,6 +721,45 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.read(uiStateProvider.notifier).reset();
     } finally {
       ref.read(aiThinkingProvider.notifier).state = false;
+    }
+  }
+
+  void _syncOnlineMove(MoveRecord? moveRecord) {
+    if (moveRecord == null) return;
+    final session = ref.read(gameSessionProvider);
+    if (session.mode != GameMode.online) return;
+    final latestState = ref.read(gameStateProvider);
+    unawaited(
+      ref.read(onlineGameProvider.notifier).recordLocalMove(moveRecord, latestState),
+    );
+  }
+
+  Future<void> _confirmResign(BuildContext context) async {
+    final session = ref.read(gameSessionProvider);
+    if (session.mode != GameMode.online) return;
+    final shouldResign = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Resign game?'),
+            content: const Text(
+              'Are you sure you want to resign this online match? Your opponent will be marked as the winner.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Resign'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (shouldResign) {
+      await ref.read(onlineGameProvider.notifier).resign();
     }
   }
 
@@ -2805,6 +2885,41 @@ class _WinOverlay extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnlineStatusBanner extends StatelessWidget {
+  final String message;
+
+  const _OnlineStatusBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 16,
+      left: 16,
+      right: 16,
+      child: Card(
+        color: Colors.white.withValues(alpha: 0.95),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.wifi_tethering, color: GameColors.boardFrameInner),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         ),
       ),

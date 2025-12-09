@@ -10,6 +10,7 @@ import '../version.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
 import 'game_screen.dart';
+import 'online_lobby_screen.dart';
 
 /// Main menu screen with title, play button, settings, and about links
 class MainMenuScreen extends ConsumerStatefulWidget {
@@ -231,6 +232,35 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: GameColors.boardFrameInner,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: 220,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const OnlineLobbyScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.wifi, size: 22),
+                          label: const Text(
+                            'Online Game',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: GameColors.boardFrameOuter,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
