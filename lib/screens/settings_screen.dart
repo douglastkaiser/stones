@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +15,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
+    final playGames = ref.watch(playGamesServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -81,6 +84,16 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 32),
+
+          // Play Games Section
+          const _SectionHeader(title: 'Google Play Games'),
+          const SizedBox(height: 12),
+          _PlayGamesSection(
+            playGames: playGames,
+            onManualSignIn: () =>
+                ref.read(playGamesServiceProvider.notifier).manualSignIn(),
+          ),
         ],
       ),
     );
@@ -141,6 +154,71 @@ class _SettingsTile extends StatelessWidget {
           style: TextStyle(color: Colors.grey.shade600),
         ),
         trailing: trailing,
+      ),
+    );
+  }
+}
+
+class _PlayGamesSection extends StatelessWidget {
+  final PlayGamesState playGames;
+  final VoidCallback onManualSignIn;
+
+  const _PlayGamesSection({
+    required this.playGames,
+    required this.onManualSignIn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    ImageProvider? avatar;
+    if (playGames.iconImage != null) {
+      try {
+        avatar = MemoryImage(base64Decode(playGames.iconImage!));
+      } catch (_) {}
+    }
+
+    final isSignedIn = playGames.isSignedIn;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundImage: avatar,
+          child: avatar == null
+              ? const Icon(Icons.videogame_asset, color: Colors.white)
+              : null,
+        ),
+        title: Text(
+          isSignedIn ? playGames.player?.displayName ?? 'Signed in' : 'Not signed in',
+        ),
+        subtitle: Text(
+          isSignedIn
+              ? 'Achievements, leaderboards, and cloud saves are enabled.'
+              : 'Sign in to enable achievements, leaderboards, and cloud saves.',
+          style: TextStyle(color: Colors.grey.shade600),
+        ),
+        trailing: isSignedIn
+            ? const Icon(Icons.check_circle, color: Colors.green)
+            : ElevatedButton.icon(
+                onPressed: playGames.isSigningIn ? null : onManualSignIn,
+                icon: playGames.isSigningIn
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.login),
+                label: Text(playGames.isSigningIn ? 'Signing in' : 'Sign in'),
+              ),
       ),
     );
   }

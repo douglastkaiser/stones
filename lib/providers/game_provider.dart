@@ -224,6 +224,14 @@ class GameStateNotifier extends StateNotifier<GameState> {
     onHistoryChanged?.call(false);
   }
 
+  /// Load a game state (used for cloud saves)
+  void loadState(GameState loadedState) {
+    _history.clear();
+    _lastMoveRecord = null;
+    state = loadedState;
+    onHistoryChanged?.call(_history.isNotEmpty);
+  }
+
   /// Undo the last move
   bool undo() {
     if (_history.isEmpty) return false;

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,6 +38,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final settings = ref.read(appSettingsProvider);
     await soundManager.setMuted(settings.isSoundMuted);
     ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+
+    // Attempt silent sign-in for Google Play Games
+    await ref.read(playGamesServiceProvider.notifier).initialize();
   }
 
   void _startNewGame(
@@ -144,6 +149,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final gameState = ref.watch(gameStateProvider);
     final hasGameInProgress = !gameState.isGameOver &&
         (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+    final playGames = ref.watch(playGamesServiceProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -170,6 +176,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ),
                     ),
                   ),
+                  if (playGames.player != null)
+                    _PlayerChip(
+                      displayName: playGames.player!.displayName,
+                      iconImage: playGames.iconImage,
+                    ),
                   // Settings gear on the right
                   IconButton(
                     icon: const Icon(
@@ -377,6 +388,60 @@ class _LogoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PlayerChip extends StatelessWidget {
+  final String displayName;
+  final String? iconImage;
+
+  const _PlayerChip({
+    required this.displayName,
+    this.iconImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    ImageProvider? avatar;
+    if (iconImage != null) {
+      try {
+        avatar = MemoryImage(base64Decode(iconImage!));
+      } catch (_) {}
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundImage: avatar,
+            child: avatar == null
+                ? Text(
+                    displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                    style: const TextStyle(color: Colors.white),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            displayName,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Version footer widget

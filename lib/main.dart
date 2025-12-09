@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -432,6 +433,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     ref.listen<GameState>(gameStateProvider, (previous, next) {
       unawaited(_maybeTriggerAiTurn(next));
+      final moveCount = ref.read(moveHistoryProvider).length;
+      unawaited(
+        ref.read(playGamesServiceProvider.notifier).onGameStateChanged(
+              next,
+              previous: previous,
+              moveCount: moveCount,
+            ),
+      );
     });
   }
 
