@@ -6,6 +6,16 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def androidUploadStoreFile = System.getenv("ANDROID_UPLOAD_STORE_FILE")
+def androidUploadStorePassword = System.getenv("ANDROID_UPLOAD_STORE_PASSWORD")
+def androidUploadKeyAlias = System.getenv("ANDROID_UPLOAD_KEY_ALIAS")
+def androidUploadKeyPassword = System.getenv("ANDROID_UPLOAD_KEY_PASSWORD")
+def isReleaseTaskRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+
+if (isReleaseTaskRequested && (!androidUploadStoreFile || !androidUploadStorePassword || !androidUploadKeyAlias || !androidUploadKeyPassword)) {
+    throw new GradleException("Missing Android upload keystore configuration for release build.")
+}
+
 android {
     namespace = "com.example.stones"
     compileSdk = flutter.compileSdkVersion
@@ -30,19 +40,21 @@ android {
 
     signingConfigs {
         release {
-            def uploadStoreFile = System.getenv("ANDROID_UPLOAD_STORE_FILE")
-            if (uploadStoreFile) {
-                storeFile file(uploadStoreFile)
+            if (androidUploadStoreFile) {
+                storeFile file(androidUploadStoreFile)
             }
-            storePassword System.getenv("ANDROID_UPLOAD_STORE_PASSWORD")
-            keyAlias System.getenv("ANDROID_UPLOAD_KEY_ALIAS")
-            keyPassword System.getenv("ANDROID_UPLOAD_KEY_PASSWORD")
+            storePassword androidUploadStorePassword ?: ""
+            keyAlias androidUploadKeyAlias ?: ""
+            keyPassword androidUploadKeyPassword ?: ""
         }
     }
 
     buildTypes {
+        debug {
+            // Keep existing debug config; use default debug keystore.
+        }
         release {
-            signingConfig = signingConfigs.release
+            signingConfig signingConfigs.release
         }
     }
 }
