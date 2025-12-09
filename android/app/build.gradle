@@ -30,7 +30,10 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(System.getenv("ANDROID_UPLOAD_STORE_FILE"))
+            def uploadStoreFile = System.getenv("ANDROID_UPLOAD_STORE_FILE")
+            if (uploadStoreFile) {
+                storeFile file(uploadStoreFile)
+            }
             storePassword System.getenv("ANDROID_UPLOAD_STORE_PASSWORD")
             keyAlias System.getenv("ANDROID_UPLOAD_KEY_ALIAS")
             keyPassword System.getenv("ANDROID_UPLOAD_KEY_PASSWORD")
