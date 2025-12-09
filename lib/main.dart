@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
-import 'providers/ui_state_provider.dart';
 import 'models/models.dart';
 import 'services/services.dart';
 import 'theme/theme.dart';
