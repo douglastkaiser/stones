@@ -64,6 +64,20 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 30
 
+      - name: Show debug keystore SHA-1
+        run: |
+          DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+          if [ -f "$DEBUG_KEYSTORE" ]; then
+            echo "Found debug keystore at $DEBUG_KEYSTORE"
+            keytool -list -v \
+              -keystore "$DEBUG_KEYSTORE" \
+              -alias androiddebugkey \
+              -storepass android \
+              -keypass android | grep 'SHA1'
+          else
+            echo "No debug keystore found at $DEBUG_KEYSTORE"
+          fi
+
   build-web:
     name: Build Web
     runs-on: ubuntu-latest

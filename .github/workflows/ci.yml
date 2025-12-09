@@ -84,6 +84,20 @@ jobs:
       - name: Build APK (debug)
         run: flutter build apk --debug
 
+      - name: Show debug keystore SHA-1
+        run: |
+          DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+          if [ -f "$DEBUG_KEYSTORE" ]; then
+            echo "Found debug keystore at $DEBUG_KEYSTORE"
+            keytool -list -v \
+              -keystore "$DEBUG_KEYSTORE" \
+              -alias androiddebugkey \
+              -storepass android \
+              -keypass android | grep 'SHA1'
+          else
+            echo "No debug keystore found at $DEBUG_KEYSTORE"
+          fi
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
