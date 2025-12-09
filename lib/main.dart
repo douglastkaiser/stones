@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -428,6 +429,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.read(gameStateProvider.notifier).onRoadWin = (roadPositions, winner) {
       ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
     };
+
+    ref.listen<GameState>(gameStateProvider, (previous, next) {
+      unawaited(_maybeTriggerAiTurn(next));
+    });
   }
 
   @override
@@ -437,6 +442,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _undo() {
+    if (ref.read(aiThinkingProvider)) return;
+    final session = ref.read(gameSessionProvider);
+    final gameState = ref.read(gameStateProvider);
+    if (session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black) {
+      return;
+    }
+
     final gameNotifier = ref.read(gameStateProvider.notifier);
     if (gameNotifier.canUndo) {
       // Remove from move history
@@ -467,6 +479,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final moveHistory = ref.watch(moveHistoryProvider);
     final lastMovePositions = ref.watch(lastMoveProvider);
     final canUndo = ref.read(gameStateProvider.notifier).canUndo;
+    final session = ref.watch(gameSessionProvider);
+    final isAiThinking = ref.watch(aiThinkingProvider);
+    final isAiTurn =
+        session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
+    final inputLocked = isAiTurn || isAiThinking;
 
     return Scaffold(
       appBar: AppBar(
@@ -516,7 +533,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 child: Column(
                   children: [
                     // Game info bar
-                    _GameInfoBar(gameState: gameState),
+                    _GameInfoBar(
+                      gameState: gameState,
+                      isAiTurn: isAiTurn,
+                      isThinking: isAiThinking,
+                      aiDifficulty:
+                          session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
+                    ),
 
                     // Board
                     Expanded(
@@ -555,13 +578,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                 ),
                               ],
                             ),
-                            child: _GameBoard(
-                              gameState: gameState,
-                              uiState: uiState,
-                              animationState: animationState,
-                              lastMovePositions: lastMovePositions,
-                              onCellTap: (pos) => _handleCellTap(context, ref, pos),
-                              onCellLongPress: (pos, stack) => _showStackViewer(context, pos, stack, gameState.boardSize),
+                            child: IgnorePointer(
+                              ignoring: inputLocked,
+                              child: _GameBoard(
+                                gameState: gameState,
+                                uiState: uiState,
+                                animationState: animationState,
+                                lastMovePositions: lastMovePositions,
+                                onCellTap: (pos) => _handleCellTap(context, ref, pos),
+                                onCellLongPress: (pos, stack) =>
+                                    _showStackViewer(context, pos, stack, gameState.boardSize),
+                              ),
                             ),
                           ),
                         ),
@@ -569,15 +596,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
 
                     // Bottom controls
-                    _BottomControls(
-                      gameState: gameState,
-                      uiState: uiState,
-                      onPieceSelected: (type) => _placePiece(ref, type),
-                      onDirectionSelected: (dir) => _selectDirection(ref, dir),
-                      onDropSelected: (count) => _addDrop(ref, count),
-                      onPieceCountChanged: (count) => ref.read(uiStateProvider.notifier).setPiecesPickedUp(count),
-                      onConfirmMove: () => _confirmMove(ref),
-                      onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+                    IgnorePointer(
+                      ignoring: inputLocked,
+                      child: _BottomControls(
+                        gameState: gameState,
+                        uiState: uiState,
+                        onPieceSelected: (type) => _placePiece(ref, type),
+                        onDirectionSelected: (dir) => _selectDirection(ref, dir),
+                        onDropSelected: (count) => _addDrop(ref, count),
+                        onPieceCountChanged: (count) =>
+                            ref.read(uiStateProvider.notifier).setPiecesPickedUp(count),
+                        onConfirmMove: () => _confirmMove(ref),
+                        onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+                      ),
                     ),
 
                     // Piece counts
@@ -616,8 +647,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.read(gameStateProvider);
     final uiState = ref.read(uiStateProvider);
     final uiNotifier = ref.read(uiStateProvider.notifier);
+    final session = ref.read(gameSessionProvider);
 
-    if (gameState.isGameOver) return;
+    final isAiTurn =
+        session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
+    if (gameState.isGameOver || isAiTurn || ref.read(aiThinkingProvider)) {
+      uiNotifier.reset();
+      return;
+    }
 
     final stack = gameState.board.stackAt(pos);
 
@@ -657,29 +694,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final pos = uiState.selectedPosition;
     if (pos == null) return;
 
-    final gameState = ref.read(gameStateProvider);
-    final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
-    final soundManager = ref.read(soundManagerProvider);
-    final gameNotifier = ref.read(gameStateProvider.notifier);
-
-    final success = gameNotifier.placePiece(pos, type);
-    if (success) {
-      // Record move in history
-      final moveRecord = gameNotifier.lastMoveRecord;
-      if (moveRecord != null) {
-        ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
-        ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
-      }
-
-      ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
-      soundManager.playPiecePlace();
-      // Check if this move caused a win
-      if (ref.read(isGameOverProvider)) {
-        soundManager.playWin();
-      }
-    } else {
-      soundManager.playIllegalMove();
-    }
+    _performPlacementMove(pos, type, ref);
     ref.read(uiStateProvider.notifier).reset();
   }
 
@@ -698,18 +713,48 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final drops = uiState.drops;
 
     if (pos == null || dir == null || drops.isEmpty) return;
+    _performStackMove(pos, dir, drops, ref);
+    ref.read(uiStateProvider.notifier).reset();
+  }
 
-    // Calculate drop positions for animation
-    final dropPositions = <Position>[];
-    var currentPos = pos;
-    for (var i = 0; i < drops.length; i++) {
-      currentPos = dir.apply(currentPos);
-      dropPositions.add(currentPos);
+  bool _performPlacementMove(Position pos, PieceType type, WidgetRef ref) {
+    final gameState = ref.read(gameStateProvider);
+    final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
+    final soundManager = ref.read(soundManagerProvider);
+    final gameNotifier = ref.read(gameStateProvider.notifier);
+
+    final success = gameNotifier.placePiece(pos, type);
+    if (success) {
+      final moveRecord = gameNotifier.lastMoveRecord;
+      if (moveRecord != null) {
+        ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
+        ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+      }
+
+      ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
+      soundManager.playPiecePlace();
+      if (ref.read(isGameOverProvider)) {
+        soundManager.playWin();
+      }
+
+      unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+    } else {
+      soundManager.playIllegalMove();
     }
 
-    // Check for wall flattening before the move
+    return success;
+  }
+
+  bool _performStackMove(
+    Position from,
+    Direction dir,
+    List<int> drops,
+    WidgetRef ref,
+  ) {
+    final dropPositions = _calculateDropPositions(from, dir, drops.length);
+
     final gameState = ref.read(gameStateProvider);
-    final stack = gameState.board.stackAt(pos);
+    final stack = gameState.board.stackAt(from);
     final topPiece = stack.topPiece;
     Position? flattenedWallPos;
     if (topPiece != null && topPiece.canFlattenWalls && dropPositions.isNotEmpty) {
@@ -721,30 +766,76 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
-    final success = gameNotifier.moveStack(pos, dir, drops);
+    final success = gameNotifier.moveStack(from, dir, drops);
     if (success) {
-      // Record move in history
       final moveRecord = gameNotifier.lastMoveRecord;
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
         ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
       }
 
-      ref.read(animationStateProvider.notifier).stackMoved(pos, dir, drops, dropPositions);
+      ref.read(animationStateProvider.notifier).stackMoved(from, dir, drops, dropPositions);
       if (flattenedWallPos != null) {
         ref.read(animationStateProvider.notifier).wallFlattened(flattenedWallPos);
         soundManager.playWallFlatten();
       } else {
         soundManager.playStackMove();
       }
-      // Check if this move caused a win
       if (ref.read(isGameOverProvider)) {
         soundManager.playWin();
       }
+
+      unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
     } else {
       soundManager.playIllegalMove();
     }
+
+    return success;
+  }
+
+  List<Position> _calculateDropPositions(Position start, Direction dir, int steps) {
+    final dropPositions = <Position>[];
+    var currentPos = start;
+    for (var i = 0; i < steps; i++) {
+      currentPos = dir.apply(currentPos);
+      dropPositions.add(currentPos);
+    }
+    return dropPositions;
+  }
+
+  Future<void> _maybeTriggerAiTurn(GameState state) async {
+    final session = ref.read(gameSessionProvider);
+    if (session.mode != GameMode.vsComputer || state.isGameOver) return;
+    if (state.currentPlayer != PlayerColor.black) return;
+    if (ref.read(aiThinkingProvider)) return;
+
     ref.read(uiStateProvider.notifier).reset();
+    ref.read(aiThinkingProvider.notifier).state = true;
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final latestState = ref.read(gameStateProvider);
+      final latestSession = ref.read(gameSessionProvider);
+      if (latestSession.mode != GameMode.vsComputer ||
+          latestState.isGameOver ||
+          latestState.currentPlayer != PlayerColor.black) {
+        return;
+      }
+
+      final ai = StonesAI.forDifficulty(latestSession.aiDifficulty);
+      final move = await ai.selectMove(latestState);
+
+      if (move is AIPlacementMove) {
+        _performPlacementMove(move.position, move.pieceType, ref);
+      } else if (move is AIStackMove) {
+        _performStackMove(move.from, move.direction, move.drops, ref);
+      }
+
+      ref.read(uiStateProvider.notifier).reset();
+    } finally {
+      ref.read(aiThinkingProvider.notifier).state = false;
+    }
   }
 
   void _showNewGameDialog(BuildContext context, WidgetRef ref) {
@@ -840,8 +931,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 /// Game info bar showing current player and phase
 class _GameInfoBar extends StatelessWidget {
   final GameState gameState;
+  final bool isAiTurn;
+  final bool isThinking;
+  final AIDifficulty? aiDifficulty;
 
-  const _GameInfoBar({required this.gameState});
+  const _GameInfoBar({
+    required this.gameState,
+    this.isAiTurn = false,
+    this.isThinking = false,
+    this.aiDifficulty,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -901,6 +1000,45 @@ class _GameInfoBar extends StatelessWidget {
               ],
             ),
           ),
+          if (aiDifficulty != null && (isAiTurn || isThinking))
+            Row(
+              children: [
+                if (isThinking)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                      ),
+                    ),
+                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Computer (${aiDifficulty!.name[0].toUpperCase()}${aiDifficulty!.name.substring(1)})',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    if (isAiTurn)
+                      Text(
+                        isThinking ? 'Thinking...' : 'Planning move',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: secondaryColor,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(

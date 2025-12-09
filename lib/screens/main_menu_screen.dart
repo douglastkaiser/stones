@@ -38,14 +38,19 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
   }
 
-  void _startNewGame(BuildContext context) {
+  void _startNewGame(
+    BuildContext context,
+    GameMode mode, {
+    AIDifficulty difficulty = AIDifficulty.easy,
+  }) {
     final gameState = ref.read(gameStateProvider);
     final settings = ref.read(appSettingsProvider);
     final isGameInProgress = !gameState.isGameOver &&
         (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
 
+    void start() => _doStartNewGame(context, settings.boardSize, mode, difficulty);
+
     if (isGameInProgress) {
-      // Show confirmation dialog
       showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -61,7 +66,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                _doStartNewGame(context, settings.boardSize);
+                start();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,
@@ -73,11 +78,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
         ),
       );
     } else {
-      _doStartNewGame(context, settings.boardSize);
+      start();
     }
   }
 
-  void _doStartNewGame(BuildContext context, int size) {
+  void _doStartNewGame(
+    BuildContext context,
+    int size,
+    GameMode mode,
+    AIDifficulty difficulty,
+  ) {
+    ref.read(gameSessionProvider.notifier).state =
+        GameSessionConfig(mode: mode, aiDifficulty: difficulty);
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -86,6 +98,37 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const GameScreen()),
+    );
+  }
+
+  void _startVsComputer(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (dialogContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.smart_toy_outlined),
+              title: const Text('Easy'),
+              subtitle: const Text('Random moves with placement bias early on'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.easy);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome),
+              title: const Text('Medium'),
+              subtitle: const Text('Plays simple road-building and blocking heuristics'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.medium);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -164,16 +207,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ),
                       const SizedBox(height: 64),
 
-                      // Play button
+                      // Game mode buttons
                       SizedBox(
-                        width: 200,
+                        width: 220,
                         height: 56,
                         child: ElevatedButton.icon(
-                          onPressed: () => _startNewGame(context),
-                          icon: const Icon(Icons.play_arrow, size: 28),
+                          onPressed: () => _startNewGame(context, GameMode.local),
+                          icon: const Icon(Icons.group, size: 24),
                           label: const Text(
-                            'Play',
-                            style: TextStyle(fontSize: 20),
+                            'Local Game',
+                            style: TextStyle(fontSize: 18),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: GameColors.boardFrameInner,
@@ -183,6 +226,34 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                             ),
                           ),
                         ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: 220,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _startVsComputer(context),
+                          icon: const Icon(Icons.smart_toy_outlined, size: 22),
+                          label: const Text(
+                            'Vs Computer',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: GameColors.boardFrameInner,
+                            side: const BorderSide(color: GameColors.boardFrameInner, width: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+                      const Text(
+                        'You play as White when facing the computer',
+                        style: TextStyle(color: GameColors.subtitleColor),
                       ),
 
                       const SizedBox(height: 16),
