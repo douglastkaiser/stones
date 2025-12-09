@@ -136,12 +136,12 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
 
   Widget _buildRoomStatus(BuildContext context, OnlineGameState online) {
     if (online.session == null) {
-      return Card(
+      return const Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text(
                 'Create or join a room to share a code with a friend. Games are saved in Firestore so both players stay in sync.',
               ),
@@ -308,7 +308,7 @@ class _StatusBadge extends StatelessWidget {
     return Row(
       children: [
         Chip(
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withValues(alpha: 0.1),
           label: Text(
             text,
             style: TextStyle(color: color),
