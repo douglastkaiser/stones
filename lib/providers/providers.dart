@@ -2,4 +2,5 @@
 library;
 
 export 'game_provider.dart';
+export 'game_session_provider.dart';
 export 'settings_provider.dart';
