@@ -736,6 +736,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (ref.read(isGameOverProvider)) {
         soundManager.playWin();
       }
+
+      unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
     } else {
       soundManager.playIllegalMove();
     }
@@ -782,6 +784,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (ref.read(isGameOverProvider)) {
         soundManager.playWin();
       }
+
+      unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
     } else {
       soundManager.playIllegalMove();
     }
@@ -808,28 +812,30 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.read(uiStateProvider.notifier).reset();
     ref.read(aiThinkingProvider.notifier).state = true;
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
 
-    final latestState = ref.read(gameStateProvider);
-    final latestSession = ref.read(gameSessionProvider);
-    if (latestSession.mode != GameMode.vsComputer ||
-        latestState.isGameOver ||
-        latestState.currentPlayer != PlayerColor.black) {
+      final latestState = ref.read(gameStateProvider);
+      final latestSession = ref.read(gameSessionProvider);
+      if (latestSession.mode != GameMode.vsComputer ||
+          latestState.isGameOver ||
+          latestState.currentPlayer != PlayerColor.black) {
+        return;
+      }
+
+      final ai = StonesAI.forDifficulty(latestSession.aiDifficulty);
+      final move = await ai.selectMove(latestState);
+
+      if (move is AIPlacementMove) {
+        _performPlacementMove(move.position, move.pieceType, ref);
+      } else if (move is AIStackMove) {
+        _performStackMove(move.from, move.direction, move.drops, ref);
+      }
+
+      ref.read(uiStateProvider.notifier).reset();
+    } finally {
       ref.read(aiThinkingProvider.notifier).state = false;
-      return;
     }
-
-    final ai = StonesAI.forDifficulty(latestSession.aiDifficulty);
-    final move = await ai.selectMove(latestState);
-
-    if (move is AIPlacementMove) {
-      _performPlacementMove(move.position, move.pieceType, ref);
-    } else if (move is AIStackMove) {
-      _performStackMove(move.from, move.direction, move.drops, ref);
-    }
-
-    ref.read(uiStateProvider.notifier).reset();
-    ref.read(aiThinkingProvider.notifier).state = false;
   }
 
   void _showNewGameDialog(BuildContext context, WidgetRef ref) {
