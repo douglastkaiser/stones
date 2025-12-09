@@ -2,11 +2,10 @@ import 'dart:math';
 
 import '../../models/models.dart';
 import 'ai.dart';
-import 'move_generator.dart';
 
 /// Heuristic-driven AI
 class MediumStonesAI extends StonesAI {
-  MediumStonesAI(Random random) : super(random);
+  MediumStonesAI(super.random);
 
   final _generator = const AIMoveGenerator();
 

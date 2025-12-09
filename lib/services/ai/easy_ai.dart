@@ -2,11 +2,10 @@ import 'dart:math';
 
 import '../../models/models.dart';
 import 'ai.dart';
-import 'move_generator.dart';
 
 /// Random AI with slight placement preference early game
 class EasyStonesAI extends StonesAI {
-  EasyStonesAI(Random random) : super(random);
+  EasyStonesAI(super.random);
 
   final _generator = const AIMoveGenerator();
 
