@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -480,7 +481,11 @@ class _VersionFooter extends StatelessWidget {
   const _VersionFooter();
 
   Future<void> _openPrivacyPolicy() async {
-    final Uri url = Uri.parse('https://douglastkaiser.github.io/stones/privacy.html');
+    // On web, use relative URL so it works for both production and PR previews
+    // On mobile, use absolute URL to production site
+    final Uri url = kIsWeb
+        ? Uri.base.resolve('privacy')
+        : Uri.parse('https://douglastkaiser.github.io/stones/privacy');
     await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
