@@ -112,6 +112,18 @@ jobs:
       - name: Build web
         run: flutter build web --release --base-href "/stones/"
 
+      - name: Ensure privacy.html is included
+        run: |
+          # Flutter should copy web/privacy.html to build/web/, but verify and copy if needed
+          if [ -f "web/privacy.html" ] && [ ! -f "build/web/privacy.html" ]; then
+            cp web/privacy.html build/web/
+            echo "Copied privacy.html to build/web/"
+          elif [ -f "build/web/privacy.html" ]; then
+            echo "privacy.html already exists in build/web/"
+          else
+            echo "Warning: web/privacy.html not found"
+          fi
+
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:

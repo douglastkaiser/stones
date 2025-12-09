@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/theme.dart';
 import '../version.dart';
@@ -24,6 +26,18 @@ class AboutScreen extends StatelessWidget {
       ),
       applicationLegalese: '\u00a9 2024 Stones Contributors',
     );
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    // On web, open the local privacy.html page
+    // On other platforms, open the hosted URL
+    final Uri url = kIsWeb
+        ? Uri.parse('privacy.html')
+        : Uri.parse('https://douglastkaiser.github.io/stones/privacy.html');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -102,6 +116,13 @@ class AboutScreen extends StatelessWidget {
           _AboutCard(
             title: 'Legal',
             children: [
+              _LinkTile(
+                icon: Icons.privacy_tip,
+                title: 'Privacy Policy',
+                subtitle: 'How we handle your data',
+                onTap: _openPrivacyPolicy,
+              ),
+              const SizedBox(height: 12),
               _LinkTile(
                 icon: Icons.description,
                 title: 'Open Source Licenses',
