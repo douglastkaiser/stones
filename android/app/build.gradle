@@ -28,10 +28,18 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("ANDROID_UPLOAD_STORE_FILE"))
+            storePassword System.getenv("ANDROID_UPLOAD_STORE_PASSWORD")
+            keyAlias System.getenv("ANDROID_UPLOAD_KEY_ALIAS")
+            keyPassword System.getenv("ANDROID_UPLOAD_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = signingConfigs.release
         }
     }
 }
