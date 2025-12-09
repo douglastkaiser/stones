@@ -30,19 +30,19 @@ android {
 
     signingConfigs {
         release {
-            def uploadStoreFile = System.getenv("ANDROID_UPLOAD_STORE_FILE")
-            if (uploadStoreFile) {
-                storeFile file(uploadStoreFile)
-            }
-            storePassword System.getenv("ANDROID_UPLOAD_STORE_PASSWORD")
-            keyAlias System.getenv("ANDROID_UPLOAD_KEY_ALIAS")
-            keyPassword System.getenv("ANDROID_UPLOAD_KEY_PASSWORD")
+            storeFile file(System.getenv("ANDROID_UPLOAD_STORE_FILE") ?: "")
+            storePassword System.getenv("ANDROID_UPLOAD_STORE_PASSWORD") ?: ""
+            keyAlias System.getenv("ANDROID_UPLOAD_KEY_ALIAS") ?: ""
+            keyPassword System.getenv("ANDROID_UPLOAD_KEY_PASSWORD") ?: ""
         }
     }
 
     buildTypes {
+        debug {
+            // Keep existing debug config; use default debug keystore.
+        }
         release {
-            signingConfig = signingConfigs.release
+            signingConfig signingConfigs.release
         }
     }
 }
