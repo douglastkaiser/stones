@@ -301,15 +301,17 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
       if (visited.contains(current)) continue;
       visited.add(current);
 
-      if (isTargetEdge(current)) {
-        final path = <Position>{};
-        var pos = current;
-        while (pos != null) {
-          path.add(pos);
-          pos = parent[pos]!;
+        if (isTargetEdge(current)) {
+          final path = <Position>{};
+          var pos = current;
+          while (true) {
+            path.add(pos);
+            final nextPos = parent[pos];
+            if (nextPos == null) break;
+            pos = nextPos;
+          }
+          return path;
         }
-        return path;
-      }
 
       for (final adj in current.adjacentPositions(state.boardSize)) {
         if (_controlsForRoad(state, adj, color) && !visited.contains(adj)) {
