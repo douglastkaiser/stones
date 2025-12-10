@@ -228,19 +228,30 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       }
 
       _debugLog('Transaction complete, setting up listener as BLACK');
+      _debugLog('>>> JOINER: About to call _listenToRoom <<<');
       _listenToRoom(code, localColor: PlayerColor.black);
 
       // IMPORTANT: Set session immediately so isLocalTurn works correctly
+      _debugLog('>>> JOINER: Setting state with session <<<');
       state = state.copyWith(
         session: joinedSession,
         roomCode: code,
         localColor: PlayerColor.black,
         appliedMoveCount: 0, // Will be updated by _syncMovesWithLocalGame
       );
-      _debugLog('State updated: localColor=black, roomCode=$code, session SET with ${joinedSession!.moves.length} moves');
+      _debugLog('>>> JOINER: State set: localColor=black, roomCode=$code <<<');
+      _debugLog('>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
 
+      _debugLog('>>> JOINER: About to call _beginLocalGame <<<');
       _beginLocalGame(joinedSession!.boardSize);
-      _debugLog('Local game initialized with boardSize=${joinedSession!.boardSize}');
+      _debugLog('>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
+
+      // Log the final state after joining
+      final finalLocalState = _ref.read(gameStateProvider);
+      _debugLog('>>> JOINER FINAL STATE <<<');
+      _debugLog('gameStateProvider: currentPlayer=${finalLocalState.currentPlayer}, turnNumber=${finalLocalState.turnNumber}');
+      _debugLog('gameStateProvider: board.occupiedPositions=${finalLocalState.board.occupiedPositions.length}');
+      _debugLog('onlineGameState: session.moves=${state.session?.moves.length}, appliedMoveCount=${state.appliedMoveCount}');
     } catch (e) {
       _debugLog('joinGame error: $e');
       final message = e.toString().replaceFirst('Exception: ', '');
@@ -336,18 +347,41 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> _listenToRoom(String roomCode, {required PlayerColor localColor}) async {
     _debugLog('_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
     await _subscription?.cancel();
-    _subscription = _firestore
-        .collection('games')
-        .doc(roomCode)
-        .snapshots()
-        .listen((snapshot) {
+
+    final docRef = _firestore.collection('games').doc(roomCode);
+    _debugLog('>>> Subscribing to document path: ${docRef.path} <<<');
+
+    _subscription = docRef.snapshots().listen((snapshot) {
       _debugLog('>>> FIRESTORE SNAPSHOT RECEIVED <<<');
+      _debugLog('>>> connectionState: exists=${snapshot.exists}, metadata.isFromCache=${snapshot.metadata.isFromCache}, metadata.hasPendingWrites=${snapshot.metadata.hasPendingWrites} <<<');
+
       final data = snapshot.data();
       if (data == null) {
         _debugLog('Snapshot data is null, ignoring');
         return;
       }
-      final session = OnlineGameSession.fromSnapshot(roomCode, data);
+
+      // Log raw Firestore data for debugging
+      _debugLog('>>> RAW FIRESTORE DATA <<<');
+      _debugLog('moves count: ${(data['moves'] as List?)?.length ?? 0}');
+      _debugLog('currentTurn: ${data['currentTurn']}');
+      _debugLog('status: ${data['status']}');
+      _debugLog('white: ${data['white']}');
+      _debugLog('black: ${data['black']}');
+      _debugLog('>>> END RAW DATA <<<');
+
+      // Try to deserialize with error catching
+      OnlineGameSession session;
+      try {
+        session = OnlineGameSession.fromSnapshot(roomCode, data);
+        _debugLog('Deserialization SUCCESS: moves=${session.moves.length}, currentTurn=${session.currentTurn}');
+      } catch (e, stackTrace) {
+        _debugLog('!!! DESERIALIZATION ERROR !!!');
+        _debugLog('Error: $e');
+        _debugLog('Stack trace: $stackTrace');
+        _debugLog('Raw data that failed: $data');
+        return;
+      }
       final previousSession = state.session;
 
       _debugLog('Snapshot data: moves=${session.moves.length}, currentTurn=${session.currentTurn}, '
@@ -384,6 +418,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       );
       _debugLog('State updated, now calling _syncMovesWithLocalGame');
       _syncMovesWithLocalGame(session);
+    }, onError: (error, stackTrace) {
+      _debugLog('!!! FIRESTORE LISTENER ERROR !!!');
+      _debugLog('Error: $error');
+      _debugLog('Stack trace: $stackTrace');
+      state = state.copyWith(errorMessage: 'Connection error: $error');
     });
     _debugLog('Firestore listener setup complete');
   }
@@ -436,7 +475,14 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   void _syncMovesWithLocalGame(OnlineGameSession session) {
     final applied = state.appliedMoveCount;
-    _debugLog('_syncMovesWithLocalGame: session.moves=${session.moves.length}, appliedMoveCount=$applied');
+    _debugLog('>>> _syncMovesWithLocalGame START <<<');
+    _debugLog('session.moves.length=${session.moves.length}, appliedMoveCount=$applied');
+
+    // Log the LOCAL game state BEFORE sync
+    final localStateBefore = _ref.read(gameStateProvider);
+    _debugLog('LOCAL STATE BEFORE SYNC: currentPlayer=${localStateBefore.currentPlayer}, '
+        'turnNumber=${localStateBefore.turnNumber}, '
+        'occupiedCells=${localStateBefore.board.occupiedPositions.length}');
 
     if (session.moves.length < applied) {
       _debugLog('_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
@@ -446,25 +492,34 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     if (session.moves.length == state.appliedMoveCount) {
       _debugLog('_syncMovesWithLocalGame: No new moves to apply (${session.moves.length} == ${state.appliedMoveCount})');
+      _debugLog('>>> _syncMovesWithLocalGame END (no changes) <<<');
       return;
     }
 
-    _debugLog('_syncMovesWithLocalGame: Applying moves from ${state.appliedMoveCount} to ${session.moves.length - 1}');
+    _debugLog('>>> APPLYING ${session.moves.length - state.appliedMoveCount} NEW MOVES <<<');
     for (var i = state.appliedMoveCount; i < session.moves.length; i++) {
       final move = session.moves[i];
-      _debugLog('_syncMovesWithLocalGame: Applying move $i: ${move.notation} by ${move.player}');
+      _debugLog('Applying move $i: notation="${move.notation}", player=${move.player}');
       final success = _applyNotation(move);
       if (!success) {
-        _debugLog('_syncMovesWithLocalGame: FAILED to apply move ${move.notation}!');
+        _debugLog('!!! FAILED to apply move ${move.notation} !!!');
         state = state.copyWith(
           errorMessage: 'Failed to apply move ${move.notation}',
         );
         break;
       }
-      _debugLog('_syncMovesWithLocalGame: Move applied successfully');
+      _debugLog('Move $i applied successfully');
     }
-    _debugLog('_syncMovesWithLocalGame: Done. appliedMoveCount: $applied -> ${session.moves.length}');
+
+    // Log the LOCAL game state AFTER sync
+    final localStateAfter = _ref.read(gameStateProvider);
+    _debugLog('LOCAL STATE AFTER SYNC: currentPlayer=${localStateAfter.currentPlayer}, '
+        'turnNumber=${localStateAfter.turnNumber}, '
+        'occupiedCells=${localStateAfter.board.occupiedPositions.length}');
+
+    _debugLog('Updating appliedMoveCount: $applied -> ${session.moves.length}');
     state = state.copyWith(appliedMoveCount: session.moves.length);
+    _debugLog('>>> _syncMovesWithLocalGame END <<<');
   }
 
   bool _applyNotation(OnlineGameMove move) {

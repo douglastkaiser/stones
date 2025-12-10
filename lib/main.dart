@@ -368,14 +368,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Debug logging for turn enforcement
     if (isOnline) {
-      _debugLog('BUILD: isOnline=$isOnline, localColor=${onlineState.localColor}, '
-          'sessionTurn=${onlineState.session?.currentTurn}, '
-          'localGameTurn=${gameState.currentPlayer}');
-      _debugLog('BUILD: isMyTurnLocally=$isMyTurnLocally (uses LOCAL game state), '
-          'isRemoteTurn=$isRemoteTurn, waitingForOpponent=$waitingForOpponent, '
-          'inputLocked=$inputLocked');
-      _debugLog('BUILD: session.moves=${onlineState.session?.moves.length ?? 0}, '
-          'appliedMoveCount=${onlineState.appliedMoveCount}');
+      _debugLog('>>> GAME SCREEN BUILD (ONLINE MODE) <<<');
+      _debugLog('localColor=${onlineState.localColor}, roomCode=${onlineState.roomCode}');
+      _debugLog('session.currentTurn=${onlineState.session?.currentTurn}, session.moves=${onlineState.session?.moves.length ?? 0}');
+      _debugLog('LOCAL gameState: currentPlayer=${gameState.currentPlayer}, turnNumber=${gameState.turnNumber}');
+      _debugLog('LOCAL board: occupiedCells=${gameState.board.occupiedPositions.length}');
+      _debugLog('appliedMoveCount=${onlineState.appliedMoveCount}');
+      _debugLog('isMyTurnLocally=$isMyTurnLocally, isRemoteTurn=$isRemoteTurn');
+      _debugLog('waitingForOpponent=$waitingForOpponent, inputLocked=$inputLocked');
+      _debugLog('>>> END GAME SCREEN BUILD <<<');
     }
 
     return Scaffold(
@@ -1148,6 +1149,14 @@ class _GameBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug logging for board state
+    final occupiedCount = gameState.board.occupiedPositions.length;
+    _debugLog('BOARD BUILD: currentTurn=${gameState.currentPlayer}, '
+        'turnNumber=${gameState.turnNumber}, '
+        'phase=${gameState.phase}, '
+        'occupiedCells=$occupiedCount, '
+        'isGameOver=${gameState.isGameOver}');
+
     final dropPath = uiState.getDropPath();
     final nextDropPos = uiState.getCurrentHandPosition();
     final validMoveDestinations = uiState.getValidMoveDestinations(gameState);
