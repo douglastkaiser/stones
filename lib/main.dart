@@ -284,6 +284,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
       );
     });
+
+    // Listen for online game events (opponent moves/joins)
+    ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
+      final soundManager = ref.read(soundManagerProvider);
+      if (next.opponentJustJoined) {
+        soundManager.playPiecePlace();
+      }
+      if (next.opponentJustMoved) {
+        soundManager.playStackMove();
+      }
+    });
   }
 
   @override
@@ -405,6 +416,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       isThinking: isAiThinking,
                       aiDifficulty:
                           session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
+                      onlineState: isOnline ? onlineState : null,
                     ),
 
                     // Board
@@ -510,10 +522,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             _OnlineStatusBanner(
               message:
                   'Waiting for opponent... Room code: ${onlineState.roomCode ?? '---'}',
+              icon: Icons.hourglass_empty,
+            ),
+          if (session.mode == GameMode.online &&
+              onlineState.opponentDisconnected &&
+              !onlineState.opponentInactive)
+            _OnlineStatusBanner(
+              message: 'Opponent may have disconnected (no activity for 60s)',
+              icon: Icons.wifi_off,
+              color: Colors.orange,
             ),
           if (session.mode == GameMode.online && onlineState.opponentInactive)
-            const _OnlineStatusBanner(
-              message: 'Opponent left? No activity for 60 seconds.',
+            _OnlineStatusBanner(
+              message: 'Opponent disconnected (no activity for 2+ minutes)',
+              icon: Icons.error_outline,
+              color: Colors.red,
             ),
         ],
       ),
@@ -859,12 +882,14 @@ class _GameInfoBar extends StatelessWidget {
   final bool isAiTurn;
   final bool isThinking;
   final AIDifficulty? aiDifficulty;
+  final OnlineGameState? onlineState;
 
   const _GameInfoBar({
     required this.gameState,
     this.isAiTurn = false,
     this.isThinking = false,
     this.aiDifficulty,
+    this.onlineState,
   });
 
   @override
@@ -882,6 +907,18 @@ class _GameInfoBar extends StatelessWidget {
       statusText = "Place opponent's flat stone";
     } else {
       statusText = 'Place or move';
+    }
+
+    // Online game: show player names
+    String? currentPlayerName;
+    bool isLocalPlayerTurn = false;
+    if (onlineState != null && onlineState!.session != null) {
+      final session = onlineState!.session!;
+      final currentColor = gameState.currentPlayer;
+      currentPlayerName = currentColor == PlayerColor.white
+          ? session.white.displayName
+          : session.black?.displayName;
+      isLocalPlayerTurn = onlineState!.isLocalTurn;
     }
 
     return Container(
@@ -907,14 +944,46 @@ class _GameInfoBar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${gameState.currentPlayer.name.toUpperCase()}\'S TURN',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
+                if (onlineState != null && currentPlayerName != null)
+                  Row(
+                    children: [
+                      Text(
+                        isLocalPlayerTurn ? 'YOUR TURN' : "${currentPlayerName.toUpperCase()}'S TURN",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isLocalPlayerTurn
+                              ? Colors.green.withValues(alpha: 0.3)
+                              : Colors.orange.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          gameState.currentPlayer.name.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    '${gameState.currentPlayer.name.toUpperCase()}\'S TURN',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
-                ),
                 Text(
                   statusText,
                   style: TextStyle(
@@ -959,6 +1028,33 @@ class _GameInfoBar extends StatelessWidget {
                           color: secondaryColor,
                         ),
                       ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
+          // Show online game info
+          if (onlineState != null && onlineState!.session != null)
+            Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      onlineState!.localColor == PlayerColor.white ? 'You: White' : 'You: Black',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      'vs ${onlineState!.localColor == PlayerColor.white ? (onlineState!.session!.black?.displayName ?? "...") : onlineState!.session!.white.displayName}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: secondaryColor,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(width: 12),
@@ -2894,11 +2990,18 @@ class _WinOverlay extends StatelessWidget {
 
 class _OnlineStatusBanner extends StatelessWidget {
   final String message;
+  final IconData icon;
+  final Color? color;
 
-  const _OnlineStatusBanner({required this.message});
+  const _OnlineStatusBanner({
+    required this.message,
+    this.icon = Icons.wifi_tethering,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bannerColor = color ?? GameColors.boardFrameInner;
     return Positioned(
       top: 16,
       left: 16,
@@ -2910,13 +3013,16 @@ class _OnlineStatusBanner extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.wifi_tethering, color: GameColors.boardFrameInner),
+              Icon(icon, color: bannerColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: color != null ? bannerColor : null,
+                  ),
                 ),
               ),
             ],

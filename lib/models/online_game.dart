@@ -61,7 +61,8 @@ class OnlineGameSession {
   final PlayerColor currentTurn;
   final OnlineStatus status;
   final OnlineWinner? winner;
-  final DateTime? updatedAt;
+  final DateTime? createdAt;
+  final DateTime? lastMoveAt;
 
   const OnlineGameSession({
     required this.roomCode,
@@ -72,7 +73,8 @@ class OnlineGameSession {
     this.currentTurn = PlayerColor.white,
     this.status = OnlineStatus.waiting,
     this.winner,
-    this.updatedAt,
+    this.createdAt,
+    this.lastMoveAt,
   });
 
   bool get hasOpponent => black != null;
@@ -86,7 +88,6 @@ class OnlineGameSession {
       'currentTurn': currentTurn.name,
       'status': status.name,
       'winner': winner?.name,
-      'updatedAt': FieldValue.serverTimestamp(),
     };
   }
 
@@ -105,8 +106,11 @@ class OnlineGameSession {
       currentTurn: _colorFromString(data['currentTurn'] as String?),
       status: _statusFromString(data['status'] as String?),
       winner: _winnerFromString(data['winner'] as String?),
-      updatedAt: (data['updatedAt'] is Timestamp)
-          ? (data['updatedAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] is Timestamp)
+          ? (data['createdAt'] as Timestamp).toDate()
+          : null,
+      lastMoveAt: (data['lastMoveAt'] is Timestamp)
+          ? (data['lastMoveAt'] as Timestamp).toDate()
           : null,
     );
   }
@@ -119,7 +123,8 @@ class OnlineGameSession {
     PlayerColor? currentTurn,
     OnlineStatus? status,
     OnlineWinner? winner,
-    DateTime? updatedAt,
+    DateTime? createdAt,
+    DateTime? lastMoveAt,
   }) {
     return OnlineGameSession(
       roomCode: roomCode,
@@ -130,7 +135,8 @@ class OnlineGameSession {
       currentTurn: currentTurn ?? this.currentTurn,
       status: status ?? this.status,
       winner: winner ?? this.winner,
-      updatedAt: updatedAt ?? this.updatedAt,
+      createdAt: createdAt ?? this.createdAt,
+      lastMoveAt: lastMoveAt ?? this.lastMoveAt,
     );
   }
 }

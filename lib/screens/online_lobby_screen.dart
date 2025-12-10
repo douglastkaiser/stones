@@ -1,10 +1,12 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
 import '../providers/providers.dart';
-import '../services/play_games_service.dart';
+import '../services/services.dart';
+import '../theme/theme.dart';
 import 'game_screen.dart';
 
 class OnlineLobbyScreen extends ConsumerStatefulWidget {
@@ -16,11 +18,16 @@ class OnlineLobbyScreen extends ConsumerStatefulWidget {
 
 class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   final TextEditingController _joinCodeController = TextEditingController();
+  int _selectedBoardSize = 5;
+  bool _hasNavigatedToGame = false;
 
   @override
   void initState() {
     super.initState();
     ref.read(onlineGameProvider.notifier).initialize();
+    // Load saved board size preference
+    final settings = ref.read(appSettingsProvider);
+    _selectedBoardSize = settings.boardSize;
   }
 
   @override
@@ -29,42 +36,72 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
     super.dispose();
   }
 
+  void _playSound(GameSound sound) {
+    final soundManager = ref.read(soundManagerProvider);
+    soundManager.play(sound);
+  }
+
   @override
   Widget build(BuildContext context) {
     final online = ref.watch(onlineGameProvider);
     final playGames = ref.watch(playGamesServiceProvider);
-    final settings = ref.watch(appSettingsProvider);
+
+    // Listen for opponent join or move to play sounds
+    ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
+      if (next.opponentJustJoined) {
+        _playSound(GameSound.piecePlace);
+      }
+      if (next.opponentJustMoved) {
+        _playSound(GameSound.stackMove);
+      }
+      // Auto-navigate to game when opponent joins and game starts
+      if (!_hasNavigatedToGame &&
+          next.session?.status == OnlineStatus.playing &&
+          previous?.session?.status == OnlineStatus.waiting) {
+        _hasNavigatedToGame = true;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const GameScreen()),
+        );
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Online Play'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            ref.read(onlineGameProvider.notifier).leaveRoom();
+            Navigator.pop(context);
+          },
         ),
-        actions: [
-          if (online.session != null)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Leave room',
-              onPressed: () => ref.read(onlineGameProvider.notifier).leaveRoom(),
-            ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Profile card
             _buildProfileCard(playGames),
+
+            // Error banner
             if (online.errorMessage != null) ...[
               const SizedBox(height: 12),
               _ErrorBanner(message: online.errorMessage!),
             ],
-            const SizedBox(height: 12),
-            _buildActions(context, settings.boardSize, online),
-            const SizedBox(height: 12),
-            _buildRoomStatus(context, online),
+
+            const SizedBox(height: 16),
+
+            // Main content based on state
+            if (online.session == null)
+              _buildLobbyActions(context, online)
+            else if (online.session!.status == OnlineStatus.waiting)
+              _buildWaitingScreen(context, online)
+            else if (online.session!.status == OnlineStatus.playing)
+              _buildPlayingStatus(context, online)
+            else if (online.session!.status == OnlineStatus.finished)
+              _buildFinishedStatus(context, online),
           ],
         ),
       ),
@@ -77,244 +114,617 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
         leading: const Icon(Icons.person_outline),
         title: Text(playGames.player?.displayName ?? 'Guest'),
         subtitle: Text(playGames.isSignedIn
-            ? 'Connected with Play Games'
-            : 'Sign-in happens automatically when creating/joining'),
+            ? 'Signed in with Play Games'
+            : 'Will sign in when creating or joining a game'),
       ),
     );
   }
 
-  Widget _buildActions(BuildContext context, int boardSize, OnlineGameState online) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Start a private match',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.add_circle_outline),
-              label: online.creating
-                  ? const Text('Creating room...')
-                  : Text('Create game (Board $boardSize x $boardSize)'),
-              onPressed: online.creating
-                  ? null
-                  : () => ref
-                      .read(onlineGameProvider.notifier)
-                      .createGame(boardSize: boardSize),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.login),
-              label: const Text('Join with room code'),
-              onPressed: online.joining ? null : () => _showJoinDialog(context),
-            ),
-            if (online.session?.status == OnlineStatus.finished) ...[
-              const Divider(height: 24),
-              FilledButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text('Offer rematch'),
-                onPressed: () => ref.read(onlineGameProvider.notifier).requestRematch(),
-              ),
-            ],
-            if (online.session?.status == OnlineStatus.playing && online.localColor != null) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.flag),
-                label: const Text('Resign'),
-                onPressed: () => ref.read(onlineGameProvider.notifier).resign(),
-              ),
-            ]
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoomStatus(BuildContext context, OnlineGameState online) {
-    if (online.session == null) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Create or join a room to share a code with a friend. Games are saved in Firestore so both players stay in sync.',
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final session = online.session!;
-    final subtitle = switch (session.status) {
-      OnlineStatus.waiting => 'Share this code and wait for a friend to join.',
-      OnlineStatus.playing => 'Game in progress. Make your move from the board.',
-      OnlineStatus.finished => 'Game finished. Start a rematch to keep playing.',
-    };
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.videogame_asset, color: Colors.brown),
-                const SizedBox(width: 8),
-                Text('Room ${session.roomCode}',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                if (online.opponentInactive)
-                  Chip(
-                    label: const Text('Opponent left?'),
-                    backgroundColor: Colors.orange.shade100,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(subtitle),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _PlayerPill(label: 'White', player: session.white),
-                const SizedBox(width: 8),
-                _PlayerPill(label: 'Black', player: session.black),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _StatusBadge(status: session.status, winner: session.winner),
-            const SizedBox(height: 12),
-            if (session.status == OnlineStatus.waiting) ...[
-              const LinearProgressIndicator(),
-              const SizedBox(height: 12),
-              Text('Waiting for opponent. Room code: ${session.roomCode}'),
-            ],
-            if (session.status == OnlineStatus.playing)
-              ElevatedButton.icon(
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Open game board'),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GameScreen()),
-                ),
-              ),
-            if (session.status == OnlineStatus.finished)
-              OutlinedButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text('Request rematch'),
-                onPressed: () => ref.read(onlineGameProvider.notifier).requestRematch(),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showJoinDialog(BuildContext context) async {
-    _joinCodeController.text = '';
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Join room'),
-        content: TextField(
-          controller: _joinCodeController,
-          decoration: const InputDecoration(
-            labelText: 'Room code',
-            hintText: 'STONE-1234',
-          ),
-          textCapitalization: TextCapitalization.characters,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Join'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && _joinCodeController.text.isNotEmpty) {
-      await ref.read(onlineGameProvider.notifier).joinGame(_joinCodeController.text);
-    }
-  }
-}
-
-class _PlayerPill extends StatelessWidget {
-  final String label;
-  final OnlineGamePlayer? player;
-
-  const _PlayerPill({required this.label, required this.player});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(player?.displayName ?? 'Waiting...'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final OnlineStatus status;
-  final OnlineWinner? winner;
-
-  const _StatusBadge({required this.status, required this.winner});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    String text;
-    switch (status) {
-      case OnlineStatus.waiting:
-        color = Colors.amber.shade700;
-        text = 'Waiting';
-        break;
-      case OnlineStatus.playing:
-        color = Colors.green.shade700;
-        text = 'Playing';
-        break;
-      case OnlineStatus.finished:
-        color = Colors.indigo.shade700;
-        text = winner == null
-            ? 'Finished'
-            : 'Winner: ${winner == OnlineWinner.white ? 'White' : winner == OnlineWinner.black ? 'Black' : 'Draw'}';
-        break;
-    }
-
-    return Row(
+  Widget _buildLobbyActions(BuildContext context, OnlineGameState online) {
+    return Column(
       children: [
-        Chip(
-          backgroundColor: color.withValues(alpha: 0.1),
-          label: Text(
-            text,
-            style: TextStyle(color: color),
+        // Create Game section
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.add_circle_outline, color: GameColors.boardFrameInner),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Create Game',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Select board size:',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 8),
+                _BoardSizeSelector(
+                  selectedSize: _selectedBoardSize,
+                  onSizeSelected: (size) {
+                    setState(() => _selectedBoardSize = size);
+                  },
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    icon: online.creating
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.play_arrow),
+                    label: Text(online.creating ? 'Creating...' : 'Create Game'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: GameColors.boardFrameInner,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: online.creating
+                        ? null
+                        : () => ref
+                            .read(onlineGameProvider.notifier)
+                            .createGame(boardSize: _selectedBoardSize),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Join Game section
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.login, color: GameColors.boardFrameOuter),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Join Game',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _joinCodeController,
+                  decoration: InputDecoration(
+                    labelText: 'Room Code',
+                    hintText: 'e.g., ABCXYZ',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.tag),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => _joinCodeController.clear(),
+                    ),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
+                    LengthLimitingTextInputFormatter(6),
+                    _UpperCaseTextFormatter(),
+                  ],
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    icon: online.joining
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.login),
+                    label: Text(online.joining ? 'Joining...' : 'Join Game'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: GameColors.boardFrameOuter,
+                      side: const BorderSide(color: GameColors.boardFrameOuter, width: 2),
+                    ),
+                    onPressed: (online.joining || _joinCodeController.text.length != 6)
+                        ? null
+                        : () => ref
+                            .read(onlineGameProvider.notifier)
+                            .joinGame(_joinCodeController.text),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildWaitingScreen(BuildContext context, OnlineGameState online) {
+    final session = online.session!;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.hourglass_empty,
+              size: 48,
+              color: GameColors.boardFrameInner,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Waiting for opponent...',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Share this code with a friend:',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            // Big room code display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: GameColors.boardFrameInner.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: GameColors.boardFrameInner.withValues(alpha: 0.3),
+                  width: 2,
+                ),
+              ),
+              child: Text(
+                session.roomCode,
+                style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 8,
+                      color: GameColors.boardFrameInner,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Copy button
+            OutlinedButton.icon(
+              icon: const Icon(Icons.copy),
+              label: const Text('Copy Code'),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: session.roomCode));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Room code copied to clipboard'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            const LinearProgressIndicator(),
+            const SizedBox(height: 24),
+            // Player info
+            _PlayerInfoCard(
+              label: 'You (White)',
+              player: session.white,
+              isLocal: true,
+            ),
+            const SizedBox(height: 8),
+            _PlayerInfoCard(
+              label: 'Opponent (Black)',
+              player: null,
+              isLocal: false,
+              waiting: true,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Board size: ${session.boardSize}×${session.boardSize}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+            ),
+            const SizedBox(height: 24),
+            // Leave game button
+            TextButton.icon(
+              icon: const Icon(Icons.exit_to_app),
+              label: const Text('Leave Game'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red.shade700,
+              ),
+              onPressed: () {
+                ref.read(onlineGameProvider.notifier).leaveRoom();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayingStatus(BuildContext context, OnlineGameState online) {
+    final session = online.session!;
+    final isYourTurn = online.isLocalTurn;
+    final yourColor = online.localColor == PlayerColor.white ? 'White' : 'Black';
+    final opponentColor = online.localColor == PlayerColor.white ? 'Black' : 'White';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.sports_esports,
+                  color: isYourTurn ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isYourTurn ? 'Your turn!' : "Opponent's turn",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: isYourTurn ? Colors.green.shade700 : Colors.orange.shade700,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _PlayerInfoCard(
+              label: 'You ($yourColor)',
+              player: online.localColor == PlayerColor.white ? session.white : session.black,
+              isLocal: true,
+              isActive: isYourTurn,
+            ),
+            const SizedBox(height: 8),
+            _PlayerInfoCard(
+              label: 'Opponent ($opponentColor)',
+              player: online.localColor == PlayerColor.white ? session.black : session.white,
+              isLocal: false,
+              isActive: !isYourTurn,
+            ),
+            if (online.opponentDisconnected && !online.opponentInactive) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.wifi_off, color: Colors.orange.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Opponent may have disconnected (no activity for 60s)',
+                        style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (online.opponentInactive) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Opponent disconnected (no activity for 2+ minutes)',
+                        style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Open Game Board'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: GameColors.boardFrameInner,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GameScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.flag),
+                    label: const Text('Resign'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                      side: BorderSide(color: Colors.red.shade300),
+                    ),
+                    onPressed: () => _confirmResign(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.exit_to_app),
+                    label: const Text('Leave'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade700,
+                    ),
+                    onPressed: () {
+                      ref.read(onlineGameProvider.notifier).leaveRoom();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFinishedStatus(BuildContext context, OnlineGameState online) {
+    final session = online.session!;
+    final winner = session.winner;
+    final yourColor = online.localColor == PlayerColor.white ? 'White' : 'Black';
+    final opponentColor = online.localColor == PlayerColor.white ? 'Black' : 'White';
+
+    String resultText;
+    Color resultColor;
+    if (winner == OnlineWinner.draw) {
+      resultText = 'Game ended in a draw!';
+      resultColor = Colors.orange.shade700;
+    } else if ((winner == OnlineWinner.white && online.localColor == PlayerColor.white) ||
+        (winner == OnlineWinner.black && online.localColor == PlayerColor.black)) {
+      resultText = 'You won!';
+      resultColor = Colors.green.shade700;
+    } else {
+      resultText = 'You lost!';
+      resultColor = Colors.red.shade700;
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(
+              winner == OnlineWinner.draw
+                  ? Icons.handshake
+                  : resultColor == Colors.green.shade700
+                      ? Icons.emoji_events
+                      : Icons.sentiment_dissatisfied,
+              size: 48,
+              color: resultColor,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              resultText,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: resultColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            _PlayerInfoCard(
+              label: 'You ($yourColor)',
+              player: online.localColor == PlayerColor.white ? session.white : session.black,
+              isLocal: true,
+            ),
+            const SizedBox(height: 8),
+            _PlayerInfoCard(
+              label: 'Opponent ($opponentColor)',
+              player: online.localColor == PlayerColor.white ? session.black : session.white,
+              isLocal: false,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text('Rematch'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: GameColors.boardFrameInner,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  ref.read(onlineGameProvider.notifier).requestRematch();
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              icon: const Icon(Icons.exit_to_app),
+              label: const Text('Leave Game'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey.shade700,
+              ),
+              onPressed: () {
+                ref.read(onlineGameProvider.notifier).leaveRoom();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmResign(BuildContext context) async {
+    final shouldResign = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Resign game?'),
+            content: const Text(
+              'Are you sure you want to resign? Your opponent will be declared the winner.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Resign'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (shouldResign) {
+      await ref.read(onlineGameProvider.notifier).resign();
+    }
+  }
+}
+
+class _BoardSizeSelector extends StatelessWidget {
+  final int selectedSize;
+  final ValueChanged<int> onSizeSelected;
+
+  const _BoardSizeSelector({
+    required this.selectedSize,
+    required this.onSizeSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (int size = 3; size <= 8; size++)
+          ChoiceChip(
+            label: Text('${size}×$size'),
+            selected: selectedSize == size,
+            onSelected: (_) => onSizeSelected(size),
+            selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+            checkmarkColor: GameColors.boardFrameInner,
+          ),
+      ],
+    );
+  }
+}
+
+class _PlayerInfoCard extends StatelessWidget {
+  final String label;
+  final OnlineGamePlayer? player;
+  final bool isLocal;
+  final bool isActive;
+  final bool waiting;
+
+  const _PlayerInfoCard({
+    required this.label,
+    required this.player,
+    required this.isLocal,
+    this.isActive = false,
+    this.waiting = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isActive
+            ? Colors.green.shade50
+            : isLocal
+                ? Colors.blue.shade50
+                : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive
+              ? Colors.green.shade300
+              : isLocal
+                  ? Colors.blue.shade200
+                  : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isLocal ? Icons.person : Icons.person_outline,
+            color: isActive
+                ? Colors.green.shade700
+                : isLocal
+                    ? Colors.blue.shade700
+                    : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isActive
+                        ? Colors.green.shade700
+                        : isLocal
+                            ? Colors.blue.shade700
+                            : Colors.grey.shade700,
+                  ),
+                ),
+                Text(
+                  waiting ? 'Waiting...' : (player?.displayName ?? 'Unknown'),
+                  style: TextStyle(
+                    color: waiting ? Colors.grey.shade500 : Colors.grey.shade700,
+                    fontStyle: waiting ? FontStyle.italic : FontStyle.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isActive)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.shade700,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'TURN',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -338,6 +748,19 @@ class _ErrorBanner extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }
