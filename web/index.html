@@ -127,5 +127,27 @@
       console.log('Stones PWA was installed');
     });
   </script>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDU8twgc4E0ZR-pcIBHwIqMx0Wdty1_LwM",
+      authDomain: "stones-9a6a0.firebaseapp.com",
+      projectId: "stones-9a6a0",
+      storageBucket: "stones-9a6a0.firebasestorage.app",
+      messagingSenderId: "984712752792",
+      appId: "1:984712752792:web:eda06c6c598e3971e96aed",
+      measurementId: "G-8BM3W3Q70J"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+  </script>
 </body>
 </html>
