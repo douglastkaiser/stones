@@ -270,34 +270,32 @@ class MediumStonesAI extends StonesAI {
       score += 4;
     }
 
-    if (destination != null) {
-      // Chain extension bonus for stack moves
-      final chainBonus = _evaluateChainExtension(state, destination, state.currentPlayer);
-      score += chainBonus * 3;
+    // Chain extension bonus for stack moves
+    final chainBonus = _evaluateChainExtension(state, destination, state.currentPlayer);
+    score += chainBonus * 3;
 
-      final friendlyAdjacency =
-          _adjacentControlled(state, destination, state.currentPlayer);
-      final opponentAdjacency =
-          _adjacentControlled(state, destination, state.opponent);
-      score += friendlyAdjacency * 2;
-      score += opponentAdjacency * 2;
+    final friendlyAdjacency =
+        _adjacentControlled(state, destination, state.currentPlayer);
+    final opponentAdjacency =
+        _adjacentControlled(state, destination, state.opponent);
+    score += friendlyAdjacency * 2;
+    score += opponentAdjacency * 2;
 
-      // Taking control of opponent space
-      final targetStack = board.stackAt(destination);
-      if (targetStack.topPiece?.color == state.opponent) {
-        score += 3;
-      }
+    // Taking control of opponent space
+    final targetStack = board.stackAt(destination);
+    if (targetStack.topPiece?.color == state.opponent) {
+      score += 3;
+    }
 
-      // Flattening walls
-      if (targetStack.topPiece?.type == PieceType.standing &&
-          movingTop?.canFlattenWalls == true) {
-        score += 5;
-      }
+    // Flattening walls
+    if (targetStack.topPiece?.type == PieceType.standing &&
+        movingTop?.canFlattenWalls == true) {
+      score += 5;
+    }
 
-      // Edge bonus
-      if (_touchesEdge(destination, state.boardSize)) {
-        score += 2;
-      }
+    // Edge bonus
+    if (_touchesEdge(destination, state.boardSize)) {
+      score += 2;
     }
 
     return score + random.nextDouble() * 0.2;
