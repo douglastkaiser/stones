@@ -22,8 +22,12 @@ class OnlineGameState {
   final String? roomCode;
   final PlayerColor? localColor;
   final bool opponentInactive;
+  final bool opponentDisconnected;
+  final bool reconnecting;
   final String? errorMessage;
   final int appliedMoveCount;
+  final bool opponentJustJoined;
+  final bool opponentJustMoved;
 
   const OnlineGameState({
     this.initializing = false,
@@ -33,8 +37,12 @@ class OnlineGameState {
     this.roomCode,
     this.localColor,
     this.opponentInactive = false,
+    this.opponentDisconnected = false,
+    this.reconnecting = false,
     this.errorMessage,
     this.appliedMoveCount = 0,
+    this.opponentJustJoined = false,
+    this.opponentJustMoved = false,
   });
 
   bool get isLocalTurn =>
@@ -50,9 +58,13 @@ class OnlineGameState {
     String? roomCode,
     PlayerColor? localColor,
     bool? opponentInactive,
+    bool? opponentDisconnected,
+    bool? reconnecting,
     String? errorMessage,
     int? appliedMoveCount,
     bool clearError = false,
+    bool? opponentJustJoined,
+    bool? opponentJustMoved,
   }) {
     return OnlineGameState(
       initializing: initializing ?? this.initializing,
@@ -62,8 +74,12 @@ class OnlineGameState {
       roomCode: roomCode ?? this.roomCode,
       localColor: localColor ?? this.localColor,
       opponentInactive: opponentInactive ?? this.opponentInactive,
+      opponentDisconnected: opponentDisconnected ?? this.opponentDisconnected,
+      reconnecting: reconnecting ?? this.reconnecting,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       appliedMoveCount: appliedMoveCount ?? this.appliedMoveCount,
+      opponentJustJoined: opponentJustJoined ?? false,
+      opponentJustMoved: opponentJustMoved ?? false,
     );
   }
 }
@@ -97,7 +113,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       final user = FirebaseAuth.instance.currentUser ??
           (await _ensureAuth(force: true));
       if (user == null) {
-        throw Exception('Unable to authenticate with Play Games.');
+        throw Exception('Unable to sign in. Please try again.');
       }
 
       final code = _generateRoomCode();
@@ -109,7 +125,13 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         moves: const [],
         status: OnlineStatus.waiting,
       );
-      await _firestore.collection('games').doc(code).set(session.toMap());
+
+      // Create with both createdAt and lastMoveAt fields
+      final data = session.toMap();
+      data['createdAt'] = FieldValue.serverTimestamp();
+      data['lastMoveAt'] = FieldValue.serverTimestamp();
+
+      await _firestore.collection('games').doc(code).set(data);
       _listenToRoom(code, localColor: PlayerColor.white);
       state = state.copyWith(
         session: session,
@@ -119,7 +141,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       );
       _beginLocalGame(boardSize);
     } catch (e) {
-      state = state.copyWith(errorMessage: e.toString());
+      final message = e.toString().replaceFirst('Exception: ', '');
+      state = state.copyWith(errorMessage: message);
     } finally {
       state = state.copyWith(creating: false);
     }
@@ -128,12 +151,22 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> joinGame(String roomCode) async {
     await initialize();
     state = state.copyWith(joining: true, clearError: true);
-    final code = roomCode.toUpperCase();
+    final code = roomCode.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+
+    // Validate room code format
+    if (code.length != 6) {
+      state = state.copyWith(
+        joining: false,
+        errorMessage: 'Room code must be 6 letters (e.g., ABCXYZ)',
+      );
+      return;
+    }
+
     try {
       final user = FirebaseAuth.instance.currentUser ??
           (await _ensureAuth(force: true));
       if (user == null) {
-        throw Exception('Unable to authenticate with Play Games.');
+        throw Exception('Unable to sign in. Please try again.');
       }
 
       final docRef = _firestore.collection('games').doc(code);
@@ -141,14 +174,19 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       await _firestore.runTransaction((txn) async {
         final snapshot = await txn.get(docRef);
         if (!snapshot.exists) {
-          throw Exception('Room not found.');
+          throw Exception('Game not found. Check the code and try again.');
         }
         final data = snapshot.data();
-        if (data == null) throw Exception('Room data missing.');
+        if (data == null) throw Exception('Game data missing.');
         final existing = OnlineGameSession.fromSnapshot(code, data);
         boardSize = existing.boardSize;
+
+        if (existing.status == OnlineStatus.finished) {
+          throw Exception('This game has already ended.');
+        }
+
         if (existing.black != null && existing.black!.id != user.uid) {
-          throw Exception('Room already has two players.');
+          throw Exception('Game already has two players.');
         }
 
         final updated = existing.copyWith(
@@ -158,7 +196,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         txn.update(docRef, {
           'black': updated.black?.toMap(),
           'status': updated.status.name,
-          'updatedAt': FieldValue.serverTimestamp(),
+          'lastMoveAt': FieldValue.serverTimestamp(),
         });
       });
 
@@ -166,7 +204,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       state = state.copyWith(roomCode: code, localColor: PlayerColor.black);
       _beginLocalGame(boardSize ?? 5);
     } catch (e) {
-      state = state.copyWith(errorMessage: e.toString());
+      final message = e.toString().replaceFirst('Exception: ', '');
+      state = state.copyWith(errorMessage: message);
     } finally {
       state = state.copyWith(joining: false);
     }
@@ -212,7 +251,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         'currentTurn': latestState.currentPlayer.name,
         'status': nextStatus,
         'winner': winner,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'lastMoveAt': FieldValue.serverTimestamp(),
       });
     });
 
@@ -229,7 +268,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     await docRef.update({
       'status': OnlineStatus.finished.name,
       'winner': winner,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'lastMoveAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -242,7 +281,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       'status': OnlineStatus.waiting.name,
       'winner': null,
       'currentTurn': PlayerColor.white.name,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'lastMoveAt': FieldValue.serverTimestamp(),
     });
     state = state.copyWith(appliedMoveCount: 0);
     _beginLocalGame(activeSession.boardSize);
@@ -258,12 +297,30 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       final data = snapshot.data();
       if (data == null) return;
       final session = OnlineGameSession.fromSnapshot(roomCode, data);
-      final opponentInactive = _isOpponentInactive(session);
+      final previousSession = state.session;
+
+      // Detect opponent join (for sound trigger)
+      final opponentJustJoined = previousSession != null &&
+          previousSession.black == null &&
+          session.black != null;
+
+      // Detect opponent move (for sound trigger)
+      final opponentJustMoved = previousSession != null &&
+          session.moves.length > previousSession.moves.length &&
+          session.moves.isNotEmpty &&
+          session.moves.last.player != localColor;
+
+      // Check activity status (2 minutes = inactive, 60 seconds = disconnected warning)
+      final (opponentInactive, opponentDisconnected) = _checkOpponentActivity(session);
+
       state = state.copyWith(
         session: session,
         roomCode: roomCode,
         localColor: localColor,
         opponentInactive: opponentInactive,
+        opponentDisconnected: opponentDisconnected,
+        opponentJustJoined: opponentJustJoined,
+        opponentJustMoved: opponentJustMoved,
         clearError: true,
       );
       _syncMovesWithLocalGame(session);
@@ -284,14 +341,24 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   OnlineGamePlayer _playerFor(User user) {
     final playGames = _ref.read(playGamesServiceProvider);
-    final displayName = playGames.player?.displayName ?? user.displayName ?? 'Player';
+    String displayName;
+    if (playGames.player?.displayName != null) {
+      displayName = playGames.player!.displayName;
+    } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+      displayName = user.displayName!;
+    } else {
+      // Generate random "Player-XXXX" name for anonymous users
+      final rand = Random();
+      final digits = List.generate(4, (_) => rand.nextInt(10)).join();
+      displayName = 'Player-$digits';
+    }
     return OnlineGamePlayer(id: user.uid, displayName: displayName);
   }
 
   String _generateRoomCode() {
     final rand = Random();
-    final digits = List.generate(4, (_) => rand.nextInt(10)).join();
-    return 'STONE-$digits';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    return List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
   void _beginLocalGame(int boardSize) {
@@ -400,12 +467,23 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     };
   }
 
-  bool _isOpponentInactive(OnlineGameSession session) {
-    final updated = session.updatedAt;
-    if (updated == null) return false;
-    if (session.status != OnlineStatus.playing) return false;
+  /// Returns (opponentInactive, opponentDisconnected)
+  /// - opponentInactive: No move for 2+ minutes
+  /// - opponentDisconnected: No move for 60+ seconds (warning state)
+  (bool, bool) _checkOpponentActivity(OnlineGameSession session) {
+    final lastMove = session.lastMoveAt;
+    if (lastMove == null) return (false, false);
+    if (session.status != OnlineStatus.playing) return (false, false);
+
     final now = DateTime.now();
-    return now.difference(updated).inSeconds > 60;
+    final secondsSinceLastMove = now.difference(lastMove).inSeconds;
+
+    // Opponent inactive: 2+ minutes of no activity
+    final opponentInactive = secondsSinceLastMove > 120;
+    // Opponent disconnected warning: 60+ seconds of no activity
+    final opponentDisconnected = secondsSinceLastMove > 60;
+
+    return (opponentInactive, opponentDisconnected);
   }
 }
 
