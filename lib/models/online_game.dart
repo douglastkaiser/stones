@@ -108,7 +108,7 @@ class OnlineGameSession {
           : OnlineGamePlayer.fromMap(toStringDynamicMap(data['black'])),
       boardSize: (data['boardSize'] as num?)?.toInt() ?? 5,
       moves: ((data['moves'] as List?) ?? [])
-          .where((m) => m is Map)
+          .whereType<Map>()
           .map((m) => OnlineGameMove.fromMap(toStringDynamicMap(m)))
           .toList(),
       currentTurn: _colorFromString(data['currentTurn'] as String?),
