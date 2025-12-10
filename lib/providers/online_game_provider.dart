@@ -1,5 +1,6 @@
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +14,13 @@ import 'game_provider.dart';
 import 'game_session_provider.dart';
 import '../services/services.dart';
 import 'ui_state_provider.dart';
+
+void _debugLog(String message) {
+  developer.log('[ONLINE] $message', name: 'multiplayer');
+  // Also print to console for visibility
+  // ignore: avoid_print
+  print('[ONLINE] $message');
+}
 
 class OnlineGameState {
   final bool initializing;
@@ -45,8 +53,12 @@ class OnlineGameState {
     this.opponentJustMoved = false,
   });
 
-  bool get isLocalTurn =>
-      session != null && localColor != null && session!.currentTurn == localColor;
+  bool get isLocalTurn {
+    final result = session != null && localColor != null && session!.currentTurn == localColor;
+    _debugLog('isLocalTurn check: session=${session != null}, localColor=$localColor, '
+        'sessionTurn=${session?.currentTurn}, result=$result');
+    return result;
+  }
 
   bool get waitingForOpponent => session?.status == OnlineStatus.waiting;
 
@@ -107,6 +119,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   Future<void> createGame({required int boardSize}) async {
+    _debugLog('createGame() called with boardSize=$boardSize');
     await initialize();
     state = state.copyWith(creating: true, clearError: true);
     try {
@@ -131,7 +144,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       data['createdAt'] = FieldValue.serverTimestamp();
       data['lastMoveAt'] = FieldValue.serverTimestamp();
 
+      _debugLog('Creating game in Firestore with code=$code');
       await _firestore.collection('games').doc(code).set(data);
+      _debugLog('Game created, setting up listener as WHITE');
       _listenToRoom(code, localColor: PlayerColor.white);
       state = state.copyWith(
         session: session,
@@ -139,8 +154,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         localColor: PlayerColor.white,
         appliedMoveCount: 0,
       );
+      _debugLog('State updated: localColor=white, appliedMoveCount=0');
       _beginLocalGame(boardSize);
     } catch (e) {
+      _debugLog('createGame error: $e');
       final message = e.toString().replaceFirst('Exception: ', '');
       state = state.copyWith(errorMessage: message);
     } finally {
@@ -149,6 +166,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   Future<void> joinGame(String roomCode) async {
+    _debugLog('joinGame() called with roomCode=$roomCode');
     await initialize();
     state = state.copyWith(joining: true, clearError: true);
     final code = roomCode.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
@@ -170,7 +188,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       }
 
       final docRef = _firestore.collection('games').doc(code);
-      int? boardSize;
+      OnlineGameSession? joinedSession;
+      int existingMoveCount = 0;
+      _debugLog('Starting Firestore transaction to join game');
       await _firestore.runTransaction((txn) async {
         final snapshot = await txn.get(docRef);
         if (!snapshot.exists) {
@@ -179,7 +199,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         final data = snapshot.data();
         if (data == null) throw Exception('Game data missing.');
         final existing = OnlineGameSession.fromSnapshot(code, data);
-        boardSize = existing.boardSize;
+        existingMoveCount = existing.moves.length;
+        _debugLog('Found game: boardSize=${existing.boardSize}, moves=$existingMoveCount, currentTurn=${existing.currentTurn}');
 
         if (existing.status == OnlineStatus.finished) {
           throw Exception('This game has already ended.');
@@ -189,21 +210,39 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           throw Exception('Game already has two players.');
         }
 
-        final updated = existing.copyWith(
-          black: existing.black ?? _playerFor(user),
+        final blackPlayer = existing.black ?? _playerFor(user);
+        joinedSession = existing.copyWith(
+          black: blackPlayer,
           status: OnlineStatus.playing,
         );
+        _debugLog('Updating game status to playing');
         txn.update(docRef, {
-          'black': updated.black?.toMap(),
-          'status': updated.status.name,
+          'black': blackPlayer.toMap(),
+          'status': OnlineStatus.playing.name,
           'lastMoveAt': FieldValue.serverTimestamp(),
         });
       });
 
+      if (joinedSession == null) {
+        throw Exception('Failed to join game.');
+      }
+
+      _debugLog('Transaction complete, setting up listener as BLACK');
       _listenToRoom(code, localColor: PlayerColor.black);
-      state = state.copyWith(roomCode: code, localColor: PlayerColor.black);
-      _beginLocalGame(boardSize ?? 5);
+
+      // IMPORTANT: Set session immediately so isLocalTurn works correctly
+      state = state.copyWith(
+        session: joinedSession,
+        roomCode: code,
+        localColor: PlayerColor.black,
+        appliedMoveCount: 0, // Will be updated by _syncMovesWithLocalGame
+      );
+      _debugLog('State updated: localColor=black, roomCode=$code, session SET with ${joinedSession!.moves.length} moves');
+
+      _beginLocalGame(joinedSession!.boardSize);
+      _debugLog('Local game initialized with boardSize=${joinedSession!.boardSize}');
     } catch (e) {
+      _debugLog('joinGame error: $e');
       final message = e.toString().replaceFirst('Exception: ', '');
       state = state.copyWith(errorMessage: message);
     } finally {
@@ -218,8 +257,12 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   Future<void> recordLocalMove(MoveRecord move, GameState latestState) async {
+    _debugLog('recordLocalMove() called: notation=${move.notation}, player=${move.player}');
     final activeSession = state.session;
-    if (activeSession == null || state.localColor == null) return;
+    if (activeSession == null || state.localColor == null) {
+      _debugLog('recordLocalMove: ABORT - session=${activeSession != null}, localColor=${state.localColor}');
+      return;
+    }
 
     final docRef = _firestore.collection('games').doc(activeSession.roomCode);
     final nextStatus = latestState.isGameOver
@@ -233,6 +276,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
                 ? OnlineWinner.white.name
                 : OnlineWinner.black.name;
 
+    _debugLog('recordLocalMove: Writing to Firestore - nextTurn=${latestState.currentPlayer.name}, status=$nextStatus');
     await _firestore.runTransaction((txn) async {
       final snapshot = await txn.get(docRef);
       if (!snapshot.exists) return;
@@ -255,7 +299,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       });
     });
 
-    state = state.copyWith(appliedMoveCount: state.appliedMoveCount + 1);
+    final newCount = state.appliedMoveCount + 1;
+    _debugLog('recordLocalMove: Transaction complete, appliedMoveCount: ${state.appliedMoveCount} -> $newCount');
+    state = state.copyWith(appliedMoveCount: newCount);
   }
 
   Future<void> resign() async {
@@ -288,16 +334,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   Future<void> _listenToRoom(String roomCode, {required PlayerColor localColor}) async {
+    _debugLog('_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
     await _subscription?.cancel();
     _subscription = _firestore
         .collection('games')
         .doc(roomCode)
         .snapshots()
         .listen((snapshot) {
+      _debugLog('>>> FIRESTORE SNAPSHOT RECEIVED <<<');
       final data = snapshot.data();
-      if (data == null) return;
+      if (data == null) {
+        _debugLog('Snapshot data is null, ignoring');
+        return;
+      }
       final session = OnlineGameSession.fromSnapshot(roomCode, data);
       final previousSession = state.session;
+
+      _debugLog('Snapshot data: moves=${session.moves.length}, currentTurn=${session.currentTurn}, '
+          'status=${session.status}, white=${session.white.displayName}, black=${session.black?.displayName}');
+      _debugLog('Previous state: appliedMoveCount=${state.appliedMoveCount}, session=${previousSession != null}');
 
       // Detect opponent join (for sound trigger)
       final opponentJustJoined = previousSession != null &&
@@ -310,9 +365,13 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           session.moves.isNotEmpty &&
           session.moves.last.player != localColor;
 
+      if (opponentJustJoined) _debugLog('EVENT: Opponent just joined!');
+      if (opponentJustMoved) _debugLog('EVENT: Opponent just moved!');
+
       // Check activity status (2 minutes = inactive, 60 seconds = disconnected warning)
       final (opponentInactive, opponentDisconnected) = _checkOpponentActivity(session);
 
+      _debugLog('Updating state with session, localColor=$localColor');
       state = state.copyWith(
         session: session,
         roomCode: roomCode,
@@ -323,8 +382,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         opponentJustMoved: opponentJustMoved,
         clearError: true,
       );
+      _debugLog('State updated, now calling _syncMovesWithLocalGame');
       _syncMovesWithLocalGame(session);
     });
+    _debugLog('Firestore listener setup complete');
   }
 
   Future<User?> _ensureAuth({bool force = false}) async {
@@ -362,6 +423,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   void _beginLocalGame(int boardSize) {
+    _debugLog('_beginLocalGame: Starting new local game with boardSize=$boardSize');
     _ref.read(gameSessionProvider.notifier).state =
         const GameSessionConfig(mode: GameMode.online);
     _ref.read(gameStateProvider.notifier).newGame(boardSize);
@@ -369,26 +431,39 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _ref.read(uiStateProvider.notifier).reset();
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(lastMoveProvider.notifier).state = null;
+    _debugLog('_beginLocalGame: Local game initialized, gameSessionProvider mode=online');
   }
 
   void _syncMovesWithLocalGame(OnlineGameSession session) {
     final applied = state.appliedMoveCount;
+    _debugLog('_syncMovesWithLocalGame: session.moves=${session.moves.length}, appliedMoveCount=$applied');
+
     if (session.moves.length < applied) {
+      _debugLog('_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
       _beginLocalGame(session.boardSize);
       state = state.copyWith(appliedMoveCount: 0);
     }
 
-    if (session.moves.length == state.appliedMoveCount) return;
+    if (session.moves.length == state.appliedMoveCount) {
+      _debugLog('_syncMovesWithLocalGame: No new moves to apply (${session.moves.length} == ${state.appliedMoveCount})');
+      return;
+    }
+
+    _debugLog('_syncMovesWithLocalGame: Applying moves from ${state.appliedMoveCount} to ${session.moves.length - 1}');
     for (var i = state.appliedMoveCount; i < session.moves.length; i++) {
       final move = session.moves[i];
+      _debugLog('_syncMovesWithLocalGame: Applying move $i: ${move.notation} by ${move.player}');
       final success = _applyNotation(move);
       if (!success) {
+        _debugLog('_syncMovesWithLocalGame: FAILED to apply move ${move.notation}!');
         state = state.copyWith(
           errorMessage: 'Failed to apply move ${move.notation}',
         );
         break;
       }
+      _debugLog('_syncMovesWithLocalGame: Move applied successfully');
     }
+    _debugLog('_syncMovesWithLocalGame: Done. appliedMoveCount: $applied -> ${session.moves.length}');
     state = state.copyWith(appliedMoveCount: session.moves.length);
   }
 
@@ -396,6 +471,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     final notation = move.notation;
     final boardSize = _ref.read(gameStateProvider).boardSize;
     final gameNotifier = _ref.read(gameStateProvider.notifier);
+    final currentGameState = _ref.read(gameStateProvider);
+
+    _debugLog('_applyNotation: notation=$notation, currentPlayer=${currentGameState.currentPlayer}, '
+        'turnNumber=${currentGameState.turnNumber}, phase=${currentGameState.phase}');
 
     final placement = RegExp(r'^(S|C)?([a-z])(\d+)$');
     final stack = RegExp(r'^(\d+)?([a-z])(\d+)([<>+-])(\d+)?$');
@@ -411,7 +490,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         'C' => PieceType.capstone,
         _ => PieceType.flat,
       };
+      _debugLog('_applyNotation: Placing $type at $pos');
       final success = gameNotifier.placePiece(pos, type);
+      _debugLog('_applyNotation: placePiece result=$success');
       if (success) {
         _consumeLastMove();
       }
@@ -433,13 +514,16 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       final from = _positionFromNotation(col, row, boardSize);
       final direction = _directionFromSymbol(dirSymbol);
+      _debugLog('_applyNotation: Moving stack from $from, direction=$direction, drops=$drops');
       final success = gameNotifier.moveStack(from, direction, drops);
+      _debugLog('_applyNotation: moveStack result=$success');
       if (success) {
         _consumeLastMove();
       }
       return success;
     }
 
+    _debugLog('_applyNotation: No regex match for notation=$notation');
     return false;
   }
 

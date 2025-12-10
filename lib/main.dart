@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -13,6 +14,12 @@ import 'theme/theme.dart';
 import 'version.dart';
 import 'screens/main_menu_screen.dart';
 import 'firebase_options.dart';
+
+void _debugLog(String message) {
+  developer.log('[GAME] $message', name: 'game');
+  // ignore: avoid_print
+  print('[GAME] $message');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -349,10 +356,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
-    final isRemoteTurn = isOnline && !onlineState.isLocalTurn;
+    // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
+    // This prevents race condition where creator can play multiple moves before
+    // Firestore listener updates session.currentTurn
+    final isMyTurnLocally = isOnline && onlineState.localColor != null &&
+        gameState.currentPlayer == onlineState.localColor;
+    final isRemoteTurn = isOnline && !isMyTurnLocally;
     final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
     final canUndo = !isOnline && ref.read(gameStateProvider.notifier).canUndo;
     final inputLocked = isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
+
+    // Debug logging for turn enforcement
+    if (isOnline) {
+      _debugLog('BUILD: isOnline=$isOnline, localColor=${onlineState.localColor}, '
+          'sessionTurn=${onlineState.session?.currentTurn}, '
+          'localGameTurn=${gameState.currentPlayer}');
+      _debugLog('BUILD: isMyTurnLocally=$isMyTurnLocally (uses LOCAL game state), '
+          'isRemoteTurn=$isRemoteTurn, waitingForOpponent=$waitingForOpponent, '
+          'inputLocked=$inputLocked');
+      _debugLog('BUILD: session.moves=${onlineState.session?.moves.length ?? 0}, '
+          'appliedMoveCount=${onlineState.appliedMoveCount}');
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -544,16 +568,26 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _handleCellTap(BuildContext context, WidgetRef ref, Position pos) {
+    _debugLog('_handleCellTap: pos=$pos');
     final gameState = ref.read(gameStateProvider);
     final uiState = ref.read(uiStateProvider);
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final session = ref.read(gameSessionProvider);
     if (session.mode == GameMode.online) {
       final onlineState = ref.read(onlineGameProvider);
-      if (!onlineState.isLocalTurn || onlineState.waitingForOpponent) {
+      // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
+      final isMyTurnLocally = onlineState.localColor != null &&
+          gameState.currentPlayer == onlineState.localColor;
+      _debugLog('_handleCellTap: ONLINE check - localColor=${onlineState.localColor}, '
+          'localGameTurn=${gameState.currentPlayer}, '
+          'isMyTurnLocally=$isMyTurnLocally, '
+          'waitingForOpponent=${onlineState.waitingForOpponent}');
+      if (!isMyTurnLocally || onlineState.waitingForOpponent) {
+        _debugLog('_handleCellTap: BLOCKED - not local turn or waiting for opponent');
         uiNotifier.reset();
         return;
       }
+      _debugLog('_handleCellTap: ALLOWED - is local turn');
     }
 
     final isAiTurn =
@@ -630,7 +664,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
+    _debugLog('_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
     final success = gameNotifier.placePiece(pos, type);
+    _debugLog('_performPlacementMove: placePiece result=$success');
     if (success) {
       final moveRecord = gameNotifier.lastMoveRecord;
       if (moveRecord != null) {
@@ -752,6 +788,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.read(gameSessionProvider);
     if (session.mode != GameMode.online) return;
     final latestState = ref.read(gameStateProvider);
+    _debugLog('_syncOnlineMove: Recording move ${moveRecord.notation} to Firestore, '
+        'nextTurn=${latestState.currentPlayer}');
     unawaited(
       ref.read(onlineGameProvider.notifier).recordLocalMove(moveRecord, latestState),
     );
@@ -918,7 +956,9 @@ class _GameInfoBar extends StatelessWidget {
       currentPlayerName = currentColor == PlayerColor.white
           ? session.white.displayName
           : session.black?.displayName;
-      isLocalPlayerTurn = onlineState!.isLocalTurn;
+      // FIX: Use LOCAL game state for turn display instead of Firestore session
+      isLocalPlayerTurn = onlineState!.localColor != null &&
+          gameState.currentPlayer == onlineState!.localColor;
     }
 
     return Container(
