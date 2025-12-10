@@ -29,17 +29,39 @@ Future<void> main() async {
   runApp(const ProviderScope(child: StonesApp()));
 }
 
-class StonesApp extends StatelessWidget {
+class StonesApp extends ConsumerStatefulWidget {
   const StonesApp({super.key});
 
   @override
+  ConsumerState<StonesApp> createState() => _StonesAppState();
+}
+
+class _StonesAppState extends ConsumerState<StonesApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Load settings on app start
+    ref.read(appSettingsProvider.notifier).load();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(appSettingsProvider);
+
     return MaterialApp(
       title: 'Stones',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: GameColors.themeSeed,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: settings.themeMode,
       home: const MainMenuScreen(),
     );
   }

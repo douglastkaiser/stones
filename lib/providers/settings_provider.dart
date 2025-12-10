@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -5,30 +6,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsKeys {
   static const String boardSize = 'board_size';
   static const String soundMuted = 'sound_muted';
-  static const String darkTheme = 'dark_theme';
+  static const String themeMode = 'theme_mode';
 }
 
 /// App settings state
 class AppSettings {
   final int boardSize;
   final bool isSoundMuted;
-  final bool isDarkTheme;
+  final ThemeMode themeMode;
 
   const AppSettings({
     this.boardSize = 5,
     this.isSoundMuted = false,
-    this.isDarkTheme = false,
+    this.themeMode = ThemeMode.system,
   });
 
   AppSettings copyWith({
     int? boardSize,
     bool? isSoundMuted,
-    bool? isDarkTheme,
+    ThemeMode? themeMode,
   }) {
     return AppSettings(
       boardSize: boardSize ?? this.boardSize,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
-      isDarkTheme: isDarkTheme ?? this.isDarkTheme,
+      themeMode: themeMode ?? this.themeMode,
     );
   }
 }
@@ -40,10 +41,13 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
   /// Load settings from SharedPreferences
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
+    final themeModeIndex = prefs.getInt(SettingsKeys.themeMode);
     state = AppSettings(
       boardSize: prefs.getInt(SettingsKeys.boardSize) ?? 5,
       isSoundMuted: prefs.getBool(SettingsKeys.soundMuted) ?? false,
-      isDarkTheme: prefs.getBool(SettingsKeys.darkTheme) ?? false,
+      themeMode: themeModeIndex != null
+          ? ThemeMode.values[themeModeIndex]
+          : ThemeMode.system,
     );
   }
 
@@ -66,16 +70,11 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     await setSoundMuted(!state.isSoundMuted);
   }
 
-  /// Set dark theme and persist
-  Future<void> setDarkTheme(bool dark) async {
-    state = state.copyWith(isDarkTheme: dark);
+  /// Set theme mode and persist
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = state.copyWith(themeMode: mode);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(SettingsKeys.darkTheme, dark);
-  }
-
-  /// Toggle dark theme
-  Future<void> toggleDarkTheme() async {
-    await setDarkTheme(!state.isDarkTheme);
+    await prefs.setInt(SettingsKeys.themeMode, mode.index);
   }
 }
 
