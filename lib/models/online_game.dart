@@ -92,16 +92,24 @@ class OnlineGameSession {
   }
 
   factory OnlineGameSession.fromSnapshot(String code, Map<String, dynamic> data) {
+    // Helper to safely convert Firestore maps (which can be Map<Object?, Object?> on web)
+    // to Map<String, dynamic>
+    Map<String, dynamic> toStringDynamicMap(dynamic map) {
+      if (map is Map<String, dynamic>) return map;
+      if (map is Map) return Map<String, dynamic>.from(map);
+      return <String, dynamic>{};
+    }
+
     return OnlineGameSession(
       roomCode: code,
-      white: OnlineGamePlayer.fromMap(data['white'] as Map<String, dynamic>),
+      white: OnlineGamePlayer.fromMap(toStringDynamicMap(data['white'])),
       black: data['black'] == null
           ? null
-          : OnlineGamePlayer.fromMap(data['black'] as Map<String, dynamic>),
+          : OnlineGamePlayer.fromMap(toStringDynamicMap(data['black'])),
       boardSize: (data['boardSize'] as num?)?.toInt() ?? 5,
       moves: ((data['moves'] as List?) ?? [])
-          .whereType<Map<String, dynamic>>()
-          .map(OnlineGameMove.fromMap)
+          .where((m) => m is Map)
+          .map((m) => OnlineGameMove.fromMap(toStringDynamicMap(m)))
           .toList(),
       currentTurn: _colorFromString(data['currentTurn'] as String?),
       status: _statusFromString(data['status'] as String?),

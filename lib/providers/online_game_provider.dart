@@ -293,21 +293,34 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       if (!snapshot.exists) return;
       final data = snapshot.data();
       if (data == null) return;
-      final moves = List<Map<String, dynamic>>.from(data['moves'] as List? ?? []);
-      moves.add(
-        OnlineGameMove(
-          notation: move.notation,
-          player: state.localColor!,
-        ).toMap(),
-      );
 
-      txn.update(docRef, {
+      // Convert existing moves to properly typed maps (Firestore web returns Map<Object?, Object?>)
+      final rawMoves = data['moves'] as List? ?? [];
+      final moves = rawMoves.map((m) {
+        if (m is Map<String, dynamic>) return m;
+        if (m is Map) return Map<String, dynamic>.from(m);
+        return <String, dynamic>{};
+      }).toList();
+
+      // Add the new move as a properly serialized map
+      final newMoveMap = OnlineGameMove(
+        notation: move.notation,
+        player: state.localColor!,
+      ).toMap();
+      moves.add(newMoveMap);
+
+      final updateData = {
         'moves': moves,
         'currentTurn': latestState.currentPlayer.name,
         'status': nextStatus,
         'winner': winner,
         'lastMoveAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      _debugLog('recordLocalMove: Firestore update data: moves=${moves.length}, currentTurn=${updateData['currentTurn']}, status=${updateData['status']}');
+      _debugLog('recordLocalMove: New move: $newMoveMap');
+
+      txn.update(docRef, updateData);
     });
 
     final newCount = state.appliedMoveCount + 1;
