@@ -321,7 +321,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               isLocal: true,
             ),
             const SizedBox(height: 8),
-            _PlayerInfoCard(
+            const _PlayerInfoCard(
               label: 'Opponent (Black)',
               player: null,
               isLocal: false,
@@ -626,7 +626,7 @@ class _BoardSizeSelector extends StatelessWidget {
       children: [
         for (int size = 3; size <= 8; size++)
           ChoiceChip(
-            label: Text('${size}×$size'),
+            label: Text('$size×$size'),
             selected: selectedSize == size,
             onSelected: (_) => onSizeSelected(size),
             selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),

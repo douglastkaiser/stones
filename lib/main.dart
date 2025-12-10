@@ -527,13 +527,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           if (session.mode == GameMode.online &&
               onlineState.opponentDisconnected &&
               !onlineState.opponentInactive)
-            _OnlineStatusBanner(
+            const _OnlineStatusBanner(
               message: 'Opponent may have disconnected (no activity for 60s)',
               icon: Icons.wifi_off,
               color: Colors.orange,
             ),
           if (session.mode == GameMode.online && onlineState.opponentInactive)
-            _OnlineStatusBanner(
+            const _OnlineStatusBanner(
               message: 'Opponent disconnected (no activity for 2+ minutes)',
               icon: Icons.error_outline,
               color: Colors.red,
