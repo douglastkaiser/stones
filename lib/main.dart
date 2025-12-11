@@ -1295,7 +1295,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         Switch(
                           value: chessClockEnabled,
                           onChanged: (v) => setState(() => chessClockEnabled = v),
-                          activeColor: GameColors.boardFrameInner,
+                          activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                          activeThumbColor: GameColors.boardFrameInner,
                         ),
                       ],
                     ),
