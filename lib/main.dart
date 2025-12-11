@@ -1116,6 +1116,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       ref.read(animationStateProvider.notifier).reset();
                       ref.read(moveHistoryProvider.notifier).clear();
                       ref.read(lastMoveProvider.notifier).state = null;
+
+                      // Reset chess clock for new game
+                      final session = ref.read(gameSessionProvider);
+                      final settings = ref.read(appSettingsProvider);
+                      if (session.mode == GameMode.local && settings.chessClockEnabled) {
+                        ref.read(chessClockProvider.notifier).initialize(size);
+                      } else {
+                        ref.read(chessClockProvider.notifier).stop();
+                      }
+
                       Navigator.pop(context);
                     },
                     child: Text('${size}x$size'),
