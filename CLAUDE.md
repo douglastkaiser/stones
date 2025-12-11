@@ -42,7 +42,8 @@ The project uses `flutter analyze --fatal-infos` which treats warnings as errors
 - `ai.dart` - Base class, difficulty enum, factory
 - `intro_ai.dart` - Random moves (learning mode)
 - `easy_ai.dart` - 1-ply lookahead (threat detection)
-- `medium_ai.dart` - 2-ply lookahead (fork detection)
+- `medium_ai.dart` - 2-ply lookahead (fork detection, aggressive)
+- `hard_ai.dart` - 3-ply minimax (very aggressive, deep search)
 - `move_generator.dart` - Legal move generation
 
 ### Key Directories

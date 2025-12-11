@@ -143,6 +143,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.medium);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.local_fire_department),
+              title: const Text('Hard'),
+              subtitle: const Text('Aggressive 3-ply search, relentless offense'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.hard);
+              },
+            ),
           ],
         ),
       ),
