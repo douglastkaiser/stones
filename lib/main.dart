@@ -677,32 +677,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    // Check if tapped position is a valid destination
+    // Check if tapped position is a valid destination (adjacent cell in any valid direction)
     final validDestinations = uiState.getValidMoveDestinations(gameState);
     if (validDestinations.contains(pos)) {
       // Determine direction from selected position to tapped position
       final dir = _getDirectionBetween(selectedPos, pos);
       if (dir != null) {
-        // Calculate distance
-        final distance = _getDistanceBetween(selectedPos, pos, dir);
-        // Default: drop 1 piece at each step up to this position
-        // Start movement with 1 piece at first cell
-        uiNotifier.startMoving(dir, 1);
-
-        // If distance > 1, we need to auto-add drops for intermediate cells
-        if (distance > 1) {
-          for (var i = 1; i < distance; i++) {
-            if (ref.read(uiStateProvider).piecesPickedUp > 0) {
-              uiNotifier.addDrop(1);
-            }
-          }
-        }
-
-        // Check if all pieces are dropped
-        if (ref.read(uiStateProvider).piecesPickedUp == 0) {
-          // Auto-confirm the move
-          _confirmMove(ref);
-        }
+        // Start movement in this direction - enters dropping mode at first cell
+        // No drops committed yet, user will choose how many to drop
+        uiNotifier.startMoving(dir);
         return;
       }
     }
@@ -731,6 +714,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       GameState gameState, UIState uiState) {
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final handPos = uiState.getCurrentHandPosition();
+    final dir = uiState.selectedDirection!;
 
     if (handPos == null) {
       // No more pieces to drop, this shouldn't happen
@@ -738,48 +722,63 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
+    // Get info about what we're moving
+    final originalStack = gameState.board.stackAt(uiState.selectedPosition!);
+    final movingPiece = originalStack.topPiece;
+    if (movingPiece == null) {
+      uiNotifier.reset();
+      return;
+    }
+
+    // Check if we can continue to the next cell after current hand position
+    final nextPos = dir.apply(handPos);
+    final canContinue = gameState.board.isValidPosition(nextPos) && (() {
+      final targetStack = gameState.board.stackAt(nextPos);
+      return targetStack.canMoveOnto(movingPiece) ||
+          (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls);
+    })();
+
     if (pos == handPos) {
-      // Tap current hand position: cycle drop count
-      final maxDrop = uiState.piecesPickedUp;
-      if (maxDrop > 1) {
-        uiNotifier.cyclePendingDropCount(maxDrop);
+      // Tap current hand position
+      final piecesInHand = uiState.piecesPickedUp;
+      final pendingDrop = uiState.pendingDropCount;
+
+      if (pendingDrop == piecesInHand) {
+        // All pieces selected to drop here
+        if (!canContinue) {
+          // Can't continue, so commit all pieces here and finish the move
+          uiNotifier.addDrop(pendingDrop);
+          _confirmMove(ref);
+          return;
+        } else {
+          // Can continue, so cycle back to 1
+          uiNotifier.cyclePendingDropCount(piecesInHand);
+          return;
+        }
+      } else {
+        // Not all pieces selected, cycle up
+        uiNotifier.cyclePendingDropCount(piecesInHand);
+        return;
+      }
+    }
+
+    // Check if tapping the next cell in the movement direction
+    if (pos == nextPos && canContinue) {
+      // Drop current pending at hand position and move to next
+      final dropCount = uiState.pendingDropCount;
+      uiNotifier.addDrop(dropCount);
+
+      // Check if all pieces are dropped
+      if (ref.read(uiStateProvider).piecesPickedUp == 0) {
+        // Auto-confirm the move
+        _confirmMove(ref);
       }
       return;
     }
 
-    // Check if tapping the next cell in the movement direction
-    final dir = uiState.selectedDirection!;
-    final nextPos = dir.apply(handPos);
-
-    if (pos == nextPos && gameState.board.isValidPosition(nextPos)) {
-      // Check if we can move to this cell
-      final originalStack = gameState.board.stackAt(uiState.selectedPosition!);
-      final movingPiece = originalStack.topPiece;
-      if (movingPiece == null) {
-        uiNotifier.reset();
-        return;
-      }
-
-      final targetStack = gameState.board.stackAt(nextPos);
-      if (targetStack.canMoveOnto(movingPiece) ||
-          (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls)) {
-        // Drop current pending at hand position and move to next
-        final dropCount = uiState.pendingDropCount;
-        uiNotifier.addDrop(dropCount);
-
-        // Check if all pieces are dropped
-        if (ref.read(uiStateProvider).piecesPickedUp == 0) {
-          // Auto-confirm the move
-          _confirmMove(ref);
-        }
-        return;
-      }
-    }
-
-    // Tapping somewhere else: check if it's on the drop path to confirm early
+    // Tapping on already-dropped path or origin: do nothing
     final dropPath = uiState.getDropPath();
     if (dropPath.contains(pos) || pos == uiState.selectedPosition) {
-      // Tapping on already-dropped path or origin: do nothing (could cancel)
       return;
     }
 
@@ -2415,6 +2414,9 @@ class _BottomControls extends StatelessWidget {
     }
 
     // Still dropping - show hint
+    final dropsText = drops.isEmpty ? '' : 'Dropped: ${drops.join(' → ')} • ';
+    final holdingText = 'Holding $remaining';
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -2423,18 +2425,17 @@ class _BottomControls extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                drops.isEmpty
-                    ? 'Dropping $pendingDrop piece${pendingDrop == 1 ? '' : 's'}'
-                    : 'Drops: ${drops.join(' → ')} (+$pendingDrop)',
+                'Drop $pendingDrop here',
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               Text(
-                'Holding: $remaining piece${remaining == 1 ? '' : 's'} • Tap cell to change drop count',
+                '$dropsText$holdingText • Tap to change, tap next cell to continue',
                 style: const TextStyle(
                   color: GameColors.subtitleColor,
                   fontStyle: FontStyle.italic,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

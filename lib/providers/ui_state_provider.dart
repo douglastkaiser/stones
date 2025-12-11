@@ -57,15 +57,18 @@ class UIState {
     return path;
   }
 
-  /// Get the current "hand" position (where next drop would go)
+  /// Get the current "hand" position (where pieces are being held/will be dropped)
+  /// This is the position AFTER all committed drops, where pendingDropCount will be dropped
   Position? getCurrentHandPosition() {
     if (selectedPosition == null || selectedDirection == null) return null;
     if (piecesPickedUp == 0) return null;
 
     var pos = selectedPosition!;
+    // Move past each committed drop
     for (var i = 0; i < drops.length; i++) {
       pos = selectedDirection!.apply(pos);
     }
+    // The hand position is one step past the last drop (or first step if no drops yet)
     return selectedDirection!.apply(pos);
   }
 
@@ -256,31 +259,32 @@ class UIStateNotifier extends StateNotifier<UIState> {
     );
   }
 
-  /// Cycle the number of pieces to pick up (1, 2, ..., max, 1, 2, ...)
+  /// Cycle the number of pieces to pick up (max, max-1, ..., 1, max, ...)
   void cyclePiecesPickedUp(int maxPieces) {
     final current = state.piecesPickedUp;
-    final next = current >= maxPieces ? 1 : current + 1;
+    // Cycle down: max → max-1 → ... → 1 → max
+    final next = current <= 1 ? maxPieces : current - 1;
     state = state.copyWith(piecesPickedUp: next);
   }
 
-  /// Start moving in a direction (first drop)
-  void startMoving(Direction dir, int dropCount) {
+  /// Start moving in a direction - enters dropping mode without committing any drops yet
+  void startMoving(Direction dir) {
     state = UIState(
       selectedPosition: state.selectedPosition,
       mode: InteractionMode.droppingPieces,
       selectedDirection: dir,
-      drops: [dropCount],
-      piecesPickedUp: state.piecesPickedUp - dropCount,
-      pendingDropCount: 1,
+      drops: const [], // No drops committed yet
+      piecesPickedUp: state.piecesPickedUp,
+      pendingDropCount: 1, // Default to dropping 1
     );
   }
 
-  /// Add a drop at the current hand position
+  /// Add a drop at the current hand position and move forward
   void addDrop(int count) {
     state = state.copyWith(
       drops: [...state.drops, count],
       piecesPickedUp: state.piecesPickedUp - count,
-      pendingDropCount: 1,
+      pendingDropCount: 1, // Reset to 1 for next position
     );
   }
 
