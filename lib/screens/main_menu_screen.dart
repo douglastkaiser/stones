@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
@@ -52,11 +53,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     AIDifficulty difficulty = AIDifficulty.intro,
   }) {
     final gameState = ref.read(gameStateProvider);
-    final settings = ref.read(appSettingsProvider);
     final isGameInProgress = !gameState.isGameOver &&
         (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
 
-    void start() => _doStartNewGame(context, settings.boardSize, mode, difficulty);
+    void showBoardSizePicker() => _showBoardSizePickerDialog(context, mode, difficulty);
 
     if (isGameInProgress) {
       showDialog(
@@ -74,7 +74,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                start();
+                showBoardSizePicker();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,
@@ -86,8 +86,90 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
         ),
       );
     } else {
-      start();
+      showBoardSizePicker();
     }
+  }
+
+  void _showBoardSizePickerDialog(
+    BuildContext context,
+    GameMode mode,
+    AIDifficulty difficulty,
+  ) {
+    final settings = ref.read(appSettingsProvider);
+    int selectedSize = settings.boardSize;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Select Board Size'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Choose the board size for your game:',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (int size = 3; size <= 8; size++)
+                    ChoiceChip(
+                      label: Text(
+                        '$size×$size',
+                        style: TextStyle(
+                          fontWeight: selectedSize == size
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      selected: selectedSize == size,
+                      onSelected: (_) => setState(() => selectedSize = size),
+                      selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                      checkmarkColor: GameColors.boardFrameInner,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _getBoardSizeDescription(selectedSize),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _doStartNewGame(context, selectedSize, mode, difficulty);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GameColors.boardFrameInner,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start Game'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getBoardSizeDescription(int size) {
+    final counts = PieceCounts.forBoardSize(size);
+    return '${counts.flatStones} flat stones, ${counts.capstones} capstone${counts.capstones == 1 ? '' : 's'} per player';
   }
 
   void _doStartNewGame(
@@ -103,6 +185,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     ref.read(animationStateProvider.notifier).reset();
     ref.read(moveHistoryProvider.notifier).clear();
     ref.read(lastMoveProvider.notifier).state = null;
+
+    // Always reset chess clock when starting a new game
+    final settings = ref.read(appSettingsProvider);
+    if (mode == GameMode.local && settings.chessClockEnabled) {
+      // Initialize with new board size (resets times and stops any running timer)
+      ref.read(chessClockProvider.notifier).initialize(size);
+      // Clock will start when first move is made in _switchChessClock
+    } else {
+      // Stop any running clock for non-local games or when clock is disabled
+      ref.read(chessClockProvider.notifier).stop();
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const GameScreen()),
@@ -110,47 +204,148 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }
 
   void _startVsComputer(BuildContext context) {
-    showModalBottomSheet(
+    final gameState = ref.read(gameStateProvider);
+    final isGameInProgress = !gameState.isGameOver &&
+        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+
+    void showPickers() => _showVsComputerPickerDialog(context);
+
+    if (isGameInProgress) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Start New Game?'),
+          content: const Text(
+            'You have a game in progress. Starting a new game will discard your current game.\n\nAre you sure you want to continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                showPickers();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start New Game'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      showPickers();
+    }
+  }
+
+  void _showVsComputerPickerDialog(BuildContext context) {
+    final settings = ref.read(appSettingsProvider);
+    int selectedSize = settings.boardSize;
+    AIDifficulty selectedDifficulty = AIDifficulty.easy;
+
+    showDialog(
       context: context,
-      builder: (dialogContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.child_care),
-              title: const Text('Intro'),
-              subtitle: const Text('Random moves - great for learning the game'),
-              onTap: () {
-                Navigator.pop(dialogContext);
-                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.intro);
-              },
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Play vs Computer'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Board Size Section
+                const Text(
+                  'Board Size',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: GameColors.titleColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (int size = 3; size <= 8; size++)
+                      ChoiceChip(
+                        label: Text('$size×$size'),
+                        selected: selectedSize == size,
+                        onSelected: (_) => setState(() => selectedSize = size),
+                        selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                        checkmarkColor: GameColors.boardFrameInner,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _getBoardSizeDescription(selectedSize),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Difficulty Section
+                const Text(
+                  'Difficulty',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: GameColors.titleColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _DifficultyOption(
+                  icon: Icons.child_care,
+                  title: 'Intro',
+                  subtitle: 'Random moves - great for learning',
+                  isSelected: selectedDifficulty == AIDifficulty.intro,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.intro),
+                ),
+                _DifficultyOption(
+                  icon: Icons.smart_toy_outlined,
+                  title: 'Easy',
+                  subtitle: 'Detects threats, builds roads',
+                  isSelected: selectedDifficulty == AIDifficulty.easy,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
+                ),
+                _DifficultyOption(
+                  icon: Icons.psychology,
+                  title: 'Medium',
+                  subtitle: 'Creates forks, blocks your plans',
+                  isSelected: selectedDifficulty == AIDifficulty.medium,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.medium),
+                ),
+                _DifficultyOption(
+                  icon: Icons.local_fire_department,
+                  title: 'Hard',
+                  subtitle: 'Aggressive 3-ply search',
+                  isSelected: selectedDifficulty == AIDifficulty.hard,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.smart_toy_outlined),
-              title: const Text('Easy'),
-              subtitle: const Text('Detects wins and threats, builds strategic roads'),
-              onTap: () {
-                Navigator.pop(dialogContext);
-                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.easy);
-              },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
-            ListTile(
-              leading: const Icon(Icons.psychology),
-              title: const Text('Medium'),
-              subtitle: const Text('Looks ahead, creates forks, and blocks your plans'),
-              onTap: () {
+            ElevatedButton(
+              onPressed: () {
                 Navigator.pop(dialogContext);
-                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.medium);
+                _doStartNewGame(context, selectedSize, GameMode.vsComputer, selectedDifficulty);
               },
-            ),
-            ListTile(
-              leading: const Icon(Icons.local_fire_department),
-              title: const Text('Hard'),
-              subtitle: const Text('Aggressive 3-ply search, relentless offense'),
-              onTap: () {
-                Navigator.pop(dialogContext);
-                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.hard);
-              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GameColors.boardFrameInner,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start Game'),
             ),
           ],
         ),
@@ -541,6 +736,84 @@ class _VersionFooter extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Difficulty option for AI picker
+class _DifficultyOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DifficultyOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? GameColors.boardFrameInner.withValues(alpha: 0.1)
+              : null,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? GameColors.boardFrameInner
+                : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? GameColors.boardFrameInner : Colors.grey.shade600,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? GameColors.boardFrameInner : null,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_circle,
+                color: GameColors.boardFrameInner,
+                size: 20,
+              ),
           ],
         ),
       ),

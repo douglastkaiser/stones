@@ -294,6 +294,24 @@ class GameScreen extends ConsumerStatefulWidget {
 class _GameScreenState extends ConsumerState<GameScreen> {
   bool _showHistory = false;
 
+  // Long press stack view state
+  Position? _longPressedPosition;
+  PieceStack? _longPressedStack;
+
+  void _startStackView(Position pos, PieceStack stack) {
+    setState(() {
+      _longPressedPosition = pos;
+      _longPressedStack = stack;
+    });
+  }
+
+  void _endStackView() {
+    setState(() {
+      _longPressedPosition = null;
+      _longPressedStack = null;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -367,7 +385,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameStateProvider);
     final uiState = ref.watch(uiStateProvider);
-    final isGameOver = ref.watch(isGameOverProvider);
     final animationState = ref.watch(animationStateProvider);
     final isMuted = ref.watch(isMutedProvider);
     final moveHistory = ref.watch(moveHistoryProvider);
@@ -466,6 +483,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       onlineState: isOnline ? onlineState : null,
                     ),
 
+                    // Chess clock (only for local games when enabled)
+                    if (session.mode == GameMode.local)
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final settings = ref.watch(appSettingsProvider);
+                          if (!settings.chessClockEnabled) return const SizedBox.shrink();
+                          return _ChessClockDisplay(
+                            currentPlayer: gameState.currentPlayer,
+                            isGameOver: gameState.isGameOver,
+                          );
+                        },
+                      ),
+
                     // Board
                     Expanded(
                       child: Center(
@@ -511,8 +541,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                 animationState: animationState,
                                 lastMovePositions: lastMovePositions,
                                 onCellTap: (pos) => _handleCellTap(context, ref, pos),
-                                onCellLongPress: (pos, stack) =>
-                                    _showStackViewer(context, pos, stack, gameState.boardSize),
+                                onLongPressStart: _startStackView,
+                                onLongPressEnd: _endStackView,
                               ),
                             ),
                           ),
@@ -552,16 +582,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ],
           ),
 
-          // Win overlay
-          if (isGameOver)
-            _WinOverlay(
-              result: gameState.result!,
-              winReason: gameState.winReason,
-              onNewGame: session.mode == GameMode.online
-                  ? () => ref.read(onlineGameProvider.notifier).requestRematch()
-                  : () => _showNewGameDialog(context, ref),
-              onHome: () => Navigator.pop(context),
+          // Stack exploded view overlay (press and hold)
+          if (_longPressedPosition != null && _longPressedStack != null)
+            _StackExplodedOverlay(
+              position: _longPressedPosition!,
+              stack: _longPressedStack!,
+              boardSize: gameState.boardSize,
             ),
+
+          // Win overlay removed - now using _WinBanner in _GameInfoBar instead
           if (session.mode == GameMode.online && waitingForOpponent)
             _OnlineStatusBanner(
               message:
@@ -855,8 +884,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
       ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
       soundManager.playPiecePlace();
+
+      // Switch chess clock to next player (for local games)
+      _switchChessClock(ref);
+
       if (ref.read(isGameOverProvider)) {
         soundManager.playWin();
+        // Stop the clock when game is over
+        ref.read(chessClockProvider.notifier).stop();
       }
 
       unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
@@ -904,8 +939,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       } else {
         soundManager.playStackMove();
       }
+
+      // Switch chess clock to next player (for local games)
+      _switchChessClock(ref);
+
       if (ref.read(isGameOverProvider)) {
         soundManager.playWin();
+        // Stop the clock when game is over
+        ref.read(chessClockProvider.notifier).stop();
       }
 
       unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
@@ -914,6 +955,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return success;
+  }
+
+  void _switchChessClock(WidgetRef ref) {
+    final session = ref.read(gameSessionProvider);
+    // Only switch clock for local games with clock enabled
+    if (session.mode != GameMode.local) return;
+
+    final settings = ref.read(appSettingsProvider);
+    if (!settings.chessClockEnabled) return;
+
+    final gameState = ref.read(gameStateProvider);
+    // The game state has already switched to the next player, so start their clock
+    ref.read(chessClockProvider.notifier).start(gameState.currentPlayer);
   }
 
   List<Position> _calculateDropPositions(Position start, Direction dir, int steps) {
@@ -1062,6 +1116,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       ref.read(animationStateProvider.notifier).reset();
                       ref.read(moveHistoryProvider.notifier).clear();
                       ref.read(lastMoveProvider.notifier).state = null;
+
+                      // Reset chess clock for new game
+                      final session = ref.read(gameSessionProvider);
+                      final settings = ref.read(appSettingsProvider);
+                      if (session.mode == GameMode.local && settings.chessClockEnabled) {
+                        ref.read(chessClockProvider.notifier).initialize(size);
+                      } else {
+                        ref.read(chessClockProvider.notifier).stop();
+                      }
+
                       Navigator.pop(context);
                     },
                     child: Text('${size}x$size'),
@@ -1080,13 +1144,234 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  void _showStackViewer(BuildContext context, Position pos, PieceStack stack, int boardSize) {
-    showDialog(
-      context: context,
-      builder: (context) => _StackViewerDialog(
-        position: pos,
-        stack: stack,
-        boardSize: boardSize,
+}
+
+/// Chess clock display widget for local games
+class _ChessClockDisplay extends ConsumerWidget {
+  final PlayerColor currentPlayer;
+  final bool isGameOver;
+
+  const _ChessClockDisplay({
+    required this.currentPlayer,
+    required this.isGameOver,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final clockState = ref.watch(chessClockProvider);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _ClockSide(
+            label: 'Light',
+            time: clockState.whiteTimeFormatted,
+            isActive: currentPlayer == PlayerColor.white && !isGameOver && clockState.isRunning,
+            isLow: clockState.whiteTimeRemaining < 30,
+            isExpired: clockState.isExpired && clockState.expiredPlayer == PlayerColor.white,
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: clockState.isRunning
+                  ? Colors.green.withValues(alpha: 0.2)
+                  : Colors.grey.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              clockState.isRunning ? Icons.timer : Icons.timer_off,
+              size: 16,
+              color: clockState.isRunning ? Colors.green : Colors.grey,
+            ),
+          ),
+          _ClockSide(
+            label: 'Dark',
+            time: clockState.blackTimeFormatted,
+            isActive: currentPlayer == PlayerColor.black && !isGameOver && clockState.isRunning,
+            isLow: clockState.blackTimeRemaining < 30,
+            isExpired: clockState.isExpired && clockState.expiredPlayer == PlayerColor.black,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClockSide extends StatelessWidget {
+  final String label;
+  final String time;
+  final bool isActive;
+  final bool isLow;
+  final bool isExpired;
+
+  const _ClockSide({
+    required this.label,
+    required this.time,
+    required this.isActive,
+    required this.isLow,
+    required this.isExpired,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isExpired
+        ? Colors.red
+        : isLow
+            ? Colors.orange
+            : isActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.onSurface;
+
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            color: textColor.withValues(alpha: 0.7),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).colorScheme.primaryContainer
+                : isExpired
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : null,
+            borderRadius: BorderRadius.circular(4),
+            border: isActive
+                ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                : null,
+          ),
+          child: Text(
+            time,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              color: textColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Win banner - shows game result prominently without blocking the board
+class _WinBanner extends StatelessWidget {
+  final GameResult result;
+  final WinReason? winReason;
+
+  const _WinBanner({
+    required this.result,
+    this.winReason,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (title, pieceColors, icon) = switch (result) {
+      GameResult.whiteWins => (
+          'Light Wins!',
+          GameColors.lightPlayerColors,
+          winReason == WinReason.road ? Icons.route : Icons.emoji_events,
+        ),
+      GameResult.blackWins => (
+          'Dark Wins!',
+          GameColors.darkPlayerColors,
+          winReason == WinReason.road ? Icons.route : Icons.emoji_events,
+        ),
+      GameResult.draw => (
+          'Draw!',
+          const PieceColors(
+            primary: Colors.grey,
+            secondary: Colors.grey,
+            border: Color(0xFF757575),
+          ),
+          Icons.handshake,
+        ),
+    };
+
+    final reasonText = switch (winReason) {
+      WinReason.road => 'by road',
+      WinReason.flats => 'by flat count',
+      null => '',
+    };
+
+    final textColor = result == GameResult.blackWins ? Colors.white : Colors.black;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: pieceColors.gradientColors,
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: pieceColors.border,
+            width: 3,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: pieceColors.border.withValues(alpha: 0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 32,
+            color: textColor,
+          ),
+          const SizedBox(width: 12),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  letterSpacing: 1,
+                ),
+              ),
+              if (reasonText.isNotEmpty)
+                Text(
+                  reasonText,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: textColor.withValues(alpha: 0.8),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Icon(
+            icon,
+            size: 32,
+            color: textColor,
+          ),
+        ],
       ),
     );
   }
@@ -1110,6 +1395,11 @@ class _GameInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Show prominent win banner when game is over
+    if (gameState.isGameOver && gameState.result != null) {
+      return _WinBanner(result: gameState.result!, winReason: gameState.winReason);
+    }
+
     final isWhite = gameState.currentPlayer == PlayerColor.white;
     final bgColor = isWhite ? GameColors.turnIndicatorLight : GameColors.turnIndicatorDark;
     final textColor = isWhite ? Colors.black : Colors.white;
@@ -1117,9 +1407,7 @@ class _GameInfoBar extends StatelessWidget {
     final pieceColors = GameColors.forPlayer(isWhite);
 
     String statusText;
-    if (gameState.isGameOver) {
-      statusText = _resultText(gameState.result!);
-    } else if (gameState.isOpeningPhase) {
+    if (gameState.isOpeningPhase) {
       statusText = "Place opponent's flat stone";
     } else {
       statusText = 'Place or move';
@@ -1296,14 +1584,6 @@ class _GameInfoBar extends StatelessWidget {
       ),
     );
   }
-
-  String _resultText(GameResult result) {
-    return switch (result) {
-      GameResult.whiteWins => 'White Wins!',
-      GameResult.blackWins => 'Black Wins!',
-      GameResult.draw => 'Draw!',
-    };
-  }
 }
 
 /// The game board grid with wooden inset styling
@@ -1313,14 +1593,16 @@ class _GameBoard extends StatelessWidget {
   final AnimationState animationState;
   final Set<Position>? lastMovePositions;
   final Function(Position) onCellTap;
-  final Function(Position, PieceStack) onCellLongPress;
+  final Function(Position, PieceStack) onLongPressStart;
+  final VoidCallback onLongPressEnd;
 
   const _GameBoard({
     required this.gameState,
     required this.uiState,
     required this.animationState,
     required this.onCellTap,
-    required this.onCellLongPress,
+    required this.onLongPressStart,
+    required this.onLongPressEnd,
     this.lastMovePositions,
   });
 
@@ -1436,7 +1718,9 @@ class _GameBoard extends StatelessWidget {
 
             return GestureDetector(
               onTap: () => onCellTap(pos),
-              onLongPress: stack.isNotEmpty ? () => onCellLongPress(pos, stack) : null,
+              onLongPressStart: stack.isNotEmpty ? (_) => onLongPressStart(pos, stack) : null,
+              onLongPressEnd: stack.isNotEmpty ? (_) => onLongPressEnd() : null,
+              onLongPressCancel: stack.isNotEmpty ? () => onLongPressEnd() : null,
               child: _BoardCell(
                 key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${lastEvent?.timestamp.millisecondsSinceEpoch ?? 0}_${ghostPieceType?.name ?? ''}'),
                 stack: stack,
@@ -2190,6 +2474,25 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 }
 
+/// Random tips about Tak rules and strategy
+const List<String> _takTips = [
+  'Win by building a road connecting opposite edges of the board.',
+  'Flats count toward road building; walls and capstones do not.',
+  'Walls block roads but can be flattened by a capstone.',
+  'Capstones can flatten walls but cannot be stacked upon.',
+  'Diagonals do not count when building a road.',
+  'If neither player can win by road, the game ends when the board fills or someone runs out of pieces.',
+  'In a flat count win, only flat stones on top of stacks count.',
+  'You can move a stack up to its height in spaces.',
+  'The carry limit is equal to the board size.',
+  'Long press on any stack to see all pieces in it.',
+  'Standing stones (walls) cannot have pieces placed on them.',
+  'During the opening, you place your opponent\'s flat stone.',
+  'Control a stack by having your piece on top.',
+  'A capstone is your most powerful piece - use it wisely!',
+  'Walls are great for blocking your opponent\'s roads.',
+];
+
 /// Bottom controls panel - simplified for on-board interaction
 class _BottomControls extends StatelessWidget {
   final GameState gameState;
@@ -2206,19 +2509,31 @@ class _BottomControls extends StatelessWidget {
     required this.onCancel,
   });
 
+  // Get a deterministic "random" tip based on turn number
+  String _getTip() {
+    final index = (gameState.turnNumber * 7) % _takTips.length;
+    return _takTips[index];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (gameState.isGameOver) {
-      return const SizedBox(height: 80);
+      return const SizedBox(height: 100);
     }
 
     return Container(
-      height: 80,
+      height: 100,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(
-        color: GameColors.controlPanelBg,
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : GameColors.controlPanelBg,
         border: Border(
-          top: BorderSide(color: GameColors.controlPanelBorder),
+          top: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.outline
+                : GameColors.controlPanelBorder,
+          ),
         ),
       ),
       child: _buildControls(context),
@@ -2228,113 +2543,171 @@ class _BottomControls extends StatelessWidget {
   Widget _buildControls(BuildContext context) {
     switch (uiState.mode) {
       case InteractionMode.idle:
-        return _buildIdleHint();
+        return _buildIdleHint(context);
       case InteractionMode.placingPiece:
-        return _buildPlacingPieceControls();
+        return _buildPlacingPieceControls(context);
       case InteractionMode.movingStack:
-        return _buildMovingStackHint();
+        return _buildMovingStackHint(context);
       case InteractionMode.droppingPieces:
-        return _buildDroppingPiecesControls();
+        return _buildDroppingPiecesControls(context);
     }
   }
 
-  Widget _buildIdleHint() {
-    final hint = gameState.isOpeningPhase
-        ? 'Tap an empty cell to place opponent\'s flat stone'
-        : 'Tap empty cell to place, or tap your stack to move';
+  Widget _buildIdleHint(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
+    final tipColor = isDark ? Colors.white54 : Colors.grey.shade600;
 
-    return Center(
-      child: Text(
-        hint,
-        style: const TextStyle(
-          color: GameColors.subtitleColor,
-          fontStyle: FontStyle.italic,
+    final String instruction;
+    if (gameState.isOpeningPhase) {
+      final playerName = gameState.currentPlayer == PlayerColor.white ? 'Light' : 'Dark';
+      instruction = '$playerName\'s turn: Tap any empty cell to place your opponent\'s flat stone.';
+    } else {
+      final playerName = gameState.currentPlayer == PlayerColor.white ? 'Light' : 'Dark';
+      instruction = '$playerName\'s turn: Tap an empty cell to place a piece, or tap your own stack to move it.';
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          instruction,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
         ),
-        textAlign: TextAlign.center,
-      ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lightbulb_outline, size: 14, color: tipColor),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                _getTip(),
+                style: TextStyle(
+                  color: tipColor,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildPlacingPieceControls() {
+  Widget _buildPlacingPieceControls(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final pieces = gameState.currentPlayerPieces;
     final isOpening = gameState.isOpeningPhase;
     final currentType = uiState.ghostPieceType;
 
     // During opening, only flat stones allowed - just show hint
     if (isOpening) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      return Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Expanded(
-            child: Text(
-              'Tap again to place flat stone',
-              style: TextStyle(
-                color: GameColors.subtitleColor,
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
+          Text(
+            'Cell selected! Tap this cell again to confirm placement.',
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
           ),
-          IconButton(
-            onPressed: onCancel,
-            icon: const Icon(Icons.close),
-            tooltip: 'Cancel',
-            color: GameColors.subtitleColor,
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Or tap a different cell to change your selection.',
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.7),
+                  fontStyle: FontStyle.italic,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: onCancel,
+                icon: const Icon(Icons.close),
+                tooltip: 'Cancel',
+                color: textColor,
+              ),
+            ],
           ),
         ],
       );
     }
 
+    final typeName = switch (currentType) {
+      PieceType.flat => 'Flat Stone',
+      PieceType.standing => 'Wall',
+      PieceType.capstone => 'Capstone',
+    };
+
     // Show piece type selector with current selection highlighted
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Hint text
-        const Expanded(
-          child: Text(
-            'Tap cell to place',
-            style: TextStyle(
-              color: GameColors.subtitleColor,
-              fontStyle: FontStyle.italic,
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
+        Text(
+          'Placing: $typeName. Tap cell to place, or select a different piece type below.',
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w500,
+            fontSize: 13,
           ),
+          textAlign: TextAlign.center,
         ),
-        // Piece type toggle buttons
-        _PieceTypeToggle(
-          type: PieceType.flat,
-          isSelected: currentType == PieceType.flat,
-          isEnabled: pieces.flatStones > 0,
-          onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
-        ),
-        const SizedBox(width: 8),
-        _PieceTypeToggle(
-          type: PieceType.standing,
-          label: 'Wall',
-          isSelected: currentType == PieceType.standing,
-          isEnabled: pieces.flatStones > 0,
-          onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
-        ),
-        const SizedBox(width: 8),
-        _PieceTypeToggle(
-          type: PieceType.capstone,
-          isSelected: currentType == PieceType.capstone,
-          isEnabled: pieces.capstones > 0,
-          onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
-        ),
-        const SizedBox(width: 12),
-        IconButton(
-          onPressed: onCancel,
-          icon: const Icon(Icons.close),
-          tooltip: 'Cancel',
-          color: GameColors.subtitleColor,
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PieceTypeToggle(
+              type: PieceType.flat,
+              isSelected: currentType == PieceType.flat,
+              isEnabled: pieces.flatStones > 0,
+              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
+            ),
+            const SizedBox(width: 8),
+            _PieceTypeToggle(
+              type: PieceType.standing,
+              label: 'Wall',
+              isSelected: currentType == PieceType.standing,
+              isEnabled: pieces.flatStones > 0,
+              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
+            ),
+            const SizedBox(width: 8),
+            _PieceTypeToggle(
+              type: PieceType.capstone,
+              isSelected: currentType == PieceType.capstone,
+              isEnabled: pieces.capstones > 0,
+              onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              onPressed: onCancel,
+              icon: const Icon(Icons.close),
+              tooltip: 'Cancel',
+              color: textColor,
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildMovingStackHint() {
+  Widget _buildMovingStackHint(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final piecesPickedUp = uiState.piecesPickedUp;
 
     return Row(
@@ -2345,15 +2718,16 @@ class _BottomControls extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Moving $piecesPickedUp piece${piecesPickedUp == 1 ? '' : 's'}',
-                style: const TextStyle(
+                'Picking up $piecesPickedUp piece${piecesPickedUp == 1 ? '' : 's'} from this stack.',
+                style: TextStyle(
                   fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white : null,
                 ),
               ),
-              const Text(
-                'Tap stack to change count, tap destination to move',
+              Text(
+                'Tap the stack again to change how many pieces to pick up. Tap an adjacent cell to start moving.',
                 style: TextStyle(
-                  color: GameColors.subtitleColor,
+                  color: textColor,
                   fontStyle: FontStyle.italic,
                   fontSize: 12,
                 ),
@@ -2366,13 +2740,15 @@ class _BottomControls extends StatelessWidget {
           onPressed: onCancel,
           icon: const Icon(Icons.close),
           tooltip: 'Cancel',
-          color: GameColors.subtitleColor,
+          color: textColor,
         ),
       ],
     );
   }
 
-  Widget _buildDroppingPiecesControls() {
+  Widget _buildDroppingPiecesControls(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final remaining = uiState.piecesPickedUp;
     final drops = uiState.drops;
     final pendingDrop = uiState.pendingDropCount;
@@ -2388,11 +2764,14 @@ class _BottomControls extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Drops: ${drops.join(' → ')}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  'Move complete! Dropped ${drops.join(' → ')} pieces.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : null,
+                  ),
                 ),
                 const Text(
-                  'Move complete!',
+                  'Press Confirm to finalize, or Cancel to undo.',
                   style: TextStyle(
                     color: Colors.green,
                     fontStyle: FontStyle.italic,
@@ -2415,15 +2794,14 @@ class _BottomControls extends StatelessWidget {
             onPressed: onCancel,
             icon: const Icon(Icons.close),
             tooltip: 'Cancel',
-            color: GameColors.subtitleColor,
+            color: textColor,
           ),
         ],
       );
     }
 
     // Still dropping - show hint
-    final dropsText = drops.isEmpty ? '' : 'Dropped: ${drops.join(' → ')} • ';
-    final holdingText = 'Holding $remaining';
+    final dropsText = drops.isEmpty ? '' : 'Already dropped: ${drops.join(' → ')}. ';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -2433,13 +2811,16 @@ class _BottomControls extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Drop $pendingDrop here',
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                'Dropping $pendingDrop piece${pendingDrop == 1 ? '' : 's'} here. $remaining remaining in hand.',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white : null,
+                ),
               ),
               Text(
-                '$dropsText$holdingText • Tap to change, tap next cell to continue',
-                style: const TextStyle(
-                  color: GameColors.subtitleColor,
+                '${dropsText}Tap this cell to change drop count, or tap an adjacent cell to continue.',
+                style: TextStyle(
+                  color: textColor,
                   fontStyle: FontStyle.italic,
                   fontSize: 11,
                 ),
@@ -2452,7 +2833,7 @@ class _BottomControls extends StatelessWidget {
           onPressed: onCancel,
           icon: const Icon(Icons.close),
           tooltip: 'Cancel',
-          color: GameColors.subtitleColor,
+          color: textColor,
         ),
       ],
     );
@@ -2619,12 +3000,20 @@ class _PieceCountsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark
+        ? Theme.of(context).colorScheme.surfaceContainerHighest
+        : Colors.grey.shade100;
+    final borderColor = isDark
+        ? Theme.of(context).colorScheme.outline
+        : Colors.grey.shade300;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: bgColor,
         border: Border(
-          top: BorderSide(color: Colors.grey.shade300),
+          top: BorderSide(color: borderColor),
         ),
       ),
       child: Row(
@@ -2639,7 +3028,7 @@ class _PieceCountsBar extends StatelessWidget {
           Container(
             width: 1,
             height: 40,
-            color: Colors.grey.shade300,
+            color: borderColor,
           ),
           _PlayerPieceCounts(
             label: 'Dark',
@@ -2668,13 +3057,19 @@ class _PlayerPieceCounts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final countColor = isDark ? Colors.white : Colors.black87;
+    final highlightColor = isDark
+        ? Theme.of(context).colorScheme.primaryContainer
+        : GameColors.currentPlayerHighlight;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: isCurrentPlayer
           ? BoxDecoration(
-              color: GameColors.currentPlayerHighlight,
+              color: highlightColor,
               borderRadius: BorderRadius.circular(8),
             )
           : null,
@@ -2684,7 +3079,7 @@ class _PlayerPieceCounts extends StatelessWidget {
             label,
             style: TextStyle(
               fontWeight: isCurrentPlayer ? FontWeight.bold : FontWeight.normal,
-              color: Colors.black87,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 4),
@@ -2706,7 +3101,7 @@ class _PlayerPieceCounts extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 '${pieces.flatStones}',
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(fontWeight: FontWeight.w500, color: countColor),
               ),
               const SizedBox(width: 12),
               // Capstone icon (small hexagon)
@@ -2717,7 +3112,7 @@ class _PlayerPieceCounts extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 '${pieces.capstones}',
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(fontWeight: FontWeight.w500, color: countColor),
               ),
             ],
           ),
@@ -2941,112 +3336,175 @@ class _SmallHexagonPainter extends CustomPainter {
   }
 }
 
-/// Stack viewer dialog - shows full stack contents from bottom to top
-class _StackViewerDialog extends StatelessWidget {
+/// Stack exploded view overlay - shows stack contents on long press
+class _StackExplodedOverlay extends StatelessWidget {
   final Position position;
   final PieceStack stack;
   final int boardSize;
 
-  const _StackViewerDialog({
+  const _StackExplodedOverlay({
     required this.position,
     required this.stack,
     required this.boardSize,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    final posNotation = _positionToNotation(position);
-
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.layers, size: 24),
-          const SizedBox(width: 8),
-          Text('Stack at $posNotation'),
-        ],
-      ),
-      content: SizedBox(
-        width: 200,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${stack.height} piece${stack.height == 1 ? '' : 's'}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'TOP',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: GameColors.subtitleColor,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 300),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Show pieces from top to bottom
-                    for (int i = stack.height - 1; i >= 0; i--)
-                      _StackPieceRow(
-                        piece: stack.pieces[i],
-                        index: i,
-                        isTop: i == stack.height - 1,
-                        isBottom: i == 0,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'BOTTOM',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: GameColors.subtitleColor,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    );
-  }
 
   String _positionToNotation(Position pos) {
     final col = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
     final row = (boardSize - pos.row).toString();
     return '$col$row';
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final posNotation = _positionToNotation(position);
+
+    return Container(
+      color: Colors.black.withValues(alpha: 0.6),
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.layers,
+                    size: 28,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Stack at $posNotation',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${stack.height} piece${stack.height == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Exploded stack view
+              Container(
+                constraints: const BoxConstraints(maxHeight: 400, maxWidth: 280),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // TOP label
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'TOP (Controls)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Stack pieces from top to bottom (exploded view)
+                      for (int i = stack.height - 1; i >= 0; i--) ...[
+                        _ExplodedPieceCard(
+                          piece: stack.pieces[i],
+                          index: i,
+                          isTop: i == stack.height - 1,
+                          totalPieces: stack.height,
+                        ),
+                        if (i > 0)
+                          Container(
+                            height: 16,
+                            width: 2,
+                            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                      ],
+
+                      const SizedBox(height: 8),
+                      // BOTTOM label
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'BOTTOM',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              Text(
+                'Release to close',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-/// A single piece row in the stack viewer
-class _StackPieceRow extends StatelessWidget {
+/// Exploded piece card for the stack overlay
+class _ExplodedPieceCard extends StatelessWidget {
   final Piece piece;
   final int index;
   final bool isTop;
-  final bool isBottom;
+  final int totalPieces;
 
-  const _StackPieceRow({
+  const _ExplodedPieceCard({
     required this.piece,
     required this.index,
     required this.isTop,
-    required this.isBottom,
+    required this.totalPieces,
   });
 
   @override
@@ -3057,35 +3515,42 @@ class _StackPieceRow extends StatelessWidget {
     final typeName = piece.type.name[0].toUpperCase() + piece.type.name.substring(1);
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      width: 200,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            pieceColors.primary.withValues(alpha: 0.3),
-            pieceColors.secondary.withValues(alpha: 0.2),
-          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: pieceColors.gradientColors,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: pieceColors.border.withValues(alpha: 0.5),
-          width: 1,
+          color: pieceColors.border,
+          width: isTop ? 3 : 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: pieceColors.border.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Piece icon
+          // Piece visual
           Container(
-            width: 32,
-            height: 32,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: pieceColors.gradientColors),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: pieceColors.border, width: 1.5),
+              color: Colors.white.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.5),
+                width: 1,
+              ),
             ),
-            child: Center(
-              child: _getPieceIcon(piece.type),
-            ),
+            child: Center(child: _getPieceVisual(piece.type)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -3094,16 +3559,22 @@ class _StackPieceRow extends StatelessWidget {
               children: [
                 Text(
                   typeName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: pieceColors.border.computeLuminance() > 0.5
+                        ? Colors.black
+                        : Colors.white,
                   ),
                 ),
                 Text(
                   playerName,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: (pieceColors.border.computeLuminance() > 0.5
+                            ? Colors.black
+                            : Colors.white)
+                        .withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -3111,18 +3582,17 @@ class _StackPieceRow extends StatelessWidget {
           ),
           if (isTop)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.amber.shade100,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.amber.shade300),
+                color: Colors.amber,
+                borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
+              child: const Text(
                 'CTRL',
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade800,
+                  color: Colors.black,
                 ),
               ),
             ),
@@ -3131,143 +3601,36 @@ class _StackPieceRow extends StatelessWidget {
     );
   }
 
-  Widget _getPieceIcon(PieceType type) {
+  Widget _getPieceVisual(PieceType type) {
     switch (type) {
       case PieceType.flat:
         return Container(
-          width: 16,
-          height: 8,
+          width: 24,
+          height: 10,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(2),
+            color: Colors.white.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(3),
           ),
         );
       case PieceType.standing:
         return Container(
-          width: 6,
-          height: 16,
+          width: 8,
+          height: 24,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(2),
+            color: Colors.white.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(3),
           ),
         );
       case PieceType.capstone:
         return Container(
-          width: 14,
-          height: 14,
+          width: 20,
+          height: 20,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: Colors.white.withValues(alpha: 0.6),
             shape: BoxShape.circle,
           ),
         );
     }
-  }
-}
-
-/// Win overlay shown when game ends
-class _WinOverlay extends StatelessWidget {
-  final GameResult result;
-  final WinReason? winReason;
-  final VoidCallback onNewGame;
-  final VoidCallback onHome;
-
-  const _WinOverlay({
-    required this.result,
-    required this.winReason,
-    required this.onNewGame,
-    required this.onHome,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final (title, pieceColors) = switch (result) {
-      GameResult.whiteWins => ('Light Wins!', GameColors.lightPlayerColors),
-      GameResult.blackWins => ('Dark Wins!', GameColors.darkPlayerColors),
-      GameResult.draw => ('Draw!', const PieceColors(
-        primary: Colors.grey,
-        secondary: Colors.grey,
-        border: Color(0xFF757575),
-      )),
-    };
-
-    final reasonText = switch (winReason) {
-      WinReason.road => 'by building a road',
-      WinReason.flats => 'by flat count',
-      null => '',
-    };
-
-    final textColor = result == GameResult.blackWins ? Colors.white : Colors.black;
-
-    return Container(
-      color: Colors.black54,
-      child: Center(
-        child: Card(
-          margin: const EdgeInsets.all(32),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: pieceColors.gradientColors,
-                    ),
-                    border: Border.all(
-                      color: pieceColors.border,
-                      width: 4,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    winReason == WinReason.road ? Icons.route : Icons.emoji_events,
-                    size: 40,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                if (reasonText.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    reasonText,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
-                  ),
-                ],
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: onHome,
-                      icon: const Icon(Icons.home),
-                      label: const Text('Home'),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      onPressed: onNewGame,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('New Game'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

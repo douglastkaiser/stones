@@ -57,6 +57,29 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
 
+          // Chess Clock Section
+          const _SectionHeader(title: 'Chess Clock'),
+          const SizedBox(height: 12),
+          _SettingsTile(
+            icon: Icons.timer,
+            title: 'Enable Chess Clock',
+            subtitle: settings.chessClockEnabled
+                ? 'Time limit per player in local games'
+                : 'Off - no time limit',
+            trailing: Switch(
+              value: settings.chessClockEnabled,
+              onChanged: (value) async {
+                await ref.read(appSettingsProvider.notifier).setChessClockEnabled(value);
+              },
+              activeTrackColor: GameColors.boardFrameInner,
+            ),
+          ),
+          if (settings.chessClockEnabled) ...[
+            const SizedBox(height: 8),
+            _ChessClockInfo(),
+          ],
+          const SizedBox(height: 32),
+
           // Theme Section
           const _SectionHeader(title: 'Appearance'),
           const SizedBox(height: 12),
@@ -448,6 +471,74 @@ class _ThemeOption extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Shows chess clock time settings by board size
+class _ChessClockInfo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Time per player by board size:',
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              _buildTimeChip(context, '3x3', '1:00'),
+              _buildTimeChip(context, '4x4', '2:00'),
+              _buildTimeChip(context, '5x5', '5:00'),
+              _buildTimeChip(context, '6x6', '10:00'),
+              _buildTimeChip(context, '7x7', '15:00'),
+              _buildTimeChip(context, '8x8', '20:00'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeChip(BuildContext context, String size, String time) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          size,
+          style: TextStyle(
+            fontSize: 12,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          time,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 }
