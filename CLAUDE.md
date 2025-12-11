@@ -14,7 +14,7 @@ flutter build apk              # Build for Android
 ## Code Quality Rules
 
 ### Dart Analyzer
-The project uses `flutter analyze --fatal-infos` which treats warnings as errors. Before committing:
+The project uses `flutter analyze --fatal-infos` which treats warnings AND infos as errors. Before committing:
 
 1. **Never declare unused variables** - If you declare a variable, use it. Remove any `final foo = ...` where `foo` is never referenced.
 
@@ -22,7 +22,36 @@ The project uses `flutter analyze --fatal-infos` which treats warnings as errors
 
 3. **Remove unused parameters** - If a function parameter isn't used, either use it or prefix with underscore (`_unusedParam`).
 
-4. **Common patterns to avoid:**
+4. **Remove unused private classes/methods** - If you replace a widget or method with a new implementation, DELETE the old one. Don't leave orphaned `_OldWidget` or `_oldMethod` declarations.
+
+5. **Use const constructors** - Always add `const` keyword to widget constructors when all arguments are compile-time constants. This includes `Text`, `Icon`, `SizedBox`, `TextStyle`, etc.
+   ```dart
+   // BAD - missing const
+   Text('Hello', style: TextStyle(color: Colors.red))
+
+   // GOOD - const added
+   const Text('Hello', style: TextStyle(color: Colors.red))
+   ```
+
+6. **Avoid unreachable switch cases** - Don't use wildcard `_` in switch expressions when all enum values are already covered:
+   ```dart
+   // BAD - unreachable case (PieceType only has flat, standing, capstone)
+   final name = switch (type) {
+     PieceType.flat => 'Flat',
+     PieceType.standing => 'Standing',
+     PieceType.capstone => 'Capstone',
+     _ => 'Unknown',  // This is unreachable!
+   };
+
+   // GOOD - exhaustive without wildcard
+   final name = switch (type) {
+     PieceType.flat => 'Flat',
+     PieceType.standing => 'Standing',
+     PieceType.capstone => 'Capstone',
+   };
+   ```
+
+7. **Common patterns to avoid:**
    ```dart
    // BAD - unused variable
    final size = state.boardSize;  // declared but never used
@@ -31,10 +60,12 @@ The project uses `flutter analyze --fatal-infos` which treats warnings as errors
    // (just don't declare it if not needed)
    ```
 
-5. **Before finishing any code changes:**
+8. **Before finishing any code changes:**
    - Review all new variables - are they actually used?
    - Review all new imports - are they needed?
    - Review all function parameters - are they used?
+   - Check for any widgets/methods that were replaced and can be deleted
+   - Add `const` to constructors where all arguments are constant
 
 ## Architecture Notes
 

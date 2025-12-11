@@ -257,7 +257,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Board Size Section
-                Text(
+                const Text(
                   'Board Size',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -291,7 +291,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 const SizedBox(height: 20),
 
                 // Difficulty Section
-                Text(
+                const Text(
                   'Difficulty',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -808,7 +808,7 @@ class _DifficultyOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              Icon(
+              const Icon(
                 Icons.check_circle,
                 color: GameColors.boardFrameInner,
                 size: 20,

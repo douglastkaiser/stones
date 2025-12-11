@@ -385,7 +385,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameStateProvider);
     final uiState = ref.watch(uiStateProvider);
-    final isGameOver = ref.watch(isGameOverProvider);
     final animationState = ref.watch(animationStateProvider);
     final isMuted = ref.watch(isMutedProvider);
     final moveHistory = ref.watch(moveHistoryProvider);
@@ -1575,14 +1574,6 @@ class _GameInfoBar extends StatelessWidget {
       ),
     );
   }
-
-  String _resultText(GameResult result) {
-    return switch (result) {
-      GameResult.whiteWins => 'White Wins!',
-      GameResult.blackWins => 'Black Wins!',
-      GameResult.draw => 'Draw!',
-    };
-  }
 }
 
 /// The game board grid with wooden inset styling
@@ -2651,7 +2642,6 @@ class _BottomControls extends StatelessWidget {
       PieceType.flat => 'Flat Stone',
       PieceType.standing => 'Wall',
       PieceType.capstone => 'Capstone',
-      _ => 'piece',
     };
 
     // Show piece type selector with current selection highlighted
@@ -3336,101 +3326,7 @@ class _SmallHexagonPainter extends CustomPainter {
   }
 }
 
-/// Stack viewer dialog - shows full stack contents from bottom to top
-class _StackViewerDialog extends StatelessWidget {
-  final Position position;
-  final PieceStack stack;
-  final int boardSize;
-
-  const _StackViewerDialog({
-    required this.position,
-    required this.stack,
-    required this.boardSize,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final posNotation = _positionToNotation(position);
-
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.layers, size: 24),
-          const SizedBox(width: 8),
-          Text('Stack at $posNotation'),
-        ],
-      ),
-      content: SizedBox(
-        width: 200,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${stack.height} piece${stack.height == 1 ? '' : 's'}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'TOP',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: GameColors.subtitleColor,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 300),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Show pieces from top to bottom
-                    for (int i = stack.height - 1; i >= 0; i--)
-                      _StackPieceRow(
-                        piece: stack.pieces[i],
-                        index: i,
-                        isTop: i == stack.height - 1,
-                        isBottom: i == 0,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'BOTTOM',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: GameColors.subtitleColor,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    );
-  }
-
-  String _positionToNotation(Position pos) {
-    final col = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
-    final row = (boardSize - pos.row).toString();
-    return '$col$row';
-  }
-}
-
-/// A single piece row in the stack viewer
+/// A single piece row in the stack viewer (used by _StackExplodedOverlay)
 class _StackPieceRow extends StatelessWidget {
   final Piece piece;
   final int index;
@@ -3854,113 +3750,6 @@ class _ExplodedPieceCard extends StatelessWidget {
           ),
         );
     }
-  }
-}
-
-/// Win overlay shown when game ends
-class _WinOverlay extends StatelessWidget {
-  final GameResult result;
-  final WinReason? winReason;
-  final VoidCallback onNewGame;
-  final VoidCallback onHome;
-
-  const _WinOverlay({
-    required this.result,
-    required this.winReason,
-    required this.onNewGame,
-    required this.onHome,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final (title, pieceColors) = switch (result) {
-      GameResult.whiteWins => ('Light Wins!', GameColors.lightPlayerColors),
-      GameResult.blackWins => ('Dark Wins!', GameColors.darkPlayerColors),
-      GameResult.draw => ('Draw!', const PieceColors(
-        primary: Colors.grey,
-        secondary: Colors.grey,
-        border: Color(0xFF757575),
-      )),
-    };
-
-    final reasonText = switch (winReason) {
-      WinReason.road => 'by building a road',
-      WinReason.flats => 'by flat count',
-      null => '',
-    };
-
-    final textColor = result == GameResult.blackWins ? Colors.white : Colors.black;
-
-    return Container(
-      color: Colors.black54,
-      child: Center(
-        child: Card(
-          margin: const EdgeInsets.all(32),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: pieceColors.gradientColors,
-                    ),
-                    border: Border.all(
-                      color: pieceColors.border,
-                      width: 4,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    winReason == WinReason.road ? Icons.route : Icons.emoji_events,
-                    size: 40,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                if (reasonText.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    reasonText,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
-                  ),
-                ],
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: onHome,
-                      icon: const Icon(Icons.home),
-                      label: const Text('Home'),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      onPressed: onNewGame,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('New Game'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
