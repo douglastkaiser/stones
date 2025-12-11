@@ -1212,51 +1212,108 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _showBoardSizeDialog(BuildContext context, WidgetRef ref) {
+    final session = ref.read(gameSessionProvider);
+    final settings = ref.read(appSettingsProvider);
+    final isLocalGame = session.mode == GameMode.local;
+    int selectedSize = settings.boardSize;
+    bool chessClockEnabled = settings.chessClockEnabled;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New Game'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Select board size:'),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (int size = 3; size <= 8; size++)
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(gameStateProvider.notifier).newGame(size);
-                      ref.read(uiStateProvider.notifier).reset();
-                      ref.read(animationStateProvider.notifier).reset();
-                      ref.read(moveHistoryProvider.notifier).clear();
-                      ref.read(lastMoveProvider.notifier).state = null;
-
-                      // Reset chess clock for new game
-                      final session = ref.read(gameSessionProvider);
-                      final settings = ref.read(appSettingsProvider);
-                      if (session.mode == GameMode.local && settings.chessClockEnabled) {
-                        ref.read(chessClockProvider.notifier).initialize(size);
-                      } else {
-                        ref.read(chessClockProvider.notifier).stop();
-                      }
-
-                      Navigator.pop(context);
-                    },
-                    child: Text('${size}x$size'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('New Game'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Select board size:'),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (int size = 3; size <= 8; size++)
+                    ChoiceChip(
+                      label: Text('$size×$size'),
+                      selected: selectedSize == size,
+                      onSelected: (_) => setState(() => selectedSize = size),
+                      selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                      checkmarkColor: GameColors.boardFrameInner,
+                    ),
+                ],
+              ),
+              // Chess clock toggle (only for local games)
+              if (isLocalGame) ...[
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.timer,
+                          size: 20,
+                          color: chessClockEnabled ? GameColors.boardFrameInner : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Chess Clock',
+                          style: TextStyle(
+                            fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
+                            color: chessClockEnabled ? GameColors.boardFrameInner : Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Switch(
+                          value: chessClockEnabled,
+                          onChanged: (v) => setState(() => chessClockEnabled = v),
+                          activeColor: GameColors.boardFrameInner,
+                        ),
+                      ],
+                    ),
                   ),
+                ),
               ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Save chess clock preference
+                if (isLocalGame) {
+                  ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
+                }
+
+                ref.read(gameStateProvider.notifier).newGame(selectedSize);
+                ref.read(uiStateProvider.notifier).reset();
+                ref.read(animationStateProvider.notifier).reset();
+                ref.read(moveHistoryProvider.notifier).clear();
+                ref.read(lastMoveProvider.notifier).state = null;
+
+                // Reset chess clock for new game
+                if (isLocalGame && chessClockEnabled) {
+                  ref.read(chessClockProvider.notifier).initialize(selectedSize);
+                } else {
+                  ref.read(chessClockProvider.notifier).stop();
+                }
+
+                Navigator.pop(dialogContext);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GameColors.boardFrameInner,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start Game'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
       ),
     );
   }
@@ -2550,27 +2607,29 @@ class _BottomControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (gameState.isGameOver) {
-      return const SizedBox.shrink();
-    }
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
-            : GameColors.controlPanelBg.withValues(alpha: 0.95),
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)
-                : GameColors.controlPanelBorder.withValues(alpha: 0.5),
-          ),
-        ),
-      ),
-      child: _buildControls(context),
+    // Fixed height container to prevent board rescaling when controls change
+    return SizedBox(
+      height: gameState.isGameOver ? 0 : 44,
+      child: gameState.isGameOver
+          ? null
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+                    : GameColors.controlPanelBg.withValues(alpha: 0.95),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark
+                        ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)
+                        : GameColors.controlPanelBorder.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              child: _buildControls(context),
+            ),
     );
   }
 

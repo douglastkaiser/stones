@@ -97,6 +97,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   ) {
     final settings = ref.read(appSettingsProvider);
     int selectedSize = settings.boardSize;
+    bool chessClockEnabled = settings.chessClockEnabled;
 
     showDialog(
       context: context,
@@ -143,6 +144,39 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 16),
+              // Chess clock toggle
+              InkWell(
+                onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.timer,
+                        size: 20,
+                        color: chessClockEnabled ? GameColors.boardFrameInner : Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Chess Clock',
+                        style: TextStyle(
+                          fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
+                          color: chessClockEnabled ? GameColors.boardFrameInner : Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: chessClockEnabled,
+                        onChanged: (v) => setState(() => chessClockEnabled = v),
+                        activeColor: GameColors.boardFrameInner,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           actions: [
@@ -152,6 +186,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ),
             ElevatedButton(
               onPressed: () {
+                // Save chess clock preference
+                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
                 Navigator.pop(dialogContext);
                 _doStartNewGame(context, selectedSize, mode, difficulty);
               },
