@@ -63,13 +63,15 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
           blackTimeRemaining: 300,
         ));
 
-  /// Initialize the clock with time based on board size
+  /// Initialize the clock with time based on board size (fully resets state)
   void initialize(int boardSize) {
     _timer?.cancel();
     final time = ChessClockDefaults.getTimeForBoardSize(boardSize);
+    // Create fresh state with all defaults (isRunning=false, isExpired=false, etc.)
     state = ChessClockState(
       whiteTimeRemaining: time,
       blackTimeRemaining: time,
+      // All other fields use default values: activePlayer=null, isRunning=false, isExpired=false, expiredPlayer=null
     );
   }
 
@@ -94,12 +96,13 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
     state = state.copyWith(isRunning: false);
   }
 
-  /// Stop the clock completely
+  /// Stop the clock completely and reset to default state
   void stop() {
     _timer?.cancel();
-    state = state.copyWith(
-      isRunning: false,
-      clearActivePlayer: true,
+    // Reset to default state (300 seconds is just a placeholder, won't be shown)
+    state = const ChessClockState(
+      whiteTimeRemaining: 300,
+      blackTimeRemaining: 300,
     );
   }
 

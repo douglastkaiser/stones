@@ -186,14 +186,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     ref.read(moveHistoryProvider.notifier).clear();
     ref.read(lastMoveProvider.notifier).state = null;
 
-    // Initialize chess clock for local games if enabled
-    if (mode == GameMode.local) {
-      final settings = ref.read(appSettingsProvider);
-      if (settings.chessClockEnabled) {
-        ref.read(chessClockProvider.notifier).initialize(size);
-        // Start the clock for white (first player)
-        ref.read(chessClockProvider.notifier).start(PlayerColor.white);
-      }
+    // Always reset chess clock when starting a new game
+    final settings = ref.read(appSettingsProvider);
+    if (mode == GameMode.local && settings.chessClockEnabled) {
+      // Initialize with new board size (resets times and stops any running timer)
+      ref.read(chessClockProvider.notifier).initialize(size);
+      // Clock will start when first move is made in _switchChessClock
+    } else {
+      // Stop any running clock for non-local games or when clock is disabled
+      ref.read(chessClockProvider.notifier).stop();
     }
 
     Navigator.push(

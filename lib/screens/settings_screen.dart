@@ -479,10 +479,12 @@ class _ThemeOption extends StatelessWidget {
 class _ChessClockInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -492,7 +494,7 @@ class _ChessClockInfo extends StatelessWidget {
             'Time per player by board size:',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -501,12 +503,12 @@ class _ChessClockInfo extends StatelessWidget {
             spacing: 16,
             runSpacing: 4,
             children: [
-              _buildTimeChip('3x3', '1:00'),
-              _buildTimeChip('4x4', '2:00'),
-              _buildTimeChip('5x5', '5:00'),
-              _buildTimeChip('6x6', '10:00'),
-              _buildTimeChip('7x7', '15:00'),
-              _buildTimeChip('8x8', '20:00'),
+              _buildTimeChip(context, '3x3', '1:00'),
+              _buildTimeChip(context, '4x4', '2:00'),
+              _buildTimeChip(context, '5x5', '5:00'),
+              _buildTimeChip(context, '6x6', '10:00'),
+              _buildTimeChip(context, '7x7', '15:00'),
+              _buildTimeChip(context, '8x8', '20:00'),
             ],
           ),
         ],
@@ -514,7 +516,9 @@ class _ChessClockInfo extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeChip(String size, String time) {
+  Widget _buildTimeChip(BuildContext context, String size, String time) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -522,15 +526,16 @@ class _ChessClockInfo extends StatelessWidget {
           size,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade700,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(width: 4),
         Text(
           time,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
           ),
         ),
       ],
