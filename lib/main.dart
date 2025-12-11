@@ -692,14 +692,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         // If distance > 1, we need to auto-add drops for intermediate cells
         if (distance > 1) {
           for (var i = 1; i < distance; i++) {
-            if (uiNotifier.state.piecesPickedUp > 0) {
+            if (ref.read(uiStateProvider).piecesPickedUp > 0) {
               uiNotifier.addDrop(1);
             }
           }
         }
 
         // Check if all pieces are dropped
-        if (uiNotifier.state.piecesPickedUp == 0) {
+        if (ref.read(uiStateProvider).piecesPickedUp == 0) {
           // Auto-confirm the move
           _confirmMove(ref);
         }
@@ -768,7 +768,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         uiNotifier.addDrop(dropCount);
 
         // Check if all pieces are dropped
-        if (uiNotifier.state.piecesPickedUp == 0) {
+        if (ref.read(uiStateProvider).piecesPickedUp == 0) {
           // Auto-confirm the move
           _confirmMove(ref);
         }
