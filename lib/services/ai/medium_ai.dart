@@ -438,29 +438,34 @@ class MediumStonesAI extends StonesAI {
     final distanceFromCenter =
         (position.row - center).abs() + (position.col - center).abs();
 
-    double score = -distanceFromCenter * 0.3; // Slightly less center preference
+    double score = -distanceFromCenter * 0.3;
 
-    // Chain connectivity
+    // Chain connectivity - primary offensive driver
     final chainBonus = _evaluateChainExtension(state, position, state.currentPlayer);
-    score += chainBonus * 5; // Higher weight on chain building
+    score += chainBonus * 6; // Increased weight on chain building
 
     // Adjacency scoring
     final friendlyAdjacency = _adjacentControlled(state, position, state.currentPlayer);
     final opponentAdjacency = _adjacentControlled(state, position, state.opponent);
-    score += friendlyAdjacency * 2.5;
-    score += opponentAdjacency * 2; // Higher blocking pressure
+    score += friendlyAdjacency * 3; // Higher bonus for extending our road
+    score += opponentAdjacency * 1.5; // Reduced blocking pressure
 
-    // Edge connectivity
+    // Edge connectivity - important for roads
     if (_touchesEdge(position, boardSize)) {
-      score += 2.5;
+      score += 3;
     }
 
     // Piece type considerations
     if (move.pieceType == PieceType.capstone) {
       score += state.turnNumber < 8 ? -3 : 5;
     } else if (move.pieceType == PieceType.standing) {
+      // Standing stones don't build roads - only use when tactically necessary
+      score -= 3; // Base penalty - prefer flat stones
       final blockValue = _standingBlockValue(state, position);
-      score += blockValue * 1.5;
+      // Only worth it if blocking a real threat
+      if (blockValue > 3) {
+        score += blockValue * 0.8;
+      }
     }
 
     return score + random.nextDouble() * 0.1;
@@ -472,38 +477,38 @@ class MediumStonesAI extends StonesAI {
     final movingTop = stack.topPiece;
     final destination = _finalPosition(move.from, move.direction, move.drops.length);
 
-    double score = 2.5;
+    double score = 3;
 
     if (movingTop?.type == PieceType.capstone) {
       score += 5;
     }
 
-    // Chain extension bonus
+    // Chain extension bonus - primary offensive consideration
     final chainBonus = _evaluateChainExtension(state, destination, state.currentPlayer);
-    score += chainBonus * 4;
+    score += chainBonus * 5; // Increased for offense
 
     final friendlyAdjacency =
         _adjacentControlled(state, destination, state.currentPlayer);
     final opponentAdjacency =
         _adjacentControlled(state, destination, state.opponent);
-    score += friendlyAdjacency * 2.5;
-    score += opponentAdjacency * 2.5;
+    score += friendlyAdjacency * 3; // Higher for road building
+    score += opponentAdjacency * 2;
 
-    // Taking control of opponent space
+    // Taking control of opponent space - offensive move
     final targetStack = board.stackAt(destination);
     if (targetStack.topPiece?.color == state.opponent) {
-      score += 4;
+      score += 5; // Increased - capturing is offensive
     }
 
-    // Flattening walls
+    // Flattening walls - very offensive, opens paths
     if (targetStack.topPiece?.type == PieceType.standing &&
         movingTop?.canFlattenWalls == true) {
-      score += 6;
+      score += 7; // Increased - breaking walls is aggressive
     }
 
-    // Edge bonus
+    // Edge bonus - roads need edges
     if (_touchesEdge(destination, state.boardSize)) {
-      score += 2.5;
+      score += 3;
     }
 
     return score + random.nextDouble() * 0.2;
