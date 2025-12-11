@@ -208,7 +208,6 @@ class MediumStonesAI extends StonesAI {
     if (move is AIPlacementMove) {
       // Bonus for controlling key positions
       final pos = move.position;
-      final size = state.boardSize;
 
       // Strong bonus for bridge positions (connect two of our chains)
       final chainBonus = _evaluateChainExtension(state, pos, state.currentPlayer);
