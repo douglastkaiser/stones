@@ -1,9 +1,10 @@
 import 'dart:math';
 
 import '../../models/models.dart';
-import 'easy_ai.dart';
 import 'intro_ai.dart';
+import 'easy_ai.dart';
 import 'medium_ai.dart';
+import 'hard_ai.dart';
 import 'move_generator.dart';
 
 /// AI difficulty levels
@@ -25,7 +26,7 @@ abstract class StonesAI {
       AIDifficulty.intro => IntroStonesAI(rng),
       AIDifficulty.easy => EasyStonesAI(rng),
       AIDifficulty.medium => MediumStonesAI(rng),
-      AIDifficulty.hard => MediumStonesAI(rng), // Placeholder until hard is implemented
+      AIDifficulty.hard => HardStonesAI(rng),
     };
   }
 }

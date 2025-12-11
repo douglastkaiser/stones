@@ -1,14 +1,15 @@
 import '../../models/models.dart';
 import 'ai.dart';
 
-/// Advanced AI with 2-ply lookahead, fork detection, and strategic planning
-class MediumStonesAI extends StonesAI {
-  MediumStonesAI(super.random);
+/// Aggressive AI with 3-ply lookahead and minimax-style evaluation
+class HardStonesAI extends StonesAI {
+  HardStonesAI(super.random);
 
   final _generator = const AIMoveGenerator();
 
-  // Limit how many moves we fully analyze for 2-ply to stay snappy
-  static const _maxMovesToAnalyze = 20;
+  // Pruning parameters to stay responsive
+  static const _maxTopMoves = 15; // Candidates for deep search
+  static const _maxOpponentMoves = 12; // Opponent responses to consider
 
   @override
   Future<AIMove?> selectMove(GameState state) async {
@@ -25,123 +26,222 @@ class MediumStonesAI extends StonesAI {
     // Priority 2: Block opponent's immediate winning threats
     final blockingMoves = _findBlockingMoves(state, moves);
     if (blockingMoves.isNotEmpty) {
-      // If there are multiple blocking moves needed, we might be in trouble
-      // Pick the best one that also advances our position
+      // Score blocking moves - pick one that also creates threats
       final scored = <(AIMove, double)>[];
       for (final move in blockingMoves) {
-        scored.add((move, _scoreMove(state, move) + _evaluateMoveStrategically(state, move)));
+        final afterMove = _applyMove(state, move);
+        final ourThreats = afterMove != null ? _countThreats(afterMove, state.currentPlayer) : 0;
+        scored.add((move, _scoreMove(state, move) + ourThreats * 5));
       }
       scored.sort((a, b) => b.$2.compareTo(a.$2));
       return scored.first.$1;
     }
 
-    // Priority 3: Look for moves that create fork threats (2+ ways to win)
+    // Priority 3: Look for fork moves (2+ winning threats)
     final forkMoves = _findForkMoves(state, moves);
     if (forkMoves.isNotEmpty) {
-      // Pick the fork move with the best overall score
       final scored = <(AIMove, double)>[];
       for (final move in forkMoves) {
-        scored.add((move, _scoreMove(state, move) + 15)); // Big bonus for forks
+        scored.add((move, _scoreMove(state, move) + 20));
       }
       scored.sort((a, b) => b.$2.compareTo(a.$2));
       return scored.first.$1;
     }
 
-    // Priority 4: Block opponent's potential fork attempts (2-ply defense)
+    // Priority 4: Block opponent's fork attempts
     final antiOpponentForkMoves = _findAntiOpponentForkMoves(state, moves);
     if (antiOpponentForkMoves.isNotEmpty) {
+      // Pick one that also advances our position
       final scored = <(AIMove, double)>[];
       for (final move in antiOpponentForkMoves) {
-        scored.add((move, _scoreMove(state, move) + 8)); // Bonus for preventing forks
+        scored.add((move, _scoreMove(state, move) + _evaluateOffensive(state, move) + 10));
       }
       scored.sort((a, b) => b.$2.compareTo(a.$2));
       return scored.first.$1;
     }
 
-    // Priority 5: Use 2-ply evaluation on top candidates
-    // Score all moves quickly first
+    // Priority 5: Use 3-ply minimax on top candidates
     final quickScored = <(AIMove, double)>[];
     for (final move in moves) {
-      quickScored.add((move, _scoreMove(state, move)));
+      quickScored.add((move, _scoreMove(state, move) + _evaluateOffensive(state, move)));
     }
     quickScored.sort((a, b) => b.$2.compareTo(a.$2));
 
-    // Take top candidates for deeper analysis
-    final topCandidates = quickScored.take(_maxMovesToAnalyze).map((e) => e.$1).toList();
+    final topCandidates = quickScored.take(_maxTopMoves).map((e) => e.$1).toList();
 
-    // Do 2-ply evaluation on top candidates
+    // 3-ply evaluation: our move -> opponent's best -> our best response
     final deepScored = <(AIMove, double)>[];
     for (final move in topCandidates) {
-      final score = _evaluateTwoPly(state, move);
+      final score = _evaluateThreePly(state, move);
       deepScored.add((move, score));
     }
 
     deepScored.sort((a, b) => b.$2.compareTo(a.$2));
     final topScore = deepScored.first.$2;
-    final bestMoves = deepScored.where((e) => e.$2 >= topScore - 0.5).toList();
+    final bestMoves = deepScored.where((e) => e.$2 >= topScore - 0.3).toList();
     return bestMoves[random.nextInt(bestMoves.length)].$1;
   }
 
-  /// Evaluate a move considering opponent's best response (2-ply)
-  double _evaluateTwoPly(GameState state, AIMove move) {
-    // Base score from heuristics
-    var score = _scoreMove(state, move);
-
-    // Apply our move
+  /// 3-ply minimax evaluation
+  double _evaluateThreePly(GameState state, AIMove move) {
     final afterOurMove = _applyMove(state, move);
-    if (afterOurMove == null) return score;
+    if (afterOurMove == null) return -1000;
 
-    // Check if we won (shouldn't happen as we check this earlier, but just in case)
+    // Check if we win
     if (_hasRoad(afterOurMove, state.currentPlayer)) {
-      return 1000; // Winning move
+      return 1000;
     }
+
+    // Count our threats after this move
+    final ourThreatsAfter = _countThreats(afterOurMove, state.currentPlayer);
 
     // Simulate opponent's turn
     final opponentState = _switchPlayer(afterOurMove);
     final opponentMoves = _generator.generateMoves(opponentState);
 
-    // Check opponent's threats after our move
-    var opponentWinningMoves = 0;
-    var opponentBestThreats = 0;
-
+    // Check if opponent can win immediately - very bad
     for (final oppMove in opponentMoves) {
       final afterOpp = _applyMove(opponentState, oppMove);
       if (afterOpp != null && _hasRoad(afterOpp, state.opponent)) {
-        opponentWinningMoves++;
+        return -500; // Losing position
       }
     }
 
-    // If opponent can win after our move, penalize heavily
-    if (opponentWinningMoves > 0) {
-      score -= 20 * opponentWinningMoves;
+    // Score opponent's best responses
+    final oppScored = <(AIMove, double)>[];
+    for (final oppMove in opponentMoves) {
+      oppScored.add((oppMove, _scoreMove(opponentState, oppMove)));
+    }
+    oppScored.sort((a, b) => b.$2.compareTo(a.$2));
+
+    // Consider opponent's best moves
+    var worstCaseScore = double.infinity;
+    final topOppMoves = oppScored.take(_maxOpponentMoves).map((e) => e.$1).toList();
+
+    for (final oppMove in topOppMoves) {
+      final afterOpp = _applyMove(opponentState, oppMove);
+      if (afterOpp == null) continue;
+
+      // Our response (3rd ply)
+      final ourResponseState = _switchPlayer(afterOpp);
+      final ourResponses = _generator.generateMoves(ourResponseState);
+
+      // Can we win on our next turn?
+      var canWin = false;
+      for (final response in ourResponses) {
+        final afterResponse = _applyMove(ourResponseState, response);
+        if (afterResponse != null && _hasRoad(afterResponse, state.currentPlayer)) {
+          canWin = true;
+          break;
+        }
+      }
+
+      double positionScore;
+      if (canWin) {
+        positionScore = 100; // We can force a win
+      } else {
+        // Evaluate position after opponent's move
+        final oppThreats = _countThreats(afterOpp, state.opponent);
+        final ourThreatsRemaining = _countThreats(afterOpp, state.currentPlayer);
+        positionScore = (ourThreatsRemaining * 8) - (oppThreats * 6);
+        positionScore += _evaluatePosition(afterOpp, state.currentPlayer);
+      }
+
+      if (positionScore < worstCaseScore) {
+        worstCaseScore = positionScore;
+      }
     }
 
-    // Count how many threats opponent has after this
-    opponentBestThreats = _countThreats(opponentState, state.opponent);
-    score -= opponentBestThreats * 2;
-
-    // Bonus for creating our own threats
-    final ourThreats = _countThreats(afterOurMove, state.currentPlayer);
-    score += ourThreats * 3;
-
-    // Strategic position evaluation
-    score += _evaluateMoveStrategically(state, move);
+    // Combine immediate evaluation with worst-case 3-ply
+    var score = _scoreMove(state, move);
+    score += ourThreatsAfter * 10; // Big bonus for creating threats
+    score += worstCaseScore * 0.7; // Weight the lookahead
+    score += _evaluateOffensive(state, move);
 
     return score;
   }
 
-  /// Count number of positions that would complete a road for the given player
+  /// Evaluate position strength for a player
+  double _evaluatePosition(GameState state, PlayerColor color) {
+    double score = 0;
+    final size = state.boardSize;
+
+    // Count controlled positions and chain connectivity
+    var edgeCount = 0;
+    var centerControl = 0;
+
+    for (int r = 0; r < size; r++) {
+      for (int c = 0; c < size; c++) {
+        final pos = Position(r, c);
+        if (_controlsForRoad(state, pos, color)) {
+          // Edge positions are valuable
+          if (r == 0 || r == size - 1 || c == 0 || c == size - 1) {
+            edgeCount++;
+          }
+          // Center control
+          final distFromCenter = (r - (size - 1) / 2).abs() + (c - (size - 1) / 2).abs();
+          if (distFromCenter < size / 2) {
+            centerControl++;
+          }
+        }
+      }
+    }
+
+    score += edgeCount * 2;
+    score += centerControl * 1.5;
+
+    return score;
+  }
+
+  /// Extra offensive evaluation
+  double _evaluateOffensive(GameState state, AIMove move) {
+    double bonus = 0;
+
+    final afterMove = _applyMove(state, move);
+    if (afterMove == null) return 0;
+
+    // Bonus for creating threats
+    final threatsBefore = _countThreats(state, state.currentPlayer);
+    final threatsAfter = _countThreats(afterMove, state.currentPlayer);
+    bonus += (threatsAfter - threatsBefore) * 8;
+
+    // Bonus for reducing opponent's threats
+    final oppThreatsBefore = _countThreats(state, state.opponent);
+    final oppThreatsAfter = _countThreats(afterMove, state.opponent);
+    bonus += (oppThreatsBefore - oppThreatsAfter) * 4;
+
+    if (move is AIPlacementMove) {
+      final chainBonus = _evaluateChainExtension(state, move.position, state.currentPlayer);
+      bonus += chainBonus * 3;
+
+      // Penalty for standing stones unless critical
+      if (move.pieceType == PieceType.standing) {
+        bonus -= 5;
+      }
+    } else if (move is AIStackMove) {
+      // Aggressive stack moves
+      final dest = _finalPosition(move.from, move.direction, move.drops.length);
+      final targetStack = state.board.stackAt(dest);
+
+      if (targetStack.topPiece?.color == state.opponent) {
+        bonus += 6; // Capturing is aggressive
+        bonus += targetStack.height * 2; // Bigger captures are better
+      }
+    }
+
+    return bonus;
+  }
+
+  /// Count winning threat positions
   int _countThreats(GameState state, PlayerColor color) {
     var threats = 0;
     final board = state.board;
     final size = state.boardSize;
 
-    // Check each empty position
     for (int r = 0; r < size; r++) {
       for (int c = 0; c < size; c++) {
         final pos = Position(r, c);
         if (board.stackAt(pos).isEmpty) {
-          // Would placing here complete a road?
           final piece = Piece(type: PieceType.flat, color: color);
           final newBoard = board.placePiece(pos, piece);
           final testState = state.copyWith(board: newBoard);
@@ -154,7 +254,7 @@ class MediumStonesAI extends StonesAI {
     return threats;
   }
 
-  /// Find moves that create multiple winning threats (forks)
+  /// Find moves that create 2+ winning threats
   List<AIMove> _findForkMoves(GameState state, List<AIMove> moves) {
     final forks = <AIMove>[];
 
@@ -162,10 +262,8 @@ class MediumStonesAI extends StonesAI {
       final afterMove = _applyMove(state, move);
       if (afterMove == null) continue;
 
-      // Count how many winning moves we'd have after this move
       final ourThreats = _countThreats(afterMove, state.currentPlayer);
       if (ourThreats >= 2) {
-        // This creates a fork - 2+ ways to win!
         forks.add(move);
       }
     }
@@ -173,13 +271,11 @@ class MediumStonesAI extends StonesAI {
     return forks;
   }
 
-  /// Find moves that prevent opponent from creating forks on their next turn
+  /// Find moves that prevent opponent forks
   List<AIMove> _findAntiOpponentForkMoves(GameState state, List<AIMove> moves) {
-    // First, check if opponent could create a fork if we make a neutral move
     final opponentState = _switchPlayer(state);
     final opponentMoves = _generator.generateMoves(opponentState);
 
-    // Find opponent moves that would create forks
     final opponentForkPositions = <Position>{};
     for (final oppMove in opponentMoves) {
       final afterOpp = _applyMove(opponentState, oppMove);
@@ -187,87 +283,24 @@ class MediumStonesAI extends StonesAI {
 
       final oppThreats = _countThreats(afterOpp, state.opponent);
       if (oppThreats >= 2) {
-        // This opponent move creates a fork
         opponentForkPositions.addAll(_getAffectedPositions(oppMove));
       }
     }
 
     if (opponentForkPositions.isEmpty) return [];
 
-    // Find our moves that interfere with opponent's fork attempts
     return moves.where((move) {
       final affected = _getAffectedPositions(move);
       return affected.any((p) => opponentForkPositions.contains(p));
     }).toList();
   }
 
-  /// Additional strategic evaluation for a move
-  double _evaluateMoveStrategically(GameState state, AIMove move) {
-    double bonus = 0;
-
-    if (move is AIPlacementMove) {
-      // Bonus for controlling key positions
-      final pos = move.position;
-
-      // Strong bonus for bridge positions (connect two of our chains)
-      final chainBonus = _evaluateChainExtension(state, pos, state.currentPlayer);
-      bonus += chainBonus * 2;
-
-      // Extra bonus for positions that extend toward both edges
-      if (_extendsToBothEdges(state, pos, state.currentPlayer)) {
-        bonus += 4;
-      }
-    } else if (move is AIStackMove) {
-      // Bonus for capturing stacks that give us control
-      final dest = _finalPosition(move.from, move.direction, move.drops.length);
-      final targetStack = state.board.stackAt(dest);
-
-      // Big bonus for capturing tall opponent stacks
-      if (targetStack.topPiece?.color == state.opponent) {
-        bonus += targetStack.height * 1.5;
-      }
-
-      // Bonus for using stack moves to extend chains
-      final chainBonus = _evaluateChainExtension(state, dest, state.currentPlayer);
-      bonus += chainBonus * 1.5;
-    }
-
-    return bonus;
-  }
-
-  /// Check if placing at this position would extend chains toward both edges
-  bool _extendsToBothEdges(GameState state, Position pos, PlayerColor color) {
-    final size = state.boardSize;
-
-    // Check horizontal direction
-    var connectsLeft = pos.col == 0;
-    var connectsRight = pos.col == size - 1;
-
-    // Check vertical direction
-    var connectsTop = pos.row == 0;
-    var connectsBottom = pos.row == size - 1;
-
-    // Check what our adjacent pieces connect to
-    for (final neighbor in pos.adjacentPositions(size)) {
-      if (_controlsForRoad(state, neighbor, color)) {
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == 0)) connectsLeft = true;
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == size - 1)) connectsRight = true;
-        if (_canReachEdge(state, neighbor, color, (p) => p.row == 0)) connectsTop = true;
-        if (_canReachEdge(state, neighbor, color, (p) => p.row == size - 1)) connectsBottom = true;
-      }
-    }
-
-    return (connectsLeft && connectsRight) || (connectsTop && connectsBottom);
-  }
-
-  /// Check if a move results in a road win
   bool _isWinningMove(GameState state, AIMove move) {
     final newState = _applyMove(state, move);
     if (newState == null) return false;
     return _hasRoad(newState, state.currentPlayer);
   }
 
-  /// Find moves that block opponent's immediate winning threats
   List<AIMove> _findBlockingMoves(GameState state, List<AIMove> moves) {
     final opponentWinningPositions = <Position>{};
 
@@ -289,7 +322,6 @@ class MediumStonesAI extends StonesAI {
     }).toList();
   }
 
-  /// Get positions affected by a move
   Set<Position> _getAffectedPositions(AIMove move) {
     if (move is AIPlacementMove) {
       return {move.position};
@@ -305,12 +337,10 @@ class MediumStonesAI extends StonesAI {
     return {};
   }
 
-  /// Create a state with swapped current player
   GameState _switchPlayer(GameState state) {
     return state.copyWith(currentPlayer: state.opponent);
   }
 
-  /// Apply a move and return the resulting state
   GameState? _applyMove(GameState state, AIMove move) {
     if (move is AIPlacementMove) {
       return _applyPlacement(state, move);
@@ -364,7 +394,6 @@ class MediumStonesAI extends StonesAI {
     return state.copyWith(board: boardState);
   }
 
-  /// Check if a player has a road
   bool _hasRoad(GameState state, PlayerColor color) {
     final size = state.boardSize;
 
@@ -438,37 +467,31 @@ class MediumStonesAI extends StonesAI {
     final distanceFromCenter =
         (position.row - center).abs() + (position.col - center).abs();
 
-    double score = -distanceFromCenter * 0.3;
+    double score = -distanceFromCenter * 0.2; // Less center preference
 
-    // Chain connectivity - primary offensive driver
+    // Chain connectivity - very important for offense
     final chainBonus = _evaluateChainExtension(state, position, state.currentPlayer);
-    score += chainBonus * 6; // Increased weight on chain building
+    score += chainBonus * 7;
 
-    // Adjacency scoring
+    // Adjacency scoring - favor our pieces
     final friendlyAdjacency = _adjacentControlled(state, position, state.currentPlayer);
     final opponentAdjacency = _adjacentControlled(state, position, state.opponent);
-    score += friendlyAdjacency * 3; // Higher bonus for extending our road
-    score += opponentAdjacency * 1.5; // Reduced blocking pressure
+    score += friendlyAdjacency * 4;
+    score += opponentAdjacency * 1;
 
-    // Edge connectivity - important for roads
+    // Edge connectivity
     if (_touchesEdge(position, boardSize)) {
-      score += 3;
+      score += 4;
     }
 
-    // Piece type considerations
+    // Piece type - strongly prefer flats
     if (move.pieceType == PieceType.capstone) {
-      score += state.turnNumber < 8 ? -3 : 5;
+      score += state.turnNumber < 10 ? -2 : 6;
     } else if (move.pieceType == PieceType.standing) {
-      // Standing stones don't build roads - only use when tactically necessary
-      score -= 3; // Base penalty - prefer flat stones
-      final blockValue = _standingBlockValue(state, position);
-      // Only worth it if blocking a real threat
-      if (blockValue > 3) {
-        score += blockValue * 0.8;
-      }
+      score -= 6; // Heavy penalty - only when absolutely needed
     }
 
-    return score + random.nextDouble() * 0.1;
+    return score + random.nextDouble() * 0.05;
   }
 
   double _scoreStackMove(GameState state, AIStackMove move) {
@@ -477,44 +500,43 @@ class MediumStonesAI extends StonesAI {
     final movingTop = stack.topPiece;
     final destination = _finalPosition(move.from, move.direction, move.drops.length);
 
-    double score = 3;
+    double score = 4;
 
     if (movingTop?.type == PieceType.capstone) {
-      score += 5;
+      score += 6;
     }
 
-    // Chain extension bonus - primary offensive consideration
+    // Chain extension - primary goal
     final chainBonus = _evaluateChainExtension(state, destination, state.currentPlayer);
-    score += chainBonus * 5; // Increased for offense
+    score += chainBonus * 6;
 
     final friendlyAdjacency =
         _adjacentControlled(state, destination, state.currentPlayer);
     final opponentAdjacency =
         _adjacentControlled(state, destination, state.opponent);
-    score += friendlyAdjacency * 3; // Higher for road building
+    score += friendlyAdjacency * 4;
     score += opponentAdjacency * 2;
 
-    // Taking control of opponent space - offensive move
+    // Capturing - very aggressive
     final targetStack = board.stackAt(destination);
     if (targetStack.topPiece?.color == state.opponent) {
-      score += 5; // Increased - capturing is offensive
+      score += 7 + targetStack.height;
     }
 
-    // Flattening walls - very offensive, opens paths
+    // Flattening walls - opens our paths
     if (targetStack.topPiece?.type == PieceType.standing &&
         movingTop?.canFlattenWalls == true) {
-      score += 7; // Increased - breaking walls is aggressive
+      score += 10;
     }
 
-    // Edge bonus - roads need edges
+    // Edge bonus
     if (_touchesEdge(destination, state.boardSize)) {
-      score += 3;
+      score += 4;
     }
 
-    return score + random.nextDouble() * 0.2;
+    return score + random.nextDouble() * 0.1;
   }
 
-  /// Evaluate how well a position extends road-building chains
   double _evaluateChainExtension(GameState state, Position pos, PlayerColor color) {
     final size = state.boardSize;
     double score = 0;
@@ -535,64 +557,19 @@ class MediumStonesAI extends StonesAI {
     }
 
     if (connectsToLeftOrTop && connectsToRightOrBottom) {
-      score += 8; // Bridge position - very valuable
+      score += 10; // Bridge position - extremely valuable
     } else if (connectsToLeftOrTop || connectsToRightOrBottom) {
-      score += 4; // Extends a chain
+      score += 5;
     }
 
     if (pos.col == 0 || pos.row == 0) {
-      score += 2;
+      score += 2.5;
     }
     if (pos.col == size - 1 || pos.row == size - 1) {
-      score += 2;
+      score += 2.5;
     }
 
     return score;
-  }
-
-  /// Evaluate standing stone placement for blocking
-  double _standingBlockValue(GameState state, Position pos) {
-    final opponent = state.opponent;
-    var blockValue = 0.0;
-
-    final neighbors = pos.adjacentPositions(state.boardSize);
-    for (final neighbor in neighbors) {
-      if (_controlsForRoad(state, neighbor, opponent)) {
-        blockValue += 2;
-      }
-    }
-
-    // Extra value if it blocks a critical path
-    if (_blocksChainExtension(state, pos, opponent)) {
-      blockValue += 3;
-    }
-
-    return blockValue;
-  }
-
-  /// Check if placing here would block an opponent's chain extension
-  bool _blocksChainExtension(GameState state, Position pos, PlayerColor opponent) {
-    final size = state.boardSize;
-    var blocksHorizontal = false;
-    var blocksVertical = false;
-
-    // Check if this position is between opponent pieces extending toward opposite edges
-    for (final neighbor in pos.adjacentPositions(size)) {
-      if (_controlsForRoad(state, neighbor, opponent)) {
-        // Check what edges this connects to
-        final reachesLeft = _canReachEdge(state, neighbor, opponent, (p) => p.col == 0);
-        final reachesRight = _canReachEdge(state, neighbor, opponent, (p) => p.col == size - 1);
-        final reachesTop = _canReachEdge(state, neighbor, opponent, (p) => p.row == 0);
-        final reachesBottom = _canReachEdge(state, neighbor, opponent, (p) => p.row == size - 1);
-
-        if (reachesLeft && !reachesRight) blocksHorizontal = true;
-        if (reachesRight && !reachesLeft) blocksHorizontal = true;
-        if (reachesTop && !reachesBottom) blocksVertical = true;
-        if (reachesBottom && !reachesTop) blocksVertical = true;
-      }
-    }
-
-    return blocksHorizontal || blocksVertical;
   }
 
   bool _touchesEdge(Position pos, int boardSize) {
