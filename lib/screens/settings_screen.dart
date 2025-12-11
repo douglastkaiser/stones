@@ -60,29 +60,11 @@ class SettingsScreen extends ConsumerWidget {
           // Theme Section
           const _SectionHeader(title: 'Appearance'),
           const SizedBox(height: 12),
-          _SettingsTile(
-            icon: settings.isDarkTheme ? Icons.dark_mode : Icons.light_mode,
-            title: 'Dark Theme',
-            subtitle: settings.isDarkTheme ? 'Enabled' : 'Disabled',
-            trailing: Switch(
-              value: settings.isDarkTheme,
-              onChanged: (value) async {
-                await ref.read(appSettingsProvider.notifier).setDarkTheme(value);
-              },
-              activeTrackColor: GameColors.boardFrameInner,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Dark theme support coming soon',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
+          _ThemeSelector(
+            currentMode: settings.themeMode,
+            onModeChanged: (mode) async {
+              await ref.read(appSettingsProvider.notifier).setThemeMode(mode);
+            },
           ),
           const SizedBox(height: 32),
 
@@ -316,6 +298,154 @@ class _BoardSizeOption extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Theme mode selector widget
+class _ThemeSelector extends StatelessWidget {
+  final ThemeMode currentMode;
+  final ValueChanged<ThemeMode> onModeChanged;
+
+  const _ThemeSelector({
+    required this.currentMode,
+    required this.onModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _getIconForMode(currentMode),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Theme',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _ThemeOption(
+                  icon: Icons.brightness_auto,
+                  label: 'System',
+                  isSelected: currentMode == ThemeMode.system,
+                  onTap: () => onModeChanged(ThemeMode.system),
+                ),
+                const SizedBox(width: 12),
+                _ThemeOption(
+                  icon: Icons.light_mode,
+                  label: 'Light',
+                  isSelected: currentMode == ThemeMode.light,
+                  onTap: () => onModeChanged(ThemeMode.light),
+                ),
+                const SizedBox(width: 12),
+                _ThemeOption(
+                  icon: Icons.dark_mode,
+                  label: 'Dark',
+                  isSelected: currentMode == ThemeMode.dark,
+                  onTap: () => onModeChanged(ThemeMode.dark),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getIconForMode(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+      case ThemeMode.light:
+        return Icons.light_mode;
+      case ThemeMode.dark:
+        return Icons.dark_mode;
+    }
+  }
+}
+
+/// Individual theme option button
+class _ThemeOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ThemeOption({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? colorScheme.primaryContainer
+                : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.outline.withValues(alpha: 0.3),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected
+                    ? colorScheme.onPrimaryContainer
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
