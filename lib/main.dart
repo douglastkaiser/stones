@@ -524,7 +524,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
           );
 
-          // Bottom controls (slim)
+          // Bottom controls
           final bottomControls = IgnorePointer(
             ignoring: inputLocked,
             child: _BottomControls(
@@ -534,6 +534,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ref.read(uiStateProvider.notifier).setGhostPieceType(type),
               onConfirmMove: () => _confirmMove(ref),
               onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+              isWideScreen: isWideScreen,
             ),
           );
 
@@ -556,6 +557,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             isGameOver: gameState.isGameOver,
                             showClock: showClockEnabled,
                           ),
+                          // Piece selector for light player when placing
+                          if (uiState.mode == InteractionMode.placingPiece &&
+                              gameState.currentPlayer == PlayerColor.white &&
+                              !gameState.isOpeningPhase) ...[
+                            const SizedBox(height: 12),
+                            _SidePanelPieceSelector(
+                              pieces: gameState.whitePieces,
+                              currentType: uiState.ghostPieceType,
+                              onTypeChanged: (type) =>
+                                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
+                            ),
+                          ],
                           const Spacer(),
                         ],
                       ),
@@ -606,6 +619,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             isGameOver: gameState.isGameOver,
                             showClock: showClockEnabled,
                           ),
+                          // Piece selector for dark player when placing
+                          if (uiState.mode == InteractionMode.placingPiece &&
+                              gameState.currentPlayer == PlayerColor.black &&
+                              !gameState.isOpeningPhase) ...[
+                            const SizedBox(height: 12),
+                            _SidePanelPieceSelector(
+                              pieces: gameState.blackPieces,
+                              currentType: uiState.ghostPieceType,
+                              onTypeChanged: (type) =>
+                                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
+                            ),
+                          ],
                           const Spacer(),
                         ],
                       ),
@@ -1582,6 +1607,135 @@ class _CompactTurnIndicator extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Side panel piece type selector for wide screens
+class _SidePanelPieceSelector extends StatelessWidget {
+  final PlayerPieces pieces;
+  final PieceType currentType;
+  final Function(PieceType) onTypeChanged;
+
+  const _SidePanelPieceSelector({
+    required this.pieces,
+    required this.currentType,
+    required this.onTypeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark
+        ? Theme.of(context).colorScheme.surfaceContainerHighest
+        : Colors.grey.shade100;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: GameColors.cellSelectedBorder.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Place',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white70 : Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _SidePieceButton(
+            type: PieceType.flat,
+            label: 'Flat',
+            isSelected: currentType == PieceType.flat,
+            isEnabled: pieces.flatStones > 0,
+            onTap: pieces.flatStones > 0 ? () => onTypeChanged(PieceType.flat) : null,
+          ),
+          const SizedBox(height: 4),
+          _SidePieceButton(
+            type: PieceType.standing,
+            label: 'Wall',
+            isSelected: currentType == PieceType.standing,
+            isEnabled: pieces.flatStones > 0,
+            onTap: pieces.flatStones > 0 ? () => onTypeChanged(PieceType.standing) : null,
+          ),
+          const SizedBox(height: 4),
+          _SidePieceButton(
+            type: PieceType.capstone,
+            label: 'Cap',
+            isSelected: currentType == PieceType.capstone,
+            isEnabled: pieces.capstones > 0,
+            onTap: pieces.capstones > 0 ? () => onTypeChanged(PieceType.capstone) : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual piece button for side panel
+class _SidePieceButton extends StatelessWidget {
+  final PieceType type;
+  final String label;
+  final bool isSelected;
+  final bool isEnabled;
+  final VoidCallback? onTap;
+
+  const _SidePieceButton({
+    required this.type,
+    required this.label,
+    required this.isSelected,
+    required this.isEnabled,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.4,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          width: 56,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? GameColors.cellSelectedGlow.withValues(alpha: 0.4)
+                : Colors.transparent,
+            border: Border.all(
+              color: isSelected
+                  ? GameColors.cellSelectedBorder
+                  : GameColors.controlPanelBorder.withValues(alpha: 0.5),
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PieceIcon(type: type, size: 18),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? GameColors.cellSelectedBorder : null,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2596,6 +2750,7 @@ class _BottomControls extends StatelessWidget {
   final Function(PieceType) onPieceTypeChanged;
   final VoidCallback onConfirmMove;
   final VoidCallback onCancel;
+  final bool isWideScreen;
 
   const _BottomControls({
     required this.gameState,
@@ -2603,19 +2758,39 @@ class _BottomControls extends StatelessWidget {
     required this.onPieceTypeChanged,
     required this.onConfirmMove,
     required this.onCancel,
+    this.isWideScreen = false,
   });
+
+  /// Tips shown randomly during idle state
+  static const List<String> _takTips = [
+    'Tip: Create a "road" connecting opposite edges to win!',
+    'Tip: Capstones can flatten standing stones (walls).',
+    'Tip: Walls block roads but don\'t count toward flat wins.',
+    'Tip: Moving stacks lets you control the board faster.',
+    'Tip: You can pick up to N pieces from a stack on an NxN board.',
+    'Tip: The first two moves place your opponent\'s piece.',
+    'Tip: Watch for threats – one move from completing a road!',
+    'Tip: Press and hold on a stack to see all pieces.',
+    'Tip: Capstones are powerful but limited – use them wisely!',
+    'Tip: Flats count for tie-breakers, so place them strategically.',
+  ];
+
+  String _getRandomTip() {
+    return _takTips[DateTime.now().millisecond % _takTips.length];
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Fixed height container to prevent board rescaling when controls change
+    // Taller height for more breathing room with full hints
     return SizedBox(
-      height: gameState.isGameOver ? 0 : 44,
+      height: gameState.isGameOver ? 0 : 72,
       child: gameState.isGameOver
           ? null
           : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: isDark
                     ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
@@ -2649,26 +2824,48 @@ class _BottomControls extends StatelessWidget {
   Widget _buildIdleHint(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final tipColor = isDark ? Colors.white54 : Colors.grey.shade600;
+    final instructionColor = isDark ? Colors.white70 : Colors.grey.shade700;
 
-    // Short, single-line hint
-    final String hint = gameState.isOpeningPhase
-        ? 'Tap empty cell to place opponent\'s flat'
-        : 'Tap cell to place, or tap your stack to move';
+    // Full instruction text
+    final String instruction = gameState.isOpeningPhase
+        ? 'Opening phase: Tap an empty cell to place your opponent\'s flat stone.'
+        : 'Tap an empty cell to place a piece, or tap a stack you control to move it.';
 
-    return Row(
+    // Random tip
+    final String tip = _getRandomTip();
+
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.lightbulb_outline, size: 14, color: tipColor),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            hint,
-            style: TextStyle(
-              color: tipColor,
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
+        // Instruction
+        Text(
+          instruction,
+          style: TextStyle(
+            color: instructionColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        // Random tip
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lightbulb_outline, size: 12, color: tipColor),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                tip,
+                style: TextStyle(
+                  color: tipColor,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -2683,60 +2880,101 @@ class _BottomControls extends StatelessWidget {
 
     // During opening, only flat stones allowed - simple hint
     if (isOpening) {
-      return Row(
+      return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Flexible(
-            child: Text(
-              'Tap again to place, or tap elsewhere',
-              style: TextStyle(color: textColor, fontSize: 12),
-            ),
+          Text(
+            'Tap the highlighted cell again to place, or tap elsewhere to move.',
+            style: TextStyle(color: textColor, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
-          IconButton(
+          const SizedBox(height: 4),
+          TextButton.icon(
             onPressed: onCancel,
-            icon: const Icon(Icons.close, size: 18),
-            tooltip: 'Cancel',
-            color: textColor,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Cancel'),
+            style: TextButton.styleFrom(
+              foregroundColor: textColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            ),
           ),
         ],
       );
     }
 
-    // Compact piece type selector
-    return Row(
+    // On wide screens, piece selector is in side panel - just show hint
+    if (isWideScreen) {
+      final typeName = switch (currentType) {
+        PieceType.flat => 'Flat',
+        PieceType.standing => 'Wall',
+        PieceType.capstone => 'Capstone',
+      };
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Placing: $typeName · Tap cell to confirm, use sidebar to change type.',
+            style: TextStyle(color: textColor, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: onCancel,
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Cancel'),
+            style: TextButton.styleFrom(
+              foregroundColor: textColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // On narrow screens, show piece type selector in bottom area
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _PieceTypeToggle(
-          type: PieceType.flat,
-          isSelected: currentType == PieceType.flat,
-          isEnabled: pieces.flatStones > 0,
-          onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
+        Text(
+          'Select piece type, then tap to place:',
+          style: TextStyle(color: textColor, fontSize: 12),
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(width: 6),
-        _PieceTypeToggle(
-          type: PieceType.standing,
-          label: 'Wall',
-          isSelected: currentType == PieceType.standing,
-          isEnabled: pieces.flatStones > 0,
-          onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
-        ),
-        const SizedBox(width: 6),
-        _PieceTypeToggle(
-          type: PieceType.capstone,
-          isSelected: currentType == PieceType.capstone,
-          isEnabled: pieces.capstones > 0,
-          onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          onPressed: onCancel,
-          icon: const Icon(Icons.close, size: 18),
-          tooltip: 'Cancel',
-          color: textColor,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PieceTypeToggle(
+              type: PieceType.flat,
+              isSelected: currentType == PieceType.flat,
+              isEnabled: pieces.flatStones > 0,
+              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
+            ),
+            const SizedBox(width: 6),
+            _PieceTypeToggle(
+              type: PieceType.standing,
+              label: 'Wall',
+              isSelected: currentType == PieceType.standing,
+              isEnabled: pieces.flatStones > 0,
+              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
+            ),
+            const SizedBox(width: 6),
+            _PieceTypeToggle(
+              type: PieceType.capstone,
+              isSelected: currentType == PieceType.capstone,
+              isEnabled: pieces.capstones > 0,
+              onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onCancel,
+              icon: const Icon(Icons.close, size: 18),
+              tooltip: 'Cancel',
+              color: textColor,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+          ],
         ),
       ],
     );
@@ -2747,22 +2985,33 @@ class _BottomControls extends StatelessWidget {
     final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final piecesPickedUp = uiState.piecesPickedUp;
 
-    return Row(
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Flexible(
-          child: Text(
-            'Picking $piecesPickedUp · Tap stack to change, or move to adjacent cell',
-            style: TextStyle(color: textColor, fontSize: 12),
-          ),
+        Text(
+          'Picking up $piecesPickedUp piece${piecesPickedUp > 1 ? 's' : ''}. Tap the stack again to change count.',
+          style: TextStyle(color: textColor, fontSize: 13),
+          textAlign: TextAlign.center,
         ),
-        IconButton(
-          onPressed: onCancel,
-          icon: const Icon(Icons.close, size: 18),
-          tooltip: 'Cancel',
-          color: textColor,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Move to an adjacent cell to start dropping.',
+              style: TextStyle(color: textColor.withValues(alpha: 0.8), fontSize: 12),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: onCancel,
+              icon: const Icon(Icons.close, size: 16),
+              label: const Text('Cancel'),
+              style: TextButton.styleFrom(
+                foregroundColor: textColor,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -2776,55 +3025,74 @@ class _BottomControls extends StatelessWidget {
     final canConfirm = remaining == 0 && drops.isNotEmpty;
 
     if (canConfirm) {
-      // All pieces dropped - compact confirm
-      return Row(
+      // All pieces dropped - show confirm
+      return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Dropped ${drops.join('→')}',
-            style: TextStyle(color: textColor, fontSize: 12),
+            'Move complete! Dropped: ${drops.join(' → ')}',
+            style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: onConfirmMove,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Confirm', style: TextStyle(fontSize: 12)),
-          ),
-          IconButton(
-            onPressed: onCancel,
-            icon: const Icon(Icons.close, size: 18),
-            tooltip: 'Cancel',
-            color: textColor,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: onConfirmMove,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Confirm Move'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.close, size: 16),
+                label: const Text('Cancel'),
+                style: TextButton.styleFrom(
+                  foregroundColor: textColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+              ),
+            ],
           ),
         ],
       );
     }
 
-    // Still dropping - compact hint
+    // Still dropping - show status
     final pendingDrop = uiState.pendingDropCount;
-    return Row(
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Flexible(
-          child: Text(
-            'Drop $pendingDrop · $remaining left · Tap to change or continue',
-            style: TextStyle(color: textColor, fontSize: 12),
-          ),
+        Text(
+          'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. $remaining remaining in hand.',
+          style: TextStyle(color: textColor, fontSize: 13),
+          textAlign: TextAlign.center,
         ),
-        IconButton(
-          onPressed: onCancel,
-          icon: const Icon(Icons.close, size: 18),
-          tooltip: 'Cancel',
-          color: textColor,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Tap cell to adjust, or continue to next cell.',
+              style: TextStyle(color: textColor.withValues(alpha: 0.8), fontSize: 12),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: onCancel,
+              icon: const Icon(Icons.close, size: 16),
+              label: const Text('Cancel'),
+              style: TextButton.styleFrom(
+                foregroundColor: textColor,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              ),
+            ),
+          ],
         ),
       ],
     );
