@@ -406,6 +406,21 @@ class GameStateNotifier extends StateNotifier<GameState> {
   /// Callback for when a road win is detected (for animations)
   void Function(Set<Position> roadPositions, PlayerColor winner)? onRoadWin;
 
+  /// End the game due to time expiration
+  void setTimeExpired(PlayerColor loser) {
+    if (state.isGameOver) return;
+
+    final winner = loser == PlayerColor.white
+        ? GameResult.blackWins
+        : GameResult.whiteWins;
+
+    state = state.copyWith(
+      phase: GamePhase.finished,
+      result: winner,
+      winReason: WinReason.time,
+    );
+  }
+
   /// Check for win conditions (road win or flat win)
   void _checkWinCondition() {
     // Check road win for both players

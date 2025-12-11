@@ -405,6 +405,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final canUndo = !isOnline && ref.read(gameStateProvider.notifier).canUndo;
     final inputLocked = isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
 
+    // Listen for chess clock expiration to trigger game end
+    ref.listen<ChessClockState>(chessClockProvider, (previous, next) {
+      if (next.isExpired && next.expiredPlayer != null && !gameState.isGameOver) {
+        ref.read(gameStateProvider.notifier).setTimeExpired(next.expiredPlayer!);
+      }
+    });
+
     // Debug logging for turn enforcement
     if (isOnline) {
       _debugLog('>>> GAME SCREEN BUILD (ONLINE MODE) <<<');
@@ -465,153 +472,263 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWideScreen = constraints.maxWidth > 700;
+          final showClockEnabled = session.mode == GameMode.local &&
+              ref.watch(appSettingsProvider).chessClockEnabled;
+
+          // Board widget (reused in both layouts)
+          final boardWidget = Container(
+            decoration: BoxDecoration(
+              // Wooden frame gradient
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  GameColors.boardFrameInner,
+                  GameColors.boardFrameOuter,
+                  GameColors.boardFrameInner,
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: GameColors.boardFrameOuter,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(2, 4),
+                ),
+                BoxShadow(
+                  color: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                  blurRadius: 2,
+                  offset: const Offset(-1, -1),
+                ),
+              ],
+            ),
+            child: IgnorePointer(
+              ignoring: inputLocked,
+              child: _GameBoard(
+                gameState: gameState,
+                uiState: uiState,
+                animationState: animationState,
+                lastMovePositions: lastMovePositions,
+                onCellTap: (pos) => _handleCellTap(context, ref, pos),
+                onLongPressStart: _startStackView,
+                onLongPressEnd: _endStackView,
+              ),
+            ),
+          );
+
+          // Bottom controls (slim)
+          final bottomControls = IgnorePointer(
+            ignoring: inputLocked,
+            child: _BottomControls(
+              gameState: gameState,
+              uiState: uiState,
+              onPieceTypeChanged: (type) =>
+                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
+              onConfirmMove: () => _confirmMove(ref),
+              onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+            ),
+          );
+
+          return Stack(
             children: [
-              // Main game area
-              Expanded(
-                child: Column(
+              if (isWideScreen)
+                // Wide screen: side panels layout
+                Row(
                   children: [
-                    // Game info bar
-                    _GameInfoBar(
-                      gameState: gameState,
-                      isAiTurn: isAiTurn,
-                      isThinking: isAiThinking,
-                      aiDifficulty:
-                          session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
-                      onlineState: isOnline ? onlineState : null,
-                    ),
-
-                    // Chess clock (only for local games when enabled)
-                    if (session.mode == GameMode.local)
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final settings = ref.watch(appSettingsProvider);
-                          if (!settings.chessClockEnabled) return const SizedBox.shrink();
-                          return _ChessClockDisplay(
-                            currentPlayer: gameState.currentPlayer,
+                    // Left side panel (Light player)
+                    Container(
+                      width: 80,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Column(
+                        children: [
+                          _PlayerSidePanel(
+                            player: PlayerColor.white,
+                            pieces: gameState.whitePieces,
+                            isCurrentTurn: gameState.currentPlayer == PlayerColor.white,
                             isGameOver: gameState.isGameOver,
-                          );
-                        },
+                            showClock: showClockEnabled,
+                          ),
+                          const Spacer(),
+                        ],
                       ),
-
-                    // Board
+                    ),
+                    // Center: game area
                     Expanded(
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: Container(
-                            margin: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              // Wooden frame gradient
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  GameColors.boardFrameInner,
-                                  GameColors.boardFrameOuter,
-                                  GameColors.boardFrameInner,
-                                ],
-                                stops: [0.0, 0.5, 1.0],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: GameColors.boardFrameOuter,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(2, 4),
-                                ),
-                                BoxShadow(
-                                  color: GameColors.boardFrameInner.withValues(alpha: 0.5),
-                                  blurRadius: 2,
-                                  offset: const Offset(-1, -1),
-                                ),
-                              ],
-                            ),
-                            child: IgnorePointer(
-                              ignoring: inputLocked,
-                              child: _GameBoard(
+                      child: Column(
+                        children: [
+                          // Win banner or compact turn indicator
+                          if (gameState.isGameOver && gameState.result != null)
+                            _WinBanner(result: gameState.result!, winReason: gameState.winReason)
+                          else
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: _CompactTurnIndicator(
                                 gameState: gameState,
-                                uiState: uiState,
-                                animationState: animationState,
-                                lastMovePositions: lastMovePositions,
-                                onCellTap: (pos) => _handleCellTap(context, ref, pos),
-                                onLongPressStart: _startStackView,
-                                onLongPressEnd: _endStackView,
+                                isThinking: isAiThinking,
+                                onlineState: isOnline ? onlineState : null,
+                              ),
+                            ),
+                          // Board
+                          Expanded(
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: 1,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: boardWidget,
+                                ),
                               ),
                             ),
                           ),
+                          // Bottom controls
+                          bottomControls,
+                        ],
+                      ),
+                    ),
+                    // Right side panel (Dark player)
+                    Container(
+                      width: 80,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Column(
+                        children: [
+                          _PlayerSidePanel(
+                            player: PlayerColor.black,
+                            pieces: gameState.blackPieces,
+                            isCurrentTurn: gameState.currentPlayer == PlayerColor.black,
+                            isGameOver: gameState.isGameOver,
+                            showClock: showClockEnabled,
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                    ),
+                    // Move history panel (collapsible sidebar)
+                    if (_showHistory)
+                      _MoveHistoryPanel(
+                        moveHistory: moveHistory,
+                        boardSize: gameState.boardSize,
+                        onClose: () => setState(() => _showHistory = false),
+                      ),
+                  ],
+                )
+              else
+                // Narrow screen: compact layout with overlays
+                Column(
+                  children: [
+                    // Win banner (if game over)
+                    if (gameState.isGameOver && gameState.result != null)
+                      _WinBanner(result: gameState.result!, winReason: gameState.winReason),
+                    // Board area with overlays
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          // Board
+                          Center(
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: boardWidget,
+                              ),
+                            ),
+                          ),
+                          // Turn indicator overlay (top center)
+                          if (!gameState.isGameOver)
+                            Positioned(
+                              top: 4,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: _CompactTurnIndicator(
+                                  gameState: gameState,
+                                  isThinking: isAiThinking,
+                                  onlineState: isOnline ? onlineState : null,
+                                ),
+                              ),
+                            ),
+                          // Player info overlays (bottom corners)
+                          Positioned(
+                            bottom: 4,
+                            left: 4,
+                            child: _PlayerSidePanel(
+                              player: PlayerColor.white,
+                              pieces: gameState.whitePieces,
+                              isCurrentTurn: gameState.currentPlayer == PlayerColor.white,
+                              isGameOver: gameState.isGameOver,
+                              showClock: showClockEnabled,
+                              isVertical: false,
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 4,
+                            right: 4,
+                            child: _PlayerSidePanel(
+                              player: PlayerColor.black,
+                              pieces: gameState.blackPieces,
+                              isCurrentTurn: gameState.currentPlayer == PlayerColor.black,
+                              isGameOver: gameState.isGameOver,
+                              showClock: showClockEnabled,
+                              isVertical: false,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Bottom controls
+                    bottomControls,
+                    // Move history panel (appears below on narrow screens)
+                    if (_showHistory)
+                      SizedBox(
+                        height: 200,
+                        child: _MoveHistoryPanel(
+                          moveHistory: moveHistory,
+                          boardSize: gameState.boardSize,
+                          onClose: () => setState(() => _showHistory = false),
                         ),
                       ),
-                    ),
-
-                    // Bottom controls
-                    IgnorePointer(
-                      ignoring: inputLocked,
-                      child: _BottomControls(
-                        gameState: gameState,
-                        uiState: uiState,
-                        onPieceTypeChanged: (type) =>
-                            ref.read(uiStateProvider.notifier).setGhostPieceType(type),
-                        onConfirmMove: () => _confirmMove(ref),
-                        onCancel: () => ref.read(uiStateProvider.notifier).reset(),
-                      ),
-                    ),
-
-                    // Piece counts
-                    _PieceCountsBar(gameState: gameState),
-
-                    // Version footer
-                    const VersionFooter(),
                   ],
                 ),
-              ),
 
-              // Move history panel (collapsible sidebar)
-              if (_showHistory)
-                _MoveHistoryPanel(
-                  moveHistory: moveHistory,
+              // Stack exploded view overlay (press and hold)
+              if (_longPressedPosition != null && _longPressedStack != null)
+                _StackExplodedOverlay(
+                  position: _longPressedPosition!,
+                  stack: _longPressedStack!,
                   boardSize: gameState.boardSize,
-                  onClose: () => setState(() => _showHistory = false),
+                ),
+
+              // Online status banners
+              if (session.mode == GameMode.online && waitingForOpponent)
+                _OnlineStatusBanner(
+                  message:
+                      'Waiting for opponent... Room code: ${onlineState.roomCode ?? '---'}',
+                  icon: Icons.hourglass_empty,
+                ),
+              if (session.mode == GameMode.online &&
+                  onlineState.opponentDisconnected &&
+                  !onlineState.opponentInactive)
+                const _OnlineStatusBanner(
+                  message: 'Opponent may have disconnected (no activity for 60s)',
+                  icon: Icons.wifi_off,
+                  color: Colors.orange,
+                ),
+              if (session.mode == GameMode.online && onlineState.opponentInactive)
+                const _OnlineStatusBanner(
+                  message: 'Opponent disconnected (no activity for 2+ minutes)',
+                  icon: Icons.error_outline,
+                  color: Colors.red,
                 ),
             ],
-          ),
-
-          // Stack exploded view overlay (press and hold)
-          if (_longPressedPosition != null && _longPressedStack != null)
-            _StackExplodedOverlay(
-              position: _longPressedPosition!,
-              stack: _longPressedStack!,
-              boardSize: gameState.boardSize,
-            ),
-
-          // Win overlay removed - now using _WinBanner in _GameInfoBar instead
-          if (session.mode == GameMode.online && waitingForOpponent)
-            _OnlineStatusBanner(
-              message:
-                  'Waiting for opponent... Room code: ${onlineState.roomCode ?? '---'}',
-              icon: Icons.hourglass_empty,
-            ),
-          if (session.mode == GameMode.online &&
-              onlineState.opponentDisconnected &&
-              !onlineState.opponentInactive)
-            const _OnlineStatusBanner(
-              message: 'Opponent may have disconnected (no activity for 60s)',
-              icon: Icons.wifi_off,
-              color: Colors.orange,
-            ),
-          if (session.mode == GameMode.online && onlineState.opponentInactive)
-            const _OnlineStatusBanner(
-              message: 'Opponent disconnected (no activity for 2+ minutes)',
-              icon: Icons.error_outline,
-              color: Colors.red,
-            ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1146,126 +1263,269 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
 }
 
-/// Chess clock display widget for local games
-class _ChessClockDisplay extends ConsumerWidget {
-  final PlayerColor currentPlayer;
+/// Compact player side panel showing clock and pieces together
+class _PlayerSidePanel extends ConsumerWidget {
+  final PlayerColor player;
+  final PlayerPieces pieces;
+  final bool isCurrentTurn;
   final bool isGameOver;
+  final bool showClock;
+  final bool isVertical;
 
-  const _ChessClockDisplay({
-    required this.currentPlayer,
+  const _PlayerSidePanel({
+    required this.player,
+    required this.pieces,
+    required this.isCurrentTurn,
     required this.isGameOver,
+    required this.showClock,
+    this.isVertical = true,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLightPlayer = player == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
     final clockState = ref.watch(chessClockProvider);
 
+    final time = isLightPlayer ? clockState.whiteTimeFormatted : clockState.blackTimeFormatted;
+    final timeRemaining = isLightPlayer ? clockState.whiteTimeRemaining : clockState.blackTimeRemaining;
+    final isLow = timeRemaining < 30;
+    final isExpired = clockState.isExpired && clockState.expiredPlayer == player;
+    final isClockActive = isCurrentTurn && !isGameOver && clockState.isRunning;
+
+    final clockColor = isExpired
+        ? Colors.red
+        : isLow
+            ? Colors.orange
+            : isClockActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.onSurface;
+
+    final bgColor = isCurrentTurn
+        ? (isDark
+            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : pieceColors.primary.withValues(alpha: 0.15))
+        : (isDark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : Colors.grey.shade100);
+
+    final borderColor = isCurrentTurn ? pieceColors.border : Colors.transparent;
+
+    final content = isVertical
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Player indicator
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: pieceColors.gradientColors),
+                  border: Border.all(color: pieceColors.border, width: 2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isLightPlayer ? 'Light' : 'Dark',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isCurrentTurn ? FontWeight.bold : FontWeight.normal,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              if (showClock) ...[
+                const SizedBox(height: 8),
+                Text(
+                  time,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    color: clockColor,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              // Piece counts
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 14,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: pieceColors.gradientColors),
+                      border: Border.all(color: pieceColors.border, width: 1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${pieces.flatStones}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomPaint(
+                    size: const Size(12, 12),
+                    painter: _SmallHexagonPainter(colors: pieceColors),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${pieces.capstones}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Player indicator
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: pieceColors.gradientColors),
+                  border: Border.all(color: pieceColors.border, width: 1.5),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (showClock) ...[
+                Text(
+                  time,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    color: clockColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              // Compact piece counts
+              Container(
+                width: 12,
+                height: 6,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: pieceColors.gradientColors),
+                  border: Border.all(color: pieceColors.border, width: 0.5),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+              Text(
+                '${pieces.flatStones}',
+                style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87),
+              ),
+              const SizedBox(width: 4),
+              CustomPaint(
+                size: const Size(10, 10),
+                painter: _SmallHexagonPainter(colors: pieceColors),
+              ),
+              Text(
+                '${pieces.capstones}',
+                style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87),
+              ),
+            ],
+          );
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(isVertical ? 8 : 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          ),
-        ),
+        color: bgColor,
+        border: Border.all(color: borderColor, width: isCurrentTurn ? 2 : 0),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _ClockSide(
-            label: 'Light',
-            time: clockState.whiteTimeFormatted,
-            isActive: currentPlayer == PlayerColor.white && !isGameOver && clockState.isRunning,
-            isLow: clockState.whiteTimeRemaining < 30,
-            isExpired: clockState.isExpired && clockState.expiredPlayer == PlayerColor.white,
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: clockState.isRunning
-                  ? Colors.green.withValues(alpha: 0.2)
-                  : Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(
-              clockState.isRunning ? Icons.timer : Icons.timer_off,
-              size: 16,
-              color: clockState.isRunning ? Colors.green : Colors.grey,
-            ),
-          ),
-          _ClockSide(
-            label: 'Dark',
-            time: clockState.blackTimeFormatted,
-            isActive: currentPlayer == PlayerColor.black && !isGameOver && clockState.isRunning,
-            isLow: clockState.blackTimeRemaining < 30,
-            isExpired: clockState.isExpired && clockState.expiredPlayer == PlayerColor.black,
-          ),
-        ],
-      ),
+      child: content,
     );
   }
 }
 
-class _ClockSide extends StatelessWidget {
-  final String label;
-  final String time;
-  final bool isActive;
-  final bool isLow;
-  final bool isExpired;
+/// Compact turn indicator for narrow screens - overlays on the board
+class _CompactTurnIndicator extends StatelessWidget {
+  final GameState gameState;
+  final bool isThinking;
+  final OnlineGameState? onlineState;
 
-  const _ClockSide({
-    required this.label,
-    required this.time,
-    required this.isActive,
-    required this.isLow,
-    required this.isExpired,
+  const _CompactTurnIndicator({
+    required this.gameState,
+    this.isThinking = false,
+    this.onlineState,
   });
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isExpired
-        ? Colors.red
-        : isLow
-            ? Colors.orange
-            : isActive
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.onSurface;
+    if (gameState.isGameOver) return const SizedBox.shrink();
 
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: textColor.withValues(alpha: 0.7),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: isActive
-                ? Theme.of(context).colorScheme.primaryContainer
-                : isExpired
-                    ? Colors.red.withValues(alpha: 0.1)
-                    : null,
-            borderRadius: BorderRadius.circular(4),
-            border: isActive
-                ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
-                : null,
-          ),
-          child: Text(
-            time,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-              color: textColor,
+    final isWhite = gameState.currentPlayer == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isWhite);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String turnText = '${isWhite ? 'Light' : 'Dark'} · Turn ${gameState.turnNumber}';
+    if (onlineState?.localColor != null) {
+      final isMyTurn = gameState.currentPlayer == onlineState!.localColor;
+      turnText = isMyTurn ? 'Your turn · ${gameState.turnNumber}' : 'Waiting...';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: pieceColors.border, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: pieceColors.gradientColors),
+              border: Border.all(color: pieceColors.border, width: 1),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 6),
+          Text(
+            turnText,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          if (isThinking) ...[
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 10,
+              height: 10,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isDark ? Colors.white70 : Colors.black54,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -1282,16 +1542,22 @@ class _WinBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final winIcon = switch (winReason) {
+      WinReason.road => Icons.route,
+      WinReason.time => Icons.timer_off,
+      _ => Icons.emoji_events,
+    };
+
     final (title, pieceColors, icon) = switch (result) {
       GameResult.whiteWins => (
           'Light Wins!',
           GameColors.lightPlayerColors,
-          winReason == WinReason.road ? Icons.route : Icons.emoji_events,
+          winIcon,
         ),
       GameResult.blackWins => (
           'Dark Wins!',
           GameColors.darkPlayerColors,
-          winReason == WinReason.road ? Icons.route : Icons.emoji_events,
+          winIcon,
         ),
       GameResult.draw => (
           'Draw!',
@@ -1307,6 +1573,7 @@ class _WinBanner extends StatelessWidget {
     final reasonText = switch (winReason) {
       WinReason.road => 'by road',
       WinReason.flats => 'by flat count',
+      WinReason.time => 'on time',
       null => '',
     };
 
@@ -1370,215 +1637,6 @@ class _WinBanner extends StatelessWidget {
             icon,
             size: 32,
             color: textColor,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Game info bar showing current player and phase
-class _GameInfoBar extends StatelessWidget {
-  final GameState gameState;
-  final bool isAiTurn;
-  final bool isThinking;
-  final AIDifficulty? aiDifficulty;
-  final OnlineGameState? onlineState;
-
-  const _GameInfoBar({
-    required this.gameState,
-    this.isAiTurn = false,
-    this.isThinking = false,
-    this.aiDifficulty,
-    this.onlineState,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Show prominent win banner when game is over
-    if (gameState.isGameOver && gameState.result != null) {
-      return _WinBanner(result: gameState.result!, winReason: gameState.winReason);
-    }
-
-    final isWhite = gameState.currentPlayer == PlayerColor.white;
-    final bgColor = isWhite ? GameColors.turnIndicatorLight : GameColors.turnIndicatorDark;
-    final textColor = isWhite ? Colors.black : Colors.white;
-    final secondaryColor = isWhite ? Colors.black54 : Colors.white70;
-    final pieceColors = GameColors.forPlayer(isWhite);
-
-    String statusText;
-    if (gameState.isOpeningPhase) {
-      statusText = "Place opponent's flat stone";
-    } else {
-      statusText = 'Place or move';
-    }
-
-    // Online game: show player names
-    String? currentPlayerName;
-    bool isLocalPlayerTurn = false;
-    if (onlineState != null && onlineState!.session != null) {
-      final session = onlineState!.session!;
-      final currentColor = gameState.currentPlayer;
-      currentPlayerName = currentColor == PlayerColor.white
-          ? session.white.displayName
-          : session.black?.displayName;
-      // FIX: Use LOCAL game state for turn display instead of Firestore session
-      isLocalPlayerTurn = onlineState!.localColor != null &&
-          gameState.currentPlayer == onlineState!.localColor;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: bgColor,
-      child: Row(
-        children: [
-          // Current player indicator
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: pieceColors.primary,
-              border: Border.all(
-                color: pieceColors.border,
-                width: 2,
-              ),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (onlineState != null && currentPlayerName != null)
-                  Row(
-                    children: [
-                      Text(
-                        isLocalPlayerTurn ? 'YOUR TURN' : "${currentPlayerName.toUpperCase()}'S TURN",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isLocalPlayerTurn
-                              ? Colors.green.withValues(alpha: 0.3)
-                              : Colors.orange.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          gameState.currentPlayer.name.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Text(
-                    '${gameState.currentPlayer.name.toUpperCase()}\'S TURN',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: secondaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (aiDifficulty != null && (isAiTurn || isThinking))
-            Row(
-              children: [
-                if (isThinking)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                      ),
-                    ),
-                  ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Computer (${aiDifficulty!.name[0].toUpperCase()}${aiDifficulty!.name.substring(1)})',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    if (isAiTurn)
-                      Text(
-                        isThinking ? 'Thinking...' : 'Planning move',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: secondaryColor,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-          // Show online game info
-          if (onlineState != null && onlineState!.session != null)
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      onlineState!.localColor == PlayerColor.white ? 'You: White' : 'You: Black',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    Text(
-                      'vs ${onlineState!.localColor == PlayerColor.white ? (onlineState!.session!.black?.displayName ?? "...") : onlineState!.session!.white.displayName}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: secondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: secondaryColor.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              'Turn ${gameState.turnNumber}',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: textColor,
-              ),
-            ),
           ),
         ],
       ),
@@ -2474,25 +2532,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 }
 
-/// Random tips about Tak rules and strategy
-const List<String> _takTips = [
-  'Win by building a road connecting opposite edges of the board.',
-  'Flats count toward road building; walls and capstones do not.',
-  'Walls block roads but can be flattened by a capstone.',
-  'Capstones can flatten walls but cannot be stacked upon.',
-  'Diagonals do not count when building a road.',
-  'If neither player can win by road, the game ends when the board fills or someone runs out of pieces.',
-  'In a flat count win, only flat stones on top of stacks count.',
-  'You can move a stack up to its height in spaces.',
-  'The carry limit is equal to the board size.',
-  'Long press on any stack to see all pieces in it.',
-  'Standing stones (walls) cannot have pieces placed on them.',
-  'During the opening, you place your opponent\'s flat stone.',
-  'Control a stack by having your piece on top.',
-  'A capstone is your most powerful piece - use it wisely!',
-  'Walls are great for blocking your opponent\'s roads.',
-];
-
 /// Bottom controls panel - simplified for on-board interaction
 class _BottomControls extends StatelessWidget {
   final GameState gameState;
@@ -2509,30 +2548,25 @@ class _BottomControls extends StatelessWidget {
     required this.onCancel,
   });
 
-  // Get a deterministic "random" tip based on turn number
-  String _getTip() {
-    final index = (gameState.turnNumber * 7) % _takTips.length;
-    return _takTips[index];
-  }
-
   @override
   Widget build(BuildContext context) {
     if (gameState.isGameOver) {
-      return const SizedBox(height: 100);
+      return const SizedBox.shrink();
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Theme.of(context).colorScheme.surfaceContainerHighest
-            : GameColors.controlPanelBg,
+        color: isDark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+            : GameColors.controlPanelBg.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Theme.of(context).colorScheme.outline
-                : GameColors.controlPanelBorder,
+            color: isDark
+                ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)
+                : GameColors.controlPanelBorder.withValues(alpha: 0.5),
           ),
         ),
       ),
@@ -2555,49 +2589,27 @@ class _BottomControls extends StatelessWidget {
 
   Widget _buildIdleHint(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final tipColor = isDark ? Colors.white54 : Colors.grey.shade600;
 
-    final String instruction;
-    if (gameState.isOpeningPhase) {
-      final playerName = gameState.currentPlayer == PlayerColor.white ? 'Light' : 'Dark';
-      instruction = '$playerName\'s turn: Tap any empty cell to place your opponent\'s flat stone.';
-    } else {
-      final playerName = gameState.currentPlayer == PlayerColor.white ? 'Light' : 'Dark';
-      instruction = '$playerName\'s turn: Tap an empty cell to place a piece, or tap your own stack to move it.';
-    }
+    // Short, single-line hint
+    final String hint = gameState.isOpeningPhase
+        ? 'Tap empty cell to place opponent\'s flat'
+        : 'Tap cell to place, or tap your stack to move';
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          instruction,
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.w500,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lightbulb_outline, size: 14, color: tipColor),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                _getTip(),
-                style: TextStyle(
-                  color: tipColor,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+        Icon(Icons.lightbulb_outline, size: 14, color: tipColor),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            hint,
+            style: TextStyle(
+              color: tipColor,
+              fontSize: 12,
             ),
-          ],
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -2610,96 +2622,62 @@ class _BottomControls extends StatelessWidget {
     final isOpening = gameState.isOpeningPhase;
     final currentType = uiState.ghostPieceType;
 
-    // During opening, only flat stones allowed - just show hint
+    // During opening, only flat stones allowed - simple hint
     if (isOpening) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'Cell selected! Tap this cell again to confirm placement.',
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              'Tap again to place, or tap elsewhere',
+              style: TextStyle(color: textColor, fontSize: 12),
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Or tap a different cell to change your selection.',
-                style: TextStyle(
-                  color: textColor.withValues(alpha: 0.7),
-                  fontStyle: FontStyle.italic,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onCancel,
-                icon: const Icon(Icons.close),
-                tooltip: 'Cancel',
-                color: textColor,
-              ),
-            ],
+          IconButton(
+            onPressed: onCancel,
+            icon: const Icon(Icons.close, size: 18),
+            tooltip: 'Cancel',
+            color: textColor,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       );
     }
 
-    final typeName = switch (currentType) {
-      PieceType.flat => 'Flat Stone',
-      PieceType.standing => 'Wall',
-      PieceType.capstone => 'Capstone',
-    };
-
-    // Show piece type selector with current selection highlighted
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    // Compact piece type selector
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          'Placing: $typeName. Tap cell to place, or select a different piece type below.',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.w500,
-            fontSize: 13,
-          ),
-          textAlign: TextAlign.center,
+        _PieceTypeToggle(
+          type: PieceType.flat,
+          isSelected: currentType == PieceType.flat,
+          isEnabled: pieces.flatStones > 0,
+          onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
         ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _PieceTypeToggle(
-              type: PieceType.flat,
-              isSelected: currentType == PieceType.flat,
-              isEnabled: pieces.flatStones > 0,
-              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
-            ),
-            const SizedBox(width: 8),
-            _PieceTypeToggle(
-              type: PieceType.standing,
-              label: 'Wall',
-              isSelected: currentType == PieceType.standing,
-              isEnabled: pieces.flatStones > 0,
-              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
-            ),
-            const SizedBox(width: 8),
-            _PieceTypeToggle(
-              type: PieceType.capstone,
-              isSelected: currentType == PieceType.capstone,
-              isEnabled: pieces.capstones > 0,
-              onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
-            ),
-            const SizedBox(width: 12),
-            IconButton(
-              onPressed: onCancel,
-              icon: const Icon(Icons.close),
-              tooltip: 'Cancel',
-              color: textColor,
-            ),
-          ],
+        const SizedBox(width: 6),
+        _PieceTypeToggle(
+          type: PieceType.standing,
+          label: 'Wall',
+          isSelected: currentType == PieceType.standing,
+          isEnabled: pieces.flatStones > 0,
+          onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
+        ),
+        const SizedBox(width: 6),
+        _PieceTypeToggle(
+          type: PieceType.capstone,
+          isSelected: currentType == PieceType.capstone,
+          isEnabled: pieces.capstones > 0,
+          onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: onCancel,
+          icon: const Icon(Icons.close, size: 18),
+          tooltip: 'Cancel',
+          color: textColor,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
       ],
     );
@@ -2713,34 +2691,19 @@ class _BottomControls extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Picking up $piecesPickedUp piece${piecesPickedUp == 1 ? '' : 's'} from this stack.',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : null,
-                ),
-              ),
-              Text(
-                'Tap the stack again to change how many pieces to pick up. Tap an adjacent cell to start moving.',
-                style: TextStyle(
-                  color: textColor,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+        Flexible(
+          child: Text(
+            'Picking $piecesPickedUp · Tap stack to change, or move to adjacent cell',
+            style: TextStyle(color: textColor, fontSize: 12),
           ),
         ),
         IconButton(
           onPressed: onCancel,
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close, size: 18),
           tooltip: 'Cancel',
           color: textColor,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
       ],
     );
@@ -2751,89 +2714,58 @@ class _BottomControls extends StatelessWidget {
     final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final remaining = uiState.piecesPickedUp;
     final drops = uiState.drops;
-    final pendingDrop = uiState.pendingDropCount;
     final canConfirm = remaining == 0 && drops.isNotEmpty;
 
     if (canConfirm) {
-      // All pieces dropped, show confirm hint
+      // All pieces dropped - compact confirm
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Move complete! Dropped ${drops.join(' → ')} pieces.',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : null,
-                  ),
-                ),
-                const Text(
-                  'Press Confirm to finalize, or Cancel to undo.',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontStyle: FontStyle.italic,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
+          Text(
+            'Dropped ${drops.join('→')}',
+            style: TextStyle(color: textColor, fontSize: 12),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: onConfirmMove,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
             ),
-            child: const Text('Confirm'),
+            child: const Text('Confirm', style: TextStyle(fontSize: 12)),
           ),
-          const SizedBox(width: 8),
           IconButton(
             onPressed: onCancel,
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close, size: 18),
             tooltip: 'Cancel',
             color: textColor,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       );
     }
 
-    // Still dropping - show hint
-    final dropsText = drops.isEmpty ? '' : 'Already dropped: ${drops.join(' → ')}. ';
-
+    // Still dropping - compact hint
+    final pendingDrop = uiState.pendingDropCount;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Dropping $pendingDrop piece${pendingDrop == 1 ? '' : 's'} here. $remaining remaining in hand.',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : null,
-                ),
-              ),
-              Text(
-                '${dropsText}Tap this cell to change drop count, or tap an adjacent cell to continue.',
-                style: TextStyle(
-                  color: textColor,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 11,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+        Flexible(
+          child: Text(
+            'Drop $pendingDrop · $remaining left · Tap to change or continue',
+            style: TextStyle(color: textColor, fontSize: 12),
           ),
         ),
         IconButton(
           onPressed: onCancel,
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close, size: 18),
           tooltip: 'Cancel',
           color: textColor,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
       ],
     );
@@ -2990,136 +2922,6 @@ class _HexagonIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Piece counts bar at bottom
-class _PieceCountsBar extends StatelessWidget {
-  final GameState gameState;
-
-  const _PieceCountsBar({required this.gameState});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark
-        ? Theme.of(context).colorScheme.surfaceContainerHighest
-        : Colors.grey.shade100;
-    final borderColor = isDark
-        ? Theme.of(context).colorScheme.outline
-        : Colors.grey.shade300;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        border: Border(
-          top: BorderSide(color: borderColor),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _PlayerPieceCounts(
-            label: 'Light',
-            pieces: gameState.whitePieces,
-            isLightPlayer: true,
-            isCurrentPlayer: gameState.currentPlayer == PlayerColor.white,
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: borderColor,
-          ),
-          _PlayerPieceCounts(
-            label: 'Dark',
-            pieces: gameState.blackPieces,
-            isLightPlayer: false,
-            isCurrentPlayer: gameState.currentPlayer == PlayerColor.black,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlayerPieceCounts extends StatelessWidget {
-  final String label;
-  final PlayerPieces pieces;
-  final bool isLightPlayer;
-  final bool isCurrentPlayer;
-
-  const _PlayerPieceCounts({
-    required this.label,
-    required this.pieces,
-    required this.isLightPlayer,
-    required this.isCurrentPlayer,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final countColor = isDark ? Colors.white : Colors.black87;
-    final highlightColor = isDark
-        ? Theme.of(context).colorScheme.primaryContainer
-        : GameColors.currentPlayerHighlight;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: isCurrentPlayer
-          ? BoxDecoration(
-              color: highlightColor,
-              borderRadius: BorderRadius.circular(8),
-            )
-          : null,
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: isCurrentPlayer ? FontWeight.bold : FontWeight.normal,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Flat stone icon
-              Container(
-                width: 18,
-                height: 10,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: pieceColors.gradientColors,
-                  ),
-                  border: Border.all(color: pieceColors.border, width: 1),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${pieces.flatStones}',
-                style: TextStyle(fontWeight: FontWeight.w500, color: countColor),
-              ),
-              const SizedBox(width: 12),
-              // Capstone icon (small hexagon)
-              CustomPaint(
-                size: const Size(14, 14),
-                painter: _SmallHexagonPainter(colors: pieceColors),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${pieces.capstones}',
-                style: TextStyle(fontWeight: FontWeight.w500, color: countColor),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// Move history panel - collapsible sidebar showing moves in algebraic notation
