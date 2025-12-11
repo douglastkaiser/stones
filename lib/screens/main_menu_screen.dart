@@ -49,7 +49,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   void _startNewGame(
     BuildContext context,
     GameMode mode, {
-    AIDifficulty difficulty = AIDifficulty.easy,
+    AIDifficulty difficulty = AIDifficulty.intro,
   }) {
     final gameState = ref.read(gameStateProvider);
     final settings = ref.read(appSettingsProvider);
@@ -117,18 +117,27 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: const Icon(Icons.child_care),
+              title: const Text('Intro'),
+              subtitle: const Text('Random moves - great for learning the game'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.intro);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.smart_toy_outlined),
               title: const Text('Easy'),
-              subtitle: const Text('Random moves with placement bias early on'),
+              subtitle: const Text('Basic road-building and blocking heuristics'),
               onTap: () {
                 Navigator.pop(dialogContext);
                 _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.easy);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.auto_awesome),
+              leading: const Icon(Icons.psychology),
               title: const Text('Medium'),
-              subtitle: const Text('Plays simple road-building and blocking heuristics'),
+              subtitle: const Text('Detects wins and threats, builds strategic roads'),
               onTap: () {
                 Navigator.pop(dialogContext);
                 _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.medium);

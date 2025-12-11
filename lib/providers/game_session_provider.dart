@@ -16,7 +16,7 @@ class GameSessionConfig {
 
   const GameSessionConfig({
     this.mode = GameMode.local,
-    this.aiDifficulty = AIDifficulty.easy,
+    this.aiDifficulty = AIDifficulty.intro,
   });
 
   GameSessionConfig copyWith({
