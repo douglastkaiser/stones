@@ -803,20 +803,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     return null;
   }
 
-  /// Get the distance between two positions in a given direction
-  int _getDistanceBetween(Position from, Position to, Direction dir) {
-    switch (dir) {
-      case Direction.up:
-        return from.row - to.row;
-      case Direction.down:
-        return to.row - from.row;
-      case Direction.left:
-        return from.col - to.col;
-      case Direction.right:
-        return to.col - from.col;
-    }
-  }
-
   void _confirmMove(WidgetRef ref) {
     final uiState = ref.read(uiStateProvider);
     final pos = uiState.selectedPosition;

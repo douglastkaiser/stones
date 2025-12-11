@@ -314,7 +314,7 @@ class UIStateNotifier extends StateNotifier<UIState> {
   }
 
   void selectDirection(Direction dir) {
-    startMoving(dir, 1);
+    startMoving(dir);
   }
 }
 
