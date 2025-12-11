@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import '../../models/models.dart';
-import 'easy_ai.dart';
 import 'intro_ai.dart';
+import 'easy_ai.dart';
 import 'medium_ai.dart';
 import 'move_generator.dart';
 

@@ -128,7 +128,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ListTile(
               leading: const Icon(Icons.smart_toy_outlined),
               title: const Text('Easy'),
-              subtitle: const Text('Basic road-building and blocking heuristics'),
+              subtitle: const Text('Detects wins and threats, builds strategic roads'),
               onTap: () {
                 Navigator.pop(dialogContext);
                 _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.easy);
@@ -137,7 +137,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ListTile(
               leading: const Icon(Icons.psychology),
               title: const Text('Medium'),
-              subtitle: const Text('Detects wins and threats, builds strategic roads'),
+              subtitle: const Text('Looks ahead, creates forks, and blocks your plans'),
               onTap: () {
                 Navigator.pop(dialogContext);
                 _startNewGame(context, GameMode.vsComputer, difficulty: AIDifficulty.medium);
