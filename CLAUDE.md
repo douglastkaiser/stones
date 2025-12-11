@@ -22,7 +22,7 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
 
 3. **Remove unused parameters** - If a function parameter isn't used, either use it or prefix with underscore (`_unusedParam`).
 
-4. **Remove unused private classes/methods** - If you replace a widget or method with a new implementation, DELETE the old one. Don't leave orphaned `_OldWidget` or `_oldMethod` declarations.
+4. **Remove unused private classes/methods** - If you replace a widget or method with a new implementation, DELETE the old one. Don't leave orphaned `_OldWidget` or `_oldMethod` declarations. **IMPORTANT: Check for cascading deletions** - when you delete a class, also delete any helper classes/methods that were ONLY used by that class (e.g., if you delete `_MyDialog`, also delete `_MyDialogRow` if nothing else uses it).
 
 5. **Use const constructors** - Always add `const` keyword to widget constructors when all arguments are compile-time constants. This includes `Text`, `Icon`, `SizedBox`, `TextStyle`, etc.
    ```dart
@@ -65,6 +65,7 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
    - Review all new imports - are they needed?
    - Review all function parameters - are they used?
    - Check for any widgets/methods that were replaced and can be deleted
+   - **Check for cascading deletions** - if you deleted a class, search for helper classes/methods that were only used by it
    - Add `const` to constructors where all arguments are constant
 
 ## Architecture Notes
