@@ -39,7 +39,7 @@ class OnlineGameMove {
   Map<String, dynamic> toMap() => {
         'notation': notation,
         'player': player.name,
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': Timestamp.now(),
       };
 
   factory OnlineGameMove.fromMap(Map<String, dynamic> map) {
