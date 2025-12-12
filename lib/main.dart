@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
@@ -53,6 +54,7 @@ class _StonesAppState extends ConsumerState<StonesApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
         useMaterial3: true,
+        textTheme: GoogleFonts.loraTextTheme(),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -60,6 +62,9 @@ class _StonesAppState extends ConsumerState<StonesApp> {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        textTheme: GoogleFonts.loraTextTheme(
+          ThemeData(brightness: Brightness.dark).textTheme,
+        ),
       ),
       themeMode: settings.themeMode,
       home: const MainMenuScreen(),
