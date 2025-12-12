@@ -299,6 +299,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   PieceStack? _longPressedStack;
 
   void _startStackView(Position pos, PieceStack stack) {
+    if (_longPressedPosition == pos && _longPressedStack == stack) return;
+
+    final soundManager = ref.read(soundManagerProvider);
+    soundManager.playStackMove();
+
     setState(() {
       _longPressedPosition = pos;
       _longPressedStack = stack;
@@ -512,16 +517,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
             child: IgnorePointer(
               ignoring: inputLocked,
-              child: _GameBoard(
-                gameState: gameState,
-                uiState: uiState,
-                animationState: animationState,
-                lastMovePositions: lastMovePositions,
-                onCellTap: (pos) => _handleCellTap(context, ref, pos),
-                onLongPressStart: _startStackView,
-                onLongPressEnd: _endStackView,
-              ),
+            child: _GameBoard(
+              gameState: gameState,
+              uiState: uiState,
+              animationState: animationState,
+              lastMovePositions: lastMovePositions,
+              explodedPosition: _longPressedPosition,
+              explodedStack: _longPressedStack,
+              onCellTap: (pos) => _handleCellTap(context, ref, pos),
+              onLongPressStart: _startStackView,
+              onLongPressEnd: _endStackView,
             ),
+          ),
           );
 
           // Bottom controls
@@ -720,14 +727,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         ),
                       ),
                   ],
-                ),
-
-              // Stack exploded view overlay (press and hold)
-              if (_longPressedPosition != null && _longPressedStack != null)
-                _StackExplodedOverlay(
-                  position: _longPressedPosition!,
-                  stack: _longPressedStack!,
-                  boardSize: gameState.boardSize,
                 ),
 
               // Online status banners
@@ -1862,6 +1861,8 @@ class _GameBoard extends StatelessWidget {
   final UIState uiState;
   final AnimationState animationState;
   final Set<Position>? lastMovePositions;
+  final Position? explodedPosition;
+  final PieceStack? explodedStack;
   final Function(Position) onCellTap;
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
@@ -1873,6 +1874,8 @@ class _GameBoard extends StatelessWidget {
     required this.onCellTap,
     required this.onLongPressStart,
     required this.onLongPressEnd,
+    this.explodedPosition,
+    this.explodedStack,
     this.lastMovePositions,
   });
 
@@ -1972,6 +1975,9 @@ class _GameBoard extends StatelessWidget {
             // Check if this is part of the last move
             final isLastMove = lastMovePositions?.contains(pos) ?? false;
 
+            final isExploded = explodedPosition == pos && explodedStack != null;
+            final stackForExplosion = isExploded ? explodedStack : null;
+
             // Check if this is a valid move destination (legal move hint)
             final isLegalMoveHint = validMoveDestinations.contains(pos);
 
@@ -1986,11 +1992,12 @@ class _GameBoard extends StatelessWidget {
             final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
                 nextDropPos == pos;
 
-            return GestureDetector(
+            return _CellInteractionLayer(
+              position: pos,
+              stack: stack,
               onTap: () => onCellTap(pos),
-              onLongPressStart: stack.isNotEmpty ? (_) => onLongPressStart(pos, stack) : null,
-              onLongPressEnd: stack.isNotEmpty ? (_) => onLongPressEnd() : null,
-              onLongPressCancel: stack.isNotEmpty ? () => onLongPressEnd() : null,
+              onStackViewStart: onLongPressStart,
+              onStackViewEnd: onLongPressEnd,
               child: _BoardCell(
                 key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${lastEvent?.timestamp.millisecondsSinceEpoch ?? 0}_${ghostPieceType?.name ?? ''}'),
                 stack: stack,
@@ -2010,10 +2017,90 @@ class _GameBoard extends StatelessWidget {
                 pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
                 pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
                 piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
+                showExploded: isExploded,
+                explodedStack: stackForExplosion,
               ),
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Interaction wrapper to support taps, long press, right-click, and hover hold for stack view
+class _CellInteractionLayer extends StatefulWidget {
+  final Position position;
+  final PieceStack stack;
+  final VoidCallback onTap;
+  final Function(Position, PieceStack) onStackViewStart;
+  final VoidCallback onStackViewEnd;
+  final Widget child;
+
+  const _CellInteractionLayer({
+    required this.position,
+    required this.stack,
+    required this.onTap,
+    required this.onStackViewStart,
+    required this.onStackViewEnd,
+    required this.child,
+  });
+
+  @override
+  State<_CellInteractionLayer> createState() => _CellInteractionLayerState();
+}
+
+class _CellInteractionLayerState extends State<_CellInteractionLayer> {
+  Timer? _hoverTimer;
+  bool _isViewing = false;
+
+  @override
+  void dispose() {
+    _hoverTimer?.cancel();
+    super.dispose();
+  }
+
+  void _activateView() {
+    if (_isViewing || widget.stack.isEmpty) return;
+    widget.onStackViewStart(widget.position, widget.stack);
+    _isViewing = true;
+  }
+
+  void _deactivateView() {
+    _hoverTimer?.cancel();
+    _hoverTimer = null;
+    if (!_isViewing) return;
+    widget.onStackViewEnd();
+    _isViewing = false;
+  }
+
+  void _scheduleHover() {
+    if (widget.stack.isEmpty) return;
+    _hoverTimer?.cancel();
+    _hoverTimer = Timer(const Duration(milliseconds: 280), _activateView);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => _scheduleHover(),
+      onExit: (_) => _deactivateView(),
+      child: GestureDetector(
+        onTap: () {
+          _deactivateView();
+          widget.onTap();
+        },
+        onLongPressStart:
+            widget.stack.isNotEmpty ? (_) => _activateView() : null,
+        onLongPressEnd: widget.stack.isNotEmpty ? (_) => _deactivateView() : null,
+        onLongPressCancel: widget.stack.isNotEmpty ? _deactivateView : null,
+        onSecondaryTapDown:
+            widget.stack.isNotEmpty ? (_) => _activateView() : null,
+        onSecondaryTapUp:
+            widget.stack.isNotEmpty ? (_) => _deactivateView() : null,
+        onSecondaryTapCancel:
+            widget.stack.isNotEmpty ? _deactivateView : null,
+        child: widget.child,
       ),
     );
   }
@@ -2033,6 +2120,8 @@ class _BoardCell extends StatefulWidget {
   final bool wasWallFlattened;
   final bool isLastMove;
   final bool isLegalMoveHint;
+  final bool showExploded;
+  final PieceStack? explodedStack;
 
   /// Ghost piece to show (for placement preview)
   final PieceType? ghostPieceType;
@@ -2066,6 +2155,8 @@ class _BoardCell extends StatefulWidget {
     this.wasWallFlattened = false,
     this.isLastMove = false,
     this.isLegalMoveHint = false,
+    this.showExploded = false,
+    this.explodedStack,
   });
 
   @override
@@ -2078,12 +2169,14 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   late AnimationController _slideController;
   late AnimationController _flattenController;
   late AnimationController _winPulseController;
+  late AnimationController _stackRevealController;
 
   // Animations
   late Animation<double> _placementScale;
   late Animation<double> _slideScale;
   late Animation<double> _flattenScale;
   late Animation<double> _winPulse;
+  late Animation<double> _stackReveal;
 
   @override
   void initState() {
@@ -2138,6 +2231,22 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       ),
     );
 
+    // Stack reveal animation: fan upward with a quick snap
+    _stackRevealController = AnimationController(
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 180),
+      vsync: this,
+    );
+    _stackReveal = CurvedAnimation(
+      parent: _stackRevealController,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeOutCubic,
+    );
+
+    if (widget.showExploded) {
+      _stackRevealController.value = 1.0;
+    }
+
     // Start animations based on initial state
     if (widget.isNewlyPlaced) {
       _placementController.forward();
@@ -2172,6 +2281,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       _flattenController.forward(from: 0);
     }
 
+    if (widget.showExploded && !oldWidget.showExploded) {
+      _stackRevealController.forward(from: 0);
+    } else if (!widget.showExploded && oldWidget.showExploded) {
+      _stackRevealController.reverse();
+    }
+
     // Start/stop win pulse
     if (widget.isInWinningRoad && !oldWidget.isInWinningRoad) {
       _winPulseController.repeat(reverse: true);
@@ -2187,6 +2302,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     _slideController.dispose();
     _flattenController.dispose();
     _winPulseController.dispose();
+    _stackRevealController.dispose();
     super.dispose();
   }
 
@@ -2348,6 +2464,28 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       );
     }
 
+    if (widget.showExploded) {
+      cellContent = AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 12,
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: Colors.amber.withValues(alpha: 0.22),
+              blurRadius: 16,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: cellContent,
+      );
+    }
+
     // Add last move highlighting (subtle outline)
     // Only show if not already highlighted by another state
     if (widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad) {
@@ -2429,8 +2567,13 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           return const SizedBox();
         }
 
-        // Build normal stack display
-        Widget content = _buildStackDisplay(widget.stack);
+        final stackForDisplay = widget.explodedStack ?? widget.stack;
+        final isExplodedView = widget.showExploded && stackForDisplay.isNotEmpty;
+
+        // Build stack display (exploded fan-out or normal depth view)
+        Widget content = isExplodedView
+            ? _buildExplodedStackView(stackForDisplay, cellSize)
+            : _buildStackDisplay(stackForDisplay);
 
         // Add pickup count overlay for stack movement
         if (widget.pickupCount != null) {
@@ -2536,6 +2679,28 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           );
         }
 
+        if (isExplodedView) {
+          content = AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            padding: EdgeInsets.only(bottom: cellSize * 0.02),
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: Colors.amber.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: content,
+          );
+        }
+
         return content;
       },
     );
@@ -2595,6 +2760,98 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
         return content;
       },
+    );
+  }
+
+  Widget _buildExplodedStackView(PieceStack stack, double cellSize) {
+    final pieceSize = cellSize * 0.62;
+    final maxLift = cellSize * 0.75;
+    final fanSpread = cellSize * 0.08;
+
+    return AnimatedBuilder(
+      animation: _stackReveal,
+      builder: (context, child) {
+        final progress = _stackReveal.value;
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            // Soft glow at the base of the stack
+            Positioned(
+              bottom: cellSize * 0.06,
+              child: Opacity(
+                opacity: progress * 0.45,
+                child: Container(
+                  width: cellSize * (0.65 + (0.25 * progress)),
+                  height: cellSize * 0.16,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.black.withValues(alpha: 0.25 * progress),
+                        Colors.black.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 1.0],
+                    ),
+                    borderRadius: BorderRadius.circular(cellSize),
+                  ),
+                ),
+              ),
+            ),
+            for (int i = 0; i < stack.height; i++)
+              _buildExplodedPiece(
+                stack.pieces[i],
+                i,
+                stack.height,
+                pieceSize,
+                fanSpread,
+                maxLift,
+                progress,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildExplodedPiece(
+    Piece piece,
+    int index,
+    int height,
+    double pieceSize,
+    double fanSpread,
+    double maxLift,
+    double progress,
+  ) {
+    final fromTop = height - 1 - index;
+    final liftFactor = (fromTop + 1) / height;
+    final horizontalOffset = (fromTop - (height - 1) / 2) * fanSpread * progress;
+    final verticalOffset = -progress * maxLift * liftFactor;
+    final tilt = ((fromTop - (height - 1) / 2) * 0.04) * progress;
+
+    final isLightPlayer = piece.color == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
+
+    return Transform.translate(
+      offset: Offset(horizontalOffset, verticalOffset),
+      child: Transform.rotate(
+        angle: tilt,
+        child: Transform.scale(
+          scale: 0.9 + (0.1 * progress),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                  blurRadius: 12 * progress + 3,
+                  spreadRadius: 0.8 * progress,
+                  offset: Offset(0, 3 - (progress * 1.5)),
+                ),
+              ],
+            ),
+            child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+          ),
+        ),
+      ),
     );
   }
 
@@ -3463,304 +3720,6 @@ class _SmallHexagonPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SmallHexagonPainter oldDelegate) {
     return oldDelegate.colors != colors;
-  }
-}
-
-/// Stack exploded view overlay - shows stack contents on long press
-class _StackExplodedOverlay extends StatelessWidget {
-  final Position position;
-  final PieceStack stack;
-  final int boardSize;
-
-  const _StackExplodedOverlay({
-    required this.position,
-    required this.stack,
-    required this.boardSize,
-  });
-
-  String _positionToNotation(Position pos) {
-    final col = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
-    final row = (boardSize - pos.row).toString();
-    return '$col$row';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final posNotation = _positionToNotation(position);
-
-    return Container(
-      color: Colors.black.withValues(alpha: 0.6),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.all(32),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.layers,
-                    size: 28,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Stack at $posNotation',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        '${stack.height} piece${stack.height == 1 ? '' : 's'}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Exploded stack view
-              Container(
-                constraints: const BoxConstraints(maxHeight: 400, maxWidth: 280),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // TOP label
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'TOP (Controls)',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber.shade800,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Stack pieces from top to bottom (exploded view)
-                      for (int i = stack.height - 1; i >= 0; i--) ...[
-                        _ExplodedPieceCard(
-                          piece: stack.pieces[i],
-                          index: i,
-                          isTop: i == stack.height - 1,
-                          totalPieces: stack.height,
-                        ),
-                        if (i > 0)
-                          Container(
-                            height: 16,
-                            width: 2,
-                            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                          ),
-                      ],
-
-                      const SizedBox(height: 8),
-                      // BOTTOM label
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'BOTTOM',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-              Text(
-                'Release to close',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Exploded piece card for the stack overlay
-class _ExplodedPieceCard extends StatelessWidget {
-  final Piece piece;
-  final int index;
-  final bool isTop;
-  final int totalPieces;
-
-  const _ExplodedPieceCard({
-    required this.piece,
-    required this.index,
-    required this.isTop,
-    required this.totalPieces,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
-    final playerName = isLightPlayer ? 'Light' : 'Dark';
-    final typeName = piece.type.name[0].toUpperCase() + piece.type.name.substring(1);
-
-    return Container(
-      width: 200,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: pieceColors.gradientColors,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: pieceColors.border,
-          width: isTop ? 3 : 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: pieceColors.border.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Piece visual
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 1,
-              ),
-            ),
-            child: Center(child: _getPieceVisual(piece.type)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  typeName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: pieceColors.border.computeLuminance() > 0.5
-                        ? Colors.black
-                        : Colors.white,
-                  ),
-                ),
-                Text(
-                  playerName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: (pieceColors.border.computeLuminance() > 0.5
-                            ? Colors.black
-                            : Colors.white)
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isTop)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'CTRL',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _getPieceVisual(PieceType type) {
-    switch (type) {
-      case PieceType.flat:
-        return Container(
-          width: 24,
-          height: 10,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(3),
-          ),
-        );
-      case PieceType.standing:
-        return Container(
-          width: 8,
-          height: 24,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(3),
-          ),
-        );
-      case PieceType.capstone:
-        return Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            shape: BoxShape.circle,
-          ),
-        );
-    }
   }
 }
 
