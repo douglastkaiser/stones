@@ -1,0 +1,97 @@
+name: Deploy Main
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Build & Deploy to gh-pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate version info
+        run: ./scripts/generate_version.sh
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
+
+      - name: Generate splash branding
+        run: ./scripts/generate_splash_branding.sh
+
+      - name: Generate splash screen
+        run: dart run flutter_native_splash:create
+
+      - name: Build web
+        run: flutter build web --release --base-href "/stones/"
+
+      - name: Ensure privacy.html is included
+        run: |
+          if [ -f "web/privacy.html" ] && [ ! -f "build/web/privacy.html" ]; then
+            cp web/privacy.html build/web/
+            echo "Copied privacy.html to build/web/"
+          elif [ -f "build/web/privacy.html" ]; then
+            echo "privacy.html already exists in build/web/"
+          else
+            echo "Warning: web/privacy.html not found"
+          fi
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-branch
+        continue-on-error: true
+
+      - name: Create gh-pages branch if it doesn't exist
+        run: |
+          if [ ! -d "gh-pages-branch" ]; then
+            mkdir gh-pages-branch
+            cd gh-pages-branch
+            git init
+            git checkout -b gh-pages
+            git remote add origin "https://github.com/${{ github.repository }}.git"
+          fi
+
+      - name: Preserve PR previews and update main build
+        run: |
+          # Preserve the /pr/ directory if it exists
+          if [ -d "gh-pages-branch/pr" ]; then
+            mv gh-pages-branch/pr /tmp/pr-previews
+          fi
+
+          # Remove old content except .git
+          find gh-pages-branch -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          # Copy new build
+          cp -r build/web/* gh-pages-branch/
+
+          # Restore PR previews
+          if [ -d "/tmp/pr-previews" ]; then
+            mv /tmp/pr-previews gh-pages-branch/pr
+          fi
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "Deploy main site [skip ci]"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages --force
