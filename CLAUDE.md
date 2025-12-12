@@ -68,6 +68,22 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
    - **Check for cascading deletions** - if you deleted a class, search for helper classes/methods that were only used by it
    - Add `const` to constructors where all arguments are constant
 
+9. **Avoid deprecated Flutter APIs** - The analyzer flags deprecated APIs as info-level issues, which fail with `--fatal-infos`. Common deprecations to avoid:
+   ```dart
+   // BAD - activeColor is deprecated (Flutter 3.31+)
+   Switch(
+     value: enabled,
+     activeColor: Colors.blue,
+   )
+
+   // GOOD - use activeThumbColor and activeTrackColor
+   Switch(
+     value: enabled,
+     activeThumbColor: Colors.blue,
+     activeTrackColor: Colors.blue.withValues(alpha: 0.5),
+   )
+   ```
+
 ## Architecture Notes
 
 ### AI System (`lib/services/ai/`)

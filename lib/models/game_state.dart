@@ -13,6 +13,7 @@ enum GameResult {
 enum WinReason {
   road,
   flats,
+  time,
 }
 
 /// Current phase of the game
