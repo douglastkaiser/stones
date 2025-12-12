@@ -2240,7 +2240,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     _stackReveal = CurvedAnimation(
       parent: _stackRevealController,
       curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+      reverseCurve: Curves.easeOutCubic,
     );
 
     if (widget.showExploded) {
