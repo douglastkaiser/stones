@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is a player in the game
+    function isPlayer(gameData) {
+      return isAuthenticated() && (
+        gameData.white.id == request.auth.uid ||
+        (gameData.black != null && gameData.black.id == request.auth.uid)
+      );
+    }
+
+    // Helper function to validate player object structure
+    function isValidPlayer(player) {
+      return player.keys().hasAll(['id', 'displayName']) &&
+             player.id is string &&
+             player.displayName is string &&
+             player.displayName.size() > 0 &&
+             player.displayName.size() <= 30; // Prevent extremely long names
+    }
+
+    // Helper function to validate move object structure
+    function isValidMove(move) {
+      return move.keys().hasAll(['notation', 'player']) &&
+             move.notation is string &&
+             move.notation.size() > 0 &&
+             move.notation.size() <= 20 && // Reasonable max for move notation
+             move.player is string &&
+             move.player in ['white', 'black'];
+    }
+
+    // Helper function to validate board size
+    function isValidBoardSize(size) {
+      return size is int && size >= 3 && size <= 8;
+    }
+
+    // Helper function to validate game status
+    function isValidStatus(status) {
+      return status in ['waiting', 'playing', 'finished'];
+    }
+
+    // Helper function to validate winner
+    function isValidWinner(winner) {
+      return winner == null || winner in ['white', 'black', 'draw'];
+    }
+
+    // Games collection rules
+    match /games/{roomCode} {
+
+      // Allow authenticated users to read games they are part of
+      allow read: if isAuthenticated() && (
+        // Can read if you're a player in the game
+        isPlayer(resource.data) ||
+        // Or if the game is still waiting (to allow joining)
+        resource.data.status == 'waiting'
+      );
+
+      // Allow authenticated users to create new games
+      allow create: if isAuthenticated() &&
+        // Validate required fields exist
+        request.resource.data.keys().hasAll([
+          'roomCode', 'white', 'boardSize', 'moves', 'status', 'currentTurn'
+        ]) &&
+        // Room code must be 6 uppercase letters
+        request.resource.data.roomCode is string &&
+        request.resource.data.roomCode.matches('^[A-Z]{6}$') &&
+        // Creator must be the white player
+        request.resource.data.white.id == request.auth.uid &&
+        isValidPlayer(request.resource.data.white) &&
+        // Black player must be null initially
+        request.resource.data.black == null &&
+        // Validate board size
+        isValidBoardSize(request.resource.data.boardSize) &&
+        // Moves must be empty array initially
+        request.resource.data.moves is list &&
+        request.resource.data.moves.size() == 0 &&
+        // Status must be 'waiting'
+        request.resource.data.status == 'waiting' &&
+        // Current turn must be white
+        request.resource.data.currentTurn == 'white' &&
+        // Winner must be null
+        (!request.resource.data.keys().hasAll(['winner']) || request.resource.data.winner == null);
+
+      // Allow updates under specific conditions
+      allow update: if isAuthenticated() && (
+        // Scenario 1: Black player joining a waiting game
+        (resource.data.status == 'waiting' &&
+         resource.data.black == null &&
+         request.resource.data.black.id == request.auth.uid &&
+         isValidPlayer(request.resource.data.black) &&
+         request.resource.data.status == 'playing' &&
+         // Ensure other fields aren't changed during join
+         request.resource.data.white == resource.data.white &&
+         request.resource.data.boardSize == resource.data.boardSize &&
+         request.resource.data.moves == resource.data.moves &&
+         request.resource.data.currentTurn == resource.data.currentTurn
+        ) ||
+
+        // Scenario 2: Player making a move
+        (isPlayer(resource.data) &&
+         resource.data.status == 'playing' &&
+         // Only allow adding one move at a time
+         request.resource.data.moves.size() == resource.data.moves.size() + 1 &&
+         // Validate the new move
+         isValidMove(request.resource.data.moves[request.resource.data.moves.size() - 1]) &&
+         // Ensure it's the player's turn
+         ((resource.data.currentTurn == 'white' && resource.data.white.id == request.auth.uid) ||
+          (resource.data.currentTurn == 'black' && resource.data.black.id == request.auth.uid)) &&
+         // Validate status transition
+         isValidStatus(request.resource.data.status) &&
+         // Validate winner if set
+         isValidWinner(request.resource.data.winner) &&
+         // Ensure players aren't modified
+         request.resource.data.white == resource.data.white &&
+         request.resource.data.black == resource.data.black &&
+         request.resource.data.boardSize == resource.data.boardSize
+        ) ||
+
+        // Scenario 3: Player resigning
+        (isPlayer(resource.data) &&
+         resource.data.status == 'playing' &&
+         request.resource.data.status == 'finished' &&
+         isValidWinner(request.resource.data.winner) &&
+         request.resource.data.winner != null &&
+         // Ensure players and other data aren't modified
+         request.resource.data.white == resource.data.white &&
+         request.resource.data.black == resource.data.black &&
+         request.resource.data.boardSize == resource.data.boardSize &&
+         request.resource.data.moves == resource.data.moves &&
+         request.resource.data.currentTurn == resource.data.currentTurn
+        ) ||
+
+        // Scenario 4: Rematch request (reset game state)
+        (isPlayer(resource.data) &&
+         resource.data.status == 'finished' &&
+         request.resource.data.status == 'waiting' &&
+         request.resource.data.moves is list &&
+         request.resource.data.moves.size() == 0 &&
+         request.resource.data.winner == null &&
+         request.resource.data.currentTurn == 'white' &&
+         // Ensure players aren't modified
+         request.resource.data.white == resource.data.white &&
+         request.resource.data.black == resource.data.black &&
+         request.resource.data.boardSize == resource.data.boardSize
+        )
+      );
+
+      // Prevent deletion of games (archive instead if needed)
+      allow delete: if false;
+    }
+
+    // Deny all other database access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

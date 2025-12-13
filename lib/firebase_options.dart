@@ -3,6 +3,12 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
+///
+/// SECURITY NOTE: Firebase API keys are designed to be included in client-side
+/// code and are not secret. They identify your Firebase project but do not grant
+/// access to your data. Security is enforced by Firestore Security Rules (see
+/// firestore.rules) and Firebase Authentication, not by keeping API keys secret.
+/// See: https://firebase.google.com/docs/projects/api-keys
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
