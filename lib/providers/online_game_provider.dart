@@ -461,7 +461,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       displayName = user.displayName!;
     } else {
       // Generate random "Player-XXXX" name for anonymous users
-      final rand = Random();
+      final rand = Random.secure();
       final digits = List.generate(4, (_) => rand.nextInt(10)).join();
       displayName = 'Player-$digits';
     }
@@ -469,7 +469,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   String _generateRoomCode() {
-    final rand = Random();
+    final rand = Random.secure();
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     return List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
   }
