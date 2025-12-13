@@ -1,5 +1,6 @@
 import '../../models/models.dart';
 import 'ai.dart';
+import 'board_analysis.dart';
 
 /// Strategic AI with win/threat detection and road-building awareness
 /// (Previously Medium difficulty, now Easy)
@@ -48,7 +49,7 @@ class EasyStonesAI extends StonesAI {
   bool _isWinningMove(GameState state, AIMove move) {
     final newState = _applyMove(state, move);
     if (newState == null) return false;
-    return _hasRoad(newState, state.currentPlayer);
+    return BoardAnalysis.hasRoad(newState, state.currentPlayer);
   }
 
   /// Find moves that block opponent's immediate winning threats
@@ -62,7 +63,7 @@ class EasyStonesAI extends StonesAI {
 
     for (final opponentMove in opponentMoves) {
       final afterOpponent = _applyMove(opponentState, opponentMove);
-      if (afterOpponent != null && _hasRoad(afterOpponent, state.opponent)) {
+      if (afterOpponent != null && BoardAnalysis.hasRoad(afterOpponent, state.opponent)) {
         // This opponent move would win - find what positions matter
         opponentWinningPositions.addAll(_getAffectedPositions(opponentMove));
       }
@@ -152,66 +153,6 @@ class EasyStonesAI extends StonesAI {
     }
 
     return state.copyWith(board: boardState);
-  }
-
-  /// Check if a player has a road (BFS path finding)
-  bool _hasRoad(GameState state, PlayerColor color) {
-    final size = state.boardSize;
-
-    // Check horizontal (left to right)
-    for (int r = 0; r < size; r++) {
-      final start = Position(r, 0);
-      if (_controlsForRoad(state, start, color)) {
-        if (_canReachEdge(state, start, color, (p) => p.col == size - 1)) {
-          return true;
-        }
-      }
-    }
-
-    // Check vertical (top to bottom)
-    for (int c = 0; c < size; c++) {
-      final start = Position(0, c);
-      if (_controlsForRoad(state, start, color)) {
-        if (_canReachEdge(state, start, color, (p) => p.row == size - 1)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  bool _controlsForRoad(GameState state, Position pos, PlayerColor color) {
-    final top = state.board.stackAt(pos).topPiece;
-    if (top == null) return false;
-    if (top.color != color) return false;
-    return top.type != PieceType.standing;
-  }
-
-  bool _canReachEdge(
-    GameState state,
-    Position start,
-    PlayerColor color,
-    bool Function(Position) isTargetEdge,
-  ) {
-    final visited = <Position>{};
-    final queue = [start];
-
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      if (visited.contains(current)) continue;
-      visited.add(current);
-
-      if (isTargetEdge(current)) return true;
-
-      for (final neighbor in current.adjacentPositions(state.boardSize)) {
-        if (!visited.contains(neighbor) &&
-            _controlsForRoad(state, neighbor, color)) {
-          queue.add(neighbor);
-        }
-      }
-    }
-    return false;
   }
 
   double _scoreMove(GameState state, AIMove move) {
@@ -313,7 +254,7 @@ class EasyStonesAI extends StonesAI {
     var connectsToRightOrBottom = false;
 
     for (final neighbor in neighbors) {
-      if (_controlsForRoad(state, neighbor, color)) {
+      if (BoardAnalysis.controlsForRoad(state, neighbor, color)) {
         // Check what edges this neighbor's chain reaches
         if (_canReachEdge(state, neighbor, color, (p) => p.col == 0 || p.row == 0)) {
           connectsToLeftOrTop = true;
@@ -350,7 +291,7 @@ class EasyStonesAI extends StonesAI {
     // Higher value if it disrupts opponent chains
     final neighbors = pos.adjacentPositions(state.boardSize);
     for (final neighbor in neighbors) {
-      if (_controlsForRoad(state, neighbor, opponent)) {
+      if (BoardAnalysis.controlsForRoad(state, neighbor, opponent)) {
         blockValue += 1.5;
       }
     }
