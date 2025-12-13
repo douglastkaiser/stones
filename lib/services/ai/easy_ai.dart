@@ -245,42 +245,10 @@ class EasyStonesAI extends StonesAI {
 
   /// Evaluate how well a position extends road-building chains
   double _evaluateChainExtension(GameState state, Position pos, PlayerColor color) {
-    final size = state.boardSize;
-    double score = 0;
-
-    // Check if this connects to pieces that reach edges
-    final neighbors = pos.adjacentPositions(size);
-    var connectsToLeftOrTop = false;
-    var connectsToRightOrBottom = false;
-
-    for (final neighbor in neighbors) {
-      if (BoardAnalysis.controlsForRoad(state, neighbor, color)) {
-        // Check what edges this neighbor's chain reaches
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == 0 || p.row == 0)) {
-          connectsToLeftOrTop = true;
-        }
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == size - 1 || p.row == size - 1)) {
-          connectsToRightOrBottom = true;
-        }
-      }
-    }
-
-    // Bonus for connecting chains or extending toward opposite edges
-    if (connectsToLeftOrTop && connectsToRightOrBottom) {
-      score += 6; // Bridge position
-    } else if (connectsToLeftOrTop || connectsToRightOrBottom) {
-      score += 3; // Extends a chain
-    }
-
-    // Position itself touches an edge
-    if (pos.col == 0 || pos.row == 0) {
-      score += 1.5;
-    }
-    if (pos.col == size - 1 || pos.row == size - 1) {
-      score += 1.5;
-    }
-
-    return score;
+    // Use shared optimized implementation with single BFS per neighbor
+    final baseScore = BoardAnalysis.evaluateChainExtension(state, pos, color);
+    // Easy AI uses lower multipliers for less aggressive play
+    return baseScore * 0.6;
   }
 
   /// Evaluate standing stone placement for blocking

@@ -2005,7 +2005,7 @@ class _GameBoard extends StatelessWidget {
               onStackViewStart: onLongPressStart,
               onStackViewEnd: onLongPressEnd,
               child: _BoardCell(
-                key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${ghostPieceType?.name ?? ''}_${isSelected}_${isInDropPath}'),
+                key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${ghostPieceType?.name ?? ''}_$isSelected_$isInDropPath'),
                 stack: stack,
                 isSelected: isSelected,
                 isInDropPath: isInDropPath,

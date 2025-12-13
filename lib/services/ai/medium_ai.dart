@@ -224,13 +224,14 @@ class MediumStonesAI extends StonesAI {
     var connectsTop = pos.row == 0;
     var connectsBottom = pos.row == size - 1;
 
-    // Check what our adjacent pieces connect to
+    // Check what our adjacent pieces connect to (optimized with single BFS per neighbor)
     for (final neighbor in pos.adjacentPositions(size)) {
       if (BoardAnalysis.controlsForRoad(state, neighbor, color)) {
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == 0)) connectsLeft = true;
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == size - 1)) connectsRight = true;
-        if (_canReachEdge(state, neighbor, color, (p) => p.row == 0)) connectsTop = true;
-        if (_canReachEdge(state, neighbor, color, (p) => p.row == size - 1)) connectsBottom = true;
+        final edges = BoardAnalysis.getReachableEdges(state, neighbor, color);
+        if (edges.contains('left')) connectsLeft = true;
+        if (edges.contains('right')) connectsRight = true;
+        if (edges.contains('top')) connectsTop = true;
+        if (edges.contains('bottom')) connectsBottom = true;
       }
     }
 
@@ -435,38 +436,10 @@ class MediumStonesAI extends StonesAI {
 
   /// Evaluate how well a position extends road-building chains
   double _evaluateChainExtension(GameState state, Position pos, PlayerColor color) {
-    final size = state.boardSize;
-    double score = 0;
-
-    final neighbors = pos.adjacentPositions(size);
-    var connectsToLeftOrTop = false;
-    var connectsToRightOrBottom = false;
-
-    for (final neighbor in neighbors) {
-      if (BoardAnalysis.controlsForRoad(state, neighbor, color)) {
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == 0 || p.row == 0)) {
-          connectsToLeftOrTop = true;
-        }
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == size - 1 || p.row == size - 1)) {
-          connectsToRightOrBottom = true;
-        }
-      }
-    }
-
-    if (connectsToLeftOrTop && connectsToRightOrBottom) {
-      score += 8; // Bridge position - very valuable
-    } else if (connectsToLeftOrTop || connectsToRightOrBottom) {
-      score += 4; // Extends a chain
-    }
-
-    if (pos.col == 0 || pos.row == 0) {
-      score += 2;
-    }
-    if (pos.col == size - 1 || pos.row == size - 1) {
-      score += 2;
-    }
-
-    return score;
+    // Use shared optimized implementation with single BFS per neighbor
+    final baseScore = BoardAnalysis.evaluateChainExtension(state, pos, color);
+    // Medium AI uses slightly lower multipliers than Hard AI
+    return baseScore * 0.8;
   }
 
   /// Evaluate standing stone placement for blocking
@@ -498,11 +471,12 @@ class MediumStonesAI extends StonesAI {
     // Check if this position is between opponent pieces extending toward opposite edges
     for (final neighbor in pos.adjacentPositions(size)) {
       if (BoardAnalysis.controlsForRoad(state, neighbor, opponent)) {
-        // Check what edges this connects to
-        final reachesLeft = _canReachEdge(state, neighbor, opponent, (p) => p.col == 0);
-        final reachesRight = _canReachEdge(state, neighbor, opponent, (p) => p.col == size - 1);
-        final reachesTop = _canReachEdge(state, neighbor, opponent, (p) => p.row == 0);
-        final reachesBottom = _canReachEdge(state, neighbor, opponent, (p) => p.row == size - 1);
+        // Check what edges this connects to (optimized with single BFS)
+        final edges = BoardAnalysis.getReachableEdges(state, neighbor, opponent);
+        final reachesLeft = edges.contains('left');
+        final reachesRight = edges.contains('right');
+        final reachesTop = edges.contains('top');
+        final reachesBottom = edges.contains('bottom');
 
         if (reachesLeft && !reachesRight) blocksHorizontal = true;
         if (reachesRight && !reachesLeft) blocksHorizontal = true;

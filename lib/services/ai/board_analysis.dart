@@ -1,6 +1,4 @@
-import '../../models/game_state.dart';
-import '../../models/position.dart';
-import '../../models/piece.dart';
+import '../../models/models.dart';
 
 /// Shared board analysis utilities for AI with caching
 class BoardAnalysis {
