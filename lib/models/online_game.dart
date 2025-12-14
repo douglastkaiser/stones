@@ -2,6 +2,28 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'models.dart';
 
+/// Sanitize and validate display names to prevent security issues
+String _sanitizeDisplayName(String name) {
+  // Trim whitespace
+  String sanitized = name.trim();
+
+  // Limit length (max 30 characters to prevent UI issues and match Firestore rules)
+  if (sanitized.length > 30) {
+    sanitized = sanitized.substring(0, 30);
+  }
+
+  // Remove control characters and other problematic characters
+  // Keep only printable ASCII and common Unicode characters
+  sanitized = sanitized.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
+
+  // If empty after sanitization, use default
+  if (sanitized.isEmpty) {
+    return 'Player';
+  }
+
+  return sanitized;
+}
+
 enum OnlineStatus { waiting, playing, finished }
 
 enum OnlineWinner { white, black, draw }
@@ -12,6 +34,9 @@ class OnlineGamePlayer {
 
   const OnlineGamePlayer({required this.id, required this.displayName});
 
+  /// Sanitize display name for security (public API)
+  static String sanitize(String name) => _sanitizeDisplayName(name);
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'displayName': displayName,
@@ -20,7 +45,7 @@ class OnlineGamePlayer {
   factory OnlineGamePlayer.fromMap(Map<String, dynamic> map) {
     return OnlineGamePlayer(
       id: map['id'] as String? ?? '',
-      displayName: map['displayName'] as String? ?? 'Player',
+      displayName: _sanitizeDisplayName(map['displayName'] as String? ?? 'Player'),
     );
   }
 }
@@ -36,6 +61,22 @@ class OnlineGameMove {
     this.timestamp,
   });
 
+  /// Validate move notation format for security
+  static bool isValidNotation(String notation) {
+    // Limit length to prevent excessive strings
+    if (notation.isEmpty || notation.length > 20) {
+      return false;
+    }
+
+    // Valid notation patterns:
+    // Placement: [S|C]?[a-z][0-9]+ (e.g., "a1", "Sa3", "Cb5")
+    // Stack move: [0-9]?[a-z][0-9]+[<>+-][0-9]? (e.g., "a1>", "3b2<21", "c3+")
+    final placementPattern = RegExp(r'^[SC]?[a-z]\d+$');
+    final stackPattern = RegExp(r'^\d?[a-z]\d+[<>+\-]\d*$');
+
+    return placementPattern.hasMatch(notation) || stackPattern.hasMatch(notation);
+  }
+
   Map<String, dynamic> toMap() => {
         'notation': notation,
         'player': player.name,
@@ -44,8 +85,15 @@ class OnlineGameMove {
 
   factory OnlineGameMove.fromMap(Map<String, dynamic> map) {
     final timestamp = map['timestamp'];
+    final notation = map['notation'] as String? ?? '';
+
+    // Validate notation format for security
+    if (!isValidNotation(notation)) {
+      throw FormatException('Invalid move notation: $notation');
+    }
+
     return OnlineGameMove(
-      notation: map['notation'] as String? ?? '',
+      notation: notation,
       player: _colorFromString(map['player'] as String?),
       timestamp: timestamp is Timestamp ? timestamp.toDate() : null,
     );

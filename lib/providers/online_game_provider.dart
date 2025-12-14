@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../firebase_options.dart';
@@ -16,10 +17,29 @@ import '../services/services.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
-  developer.log('[ONLINE] $message', name: 'multiplayer');
-  // Also print to console for visibility
-  // ignore: avoid_print
-  print('[ONLINE] $message');
+  // Only log in debug mode to prevent exposing sensitive data in production
+  if (kDebugMode) {
+    developer.log('[ONLINE] $message', name: 'multiplayer');
+  }
+}
+
+/// Sanitize error messages for user display to prevent information disclosure
+String _sanitizeErrorMessage(Object error) {
+  final errorStr = error.toString();
+
+  // If it's an Exception with a message, extract it
+  if (errorStr.startsWith('Exception: ')) {
+    final message = errorStr.replaceFirst('Exception: ', '');
+    // Only return the message if it doesn't contain internal details
+    if (!message.contains('StackTrace') && !message.contains('firebase') &&
+        !message.contains('Firestore') && message.length < 200) {
+      return message;
+    }
+  }
+
+  // For other errors, log the details but return a generic message
+  _debugLog('Error occurred: $errorStr');
+  return 'An error occurred. Please try again.';
 }
 
 class OnlineGameState {
@@ -158,8 +178,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _beginLocalGame(boardSize);
     } catch (e) {
       _debugLog('createGame error: $e');
-      final message = e.toString().replaceFirst('Exception: ', '');
-      state = state.copyWith(errorMessage: message);
+      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
     } finally {
       state = state.copyWith(creating: false);
     }
@@ -254,8 +273,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('onlineGameState: session.moves=${state.session?.moves.length}, appliedMoveCount=${state.appliedMoveCount}');
     } catch (e) {
       _debugLog('joinGame error: $e');
-      final message = e.toString().replaceFirst('Exception: ', '');
-      state = state.copyWith(errorMessage: message);
+      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
     } finally {
       state = state.copyWith(joining: false);
     }
@@ -435,7 +453,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('!!! FIRESTORE LISTENER ERROR !!!');
       _debugLog('Error: $error');
       _debugLog('Stack trace: $stackTrace');
-      state = state.copyWith(errorMessage: 'Connection error: $error');
+      state = state.copyWith(errorMessage: 'Connection error. Please check your internet connection.');
     });
     _debugLog('Firestore listener setup complete');
   }
@@ -461,15 +479,17 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       displayName = user.displayName!;
     } else {
       // Generate random "Player-XXXX" name for anonymous users
-      final rand = Random();
+      final rand = Random.secure();
       final digits = List.generate(4, (_) => rand.nextInt(10)).join();
       displayName = 'Player-$digits';
     }
+    // Sanitize display name for security
+    displayName = OnlineGamePlayer.sanitize(displayName);
     return OnlineGamePlayer(id: user.uid, displayName: displayName);
   }
 
   String _generateRoomCode() {
-    final rand = Random();
+    final rand = Random.secure();
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     return List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
   }
@@ -537,6 +557,13 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   bool _applyNotation(OnlineGameMove move) {
     final notation = move.notation;
+
+    // Validate move notation for security
+    if (!OnlineGameMove.isValidNotation(notation)) {
+      _debugLog('_applyNotation: Invalid notation format: $notation');
+      return false;
+    }
+
     final boardSize = _ref.read(gameStateProvider).boardSize;
     final gameNotifier = _ref.read(gameStateProvider.notifier);
     final currentGameState = _ref.read(gameStateProvider);
