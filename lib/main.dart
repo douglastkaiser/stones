@@ -277,6 +277,9 @@ class _BoardSizeButton extends ConsumerWidget {
   }
 
   void _doStartNewGame(BuildContext context, WidgetRef ref) {
+    ref.read(scenarioStateProvider.notifier).clearScenario();
+    ref.read(gameSessionProvider.notifier).state =
+        const GameSessionConfig(mode: GameMode.local, aiDifficulty: AIDifficulty.intro, scenario: null);
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -401,11 +404,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final moveHistory = ref.watch(moveHistoryProvider);
     final lastMovePositions = ref.watch(lastMoveProvider);
     final session = ref.watch(gameSessionProvider);
+    final scenarioState = ref.watch(scenarioStateProvider);
     final isAiThinking = ref.watch(aiThinkingProvider);
     final isAiTurn =
         session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
+    final activeScenario = session.scenario ?? scenarioState.activeScenario;
     // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
     // This prevents race condition where creator can play multiple moves before
     // Firestore listener updates session.currentTurn
@@ -434,6 +439,59 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       _debugLog('isMyTurnLocally=$isMyTurnLocally, isRemoteTurn=$isRemoteTurn');
       _debugLog('waitingForOpponent=$waitingForOpponent, inputLocked=$inputLocked');
       _debugLog('>>> END GAME SCREEN BUILD <<<');
+    }
+
+    if (activeScenario != null && !scenarioState.introShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(scenarioStateProvider.notifier).markIntroShown();
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(activeScenario.title),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activeScenario.objective,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                for (final line in activeScenario.dialogue)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(line),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Let\'s Play'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
+
+    if (activeScenario != null && gameState.isGameOver && !scenarioState.completionShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(scenarioStateProvider.notifier).markCompletionShown();
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text('${activeScenario.title} complete'),
+            content: Text(activeScenario.completionText),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
+      });
     }
 
     return Scaffold(
@@ -591,6 +649,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       child: Column(
                         children: [
                           // Win banner or compact turn indicator
+                          if (activeScenario != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: _ScenarioInfoCard(scenario: activeScenario),
+                            ),
                           if (gameState.isGameOver && gameState.result != null)
                             _WinBanner(result: gameState.result!, winReason: gameState.winReason)
                           else
@@ -661,6 +724,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 // Narrow screen: compact layout with overlays
                 Column(
                   children: [
+                    if (activeScenario != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: _ScenarioInfoCard(scenario: activeScenario),
+                      ),
                     // Win banner (if game over)
                     if (gameState.isGameOver && gameState.result != null)
                       _WinBanner(result: gameState.result!, winReason: gameState.winReason),
@@ -1147,19 +1215,33 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         return;
       }
 
+      final scenarioMove = ref.read(scenarioStateProvider).nextScriptedMove;
+      if (scenarioMove != null) {
+        final applied = _applyAiMove(scenarioMove, ref);
+        if (applied) {
+          ref.read(scenarioStateProvider.notifier).advanceScript();
+          ref.read(uiStateProvider.notifier).reset();
+          return;
+        }
+      }
+
       final ai = StonesAI.forDifficulty(latestSession.aiDifficulty);
       final move = await ai.selectMove(latestState);
 
-      if (move is AIPlacementMove) {
-        _performPlacementMove(move.position, move.pieceType, ref);
-      } else if (move is AIStackMove) {
-        _performStackMove(move.from, move.direction, move.drops, ref);
-      }
-
+      _applyAiMove(move, ref);
       ref.read(uiStateProvider.notifier).reset();
     } finally {
       ref.read(aiThinkingProvider.notifier).state = false;
     }
+  }
+
+  bool _applyAiMove(AIMove? move, WidgetRef ref) {
+    if (move is AIPlacementMove) {
+      return _performPlacementMove(move.position, move.pieceType, ref);
+    } else if (move is AIStackMove) {
+      return _performStackMove(move.from, move.direction, move.drops, ref);
+    }
+    return false;
   }
 
   void _syncOnlineMove(MoveRecord? moveRecord) {
@@ -1742,6 +1824,92 @@ class _SidePieceButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ScenarioInfoCard extends StatelessWidget {
+  final GameScenario scenario;
+
+  const _ScenarioInfoCard({required this.scenario});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPuzzle = scenario.type == ScenarioType.puzzle;
+    final accent = isPuzzle ? Colors.deepPurple : GameColors.boardFrameInner;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isPuzzle ? Icons.extension : Icons.menu_book,
+                  color: accent,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  scenario.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : GameColors.titleColor,
+                  ),
+                ),
+              ),
+              Chip(
+                label: Text(isPuzzle ? 'Puzzle' : 'Tutorial'),
+                backgroundColor: accent.withValues(alpha: 0.18),
+                labelStyle: TextStyle(
+                  color: accent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            scenario.objective,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : GameColors.subtitleColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            scenario.summary,
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.grey.shade800,
+            ),
+          ),
+        ],
       ),
     );
   }

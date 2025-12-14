@@ -6,3 +6,4 @@ export 'game_state.dart';
 export 'piece.dart';
 export 'player.dart';
 export 'online_game.dart';
+export 'scenario.dart';
