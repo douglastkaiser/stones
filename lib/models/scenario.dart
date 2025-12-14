@@ -131,7 +131,7 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
       ],
     ),
     scriptedResponses: [
-      AIPlacementMove(Position(0, 4), PieceType.flat),
+      const AIPlacementMove(Position(0, 4), PieceType.flat),
     ],
   ),
   GameScenario(
@@ -178,7 +178,7 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
       ],
     ),
     scriptedResponses: [
-      AIPlacementMove(Position(0, 0), PieceType.flat),
+      const AIPlacementMove(Position(0, 0), PieceType.flat),
     ],
   ),
   GameScenario(
@@ -225,7 +225,7 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
       ],
     ),
     scriptedResponses: [
-      AIPlacementMove(Position(0, 4), PieceType.flat),
+      const AIPlacementMove(Position(0, 4), PieceType.flat),
     ],
   ),
   GameScenario(
@@ -272,8 +272,8 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
       ],
     ),
     scriptedResponses: [
-      AIPlacementMove(Position(0, 0), PieceType.flat),
-      AIPlacementMove(Position(4, 4), PieceType.flat),
+      const AIPlacementMove(Position(0, 0), PieceType.flat),
+      const AIPlacementMove(Position(4, 4), PieceType.flat),
     ],
     aiDifficulty: AIDifficulty.medium,
   ),

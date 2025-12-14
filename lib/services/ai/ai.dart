@@ -39,7 +39,7 @@ class AIPlacementMove extends AIMove {
   final Position position;
   final PieceType pieceType;
 
-  AIPlacementMove(this.position, this.pieceType);
+  const AIPlacementMove(this.position, this.pieceType);
 }
 
 /// Stack movement move
