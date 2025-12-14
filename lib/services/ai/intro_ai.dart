@@ -12,15 +12,14 @@ class IntroStonesAI extends StonesAI {
     final moves = _generator.generateMoves(state);
     if (moves.isEmpty) return null;
 
-    final placements = moves.whereType<AIPlacementMove>().toList();
-    final stackMoves = moves.whereType<AIStackMove>().toList();
-
     final isEarlyGame = state.turnNumber <= 3 ||
         state.board.occupiedPositions.length < state.boardSize;
 
-    if (isEarlyGame && placements.isNotEmpty && stackMoves.isNotEmpty) {
-      final roll = random.nextDouble();
-      if (roll < 0.7) {
+    // Early game preference for placements (70% chance)
+    if (isEarlyGame && random.nextDouble() < 0.7) {
+      // Only create list if we're actually preferring placements
+      final placements = moves.whereType<AIPlacementMove>().toList();
+      if (placements.isNotEmpty) {
         return placements[random.nextInt(placements.length)];
       }
     }

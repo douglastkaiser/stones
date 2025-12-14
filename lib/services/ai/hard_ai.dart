@@ -1,5 +1,6 @@
 import '../../models/models.dart';
 import 'ai.dart';
+import 'board_analysis.dart';
 
 /// Aggressive AI with 3-ply lookahead and minimax-style evaluation
 class HardStonesAI extends StonesAI {
@@ -30,7 +31,7 @@ class HardStonesAI extends StonesAI {
       final scored = <(AIMove, double)>[];
       for (final move in blockingMoves) {
         final afterMove = _applyMove(state, move);
-        final ourThreats = afterMove != null ? _countThreats(afterMove, state.currentPlayer) : 0;
+        final ourThreats = afterMove != null ? BoardAnalysis.countThreats(afterMove, state.currentPlayer, maxCount: 2) : 0;
         scored.add((move, _scoreMove(state, move) + ourThreats * 5));
       }
       scored.sort((a, b) => b.$2.compareTo(a.$2));
@@ -88,12 +89,12 @@ class HardStonesAI extends StonesAI {
     if (afterOurMove == null) return -1000;
 
     // Check if we win
-    if (_hasRoad(afterOurMove, state.currentPlayer)) {
+    if (BoardAnalysis.hasRoad(afterOurMove, state.currentPlayer)) {
       return 1000;
     }
 
     // Count our threats after this move
-    final ourThreatsAfter = _countThreats(afterOurMove, state.currentPlayer);
+    final ourThreatsAfter = BoardAnalysis.countThreats(afterOurMove, state.currentPlayer);
 
     // Simulate opponent's turn
     final opponentState = _switchPlayer(afterOurMove);
@@ -102,7 +103,7 @@ class HardStonesAI extends StonesAI {
     // Check if opponent can win immediately - very bad
     for (final oppMove in opponentMoves) {
       final afterOpp = _applyMove(opponentState, oppMove);
-      if (afterOpp != null && _hasRoad(afterOpp, state.opponent)) {
+      if (afterOpp != null && BoardAnalysis.hasRoad(afterOpp, state.opponent)) {
         return -500; // Losing position
       }
     }
@@ -130,7 +131,7 @@ class HardStonesAI extends StonesAI {
       var canWin = false;
       for (final response in ourResponses) {
         final afterResponse = _applyMove(ourResponseState, response);
-        if (afterResponse != null && _hasRoad(afterResponse, state.currentPlayer)) {
+        if (afterResponse != null && BoardAnalysis.hasRoad(afterResponse, state.currentPlayer)) {
           canWin = true;
           break;
         }
@@ -141,8 +142,8 @@ class HardStonesAI extends StonesAI {
         positionScore = 100; // We can force a win
       } else {
         // Evaluate position after opponent's move
-        final oppThreats = _countThreats(afterOpp, state.opponent);
-        final ourThreatsRemaining = _countThreats(afterOpp, state.currentPlayer);
+        final oppThreats = BoardAnalysis.countThreats(afterOpp, state.opponent);
+        final ourThreatsRemaining = BoardAnalysis.countThreats(afterOpp, state.currentPlayer);
         positionScore = (ourThreatsRemaining * 8) - (oppThreats * 6);
         positionScore += _evaluatePosition(afterOpp, state.currentPlayer);
       }
@@ -173,7 +174,7 @@ class HardStonesAI extends StonesAI {
     for (int r = 0; r < size; r++) {
       for (int c = 0; c < size; c++) {
         final pos = Position(r, c);
-        if (_controlsForRoad(state, pos, color)) {
+        if (BoardAnalysis.controlsForRoad(state, pos, color)) {
           // Edge positions are valuable
           if (r == 0 || r == size - 1 || c == 0 || c == size - 1) {
             edgeCount++;
@@ -201,13 +202,13 @@ class HardStonesAI extends StonesAI {
     if (afterMove == null) return 0;
 
     // Bonus for creating threats
-    final threatsBefore = _countThreats(state, state.currentPlayer);
-    final threatsAfter = _countThreats(afterMove, state.currentPlayer);
+    final threatsBefore = BoardAnalysis.countThreats(state, state.currentPlayer);
+    final threatsAfter = BoardAnalysis.countThreats(afterMove, state.currentPlayer);
     bonus += (threatsAfter - threatsBefore) * 8;
 
     // Bonus for reducing opponent's threats
-    final oppThreatsBefore = _countThreats(state, state.opponent);
-    final oppThreatsAfter = _countThreats(afterMove, state.opponent);
+    final oppThreatsBefore = BoardAnalysis.countThreats(state, state.opponent);
+    final oppThreatsAfter = BoardAnalysis.countThreats(afterMove, state.opponent);
     bonus += (oppThreatsBefore - oppThreatsAfter) * 4;
 
     if (move is AIPlacementMove) {
@@ -232,28 +233,6 @@ class HardStonesAI extends StonesAI {
     return bonus;
   }
 
-  /// Count winning threat positions
-  int _countThreats(GameState state, PlayerColor color) {
-    var threats = 0;
-    final board = state.board;
-    final size = state.boardSize;
-
-    for (int r = 0; r < size; r++) {
-      for (int c = 0; c < size; c++) {
-        final pos = Position(r, c);
-        if (board.stackAt(pos).isEmpty) {
-          final piece = Piece(type: PieceType.flat, color: color);
-          final newBoard = board.placePiece(pos, piece);
-          final testState = state.copyWith(board: newBoard);
-          if (_hasRoad(testState, color)) {
-            threats++;
-          }
-        }
-      }
-    }
-    return threats;
-  }
-
   /// Find moves that create 2+ winning threats
   List<AIMove> _findForkMoves(GameState state, List<AIMove> moves) {
     final forks = <AIMove>[];
@@ -262,7 +241,7 @@ class HardStonesAI extends StonesAI {
       final afterMove = _applyMove(state, move);
       if (afterMove == null) continue;
 
-      final ourThreats = _countThreats(afterMove, state.currentPlayer);
+      final ourThreats = BoardAnalysis.countThreats(afterMove, state.currentPlayer, maxCount: 2);
       if (ourThreats >= 2) {
         forks.add(move);
       }
@@ -281,7 +260,7 @@ class HardStonesAI extends StonesAI {
       final afterOpp = _applyMove(opponentState, oppMove);
       if (afterOpp == null) continue;
 
-      final oppThreats = _countThreats(afterOpp, state.opponent);
+      final oppThreats = BoardAnalysis.countThreats(afterOpp, state.opponent, maxCount: 2);
       if (oppThreats >= 2) {
         opponentForkPositions.addAll(_getAffectedPositions(oppMove));
       }
@@ -298,7 +277,7 @@ class HardStonesAI extends StonesAI {
   bool _isWinningMove(GameState state, AIMove move) {
     final newState = _applyMove(state, move);
     if (newState == null) return false;
-    return _hasRoad(newState, state.currentPlayer);
+    return BoardAnalysis.hasRoad(newState, state.currentPlayer);
   }
 
   List<AIMove> _findBlockingMoves(GameState state, List<AIMove> moves) {
@@ -309,7 +288,7 @@ class HardStonesAI extends StonesAI {
 
     for (final opponentMove in opponentMoves) {
       final afterOpponent = _applyMove(opponentState, opponentMove);
-      if (afterOpponent != null && _hasRoad(afterOpponent, state.opponent)) {
+      if (afterOpponent != null && BoardAnalysis.hasRoad(afterOpponent, state.opponent)) {
         opponentWinningPositions.addAll(_getAffectedPositions(opponentMove));
       }
     }
@@ -392,63 +371,6 @@ class HardStonesAI extends StonesAI {
     }
 
     return state.copyWith(board: boardState);
-  }
-
-  bool _hasRoad(GameState state, PlayerColor color) {
-    final size = state.boardSize;
-
-    for (int r = 0; r < size; r++) {
-      final start = Position(r, 0);
-      if (_controlsForRoad(state, start, color)) {
-        if (_canReachEdge(state, start, color, (p) => p.col == size - 1)) {
-          return true;
-        }
-      }
-    }
-
-    for (int c = 0; c < size; c++) {
-      final start = Position(0, c);
-      if (_controlsForRoad(state, start, color)) {
-        if (_canReachEdge(state, start, color, (p) => p.row == size - 1)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  bool _controlsForRoad(GameState state, Position pos, PlayerColor color) {
-    final top = state.board.stackAt(pos).topPiece;
-    if (top == null) return false;
-    if (top.color != color) return false;
-    return top.type != PieceType.standing;
-  }
-
-  bool _canReachEdge(
-    GameState state,
-    Position start,
-    PlayerColor color,
-    bool Function(Position) isTargetEdge,
-  ) {
-    final visited = <Position>{};
-    final queue = [start];
-
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      if (visited.contains(current)) continue;
-      visited.add(current);
-
-      if (isTargetEdge(current)) return true;
-
-      for (final neighbor in current.adjacentPositions(state.boardSize)) {
-        if (!visited.contains(neighbor) &&
-            _controlsForRoad(state, neighbor, color)) {
-          queue.add(neighbor);
-        }
-      }
-    }
-    return false;
   }
 
   double _scoreMove(GameState state, AIMove move) {
@@ -538,38 +460,7 @@ class HardStonesAI extends StonesAI {
   }
 
   double _evaluateChainExtension(GameState state, Position pos, PlayerColor color) {
-    final size = state.boardSize;
-    double score = 0;
-
-    final neighbors = pos.adjacentPositions(size);
-    var connectsToLeftOrTop = false;
-    var connectsToRightOrBottom = false;
-
-    for (final neighbor in neighbors) {
-      if (_controlsForRoad(state, neighbor, color)) {
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == 0 || p.row == 0)) {
-          connectsToLeftOrTop = true;
-        }
-        if (_canReachEdge(state, neighbor, color, (p) => p.col == size - 1 || p.row == size - 1)) {
-          connectsToRightOrBottom = true;
-        }
-      }
-    }
-
-    if (connectsToLeftOrTop && connectsToRightOrBottom) {
-      score += 10; // Bridge position - extremely valuable
-    } else if (connectsToLeftOrTop || connectsToRightOrBottom) {
-      score += 5;
-    }
-
-    if (pos.col == 0 || pos.row == 0) {
-      score += 2.5;
-    }
-    if (pos.col == size - 1 || pos.row == size - 1) {
-      score += 2.5;
-    }
-
-    return score;
+    return BoardAnalysis.evaluateChainExtension(state, pos, color);
   }
 
   bool _touchesEdge(Position pos, int boardSize) {

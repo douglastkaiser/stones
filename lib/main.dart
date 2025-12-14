@@ -167,9 +167,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       // Continue current game button
                       Consumer(
                         builder: (context, ref, _) {
-                          final gameState = ref.watch(gameStateProvider);
-                          if (gameState.turnNumber == 1 &&
-                              gameState.board.occupiedPositions.isEmpty) {
+                          final hasGameInProgress = ref.watch(gameStateProvider.select(
+                            (s) => s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty
+                          ));
+                          if (!hasGameInProgress) {
                             return const SizedBox();
                           }
                           return TextButton.icon(
@@ -2004,7 +2005,7 @@ class _GameBoard extends StatelessWidget {
               onStackViewStart: onLongPressStart,
               onStackViewEnd: onLongPressEnd,
               child: _BoardCell(
-                key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${lastEvent?.timestamp.millisecondsSinceEpoch ?? 0}_${ghostPieceType?.name ?? ''}'),
+                key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
                 stack: stack,
                 isSelected: isSelected,
                 isInDropPath: isInDropPath,
