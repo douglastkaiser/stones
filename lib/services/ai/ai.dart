@@ -32,14 +32,16 @@ abstract class StonesAI {
 }
 
 /// Base class for AI move descriptions
-sealed class AIMove {}
+sealed class AIMove {
+  const AIMove();
+}
 
 /// Placement move
 class AIPlacementMove extends AIMove {
   final Position position;
   final PieceType pieceType;
 
-  const AIPlacementMove(this.position, this.pieceType);
+  const AIPlacementMove(this.position, this.pieceType) : super();
 }
 
 /// Stack movement move
