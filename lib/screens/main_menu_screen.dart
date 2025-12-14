@@ -835,17 +835,13 @@ class _ScenarioListTile extends StatelessWidget {
             color: isDark ? Colors.white : null,
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(scenario.summary),
-            const SizedBox(height: 6),
-            Text(
-              scenario.objective,
-              style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade700),
-            ),
-          ],
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            scenario.summary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         trailing: Chip(
           label: Text(scenario.type == ScenarioType.puzzle ? 'Puzzle' : 'Tutorial'),

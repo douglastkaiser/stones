@@ -8,12 +8,14 @@ class ScenarioState {
   final int scriptedMoveIndex;
   final bool introShown;
   final bool completionShown;
+  final bool guidedStepComplete;
 
   const ScenarioState({
     this.activeScenario,
     this.scriptedMoveIndex = 0,
     this.introShown = false,
     this.completionShown = false,
+    this.guidedStepComplete = false,
   });
 
   ScenarioState copyWith({
@@ -21,6 +23,7 @@ class ScenarioState {
     int? scriptedMoveIndex,
     bool? introShown,
     bool? completionShown,
+    bool? guidedStepComplete,
     bool clearScenario = false,
   }) {
     return ScenarioState(
@@ -28,6 +31,7 @@ class ScenarioState {
       scriptedMoveIndex: scriptedMoveIndex ?? this.scriptedMoveIndex,
       introShown: introShown ?? this.introShown,
       completionShown: completionShown ?? this.completionShown,
+      guidedStepComplete: guidedStepComplete ?? this.guidedStepComplete,
     );
   }
 
@@ -49,6 +53,7 @@ class ScenarioStateNotifier extends StateNotifier<ScenarioState> {
       scriptedMoveIndex: 0,
       introShown: false,
       completionShown: false,
+      guidedStepComplete: false,
     );
   }
 
@@ -66,6 +71,10 @@ class ScenarioStateNotifier extends StateNotifier<ScenarioState> {
 
   void markCompletionShown() {
     state = state.copyWith(completionShown: true);
+  }
+
+  void markGuidedStepComplete() {
+    state = state.copyWith(guidedStepComplete: true);
   }
 }
 

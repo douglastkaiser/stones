@@ -15,6 +15,7 @@ class GameScenario {
   final String summary;
   final String objective;
   final List<String> dialogue;
+  final GuidedMove guidedMove;
   final GameState Function() buildInitialState;
   final List<AIMove> scriptedResponses;
   final String completionText;
@@ -27,11 +28,73 @@ class GameScenario {
     required this.summary,
     required this.objective,
     required this.dialogue,
+    required this.guidedMove,
     required this.buildInitialState,
     required this.scriptedResponses,
     required this.completionText,
     this.aiDifficulty = AIDifficulty.easy,
   });
+}
+
+/// Type of action the user is being guided toward.
+enum GuidedMoveType { placement, stackMove }
+
+/// Structured hint for the exact move we expect during a scenario.
+class GuidedMove {
+  final GuidedMoveType type;
+
+  /// For placement moves, the required destination.
+  final Position target;
+
+  /// For placement moves, the expected piece type (optional).
+  final PieceType? pieceType;
+
+  /// For stack moves, the origin position.
+  final Position? from;
+
+  /// For stack moves, the direction of travel.
+  final Direction? direction;
+
+  /// For stack moves, the planned drop pattern.
+  final List<int>? drops;
+
+  const GuidedMove.placement({required this.target, this.pieceType})
+      : type = GuidedMoveType.placement,
+        from = null,
+        direction = null,
+        drops = null;
+
+  const GuidedMove.stackMove({
+    required this.from,
+    required this.direction,
+    required this.drops,
+  })  : type = GuidedMoveType.stackMove,
+        target = from,
+        pieceType = null;
+
+  /// Cells to highlight so the user knows where to interact.
+  Set<Position> highlightedCells(int boardSize) {
+    if (type == GuidedMoveType.placement) {
+      return {target};
+    }
+
+    final start = from!;
+    final dir = direction!;
+    final steps = drops?.length ?? 0;
+    final highlights = <Position>{start};
+    var current = start;
+    for (var i = 0; i < steps; i++) {
+      current = dir.apply(current);
+      if (current.row < 0 ||
+          current.col < 0 ||
+          current.row >= boardSize ||
+          current.col >= boardSize) {
+        break;
+      }
+      highlights.add(current);
+    }
+    return highlights;
+  }
 }
 
 /// Stack placed at a concrete position for a scenario setup.
@@ -91,14 +154,18 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
     id: 'tutorial_1',
     title: 'Tutorial 1',
     type: ScenarioType.tutorial,
-    summary: 'Practice simple flat placements and extending a road.',
-    objective: 'Use your white flats to connect the open lane across the center.',
-    dialogue: [
-      'You are playing as White. A road is nearly complete through the middle of the board.',
-      'Try placing a flat stone to stitch the two halves together while keeping an eye on Black\'s blocks.',
+    summary: 'Finish the open road with one flat.',
+    objective: 'Tap the highlighted square to drop a flat and claim the row.',
+    dialogue: const [
+      'You are White. The center road is almost done.',
+      'Place a single flat on the glowing cell to connect your line.',
     ],
+    guidedMove: const GuidedMove.placement(
+      target: Position(2, 2),
+      pieceType: PieceType.flat,
+    ),
     completionText:
-        'Notice how a single flat placement can complete a continuous white path. Small gaps are often the fastest wins.',
+        'That one flat closes the lane and instantly finishes the road. Look for short gaps like this.',
     buildInitialState: () => _buildScenarioState(
       boardSize: 5,
       currentPlayer: PlayerColor.white,
@@ -117,87 +184,47 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
         ),
         PositionedStack(
-          position: Position(1, 2),
-          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+          position: Position(2, 4),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
         ),
         PositionedStack(
-          position: Position(3, 2),
+          position: Position(1, 1),
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
-        ),
-        PositionedStack(
-          position: Position(1, 3),
-          stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
         ),
       ],
     ),
-    scriptedResponses: [
-      const AIPlacementMove(Position(0, 4), PieceType.flat),
-    ],
+    scriptedResponses: const [],
   ),
   GameScenario(
     id: 'tutorial_2',
     title: 'Tutorial 2',
     type: ScenarioType.tutorial,
-    summary: 'Learn to move stacks and flatten a wall with a capstone.',
-    objective: 'Slide your capstone onto the wall to clear a path for your road.',
-    dialogue: [
-      'Capstones can flatten standing stones, letting your road continue.',
-      'Pick up the capstone on d3 and move it right to crush the wall.',
+    summary: 'Slide your capstone to crush a wall.',
+    objective: 'Move from c3 to the glowing square to flatten the standing stone.',
+    dialogue: const [
+      'Capstones clear walls. Use yours to reopen the lane.',
+      'Pick up the capstone and slide it onto the highlighted space.',
     ],
+    guidedMove: const GuidedMove.stackMove(
+      from: Position(2, 1),
+      direction: Direction.right,
+      drops: [1],
+    ),
     completionText:
-        'Flattening walls with a capstone both removes the block and keeps your stone on top to control the square.',
+        'Crushing the wall reclaims the file and keeps your capstone on top to hold the road.',
     buildInitialState: () => _buildScenarioState(
       boardSize: 5,
       currentPlayer: PlayerColor.white,
       turnNumber: 10,
       stacks: const [
         PositionedStack(
-          position: Position(2, 2),
+          position: Position(2, 1),
           stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.white)]),
         ),
         PositionedStack(
-          position: Position(2, 3),
+          position: Position(2, 2),
           stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
         ),
-        PositionedStack(
-          position: Position(2, 1),
-          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
-        ),
-        PositionedStack(
-          position: Position(1, 2),
-          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
-        ),
-        PositionedStack(
-          position: Position(3, 2),
-          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
-        ),
-        PositionedStack(
-          position: Position(1, 3),
-          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
-        ),
-      ],
-    ),
-    scriptedResponses: [
-      const AIPlacementMove(Position(0, 0), PieceType.flat),
-    ],
-  ),
-  GameScenario(
-    id: 'puzzle_1',
-    title: 'Puzzle 1',
-    type: ScenarioType.puzzle,
-    summary: 'You are White to move – find Tak in 2.',
-    objective: 'Flatten the wall in the center column and finish a vertical road.',
-    dialogue: [
-      'White controls most of the center file, but a black wall is stopping the road.',
-      'Use your capstone on d3 to smash through and set up a finish on your next turn.',
-    ],
-    completionText:
-        'The capstone opens the column while your follow-up placement completes the connection for Tak.',
-    buildInitialState: () => _buildScenarioState(
-      boardSize: 5,
-      currentPlayer: PlayerColor.white,
-      turnNumber: 12,
-      stacks: const [
         PositionedStack(
           position: Position(0, 2),
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
@@ -207,46 +234,201 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
         ),
         PositionedStack(
-          position: Position(2, 2),
-          stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
-        ),
-        PositionedStack(
           position: Position(3, 2),
-          stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.white)]),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
         ),
         PositionedStack(
           position: Position(4, 2),
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
         ),
         PositionedStack(
-          position: Position(2, 3),
+          position: Position(1, 3),
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
         ),
       ],
     ),
-    scriptedResponses: [
-      const AIPlacementMove(Position(0, 4), PieceType.flat),
+    scriptedResponses: const [],
+  ),
+  GameScenario(
+    id: 'tutorial_3',
+    title: 'Tutorial 3',
+    type: ScenarioType.tutorial,
+    summary: 'Spread a tall stack cleanly.',
+    objective: 'Drag the highlighted stack left, dropping as you go.',
+    dialogue: const [
+      'Tall stacks can cover multiple cells in one motion.',
+      'Split this stack to hold the center and left lane at the same time.',
     ],
+    guidedMove: const GuidedMove.stackMove(
+      from: Position(2, 3),
+      direction: Direction.left,
+      drops: [1, 1],
+    ),
+    completionText:
+        'Dropping pieces along the path leaves anchors behind and keeps pressure on two fronts.',
+    buildInitialState: () => _buildScenarioState(
+      boardSize: 5,
+      currentPlayer: PlayerColor.white,
+      turnNumber: 12,
+      stacks: const [
+        PositionedStack(
+          position: Position(2, 3),
+          stack: PieceStack([
+            Piece(type: PieceType.flat, color: PlayerColor.white),
+            Piece(type: PieceType.flat, color: PlayerColor.white),
+          ]),
+        ),
+        PositionedStack(
+          position: Position(2, 0),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(2, 4),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(1, 2),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(3, 2),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+        ),
+        PositionedStack(
+          position: Position(1, 4),
+          stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+        ),
+      ],
+    ),
+    scriptedResponses: const [],
+  ),
+  GameScenario(
+    id: 'puzzle_1',
+    title: 'Puzzle 1',
+    type: ScenarioType.puzzle,
+    summary: 'White to move – finish the column.',
+    objective: 'Place the flat on the glowing square to score Tak.',
+    dialogue: const [
+      'Your vertical road is one cell short.',
+      'Fill the gap to connect top to bottom immediately.',
+    ],
+    guidedMove: const GuidedMove.placement(
+      target: Position(3, 1),
+      pieceType: PieceType.flat,
+    ),
+    completionText:
+        'Dropping the flat closes the only gap and ends the game on the spot.',
+    buildInitialState: () => _buildScenarioState(
+      boardSize: 5,
+      currentPlayer: PlayerColor.white,
+      turnNumber: 12,
+      stacks: const [
+        PositionedStack(
+          position: Position(0, 1),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(1, 1),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(2, 1),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(4, 1),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(2, 2),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+        ),
+        PositionedStack(
+          position: Position(1, 3),
+          stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+        ),
+      ],
+    ),
+    scriptedResponses: const [],
   ),
   GameScenario(
     id: 'puzzle_2',
     title: 'Puzzle 2',
     type: ScenarioType.puzzle,
-    summary: 'Break the fork and keep the road threat alive.',
-    objective: 'Advance your stack to spread pieces while Black reacts predictably.',
-    dialogue: [
-      'White has a strong stack on c3 ready to spread along the third row.',
-      'Try moving the stack to the right, dropping stones to maintain multiple threats.',
+    summary: 'Smash the block and keep moving.',
+    objective: 'Slide the capstone down to break Black\'s wall.',
+    dialogue: const [
+      'Black dropped a wall in your road.',
+      'Use the capstone above it to punch through.',
     ],
+    guidedMove: const GuidedMove.stackMove(
+      from: Position(2, 1),
+      direction: Direction.down,
+      drops: [1],
+    ),
     completionText:
-        'Spreading a tall stack lets you keep tempo while forcing your opponent to defend in multiple places.',
+        'The wall is gone and the capstone now anchors the row for Tak.',
     buildInitialState: () => _buildScenarioState(
       boardSize: 5,
       currentPlayer: PlayerColor.white,
       turnNumber: 14,
       stacks: const [
         PositionedStack(
-          position: Position(2, 2),
+          position: Position(2, 1),
+          stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(3, 1),
+          stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+        ),
+        PositionedStack(
+          position: Position(3, 0),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(3, 2),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(3, 3),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(3, 4),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(0, 2),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+        ),
+      ],
+    ),
+    scriptedResponses: const [],
+  ),
+  GameScenario(
+    id: 'puzzle_3',
+    title: 'Puzzle 3',
+    type: ScenarioType.puzzle,
+    summary: 'Split a tower to make dual threats.',
+    objective: 'Drag the tall stack onto the glowing squares in one sweep.',
+    dialogue: const [
+      'White controls the center tower.',
+      'Spread it left to cover two lanes at once.',
+    ],
+    guidedMove: const GuidedMove.stackMove(
+      from: Position(1, 3),
+      direction: Direction.left,
+      drops: [1, 1, 1],
+    ),
+    completionText:
+        'Leaving stones behind turns one tower into multiple anchors and forces tough answers.',
+    buildInitialState: () => _buildScenarioState(
+      boardSize: 5,
+      currentPlayer: PlayerColor.white,
+      turnNumber: 16,
+      stacks: const [
+        PositionedStack(
+          position: Position(1, 3),
           stack: PieceStack([
             Piece(type: PieceType.flat, color: PlayerColor.white),
             Piece(type: PieceType.flat, color: PlayerColor.white),
@@ -254,27 +436,27 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
           ]),
         ),
         PositionedStack(
-          position: Position(2, 3),
+          position: Position(1, 0),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(1, 4),
+          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        ),
+        PositionedStack(
+          position: Position(2, 2),
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
         ),
         PositionedStack(
-          position: Position(1, 3),
+          position: Position(0, 3),
           stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
         ),
         PositionedStack(
-          position: Position(3, 1),
+          position: Position(2, 3),
           stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
-        ),
-        PositionedStack(
-          position: Position(4, 2),
-          stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
         ),
       ],
     ),
-    scriptedResponses: [
-      const AIPlacementMove(Position(0, 0), PieceType.flat),
-      const AIPlacementMove(Position(4, 4), PieceType.flat),
-    ],
-    aiDifficulty: AIDifficulty.medium,
+    scriptedResponses: const [],
   ),
 ];

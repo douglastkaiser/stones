@@ -411,6 +411,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
+    final guidedMove =
+        scenarioState.guidedStepComplete ? null : activeScenario?.guidedMove;
+    final scenarioHighlights = guidedMove?.highlightedCells(gameState.boardSize) ??
+        <Position>{};
     // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
     // This prevents race condition where creator can play multiple moves before
     // Firestore listener updates session.currentTurn
@@ -475,7 +479,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    if (activeScenario != null && gameState.isGameOver && !scenarioState.completionShown) {
+    if (activeScenario != null &&
+        !scenarioState.completionShown &&
+        (gameState.isGameOver || scenarioState.guidedStepComplete)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
         showDialog(
@@ -588,7 +594,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               lastMovePositions: lastMovePositions,
               explodedPosition: _longPressedPosition,
               explodedStack: _longPressedStack,
-              onCellTap: (pos) => _handleCellTap(context, ref, pos),
+              highlightedPositions: scenarioHighlights,
+              onCellTap: (pos) =>
+                  _handleCellTap(context, ref, pos, guidedMove),
               onLongPressStart: _startStackView,
               onLongPressEnd: _endStackView,
             ),
@@ -831,7 +839,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  void _handleCellTap(BuildContext context, WidgetRef ref, Position pos) {
+  void _handleCellTap(
+      BuildContext context, WidgetRef ref, Position pos, GuidedMove? guidedMove) {
     _debugLog('_handleCellTap: pos=$pos');
     final gameState = ref.read(gameStateProvider);
     final uiState = ref.read(uiStateProvider);
@@ -868,13 +877,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Handle based on current interaction mode
     switch (uiState.mode) {
       case InteractionMode.idle:
-        _handleIdleTap(ref, pos, stack, gameState);
+        _handleIdleTap(ref, pos, stack, gameState, guidedMove);
 
       case InteractionMode.placingPiece:
-        _handlePlacingPieceTap(ref, pos, stack, gameState, uiState);
+        _handlePlacingPieceTap(
+            ref, pos, stack, gameState, uiState, guidedMove);
 
       case InteractionMode.movingStack:
-        _handleMovingStackTap(ref, pos, stack, gameState, uiState);
+        _handleMovingStackTap(ref, pos, stack, gameState, uiState, guidedMove);
 
       case InteractionMode.droppingPieces:
         _handleDroppingPiecesTap(ref, pos, stack, gameState, uiState);
@@ -882,8 +892,23 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Handle tap when in idle mode
-  void _handleIdleTap(WidgetRef ref, Position pos, PieceStack stack, GameState gameState) {
+  void _handleIdleTap(WidgetRef ref, Position pos, PieceStack stack,
+      GameState gameState, GuidedMove? guidedMove) {
     final uiNotifier = ref.read(uiStateProvider.notifier);
+
+    if (guidedMove != null) {
+      if (guidedMove.type == GuidedMoveType.placement) {
+        if (stack.isEmpty && pos != guidedMove.target) {
+          return;
+        }
+        if (!stack.isEmpty) {
+          return;
+        }
+      } else if (guidedMove.type == GuidedMoveType.stackMove &&
+          pos != guidedMove.from) {
+        return;
+      }
+    }
 
     if (stack.isEmpty) {
       // Tap empty cell: show ghost piece for placement
@@ -905,8 +930,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   /// Handle tap when placing a piece (ghost piece showing)
   void _handlePlacingPieceTap(WidgetRef ref, Position pos, PieceStack stack,
-      GameState gameState, UIState uiState) {
+      GameState gameState, UIState uiState, GuidedMove? guidedMove) {
     final uiNotifier = ref.read(uiStateProvider.notifier);
+
+    if (guidedMove != null && guidedMove.type == GuidedMoveType.placement) {
+      if (pos != guidedMove.target) {
+        return;
+      }
+    }
 
     if (uiState.selectedPosition == pos) {
       // Tap same cell: place the piece
@@ -924,14 +955,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Tap on a stack: cancel placement and handle like idle
     uiNotifier.reset();
-    _handleIdleTap(ref, pos, stack, gameState);
+    _handleIdleTap(ref, pos, stack, gameState, guidedMove);
   }
 
   /// Handle tap when moving a stack (stack selected, waiting for direction)
   void _handleMovingStackTap(WidgetRef ref, Position pos, PieceStack stack,
-      GameState gameState, UIState uiState) {
+      GameState gameState, UIState uiState, GuidedMove? guidedMove) {
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final selectedPos = uiState.selectedPosition!;
+
+    if (guidedMove != null && guidedMove.type == GuidedMoveType.stackMove) {
+      final allowedPositions = guidedMove.highlightedCells(gameState.boardSize);
+      if (!allowedPositions.contains(pos)) {
+        return;
+      }
+    }
 
     if (pos == selectedPos) {
       // Tap same stack: cycle piece count
@@ -1082,14 +1120,34 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   bool _performPlacementMove(Position pos, PieceType type, WidgetRef ref) {
     final gameState = ref.read(gameStateProvider);
+    final session = ref.read(gameSessionProvider);
+    final scenarioState = ref.read(scenarioStateProvider);
+    final scenario = session.scenario ?? scenarioState.activeScenario;
+    final guidanceActive =
+        scenario != null && !scenarioState.guidedStepComplete;
     final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
+
+    if (guidanceActive &&
+        scenario!.guidedMove.type == GuidedMoveType.placement &&
+        !(session.mode == GameMode.vsComputer &&
+            gameState.currentPlayer == PlayerColor.black)) {
+      final expected = scenario.guidedMove;
+      if (pos != expected.target ||
+          (expected.pieceType != null && expected.pieceType != type)) {
+        soundManager.playIllegalMove();
+        return false;
+      }
+    }
 
     _debugLog('_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
     final success = gameNotifier.placePiece(pos, type);
     _debugLog('_performPlacementMove: placePiece result=$success');
     if (success) {
+      if (guidanceActive && scenario!.guidedMove.type == GuidedMoveType.placement) {
+        ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
+      }
       final moveRecord = gameNotifier.lastMoveRecord;
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
@@ -1126,6 +1184,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final dropPositions = _calculateDropPositions(from, dir, drops.length);
 
     final gameState = ref.read(gameStateProvider);
+    final session = ref.read(gameSessionProvider);
+    final scenarioState = ref.read(scenarioStateProvider);
+    final scenario = session.scenario ?? scenarioState.activeScenario;
+    final guidanceActive =
+        scenario != null && !scenarioState.guidedStepComplete;
     final stack = gameState.board.stackAt(from);
     final topPiece = stack.topPiece;
     Position? flattenedWallPos;
@@ -1138,8 +1201,29 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
+
+    if (guidanceActive &&
+        !(session.mode == GameMode.vsComputer &&
+            gameState.currentPlayer == PlayerColor.black)) {
+      final guided = scenario!.guidedMove;
+      final expectedDrops = guided.drops ?? const [];
+      final dropsMatch = expectedDrops.length == drops.length &&
+          List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
+              .every((e) => e);
+      if (guided.type != GuidedMoveType.stackMove ||
+          guided.from != from ||
+          guided.direction != dir ||
+          !dropsMatch) {
+        soundManager.playIllegalMove();
+        return false;
+      }
+    }
+
     final success = gameNotifier.moveStack(from, dir, drops);
     if (success) {
+      if (guidanceActive && scenario!.guidedMove.type == GuidedMoveType.stackMove) {
+        ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
+      }
       final moveRecord = gameNotifier.lastMoveRecord;
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
@@ -2035,6 +2119,7 @@ class _GameBoard extends StatelessWidget {
   final UIState uiState;
   final AnimationState animationState;
   final Set<Position>? lastMovePositions;
+  final Set<Position> highlightedPositions;
   final Position? explodedPosition;
   final PieceStack? explodedStack;
   final Function(Position) onCellTap;
@@ -2048,6 +2133,7 @@ class _GameBoard extends StatelessWidget {
     required this.onCellTap,
     required this.onLongPressStart,
     required this.onLongPressEnd,
+    this.highlightedPositions = const {},
     this.explodedPosition,
     this.explodedStack,
     this.lastMovePositions,
@@ -2154,6 +2240,7 @@ class _GameBoard extends StatelessWidget {
 
             // Check if this is a valid move destination (legal move hint)
             final isLegalMoveHint = validMoveDestinations.contains(pos);
+            final isScenarioHint = highlightedPositions.contains(pos);
 
             // Ghost piece info for placement mode
             final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
@@ -2186,6 +2273,7 @@ class _GameBoard extends StatelessWidget {
                 wasWallFlattened: wasWallFlattened,
                 isLastMove: isLastMove,
                 isLegalMoveHint: isLegalMoveHint,
+                isScenarioHint: isScenarioHint,
                 ghostPieceType: ghostPieceType,
                 ghostPieceColor: ghostPieceColor,
                 pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
@@ -2294,6 +2382,7 @@ class _BoardCell extends StatefulWidget {
   final bool wasWallFlattened;
   final bool isLastMove;
   final bool isLegalMoveHint;
+  final bool isScenarioHint;
   final bool showExploded;
   final PieceStack? explodedStack;
 
@@ -2329,6 +2418,7 @@ class _BoardCell extends StatefulWidget {
     this.wasWallFlattened = false,
     this.isLastMove = false,
     this.isLegalMoveHint = false,
+    this.isScenarioHint = false,
     this.showExploded = false,
     this.explodedStack,
   });
@@ -2553,6 +2643,29 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             color: GameColors.cellDropPathGlow.withValues(alpha: 0.4),
             blurRadius: 4,
             spreadRadius: 0,
+          ),
+        ],
+      );
+    } else if (widget.isScenarioHint) {
+      decoration = BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFECF4FF),
+            Color(0xFFD2E2FF),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: GameColors.boardFrameInner,
+          width: borderWidth * 0.9,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: GameColors.boardFrameInner.withValues(alpha: 0.35),
+            blurRadius: 8,
+            spreadRadius: 1,
           ),
         ],
       );
