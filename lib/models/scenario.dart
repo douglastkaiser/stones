@@ -44,7 +44,7 @@ class GuidedMove {
   final GuidedMoveType type;
 
   /// For placement moves, the required destination.
-  final Position target;
+  final Position? target;
 
   /// For placement moves, the expected piece type (optional).
   final PieceType? pieceType;
@@ -75,7 +75,7 @@ class GuidedMove {
   /// Cells to highlight so the user knows where to interact.
   Set<Position> highlightedCells(int boardSize) {
     if (type == GuidedMoveType.placement) {
-      return {target};
+      return {target!};
     }
 
     final start = from!;

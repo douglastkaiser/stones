@@ -901,7 +901,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         if (stack.isEmpty && pos != guidedMove.target) {
           return;
         }
-        if (!stack.isEmpty) {
+        if (stack.isNotEmpty) {
           return;
         }
       } else if (guidedMove.type == GuidedMoveType.stackMove &&
@@ -1129,8 +1129,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
-    if (guidanceActive &&
-        scenario!.guidedMove.type == GuidedMoveType.placement &&
+    if (scenario != null &&
+        guidanceActive &&
+        scenario.guidedMove.type == GuidedMoveType.placement &&
         !(session.mode == GameMode.vsComputer &&
             gameState.currentPlayer == PlayerColor.black)) {
       final expected = scenario.guidedMove;
@@ -1144,8 +1145,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _debugLog('_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
     final success = gameNotifier.placePiece(pos, type);
     _debugLog('_performPlacementMove: placePiece result=$success');
-    if (success) {
-      if (guidanceActive && scenario!.guidedMove.type == GuidedMoveType.placement) {
+      if (success) {
+        if (scenario != null &&
+            guidanceActive &&
+            scenario.guidedMove.type == GuidedMoveType.placement) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
@@ -1202,10 +1205,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
-    if (guidanceActive &&
+    if (scenario != null &&
+        guidanceActive &&
         !(session.mode == GameMode.vsComputer &&
             gameState.currentPlayer == PlayerColor.black)) {
-      final guided = scenario!.guidedMove;
+      final guided = scenario.guidedMove;
       final expectedDrops = guided.drops ?? const [];
       final dropsMatch = expectedDrops.length == drops.length &&
           List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
@@ -1221,7 +1225,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final success = gameNotifier.moveStack(from, dir, drops);
     if (success) {
-      if (guidanceActive && scenario!.guidedMove.type == GuidedMoveType.stackMove) {
+      if (scenario != null &&
+          guidanceActive &&
+          scenario.guidedMove.type == GuidedMoveType.stackMove) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
