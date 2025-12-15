@@ -215,8 +215,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     GameMode mode,
     AIDifficulty difficulty,
   ) {
+    ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
-        GameSessionConfig(mode: mode, aiDifficulty: difficulty);
+        GameSessionConfig(mode: mode, aiDifficulty: difficulty, scenario: null);
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -277,6 +278,96 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     } else {
       showPickers();
     }
+  }
+
+  void _startScenarioFlow(BuildContext context, GameScenario scenario) {
+    final gameState = ref.read(gameStateProvider);
+    final isGameInProgress = !gameState.isGameOver &&
+        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+
+    void startScenario() {
+      ref.read(scenarioStateProvider.notifier).startScenario(scenario);
+      ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+        mode: GameMode.vsComputer,
+        aiDifficulty: scenario.aiDifficulty,
+        scenario: scenario,
+      );
+      ref.read(gameStateProvider.notifier).loadState(scenario.buildInitialState());
+      ref.read(uiStateProvider.notifier).reset();
+      ref.read(animationStateProvider.notifier).reset();
+      ref.read(moveHistoryProvider.notifier).clear();
+      ref.read(lastMoveProvider.notifier).state = null;
+      ref.read(chessClockProvider.notifier).stop();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const GameScreen()),
+      );
+    }
+
+    if (isGameInProgress) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Replace current game?'),
+          content: Text(
+            'Starting "${scenario.title}" will replace the game you are currently playing.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                startScenario();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start Scenario'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      startScenario();
+    }
+  }
+
+  void _openScenarioSelector(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tutorials & Puzzles'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final scenario in tutorialAndPuzzleLibrary)
+                  _ScenarioListTile(
+                    scenario: scenario,
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      _startScenarioFlow(context, scenario);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showVsComputerPickerDialog(BuildContext context) {
@@ -549,6 +640,36 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         style: TextStyle(color: GameColors.subtitleColor),
                       ),
 
+                      const SizedBox(height: 20),
+
+                      // Tutorial and puzzle hub
+                      SizedBox(
+                        width: 220,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _openScenarioSelector(context),
+                          icon: const Icon(Icons.school, size: 22),
+                          label: const Text(
+                            'Tutorials & Puzzles',
+                            style: TextStyle(fontSize: 17),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: GameColors.boardFrameInner,
+                            side: const BorderSide(color: GameColors.boardFrameInner, width: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Guided boards with scripted examples',
+                        style: TextStyle(color: GameColors.subtitleColor),
+                      ),
+
                       const SizedBox(height: 16),
 
                       // Continue game button (if game in progress)
@@ -670,6 +791,66 @@ class _LogoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ScenarioListTile extends StatelessWidget {
+  final GameScenario scenario;
+  final VoidCallback onTap;
+
+  const _ScenarioListTile({required this.scenario, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPuzzle = scenario.type == ScenarioType.puzzle;
+    final accent = isPuzzle ? Colors.deepPurple : GameColors.boardFrameInner;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: isDark ? 0.55 : 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          backgroundColor: accent.withValues(alpha: 0.12),
+          foregroundColor: accent,
+          child: Icon(isPuzzle ? Icons.extension : Icons.menu_book),
+        ),
+        title: Text(
+          scenario.title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : null,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            scenario.summary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        trailing: Chip(
+          label: Text(scenario.type == ScenarioType.puzzle ? 'Puzzle' : 'Tutorial'),
+          backgroundColor: accent.withValues(alpha: 0.15),
+          labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
 }
 
 class _PlayerChip extends StatelessWidget {

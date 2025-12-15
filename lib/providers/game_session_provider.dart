@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/scenario.dart';
 import '../services/ai/ai.dart';
 
 /// Type of game being played
@@ -13,19 +14,24 @@ enum GameMode {
 class GameSessionConfig {
   final GameMode mode;
   final AIDifficulty aiDifficulty;
+  final GameScenario? scenario;
 
   const GameSessionConfig({
     this.mode = GameMode.local,
     this.aiDifficulty = AIDifficulty.intro,
+    this.scenario,
   });
 
   GameSessionConfig copyWith({
     GameMode? mode,
     AIDifficulty? aiDifficulty,
+    GameScenario? scenario,
+    bool clearScenario = false,
   }) {
     return GameSessionConfig(
       mode: mode ?? this.mode,
       aiDifficulty: aiDifficulty ?? this.aiDifficulty,
+      scenario: clearScenario ? null : (scenario ?? this.scenario),
     );
   }
 }
