@@ -2585,7 +2585,10 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     // Build decoration based on state
     BoxDecoration decoration;
 
-    if (widget.isSelected) {
+    // Only apply fancy highlighting to stacks with multiple pieces
+    final isMultiPieceStack = widget.stack.height > 1;
+
+    if (widget.isSelected && isMultiPieceStack) {
       decoration = BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -2612,7 +2615,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ),
         ],
       );
-    } else if (widget.isNextDrop) {
+    } else if (widget.isNextDrop && isMultiPieceStack) {
       decoration = BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -2632,7 +2635,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ),
         ],
       );
-    } else if (widget.isInDropPath) {
+    } else if (widget.isInDropPath && isMultiPieceStack) {
       decoration = BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -2675,7 +2678,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ),
         ],
       );
-    } else if (widget.isLegalMoveHint) {
+    } else if (widget.isLegalMoveHint && isMultiPieceStack) {
       // Legal move destination hint (cyan/teal highlight)
       decoration = BoxDecoration(
         gradient: const LinearGradient(
@@ -2780,8 +2783,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     }
 
     // Add last move highlighting (subtle outline)
-    // Only show if not already highlighted by another state
-    if (widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad) {
+    // Only show if not already highlighted by another state and is a multi-piece stack
+    if (isMultiPieceStack && widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad) {
       cellContent = Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -3058,8 +3061,10 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
   Widget _buildExplodedStackView(PieceStack stack, double cellSize) {
     final pieceSize = cellSize * 0.62;
-    final maxLift = cellSize * 0.75;
-    final fanSpread = cellSize * 0.08;
+    // Increase vertical lift for taller stacks - scales with height
+    final maxLift = cellSize * (0.75 + (stack.height * 0.08));
+    // Keep horizontal spread consistent regardless of stack height
+    final fanSpread = cellSize * 0.06;
 
     return AnimatedBuilder(
       animation: _stackReveal,
@@ -3117,9 +3122,14 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   ) {
     final fromTop = height - 1 - index;
     final liftFactor = (fromTop + 1) / height;
-    final horizontalOffset = (fromTop - (height - 1) / 2) * fanSpread * progress;
+    // Cap horizontal spread to max ±2 units for consistent width
+    final relativePos = (fromTop - (height - 1) / 2);
+    final cappedPos = relativePos.clamp(-2.0, 2.0);
+    final horizontalOffset = cappedPos * fanSpread * progress;
+    // Increase vertical offset more dramatically for tower effect
     final verticalOffset = -progress * maxLift * liftFactor;
-    final tilt = ((fromTop - (height - 1) / 2) * 0.04) * progress;
+    // Reduce tilt for more vertical tower appearance
+    final tilt = (cappedPos * 0.02) * progress;
 
     final isLightPlayer = piece.color == PlayerColor.white;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
@@ -3159,8 +3169,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final height = stack.height;
 
     // Calculate responsive values based on board size
-    // Vertical offset between pieces to show stacking
-    final verticalOffset = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.5 : 3.0);
+    // Vertical offset between pieces to show stacking - increased for better tower appearance
+    final verticalOffset = widget.boardSize <= 4 ? 5.5 : (widget.boardSize <= 6 ? 5.0 : 4.5);
     final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
     final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
@@ -4119,7 +4129,8 @@ class _TrapezoidPainter extends CustomPainter {
     final h = size.height;
 
     // Trapezoid: wider at bottom, narrower at top
-    final inset = w * 0.15;
+    // Reduced inset for larger visual weight to match semi-circle
+    final inset = w * 0.10;
     final path = Path()
       ..moveTo(inset, 0) // top left
       ..lineTo(w - inset, 0) // top right
@@ -4181,11 +4192,11 @@ class _SemiCirclePainter extends CustomPainter {
     final chordY = h * 0.1; // Where the chord (flat bottom) sits
 
     final path = Path();
-    // Start from left side of chord
-    path.moveTo(centerX - radius * 0.95, h - chordY);
+    // Start from left side of chord - adjusted for better visual balance with trapezoid
+    path.moveTo(centerX - radius * 0.92, h - chordY);
     // Arc over the top
     path.arcToPoint(
-      Offset(centerX + radius * 0.95, h - chordY),
+      Offset(centerX + radius * 0.92, h - chordY),
       radius: Radius.circular(radius),
       largeArc: true,
     );
