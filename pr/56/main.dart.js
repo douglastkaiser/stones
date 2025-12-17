@@ -98012,13 +98012,13 @@ case 2:return A.n(null,r)}})
 return A.o($async$yS,r)},
 I(a){var s,r,q,p=null,o=A.qv(p,p,p,!0,!0,B.B,p,1,p,p,p,!1,p,!1,B.j,p,p,p,!0,p,p,p,p,p,B.a1n,p,p,p,1,p,!0),n=A.d2(A.ev(p,p,p,new A.Kq(p),B.I),80,80),m=A.P(a).ok.e
 m=A.af("STONES",p,p,p,m==null?p:m.Ki(B.du,B.X,4),p,p)
-s=A.af("v1.0.0+164.g94c86f6.d20251217 (94c86f6)",p,p,p,A.b9(p,p,B.dv,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
+s=A.af("v1.0.0+165.gad73fa7.d20251217 (ad73fa7)",p,p,p,A.b9(p,p,B.dv,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
 r=A.P(a).ok.y
 q=t.p
 return A.tE(o,A.aJK(A.b([A.eu(A.bM(A.b([n,B.av,m,B.c3,s,B.aS,A.af("An abstract strategy game",p,p,p,r==null?p:r.bq(B.bs),p,p)],q),B.p,B.t,B.w),p,p),B.Ws,B.a3d,B.av,new A.GO("Legal",A.b([new A.Im(B.Kr,"Privacy Policy","How we handle your data",this.ga9S(),p),B.bJ,new A.Im(B.Kg,"Open Source Licenses","View third-party licenses",new A.a4j(this,a),p)],q),p),B.nj],q),B.q5,p),p)}}
 A.a4j.prototype={
 $0(){var s=null
-A.baN(new A.be(B.cw,A.d2(A.ev(s,s,s,new A.Kq(s),B.I),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+164.g94c86f6.d20251217 (94c86f6)",this.b)
+A.baN(new A.be(B.cw,A.d2(A.ev(s,s,s,new A.Kq(s),B.I),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+165.gad73fa7.d20251217 (ad73fa7)",this.b)
 return s},
 $S:0}
 A.GO.prototype={
@@ -98431,7 +98431,7 @@ return A.l(A.aHt(A.Uv().V("privacy"),B.rd),$async$A6)
 case 2:return A.n(null,r)}})
 return A.o($async$A6,r)},
 I(a){var s=null
-return A.bF(s,A.eu(A.cd(A.b([A.af("v1.0.0+164.g94c86f6.d20251217 (94c86f6)",s,s,s,A.b9(s,s,B.dv,s,s,s,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),A.af("  \u2022  ",s,s,s,A.b9(s,s,B.hU,s,s,s,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),A.l2(s,A.af("Privacy",s,s,s,A.b9(s,s,B.dv,s,B.np,B.dv,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),B.aj,!1,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,this.gakW(),s,s,s,s,s,s)],t.p),B.p,B.t,B.ar,0),s,s),B.n,s,s,s,s,s,B.io,s,s,s)}}
+return A.bF(s,A.eu(A.cd(A.b([A.af("v1.0.0+165.gad73fa7.d20251217 (ad73fa7)",s,s,s,A.b9(s,s,B.dv,s,s,s,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),A.af("  \u2022  ",s,s,s,A.b9(s,s,B.hU,s,s,s,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),A.l2(s,A.af("Privacy",s,s,s,A.b9(s,s,B.dv,s,B.np,B.dv,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),B.aj,!1,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,this.gakW(),s,s,s,s,s,s)],t.p),B.p,B.t,B.ar,0),s,s),B.n,s,s,s,s,s,B.io,s,s,s)}}
 A.uo.prototype={
 I(a){var s,r,q,p=this,o=null,n=A.b4(8),m=p.f,l=m?B.B.aG(0.1):o,k=A.b4(8),j=m?B.B:B.i_
 j=A.cG(j,m?2:1)
