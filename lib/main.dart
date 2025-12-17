@@ -3051,39 +3051,79 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 
   Widget _buildExplodedStackView(PieceStack stack, double cellSize) {
-    final pieceSize = cellSize * 0.62;
-    final maxLift = cellSize * 0.75;
+    final pieceSize = cellSize * 0.7;
+    final maxLift = cellSize * 0.22;
+    final liftStep = cellSize * 0.12;
     final fanSpread = cellSize * 0.08;
 
     return AnimatedBuilder(
       animation: _stackReveal,
       builder: (context, child) {
         final progress = _stackReveal.value;
+        final height = stack.height;
+        final children = <Widget>[
+          // Soft glow at the base of the stack
+          Positioned(
+            bottom: cellSize * 0.06,
+            child: Opacity(
+              opacity: progress * 0.45,
+              child: Container(
+                width: cellSize * (0.65 + (0.25 * progress)),
+                height: cellSize * 0.16,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.25 * progress),
+                      Colors.black.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 1.0],
+                  ),
+                  borderRadius: BorderRadius.circular(cellSize),
+                ),
+              ),
+            ),
+          ),
+        ];
+
+        // Don't fan single pieces - just lift slightly for clarity
+        if (height <= 1) {
+          final piece = stack.topPiece;
+          if (piece != null) {
+            final isLightPlayer = piece.color == PlayerColor.white;
+            final pieceColors = GameColors.forPlayer(isLightPlayer);
+
+            children.add(
+              Transform.translate(
+                offset: Offset(0, -progress * maxLift),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                        blurRadius: 10 * progress + 2,
+                        spreadRadius: 0.6 * progress,
+                        offset: Offset(0, 2 - (progress)),
+                      ),
+                    ],
+                  ),
+                  child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+                ),
+              ),
+            );
+          }
+
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: children,
+          );
+        }
+
         return Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: [
-            // Soft glow at the base of the stack
-            Positioned(
-              bottom: cellSize * 0.06,
-              child: Opacity(
-                opacity: progress * 0.45,
-                child: Container(
-                  width: cellSize * (0.65 + (0.25 * progress)),
-                  height: cellSize * 0.16,
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: [
-                        Colors.black.withValues(alpha: 0.25 * progress),
-                        Colors.black.withValues(alpha: 0.0),
-                      ],
-                      stops: const [0.0, 1.0],
-                    ),
-                    borderRadius: BorderRadius.circular(cellSize),
-                  ),
-                ),
-              ),
-            ),
+            ...children,
             for (int i = 0; i < stack.height; i++)
               _buildExplodedPiece(
                 stack.pieces[i],
@@ -3092,6 +3132,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                 pieceSize,
                 fanSpread,
                 maxLift,
+                liftStep,
                 progress,
               ),
           ],
@@ -3107,13 +3148,15 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     double pieceSize,
     double fanSpread,
     double maxLift,
+    double liftStep,
     double progress,
   ) {
-    final fromTop = height - 1 - index;
-    final liftFactor = (fromTop + 1) / height;
-    final horizontalOffset = (fromTop - (height - 1) / 2) * fanSpread * progress;
-    final verticalOffset = -progress * maxLift * liftFactor;
-    final tilt = ((fromTop - (height - 1) / 2) * 0.04) * progress;
+    final fromBottom = index;
+    const maxSpreadLayers = 4;
+    final spreadLayer = math.min(fromBottom, maxSpreadLayers - 1);
+    final horizontalOffset = (spreadLayer - (maxSpreadLayers - 1) / 2) * fanSpread * progress;
+    final verticalOffset = -progress * (maxLift + (fromBottom * liftStep));
+    final tilt = (spreadLayer - (maxSpreadLayers - 1) / 2) * 0.03 * progress;
 
     final isLightPlayer = piece.color == PlayerColor.white;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
@@ -3122,19 +3165,19 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       offset: Offset(horizontalOffset, verticalOffset),
       child: Transform.rotate(
         angle: tilt,
-        child: Transform.scale(
-          scale: 0.9 + (0.1 * progress),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
-                  blurRadius: 12 * progress + 3,
-                  spreadRadius: 0.8 * progress,
-                  offset: Offset(0, 3 - (progress * 1.5)),
-                ),
-              ],
-            ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                blurRadius: 12 * progress + 3,
+                spreadRadius: 0.8 * progress,
+                offset: Offset(0, 3 - (progress * 1.5)),
+              ),
+            ],
+          ),
+          child: Transform.scale(
+            scale: 1.0 + (0.02 * progress),
             child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
           ),
         ),
@@ -3263,7 +3306,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   /// Flat stone: trapezoid for light, semi-circle for dark
   Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer) {
     return CustomPaint(
-      size: Size(size, size * 0.5),
+      size: Size(size, size * 0.55),
       painter: isLightPlayer
           ? _TrapezoidPainter(colors: colors)
           : _SemiCirclePainter(colors: colors),
@@ -4113,7 +4156,7 @@ class _TrapezoidPainter extends CustomPainter {
     final h = size.height;
 
     // Trapezoid: wider at bottom, narrower at top
-    final inset = w * 0.15;
+    final inset = w * 0.1;
     final path = Path()
       ..moveTo(inset, 0) // top left
       ..lineTo(w - inset, 0) // top right
