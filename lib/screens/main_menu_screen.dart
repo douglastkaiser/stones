@@ -217,7 +217,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   ) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
-        GameSessionConfig(mode: mode, aiDifficulty: difficulty, scenario: null);
+        GameSessionConfig(mode: mode, aiDifficulty: difficulty);
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();

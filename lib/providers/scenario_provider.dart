@@ -50,10 +50,6 @@ class ScenarioStateNotifier extends StateNotifier<ScenarioState> {
   void startScenario(GameScenario scenario) {
     state = ScenarioState(
       activeScenario: scenario,
-      scriptedMoveIndex: 0,
-      introShown: false,
-      completionShown: false,
-      guidedStepComplete: false,
     );
   }
 

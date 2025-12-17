@@ -134,8 +134,6 @@ GameState _buildScenarioState({
     blackPieces: blackPieces,
     turnNumber: turnNumber,
     phase: phase,
-    result: null,
-    winReason: null,
   );
 }
 

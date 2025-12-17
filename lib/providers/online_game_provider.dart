@@ -155,8 +155,6 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         roomCode: code,
         white: player,
         boardSize: boardSize,
-        moves: const [],
-        status: OnlineStatus.waiting,
       );
 
       // Create with both createdAt and lastMoveAt fields
@@ -167,7 +165,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('Creating game in Firestore with code=$code');
       await _firestore.collection('games').doc(code).set(data);
       _debugLog('Game created, setting up listener as WHITE');
-      _listenToRoom(code, localColor: PlayerColor.white);
+      await _listenToRoom(code, localColor: PlayerColor.white);
       state = state.copyWith(
         session: session,
         roomCode: code,
@@ -248,7 +246,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       _debugLog('Transaction complete, setting up listener as BLACK');
       _debugLog('>>> JOINER: About to call _listenToRoom <<<');
-      _listenToRoom(code, localColor: PlayerColor.black);
+      await _listenToRoom(code, localColor: PlayerColor.black);
 
       // IMPORTANT: Set session immediately so isLocalTurn works correctly
       _debugLog('>>> JOINER: Setting state with session <<<');

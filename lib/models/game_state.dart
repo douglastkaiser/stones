@@ -57,7 +57,6 @@ class GameState {
       blackPieces: PlayerPieces.initial(PlayerColor.black, boardSize),
       turnNumber: 1,
       phase: GamePhase.opening,
-      result: null,
     );
   }
 
