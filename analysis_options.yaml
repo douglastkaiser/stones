@@ -1,7 +1,25 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    # Treat these as errors to catch issues early
+    unused_import: error
+    unused_local_variable: error
+    unused_element: error
+    dead_code: error
+
 linter:
   rules:
+    # Const optimization
     prefer_const_constructors: true
     prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+
+    # Code quality
+    avoid_unused_constructor_parameters: true
+    unawaited_futures: true
+    avoid_redundant_argument_values: true
+    prefer_final_locals: true
+
+    # Allow print for debugging (use sparingly)
     avoid_print: false

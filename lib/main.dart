@@ -279,7 +279,7 @@ class _BoardSizeButton extends ConsumerWidget {
   void _doStartNewGame(BuildContext context, WidgetRef ref) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
-        const GameSessionConfig(mode: GameMode.local, aiDifficulty: AIDifficulty.intro, scenario: null);
+        const GameSessionConfig();
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -1617,7 +1617,7 @@ class _PlayerSidePanel extends ConsumerWidget {
                     height: 8,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: pieceColors.gradientColors),
-                      border: Border.all(color: pieceColors.border, width: 1),
+                      border: Border.all(color: pieceColors.border),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1758,7 +1758,7 @@ class _CompactTurnIndicator extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: pieceColors.gradientColors),
-              border: Border.all(color: pieceColors.border, width: 1),
+              border: Border.all(color: pieceColors.border),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -2019,8 +2019,9 @@ class _WinBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final winIcon = switch (winReason) {
       WinReason.road => Icons.route,
+      WinReason.flats => Icons.emoji_events,
       WinReason.time => Icons.timer_off,
-      _ => Icons.emoji_events,
+      null => Icons.emoji_events,
     };
 
     final (title, pieceColors, icon) = switch (result) {
@@ -2628,7 +2629,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           BoxShadow(
             color: GameColors.cellNextDropGlow.withValues(alpha: 0.5),
             blurRadius: 6,
-            spreadRadius: 0,
           ),
         ],
       );
@@ -2648,7 +2648,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           BoxShadow(
             color: GameColors.cellDropPathGlow.withValues(alpha: 0.4),
             blurRadius: 4,
-            spreadRadius: 0,
           ),
         ],
       );
@@ -2692,7 +2691,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           BoxShadow(
             color: GameColors.cellLegalMoveGlow.withValues(alpha: 0.5),
             blurRadius: 6,
-            spreadRadius: 0,
           ),
         ],
       );
@@ -2793,7 +2791,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             BoxShadow(
               color: GameColors.lastMoveGlow.withValues(alpha: 0.3),
               blurRadius: 4,
-              spreadRadius: 0,
             ),
           ],
         ),
@@ -2842,7 +2839,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(badgePadding * 2),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.5),
-                      width: 1,
                     ),
                   ),
                   child: Text(
@@ -2896,7 +2892,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(badgePadding),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.5),
-                      width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -2948,7 +2943,6 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(badgePadding),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.5),
-                      width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(

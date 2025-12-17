@@ -273,9 +273,7 @@ class UIStateNotifier extends StateNotifier<UIState> {
       selectedPosition: state.selectedPosition,
       mode: InteractionMode.droppingPieces,
       selectedDirection: dir,
-      drops: const [], // No drops committed yet
       piecesPickedUp: state.piecesPickedUp,
-      pendingDropCount: 1, // Default to dropping 1
     );
   }
 

@@ -71,7 +71,7 @@ String stackMoveNotation(
   final countPrefix = totalPicked > 1 ? totalPicked.toString() : '';
 
   // If all pieces are dropped at once (single drop), omit the drop sequence
-  final dropSequence = drops.length == 1 ? '' : drops.join('');
+  final dropSequence = drops.length == 1 ? '' : drops.join();
 
   return '$countPrefix$posStr$dirStr$dropSequence';
 }
