@@ -1605,6 +1605,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
+  String _getBoardSizeDescription(int size) {
+    const descriptions = {
+      3: '3×3: Quick intro board with just one capstone per side.',
+      4: '4×4: Faster games with tighter tactics and fewer flats.',
+      5: '5×5: Standard size – balanced matches with two capstones.',
+      6: '6×6: Longer games that reward planning and road threats.',
+      7: '7×7: Deep tactical battles with plenty of building space.',
+      8: '8×8: Marathon boards for expert-level play and patience.',
+    };
+
+    return descriptions[size] ?? '${size}×$size board';
+  }
+
   void _showVsComputerGameDialog(BuildContext context, WidgetRef ref) {
     final settings = ref.read(appSettingsProvider);
     final session = ref.read(gameSessionProvider);
@@ -4222,6 +4235,80 @@ class _MoveHistoryPanel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DifficultyOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DifficultyOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: isSelected ? GameColors.boardFrameInner : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+      ),
+      elevation: isSelected ? 4 : 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? GameColors.boardFrameInner : Colors.grey.shade700,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? GameColors.titleColor : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle,
+                  color: GameColors.boardFrameInner,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

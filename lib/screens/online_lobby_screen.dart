@@ -810,12 +810,12 @@ class _ChessClockSelector extends StatelessWidget {
                     ),
               ),
             ),
-            Switch(
-              value: enabled,
-              onChanged: onEnabledChanged,
-              activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
-              activeColor: GameColors.boardFrameInner,
-            ),
+              Switch(
+                value: enabled,
+                onChanged: onEnabledChanged,
+                activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                activeThumbColor: GameColors.boardFrameInner,
+              ),
           ],
         ),
         if (enabled) ...[

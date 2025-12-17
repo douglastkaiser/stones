@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
-import '../models/scenario.dart';
 import '../services/ai/ai.dart';
 
 /// Type of game being played
