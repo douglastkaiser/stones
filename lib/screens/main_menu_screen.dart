@@ -690,22 +690,24 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       Builder(
                         builder: (context) {
                           final isDark = Theme.of(context).brightness == Brightness.dark;
+                          final colorScheme = Theme.of(context).colorScheme;
+                          // In dark mode, use primary color for better contrast
+                          final buttonColor = isDark
+                              ? colorScheme.primary
+                              : GameColors.boardFrameInner;
                           return SizedBox(
                             width: 220,
                             height: 56,
-                            child: ElevatedButton.icon(
+                            child: OutlinedButton.icon(
                               onPressed: () => _openScenarioSelector(context),
-                              icon: const Icon(Icons.school, size: 22),
-                              label: const Text(
+                              icon: Icon(Icons.school, size: 22, color: buttonColor),
+                              label: Text(
                                 'Tutorials & Puzzles',
-                                style: TextStyle(fontSize: 17),
+                                style: TextStyle(fontSize: 17, color: buttonColor),
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isDark
-                                    ? Theme.of(context).colorScheme.surfaceContainerHighest
-                                    : Colors.white,
-                                foregroundColor: GameColors.boardFrameInner,
-                                side: const BorderSide(color: GameColors.boardFrameInner, width: 2),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: buttonColor,
+                                side: BorderSide(color: buttonColor, width: 2),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
