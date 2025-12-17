@@ -1615,7 +1615,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       8: '8×8: Marathon boards for expert-level play and patience.',
     };
 
-    return descriptions[size] ?? '${size}×$size board';
+    return descriptions[size] ?? '$size×$size board';
   }
 
   void _showVsComputerGameDialog(BuildContext context, WidgetRef ref) {
