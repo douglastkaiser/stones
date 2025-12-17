@@ -2019,8 +2019,8 @@ class _WinBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final winIcon = switch (winReason) {
       WinReason.road => Icons.route,
+      WinReason.flats => Icons.emoji_events,
       WinReason.time => Icons.timer_off,
-      _ => Icons.emoji_events,
     };
 
     final (title, pieceColors, icon) = switch (result) {
