@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -98,6 +99,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final settings = ref.read(appSettingsProvider);
     int selectedSize = settings.boardSize;
     bool chessClockEnabled = settings.chessClockEnabled;
+    int chessClockSeconds = settings.timeForBoardSize(selectedSize);
 
     showDialog(
       context: context,
@@ -128,7 +130,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         ),
                       ),
                       selected: selectedSize == size,
-                      onSelected: (_) => setState(() => selectedSize = size),
+                      onSelected: (_) => setState(() {
+                        selectedSize = size;
+                        chessClockSeconds = settings.timeForBoardSize(size);
+                      }),
                       selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
                       checkmarkColor: GameColors.boardFrameInner,
                     ),
@@ -145,38 +150,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              // Chess clock toggle
-              InkWell(
-                onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 20,
-                        color: chessClockEnabled ? GameColors.boardFrameInner : Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Chess Clock',
-                        style: TextStyle(
-                          fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
-                          color: chessClockEnabled ? GameColors.boardFrameInner : Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Switch(
-                        value: chessClockEnabled,
-                        onChanged: (v) => setState(() => chessClockEnabled = v),
-                        activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
-                        activeThumbColor: GameColors.boardFrameInner,
-                      ),
-                    ],
-                  ),
-                ),
+              _buildChessClockSection(
+                enabled: chessClockEnabled,
+                seconds: chessClockSeconds,
+                onEnabledChanged: (enabled) => setState(() => chessClockEnabled = enabled),
+                onSecondsChanged: (seconds) => setState(() => chessClockSeconds = seconds),
               ),
             ],
           ),
@@ -190,7 +168,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 // Save chess clock preference
                 ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
                 Navigator.pop(dialogContext);
-                _doStartNewGame(context, selectedSize, mode, difficulty);
+                _doStartNewGame(
+                  context,
+                  selectedSize,
+                  mode,
+                  difficulty,
+                  chessClockEnabled: chessClockEnabled,
+                  chessClockSeconds: chessClockSeconds,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
@@ -204,6 +189,75 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     );
   }
 
+  Widget _buildChessClockSection({
+    required bool enabled,
+    required int seconds,
+    required ValueChanged<bool> onEnabledChanged,
+    required ValueChanged<int> onSecondsChanged,
+  }) {
+    final minutes = (seconds / 60).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Chess clock toggle
+        InkWell(
+          onTap: () => onEnabledChanged(!enabled),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.timer,
+                  size: 20,
+                  color: enabled ? GameColors.boardFrameInner : Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Chess Clock',
+                  style: TextStyle(
+                    fontWeight: enabled ? FontWeight.bold : FontWeight.normal,
+                    color:
+                        enabled ? GameColors.boardFrameInner : Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: enabled,
+                  onChanged: onEnabledChanged,
+                  activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                  activeThumbColor: GameColors.boardFrameInner,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (enabled) ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            key: ValueKey('clock_$seconds'),
+            initialValue: minutes.toString(),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'Time per player (minutes)',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: (value) {
+              final minutes = int.tryParse(value);
+              if (minutes != null && minutes > 0) {
+                onSecondsChanged(minutes * 60);
+              }
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
   String _getBoardSizeDescription(int size) {
     final counts = PieceCounts.forBoardSize(size);
     return '${counts.flatStones} flat stones, ${counts.capstones} capstone${counts.capstones == 1 ? '' : 's'} per player';
@@ -213,11 +267,21 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     BuildContext context,
     int size,
     GameMode mode,
-    AIDifficulty difficulty,
-  ) {
+    AIDifficulty difficulty, {
+    bool chessClockEnabled = false,
+    int? chessClockSeconds,
+    PlayerColor playerColor = PlayerColor.white,
+  }) {
+    final clockSeconds =
+        chessClockSeconds ?? ref.read(appSettingsProvider).timeForBoardSize(size);
     ref.read(scenarioStateProvider.notifier).clearScenario();
-    ref.read(gameSessionProvider.notifier).state =
-        GameSessionConfig(mode: mode, aiDifficulty: difficulty);
+    ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+      mode: mode,
+      aiDifficulty: difficulty,
+      chessClockEnabled: chessClockEnabled,
+      chessClockSeconds: clockSeconds,
+      playerColor: playerColor,
+    );
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -225,13 +289,12 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     ref.read(lastMoveProvider.notifier).state = null;
 
     // Always reset chess clock when starting a new game
-    final settings = ref.read(appSettingsProvider);
-    if (mode == GameMode.local && settings.chessClockEnabled) {
+    if (chessClockEnabled) {
       // Initialize with new board size (resets times and stops any running timer)
-      ref.read(chessClockProvider.notifier).initialize(size);
+      ref.read(chessClockProvider.notifier).initialize(clockSeconds);
       // Clock will start when first move is made in _switchChessClock
     } else {
-      // Stop any running clock for non-local games or when clock is disabled
+      // Stop any running clock when disabled
       ref.read(chessClockProvider.notifier).stop();
     }
 
@@ -374,6 +437,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final settings = ref.read(appSettingsProvider);
     int selectedSize = settings.boardSize;
     AIDifficulty selectedDifficulty = AIDifficulty.easy;
+    bool chessClockEnabled = settings.chessClockEnabled;
+    int chessClockSeconds = settings.timeForBoardSize(selectedSize);
+    PlayerColor playerColor = PlayerColor.white;
 
     showDialog(
       context: context,
@@ -402,7 +468,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ChoiceChip(
                         label: Text('$size×$size'),
                         selected: selectedSize == size,
-                        onSelected: (_) => setState(() => selectedSize = size),
+                        onSelected: (_) => setState(() {
+                          selectedSize = size;
+                          chessClockSeconds = settings.timeForBoardSize(size);
+                        }),
                         selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
                         checkmarkColor: GameColors.boardFrameInner,
                       ),
@@ -416,6 +485,42 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     color: Colors.grey.shade600,
                     fontStyle: FontStyle.italic,
                   ),
+                ),
+                const SizedBox(height: 20),
+
+                // Color selection
+                const Text(
+                  'Your Color',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: GameColors.titleColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('White'),
+                      avatar: const Icon(
+                        Icons.circle,
+                        color: Colors.white,
+                        shadows: [Shadow(color: Colors.black26, blurRadius: 2)],
+                      ),
+                      selected: playerColor == PlayerColor.white,
+                      onSelected: (_) => setState(() => playerColor = PlayerColor.white),
+                      selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                      checkmarkColor: GameColors.boardFrameInner,
+                    ),
+                    ChoiceChip(
+                      label: const Text('Black'),
+                      avatar: const Icon(Icons.circle, color: Colors.black),
+                      selected: playerColor == PlayerColor.black,
+                      onSelected: (_) => setState(() => playerColor = PlayerColor.black),
+                      selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                      checkmarkColor: GameColors.boardFrameInner,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
 
@@ -456,6 +561,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   isSelected: selectedDifficulty == AIDifficulty.hard,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
                 ),
+                const SizedBox(height: 20),
+
+                // Chess clock controls
+                _buildChessClockSection(
+                  enabled: chessClockEnabled,
+                  seconds: chessClockSeconds,
+                  onEnabledChanged: (enabled) => setState(() => chessClockEnabled = enabled),
+                  onSecondsChanged: (seconds) => setState(() => chessClockSeconds = seconds),
+                ),
               ],
             ),
           ),
@@ -467,7 +581,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                _doStartNewGame(context, selectedSize, GameMode.vsComputer, selectedDifficulty);
+                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
+                _doStartNewGame(
+                  context,
+                  selectedSize,
+                  GameMode.vsComputer,
+                  selectedDifficulty,
+                  chessClockEnabled: chessClockEnabled,
+                  chessClockSeconds: chessClockSeconds,
+                  playerColor: playerColor,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
@@ -632,12 +755,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                             ),
                           ),
                         ),
-                      ),
-
-                      const SizedBox(height: 8),
-                      const Text(
-                        'You play as White when facing the computer',
-                        style: TextStyle(color: GameColors.subtitleColor),
                       ),
 
                       const SizedBox(height: 20),

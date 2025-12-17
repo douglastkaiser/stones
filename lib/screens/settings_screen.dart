@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/providers.dart';
@@ -53,6 +54,56 @@ class SettingsScreen extends ConsumerWidget {
             onModeChanged: (mode) async {
               await ref.read(appSettingsProvider.notifier).setThemeMode(mode);
             },
+          ),
+          const SizedBox(height: 32),
+
+          // Chess Clock Defaults
+          const _SectionHeader(title: 'Chess Clock Defaults'),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Set the default minutes per player for each board size. Games will start with these values but can be adjusted in the setup screens.',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      for (int size = 3; size <= 8; size++)
+                        SizedBox(
+                          width: 140,
+                          child: TextFormField(
+                            key: ValueKey('clock-default-$size-${settings.timeForBoardSize(size)}'),
+                            initialValue:
+                                (settings.timeForBoardSize(size) / 60).round().toString(),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: InputDecoration(
+                              labelText: '$size×$size (minutes)',
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (value) {
+                              final minutes = int.tryParse(value);
+                              if (minutes != null && minutes > 0) {
+                                ref
+                                    .read(appSettingsProvider.notifier)
+                                    .setChessClockDefault(size, minutes * 60);
+                              }
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 32),
 
