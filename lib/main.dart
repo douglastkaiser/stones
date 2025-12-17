@@ -3050,10 +3050,22 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     );
   }
 
+  double _pieceFootprintHeight(PieceType type, double pieceSize) {
+    switch (type) {
+      case PieceType.flat:
+        return pieceSize * 0.55;
+      case PieceType.standing:
+        return pieceSize;
+      case PieceType.capstone:
+        return pieceSize * 0.85;
+    }
+  }
+
   Widget _buildExplodedStackView(PieceStack stack, double cellSize) {
     final pieceSize = cellSize * 0.7;
-    final maxLift = cellSize * 0.22;
-    final liftStep = cellSize * 0.12;
+    final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+    final baseLift = baseFootprint * 0.25;
+    final liftStep = baseFootprint * 0.6;
     final fanSpread = cellSize * 0.08;
 
     return AnimatedBuilder(
@@ -3094,7 +3106,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
             children.add(
               Transform.translate(
-                offset: Offset(0, -progress * maxLift),
+                offset: Offset(0, -progress * baseLift),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     boxShadow: [
@@ -3124,17 +3136,17 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           alignment: Alignment.bottomCenter,
           children: [
             ...children,
-            for (int i = 0; i < stack.height; i++)
-              _buildExplodedPiece(
-                stack.pieces[i],
-                i,
-                stack.height,
-                pieceSize,
-                fanSpread,
-                maxLift,
-                liftStep,
-                progress,
-              ),
+        for (int i = 0; i < stack.height; i++)
+          _buildExplodedPiece(
+            stack.pieces[i],
+            i,
+            stack.height,
+            pieceSize,
+            fanSpread,
+            baseLift,
+            liftStep,
+            progress,
+          ),
           ],
         );
       },
@@ -3147,7 +3159,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     int height,
     double pieceSize,
     double fanSpread,
-    double maxLift,
+    double baseLift,
     double liftStep,
     double progress,
   ) {
@@ -3155,7 +3167,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     const maxSpreadLayers = 4;
     final spreadLayer = math.min(fromBottom, maxSpreadLayers - 1);
     final horizontalOffset = (spreadLayer - (maxSpreadLayers - 1) / 2) * fanSpread * progress;
-    final verticalOffset = -progress * (maxLift + (fromBottom * liftStep));
+    final verticalOffset = -progress * (baseLift + (fromBottom * liftStep));
     final tilt = (spreadLayer - (maxSpreadLayers - 1) / 2) * 0.03 * progress;
 
     final isLightPlayer = piece.color == PlayerColor.white;
@@ -3196,8 +3208,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final height = stack.height;
 
     // Calculate responsive values based on board size
-    // Vertical offset between pieces to show stacking
-    final verticalOffset = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.5 : 3.0);
+    final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+    final verticalOffset = baseFootprint * 0.3;
     final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
     final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
@@ -3210,7 +3222,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final startIndex = height - visibleCount;
 
     return Stack(
-      alignment: Alignment.center,
+      alignment: Alignment.bottomCenter,
       clipBehavior: Clip.none,
       children: [
         // Render pieces from bottom to top
@@ -3219,7 +3231,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           Transform.translate(
             // Each piece moves up as we go higher in the stack
             // i=0 is the lowest visible piece, i=visibleCount-1 is the top
-            offset: Offset(0, (visibleCount - 1 - i) * verticalOffset),
+            offset: Offset(0, -i * verticalOffset),
             child: _buildStackPiece(
               stack.pieces[startIndex + i],
               pieceSize,
