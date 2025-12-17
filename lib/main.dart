@@ -1758,7 +1758,7 @@ class _CompactTurnIndicator extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: pieceColors.gradientColors),
-              border: Border.all(color: pieceColors.border, width: 1),
+              border: Border.all(color: pieceColors.border),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
