@@ -2197,6 +2197,9 @@ class _GameBoard extends StatelessWidget {
     final validMoveDestinations = uiState.getValidMoveDestinations(gameState);
     final boardSize = gameState.boardSize;
 
+    // Calculate preview stacks for move operations
+    final previewStacks = uiState.getPreviewStacks(gameState);
+
     // Calculate responsive spacing based on board size
     // Larger boards get smaller spacing to fit well
     final spacing = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
@@ -2240,10 +2243,15 @@ class _GameBoard extends StatelessWidget {
             final row = index ~/ boardSize;
             final col = index % boardSize;
             final pos = Position(row, col);
-            final stack = gameState.board.stackAt(pos);
+            final actualStack = gameState.board.stackAt(pos);
             final isSelected = uiState.selectedPosition == pos;
             final isInDropPath = dropPath.contains(pos);
             final isNextDrop = nextDropPos == pos;
+
+            // Get preview stack and ghost pieces for this position
+            final preview = previewStacks?[pos];
+            final displayStack = preview?.$1 ?? actualStack;
+            final ghostStackPieces = preview?.$2 ?? const <Piece>[];
 
             // Check for animation events on this position
             final lastEvent = animationState.lastEvent;
@@ -2285,13 +2293,14 @@ class _GameBoard extends StatelessWidget {
 
             return _CellInteractionLayer(
               position: pos,
-              stack: stack,
+              stack: displayStack,
+              ghostStackPieces: ghostStackPieces,
               onTap: () => onCellTap(pos),
               onStackViewStart: onLongPressStart,
               onStackViewEnd: onLongPressEnd,
               child: _BoardCell(
-                key: ValueKey('cell_${pos.row}_${pos.col}_${stack.height}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
-                stack: stack,
+                key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
+                stack: displayStack,
                 isSelected: isSelected,
                 isInDropPath: isInDropPath,
                 isNextDrop: isNextDrop,
@@ -2306,6 +2315,7 @@ class _GameBoard extends StatelessWidget {
                 isScenarioHint: isScenarioHint,
                 ghostPieceType: ghostPieceType,
                 ghostPieceColor: ghostPieceColor,
+                ghostStackPieces: ghostStackPieces,
                 pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
                 pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
                 piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
@@ -2329,6 +2339,9 @@ class _CellInteractionLayer extends StatefulWidget {
   final VoidCallback onStackViewEnd;
   final Widget child;
 
+  /// Ghost pieces that would be added to the stack (for hover preview)
+  final List<Piece> ghostStackPieces;
+
   const _CellInteractionLayer({
     required this.position,
     required this.stack,
@@ -2336,6 +2349,7 @@ class _CellInteractionLayer extends StatefulWidget {
     required this.onStackViewStart,
     required this.onStackViewEnd,
     required this.child,
+    this.ghostStackPieces = const [],
   });
 
   @override
@@ -2352,9 +2366,22 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
     super.dispose();
   }
 
+  /// Get the stack to show in the exploded view (real stack + ghost pieces)
+  PieceStack _getPreviewStack() {
+    if (widget.ghostStackPieces.isEmpty) {
+      return widget.stack;
+    }
+    // Combine actual stack with ghost pieces for preview
+    return widget.stack.pushAll(widget.ghostStackPieces);
+  }
+
+  /// Check if we have content to display in hover (stack or ghosts)
+  bool get _hasContent =>
+      widget.stack.isNotEmpty || widget.ghostStackPieces.isNotEmpty;
+
   void _activateView() {
-    if (_isViewing || widget.stack.isEmpty) return;
-    widget.onStackViewStart(widget.position, widget.stack);
+    if (_isViewing || !_hasContent) return;
+    widget.onStackViewStart(widget.position, _getPreviewStack());
     _isViewing = true;
   }
 
@@ -2367,7 +2394,7 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
   }
 
   void _scheduleHover() {
-    if (widget.stack.isEmpty) return;
+    if (!_hasContent) return;
     _hoverTimer?.cancel();
     _hoverTimer = Timer(const Duration(milliseconds: 280), _activateView);
   }
@@ -2382,16 +2409,12 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
           _deactivateView();
           widget.onTap();
         },
-        onLongPressStart:
-            widget.stack.isNotEmpty ? (_) => _activateView() : null,
-        onLongPressEnd: widget.stack.isNotEmpty ? (_) => _deactivateView() : null,
-        onLongPressCancel: widget.stack.isNotEmpty ? _deactivateView : null,
-        onSecondaryTapDown:
-            widget.stack.isNotEmpty ? (_) => _activateView() : null,
-        onSecondaryTapUp:
-            widget.stack.isNotEmpty ? (_) => _deactivateView() : null,
-        onSecondaryTapCancel:
-            widget.stack.isNotEmpty ? _deactivateView : null,
+        onLongPressStart: _hasContent ? (_) => _activateView() : null,
+        onLongPressEnd: _hasContent ? (_) => _deactivateView() : null,
+        onLongPressCancel: _hasContent ? _deactivateView : null,
+        onSecondaryTapDown: _hasContent ? (_) => _activateView() : null,
+        onSecondaryTapUp: _hasContent ? (_) => _deactivateView() : null,
+        onSecondaryTapCancel: _hasContent ? _deactivateView : null,
         child: widget.child,
       ),
     );
@@ -2420,6 +2443,10 @@ class _BoardCell extends StatefulWidget {
   final PieceType? ghostPieceType;
   final PlayerColor? ghostPieceColor;
 
+  /// Ghost pieces to show on top of stack (for move preview)
+  /// These are pieces being moved that will land on this cell
+  final List<Piece> ghostStackPieces;
+
   /// Number of pieces being picked up (for stack movement)
   final int? pickupCount;
 
@@ -2441,6 +2468,7 @@ class _BoardCell extends StatefulWidget {
     this.isInWinningRoad = false,
     this.ghostPieceType,
     this.ghostPieceColor,
+    this.ghostStackPieces = const [],
     this.pickupCount,
     this.pendingDropCount,
     this.piecesInHand,
@@ -2880,12 +2908,39 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         }
 
         final stackForDisplay = widget.explodedStack ?? widget.stack;
-        final isExplodedView = widget.showExploded && stackForDisplay.isNotEmpty;
+        final hasGhostPieces = widget.ghostStackPieces.isNotEmpty;
+        final isExplodedView = widget.showExploded &&
+            (stackForDisplay.isNotEmpty || hasGhostPieces);
+
+        // For exploded view, combine real stack with ghost pieces
+        final explodedStack = hasGhostPieces
+            ? stackForDisplay.pushAll(widget.ghostStackPieces)
+            : stackForDisplay;
+        final ghostStartIndex = stackForDisplay.height;
 
         // Build stack display (exploded fan-out or normal depth view)
-        Widget content = isExplodedView
-            ? _buildExplodedStackView(stackForDisplay, cellSize)
-            : _buildStackDisplay(stackForDisplay);
+        Widget content;
+        if (isExplodedView) {
+          content = _buildExplodedStackViewWithGhosts(
+            explodedStack,
+            cellSize,
+            ghostStartIndex,
+          );
+        } else if (stackForDisplay.isEmpty && hasGhostPieces) {
+          // Only ghost pieces, no actual stack
+          content = _buildGhostOnlyStack(widget.ghostStackPieces, pieceSize);
+        } else if (hasGhostPieces) {
+          // Has both real stack and ghost pieces
+          content = _buildStackWithGhosts(
+            stackForDisplay,
+            widget.ghostStackPieces,
+            cellSize,
+            pieceSize,
+          );
+        } else {
+          // Normal stack display (no ghosts)
+          content = _buildStackDisplay(stackForDisplay);
+        }
 
         // Add pickup count overlay for stack movement
         if (widget.pickupCount != null) {
@@ -3070,6 +3125,377 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
         return content;
       },
+    );
+  }
+
+  /// Build a stack display with ghost pieces on top (semi-transparent)
+  Widget _buildStackWithGhosts(
+    PieceStack stack,
+    List<Piece> ghostPieces,
+    double cellSize,
+    double pieceSize,
+  ) {
+    if (stack.isEmpty && ghostPieces.isEmpty) return const SizedBox();
+
+    final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+    final naturalOffset = baseFootprint * 0.32;
+    final minOffset = baseFootprint * 0.2;
+    final availableHeight = cellSize * 0.9;
+
+    // Calculate total pieces to display
+    final totalRealPieces = stack.height;
+    const maxVisiblePieces = 3;
+    final visibleRealCount = totalRealPieces > maxVisiblePieces ? maxVisiblePieces : totalRealPieces;
+
+    // Always show all ghost pieces
+    final visibleCount = visibleRealCount + ghostPieces.length;
+    final visibleOffset = visibleCount > 1
+        ? (availableHeight - baseFootprint) / (visibleCount - 1)
+        : naturalOffset;
+    final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
+
+    final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+    final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+
+    // Start index for real pieces (skip bottom hidden pieces)
+    final startIndex = totalRealPieces - visibleRealCount;
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      clipBehavior: Clip.none,
+      children: [
+        // Render real pieces
+        for (int i = 0; i < visibleRealCount; i++)
+          Transform.translate(
+            offset: Offset(0, -i * verticalOffset),
+            child: _buildStackPiece(
+              stack.pieces[startIndex + i],
+              pieceSize,
+              i < visibleRealCount - 1 ? 0.7 + (0.1 * i) : 1.0,
+            ),
+          ),
+
+        // Render ghost pieces on top with semi-transparency
+        for (int i = 0; i < ghostPieces.length; i++)
+          Transform.translate(
+            offset: Offset(0, -(visibleRealCount + i) * verticalOffset),
+            child: Opacity(
+              opacity: 0.5,
+              child: _buildStackPiece(ghostPieces[i], pieceSize, 1.0),
+            ),
+          ),
+
+        // Stack height badge showing total (real + ghost)
+        Positioned(
+          bottom: 1,
+          right: 1,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: badgePadding,
+              vertical: badgePadding * 0.5,
+            ),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF6D4C41),
+                  GameColors.stackBadge,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(badgePadding),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 0.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 2,
+                  offset: const Offset(0.5, 0.5),
+                ),
+              ],
+            ),
+            child: Text(
+              '${totalRealPieces + ghostPieces.length}',
+              style: TextStyle(
+                color: GameColors.stackBadgeText,
+                fontSize: badgeFontSize,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    blurRadius: 1,
+                    offset: const Offset(0.5, 0.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build ghost-only stack display (no actual pieces, just ghosts)
+  Widget _buildGhostOnlyStack(List<Piece> ghostPieces, double pieceSize) {
+    if (ghostPieces.isEmpty) return const SizedBox();
+
+    if (ghostPieces.length == 1) {
+      // Single ghost piece
+      final piece = ghostPieces.first;
+      final isLightPlayer = piece.color == PlayerColor.white;
+      final pieceColors = GameColors.forPlayer(isLightPlayer);
+      return Opacity(
+        opacity: 0.5,
+        child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+      );
+    }
+
+    // Multiple ghost pieces - show as stack
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellSize = constraints.maxWidth;
+        final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+        final naturalOffset = baseFootprint * 0.32;
+        final minOffset = baseFootprint * 0.2;
+        final availableHeight = cellSize * 0.9;
+
+        final visibleCount = ghostPieces.length > 3 ? 3 : ghostPieces.length;
+        final visibleOffset = visibleCount > 1
+            ? (availableHeight - baseFootprint) / (visibleCount - 1)
+            : naturalOffset;
+        final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
+
+        final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+        final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+
+        final startIndex = ghostPieces.length - visibleCount;
+
+        return Opacity(
+          opacity: 0.5,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            clipBehavior: Clip.none,
+            children: [
+              for (int i = 0; i < visibleCount; i++)
+                Transform.translate(
+                  offset: Offset(0, -i * verticalOffset),
+                  child: _buildStackPiece(
+                    ghostPieces[startIndex + i],
+                    pieceSize,
+                    i < visibleCount - 1 ? 0.7 + (0.1 * i) : 1.0,
+                  ),
+                ),
+
+              // Ghost stack badge
+              Positioned(
+                bottom: 1,
+                right: 1,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: badgePadding,
+                    vertical: badgePadding * 0.5,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF6D4C41),
+                        GameColors.stackBadge,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(badgePadding),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 2,
+                        offset: const Offset(0.5, 0.5),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '${ghostPieces.length}',
+                    style: TextStyle(
+                      color: GameColors.stackBadgeText,
+                      fontSize: badgeFontSize,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 1,
+                          offset: const Offset(0.5, 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build exploded stack view with ghost pieces shown semi-transparent
+  Widget _buildExplodedStackViewWithGhosts(
+    PieceStack stack,
+    double cellSize,
+    int ghostStartIndex,
+  ) {
+    final pieceSize = cellSize * 0.7;
+    final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+    final baseLift = baseFootprint * 0.25;
+    final naturalSpacing = baseFootprint * 0.6;
+    final minSpacing = baseFootprint * 0.28;
+
+    // Compress spacing when the vertical stack would overflow the cell area
+    final availableHeight = cellSize * 1.2;
+    final adjustedSpacing = stack.height > 1
+        ? (availableHeight - baseFootprint) / (stack.height - 1)
+        : naturalSpacing;
+    final liftStep = math.max(minSpacing, math.min(naturalSpacing, adjustedSpacing));
+
+    return AnimatedBuilder(
+      animation: _stackReveal,
+      builder: (context, child) {
+        final progress = _stackReveal.value;
+        final height = stack.height;
+        final children = <Widget>[
+          // Soft glow at the base of the stack
+          Positioned(
+            bottom: cellSize * 0.06,
+            child: Opacity(
+              opacity: progress * 0.45,
+              child: Container(
+                width: cellSize * (0.65 + (0.25 * progress)),
+                height: cellSize * 0.16,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.25 * progress),
+                      Colors.black.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 1.0],
+                  ),
+                  borderRadius: BorderRadius.circular(cellSize),
+                ),
+              ),
+            ),
+          ),
+        ];
+
+        // Don't fan single pieces - just lift slightly for clarity
+        if (height <= 1) {
+          final piece = stack.topPiece;
+          if (piece != null) {
+            final isLightPlayer = piece.color == PlayerColor.white;
+            final pieceColors = GameColors.forPlayer(isLightPlayer);
+            final isGhost = ghostStartIndex == 0;
+
+            children.add(
+              Transform.translate(
+                offset: Offset(0, -progress * baseLift),
+                child: Opacity(
+                  opacity: isGhost ? 0.5 : 1.0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                          blurRadius: 10 * progress + 2,
+                          spreadRadius: 0.6 * progress,
+                          offset: Offset(0, 2 - (progress)),
+                        ),
+                      ],
+                    ),
+                    child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: children,
+          );
+        }
+
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            ...children,
+            for (int i = 0; i < stack.height; i++)
+              _buildExplodedPieceWithGhost(
+                stack.pieces[i],
+                i,
+                stack.height,
+                pieceSize,
+                baseLift,
+                liftStep,
+                progress,
+                i >= ghostStartIndex, // isGhost
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Build an individual exploded piece, with ghost support
+  Widget _buildExplodedPieceWithGhost(
+    Piece piece,
+    int index,
+    int totalPieces,
+    double pieceSize,
+    double baseLift,
+    double liftStep,
+    double progress,
+    bool isGhost,
+  ) {
+    final fromBottom = index;
+    final verticalOffset = -progress * (baseLift + (fromBottom * liftStep));
+    double horizontalOffset = 0;
+
+    if (totalPieces > 1) {
+      final t = fromBottom / (totalPieces - 1);
+      final fanCurve = math.sin((t - 0.5) * math.pi);
+      horizontalOffset = progress * pieceSize * 0.08 * fanCurve;
+    }
+
+    final isLightPlayer = piece.color == PlayerColor.white;
+    final pieceColors = GameColors.forPlayer(isLightPlayer);
+
+    return Transform.translate(
+      offset: Offset(horizontalOffset, verticalOffset),
+      child: Opacity(
+        opacity: isGhost ? 0.5 : 1.0,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                blurRadius: 12 * progress + 3,
+                spreadRadius: 0.8 * progress,
+                offset: Offset(0, 3 - (progress * 1.5)),
+              ),
+            ],
+          ),
+          child: Transform.scale(
+            scale: 1.0 + (0.02 * progress),
+            child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+          ),
+        ),
+      ),
     );
   }
 

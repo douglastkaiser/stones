@@ -188,6 +188,102 @@ class UIState {
     return false;
   }
 
+  /// Calculate preview stacks for all positions during move operations.
+  /// Returns a map of Position -> (previewStack, ghostPieces) where:
+  /// - previewStack: what the stack at this position would look like after the move
+  /// - ghostPieces: pieces that are "ghost" (being moved, shown semi-transparent)
+  /// Returns null if not in a move preview state.
+  Map<Position, (PieceStack previewStack, List<Piece> ghostPieces)>?
+      getPreviewStacks(GameState gameState) {
+    // Only calculate previews during stack movement modes
+    if (mode != InteractionMode.movingStack &&
+        mode != InteractionMode.droppingPieces) {
+      return null;
+    }
+
+    if (selectedPosition == null || piecesPickedUp <= 0) return null;
+
+    final sourceStack = gameState.board.stackAt(selectedPosition!);
+    if (sourceStack.isEmpty) return null;
+
+    final previews = <Position, (PieceStack, List<Piece>)>{};
+
+    // In movingStack mode: show source with picked up pieces as ghosts
+    if (mode == InteractionMode.movingStack) {
+      // Source position: keep all pieces but mark top N as ghosts
+      final piecesToPickUp = piecesPickedUp.clamp(0, sourceStack.height);
+      final ghostPieces = sourceStack.pieces
+          .sublist(sourceStack.height - piecesToPickUp);
+      final remainingPieces = sourceStack.pieces
+          .sublist(0, sourceStack.height - piecesToPickUp);
+
+      previews[selectedPosition!] = (
+        PieceStack(remainingPieces),
+        ghostPieces,
+      );
+    }
+
+    // In droppingPieces mode: calculate full preview of the move
+    if (mode == InteractionMode.droppingPieces &&
+        selectedDirection != null) {
+      final piecesToPickUp = piecesPickedUp + drops.fold(0, (a, b) => a + b);
+      final actualPickup = piecesToPickUp.clamp(0, sourceStack.height);
+
+      // Get the pieces being moved
+      final (remaining, pickedUp) = sourceStack.pop(actualPickup);
+
+      // Source position: show remaining pieces, no ghosts
+      previews[selectedPosition!] = (remaining, const []);
+
+      // Calculate drops along the path
+      var currentPos = selectedPosition!;
+      var piecesInHand = List<Piece>.from(pickedUp);
+
+      // Process committed drops
+      for (final dropCount in drops) {
+        currentPos = selectedDirection!.apply(currentPos);
+        final targetStack = gameState.board.stackAt(currentPos);
+
+        // Get pieces to drop at this position
+        final droppedPieces = piecesInHand.sublist(0, dropCount);
+        piecesInHand = piecesInHand.sublist(dropCount);
+
+        // Check if we need to flatten a wall (capstone moving onto standing stone)
+        PieceStack baseStack = targetStack;
+        if (baseStack.topPiece?.type == PieceType.standing &&
+            droppedPieces.isNotEmpty &&
+            droppedPieces.last.canFlattenWalls) {
+          baseStack = baseStack.flattenTop();
+        }
+
+        // Preview shows existing pieces + dropped pieces as ghosts
+        previews[currentPos] = (baseStack, droppedPieces);
+      }
+
+      // Current hand position: show pending drop as ghost
+      if (piecesInHand.isNotEmpty) {
+        final handPos = getCurrentHandPosition();
+        if (handPos != null) {
+          final targetStack = gameState.board.stackAt(handPos);
+          final pendingDrop = pendingDropCount.clamp(0, piecesInHand.length);
+          final ghostPieces = piecesInHand.sublist(0, pendingDrop);
+
+          // Check if we need to flatten a wall
+          PieceStack baseStack = targetStack;
+          if (baseStack.topPiece?.type == PieceType.standing &&
+              ghostPieces.isNotEmpty &&
+              ghostPieces.last.canFlattenWalls) {
+            baseStack = baseStack.flattenTop();
+          }
+
+          previews[handPos] = (baseStack, ghostPieces);
+        }
+      }
+    }
+
+    return previews;
+  }
+
   UIState copyWith({
     Position? selectedPosition,
     InteractionMode? mode,
