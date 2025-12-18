@@ -49,42 +49,53 @@ class AboutScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         children: [
           // App Logo and Name
-          Center(
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 80,
-                  width: 80,
-                  child: CustomPaint(
-                    painter: _StonesIconPainter(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'STONES',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: GameColors.titleColor,
-                        letterSpacing: 4,
+          Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final colorScheme = Theme.of(context).colorScheme;
+
+              return Center(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 80,
+                      width: 80,
+                      child: CustomPaint(
+                        painter: _StonesIconPainter(),
                       ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  AppVersion.displayVersion,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'An abstract strategy game',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: GameColors.subtitleColor,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'STONES',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : GameColors.titleColor,
+                            letterSpacing: 4,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      AppVersion.displayVersion,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark
+                            ? colorScheme.onSurfaceVariant
+                            : Colors.grey.shade500,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'An abstract strategy game',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: isDark
+                                ? colorScheme.onSurfaceVariant
+                                : GameColors.subtitleColor,
+                          ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 40),
 
@@ -147,13 +158,16 @@ class _AboutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -167,7 +181,7 @@ class _AboutCard extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: GameColors.titleColor,
+                    color: isDark ? Colors.white : GameColors.titleColor,
                     fontWeight: FontWeight.bold,
                   ),
             ),
@@ -196,13 +210,18 @@ class _LinkTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(
+            color: isDark ? colorScheme.outline : Colors.grey.shade200,
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -221,7 +240,9 @@ class _LinkTile extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: isDark
+                          ? colorScheme.onSurfaceVariant
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ],
@@ -230,7 +251,9 @@ class _LinkTile extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.grey.shade400,
+              color: isDark
+                  ? colorScheme.onSurfaceVariant
+                  : Colors.grey.shade400,
             ),
           ],
         ),
