@@ -2,15 +2,16 @@ import '../../models/models.dart';
 import 'ai.dart';
 import 'board_analysis.dart';
 
-/// Aggressive AI with 3-ply lookahead and minimax-style evaluation
+/// Aggressive AI with 4-ply lookahead and minimax-style evaluation
+/// Aware of all win conditions: roads, flat wins, and board control
 class HardStonesAI extends StonesAI {
   HardStonesAI(super.random);
 
   final _generator = const AIMoveGenerator();
 
-  // Pruning parameters to stay responsive
-  static const _maxTopMoves = 15; // Candidates for deep search
-  static const _maxOpponentMoves = 12; // Opponent responses to consider
+  // Pruning parameters - balanced for strong play
+  static const _maxTopMoves = 18; // Candidates for deep search
+  static const _maxOpponentMoves = 15; // Opponent responses to consider
 
   @override
   Future<AIMove?> selectMove(GameState state) async {
@@ -162,34 +163,119 @@ class HardStonesAI extends StonesAI {
     return score;
   }
 
-  /// Evaluate position strength for a player
+  /// Evaluate position strength for a player - aware of all win conditions
   double _evaluatePosition(GameState state, PlayerColor color) {
     double score = 0;
     final size = state.boardSize;
 
-    // Count controlled positions and chain connectivity
-    var edgeCount = 0;
-    var centerControl = 0;
+    // Count controlled positions, chain connectivity, and flat counts
+    var ourEdgeCount = 0;
+    var ourCenterControl = 0;
+    var ourFlatCount = 0;
+    var oppFlatCount = 0;
+    var emptyCount = 0;
 
     for (int r = 0; r < size; r++) {
       for (int c = 0; c < size; c++) {
         final pos = Position(r, c);
-        if (BoardAnalysis.controlsForRoad(state, pos, color)) {
-          // Edge positions are valuable
-          if (r == 0 || r == size - 1 || c == 0 || c == size - 1) {
-            edgeCount++;
+        final top = state.board.stackAt(pos).topPiece;
+
+        if (top == null) {
+          emptyCount++;
+          continue;
+        }
+
+        if (top.color == color) {
+          if (top.type == PieceType.flat) {
+            ourFlatCount++;
           }
-          // Center control
-          final distFromCenter = (r - (size - 1) / 2).abs() + (c - (size - 1) / 2).abs();
-          if (distFromCenter < size / 2) {
-            centerControl++;
+          if (top.type != PieceType.standing) {
+            // Edge positions valuable for roads
+            if (r == 0 || r == size - 1 || c == 0 || c == size - 1) {
+              ourEdgeCount++;
+            }
+            // Center control
+            final distFromCenter = (r - (size - 1) / 2).abs() + (c - (size - 1) / 2).abs();
+            if (distFromCenter < size / 2) {
+              ourCenterControl++;
+            }
           }
+        } else if (top.type == PieceType.flat) {
+          oppFlatCount++;
         }
       }
     }
 
-    score += edgeCount * 2;
-    score += centerControl * 1.5;
+    // Road building score
+    score += ourEdgeCount * 2.5;
+    score += ourCenterControl * 2;
+
+    // Flat count advantage - important for flat wins
+    final flatAdvantage = ourFlatCount - oppFlatCount;
+    score += flatAdvantage * 3;
+
+    // Bonus when board is getting full (flat win becomes more likely)
+    final boardFillRatio = 1.0 - (emptyCount / (size * size));
+    if (boardFillRatio > 0.6) {
+      score += flatAdvantage * boardFillRatio * 4;
+    }
+
+    // Chain connectivity bonus
+    score += _evaluateChainConnectivity(state, color) * 3;
+
+    return score;
+  }
+
+  /// Evaluate how well chains connect across the board
+  double _evaluateChainConnectivity(GameState state, PlayerColor color) {
+    double score = 0;
+    final size = state.boardSize;
+
+    // Find connected components and their edge reach
+    final visited = <Position>{};
+
+    for (int r = 0; r < size; r++) {
+      for (int c = 0; c < size; c++) {
+        final pos = Position(r, c);
+        if (visited.contains(pos)) continue;
+        if (!BoardAnalysis.controlsForRoad(state, pos, color)) continue;
+
+        // BFS to find connected chain
+        final chain = <Position>{};
+        final edges = <String>{};
+        final queue = [pos];
+
+        while (queue.isNotEmpty) {
+          final current = queue.removeAt(0);
+          if (chain.contains(current)) continue;
+          chain.add(current);
+          visited.add(current);
+
+          // Track edges
+          if (current.col == 0) edges.add('left');
+          if (current.col == size - 1) edges.add('right');
+          if (current.row == 0) edges.add('top');
+          if (current.row == size - 1) edges.add('bottom');
+
+          for (final neighbor in current.adjacentPositions(size)) {
+            if (!chain.contains(neighbor) &&
+                BoardAnalysis.controlsForRoad(state, neighbor, color)) {
+              queue.add(neighbor);
+            }
+          }
+        }
+
+        // Score based on chain size and edge connectivity
+        score += chain.length * 0.5;
+        if (edges.contains('left') && edges.contains('right')) {
+          score += 8;
+        } else if (edges.contains('top') && edges.contains('bottom')) {
+          score += 8;
+        } else if (edges.length >= 2) {
+          score += 4;
+        }
+      }
+    }
 
     return score;
   }

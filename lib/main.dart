@@ -406,6 +406,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.watch(gameSessionProvider);
     final scenarioState = ref.watch(scenarioStateProvider);
     final isAiThinking = ref.watch(aiThinkingProvider);
+    final isAiThinkingVisible = ref.watch(aiThinkingVisibleProvider);
     final isAiTurn =
         session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
     final onlineState = ref.watch(onlineGameProvider);
@@ -669,7 +670,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               padding: const EdgeInsets.only(top: 8),
                               child: _CompactTurnIndicator(
                                 gameState: gameState,
-                                isThinking: isAiThinking,
+                                isThinking: isAiThinkingVisible,
                                 onlineState: isOnline ? onlineState : null,
                               ),
                             ),
@@ -763,7 +764,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               child: Center(
                                 child: _CompactTurnIndicator(
                                   gameState: gameState,
-                                  isThinking: isAiThinking,
+                                  isThinking: isAiThinkingVisible,
                                   onlineState: isOnline ? onlineState : null,
                                 ),
                               ),
@@ -1294,8 +1295,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.read(uiStateProvider.notifier).reset();
     ref.read(aiThinkingProvider.notifier).state = true;
 
+    // Start a timer to show the thinking indicator after 500ms
+    // This avoids showing a spinner for quick moves
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (ref.read(aiThinkingProvider)) {
+        ref.read(aiThinkingVisibleProvider.notifier).state = true;
+      }
+    });
+
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Small delay before AI starts for better UX
+      await Future.delayed(const Duration(milliseconds: 200));
 
       final latestState = ref.read(gameStateProvider);
       final latestSession = ref.read(gameSessionProvider);
@@ -1322,6 +1332,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.read(uiStateProvider.notifier).reset();
     } finally {
       ref.read(aiThinkingProvider.notifier).state = false;
+      ref.read(aiThinkingVisibleProvider.notifier).state = false;
     }
   }
 
