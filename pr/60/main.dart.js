@@ -98109,7 +98109,7 @@ else l=l.Ko(o?B.i:B.cY,B.W,4)
 l=A.aa("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.fu
-s=A.aa("v1.0.0+171.gb1ab3d3.d20251218 (b1ab3d3)",p,p,p,A.aX(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
+s=A.aa("v1.0.0+172.g30865a7.d20251218 (30865a7)",p,p,p,A.aX(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
 r=A.F(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -98119,7 +98119,7 @@ r=q}return A.ey(A.bO(A.b([m,B.av,l,B.c3,s,B.aT,A.aa("An abstract strategy game",
 $S:671}
 A.a4t.prototype={
 $0(){var s=null
-A.bbp(new A.be(B.cx,A.d4(A.ez(s,s,s,new A.Kx(s),B.J),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+171.gb1ab3d3.d20251218 (b1ab3d3)",this.b)
+A.bbp(new A.be(B.cx,A.d4(A.ez(s,s,s,new A.Kx(s),B.J),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+172.g30865a7.d20251218 (30865a7)",this.b)
 return s},
 $S:0}
 A.GS.prototype={
@@ -98614,7 +98614,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cX
-return A.bE(o,A.ey(A.cd(A.b([A.aa("v1.0.0+171.gb1ab3d3.d20251218 (b1ab3d3)",o,o,o,A.aX(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.aa("  \u2022  ",o,o,o,A.aX(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.l2(o,A.aa("Privacy",o,o,o,A.aX(o,o,q,o,B.nu,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.aj,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gali(),o,o,o,o,o,o)],t.p),B.p,B.u,B.ar,0),o,o),B.n,o,o,o,o,o,B.ip,o,o,o)}}
+return A.bE(o,A.ey(A.cd(A.b([A.aa("v1.0.0+172.g30865a7.d20251218 (30865a7)",o,o,o,A.aX(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.aa("  \u2022  ",o,o,o,A.aX(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.l2(o,A.aa("Privacy",o,o,o,A.aX(o,o,q,o,B.nu,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.aj,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gali(),o,o,o,o,o,o)],t.p),B.p,B.u,B.ar,0),o,o),B.n,o,o,o,o,o,B.ip,o,o,o)}}
 A.uo.prototype={
 I(a){var s,r,q,p,o,n,m,l=null,k=A.F(a).ax.a===B.B,j=this.d
 if(j)s=B.D
