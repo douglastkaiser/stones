@@ -381,7 +381,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (session.mode == GameMode.online) {
       return;
     }
-    if (session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black) {
+    final isAiTurn =
+        session.mode == GameMode.vsComputer && gameState.currentPlayer != session.playerColor;
+    if (isAiTurn) {
       return;
     }
 
@@ -416,8 +418,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.watch(gameSessionProvider);
     final scenarioState = ref.watch(scenarioStateProvider);
     final isAiThinking = ref.watch(aiThinkingProvider);
-    final isAiTurn =
-        session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
+    final isAiTurn = session.mode == GameMode.vsComputer &&
+        gameState.currentPlayer != session.playerColor;
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
@@ -874,8 +876,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // AI turn check
-    final isAiTurn =
-        session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
+    final isAiTurn = session.mode == GameMode.vsComputer &&
+        gameState.currentPlayer != session.playerColor;
     if (gameState.isGameOver || isAiTurn || ref.read(aiThinkingProvider)) {
       uiNotifier.reset();
       return;
@@ -1138,11 +1140,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
+    final isAiTurn =
+        session.mode == GameMode.vsComputer && gameState.currentPlayer != session.playerColor;
     if (scenario != null &&
         guidanceActive &&
         scenario.guidedMove.type == GuidedMoveType.placement &&
-        !(session.mode == GameMode.vsComputer &&
-            gameState.currentPlayer == PlayerColor.black)) {
+        !isAiTurn) {
       final expected = scenario.guidedMove;
       if (pos != expected.target ||
           (expected.pieceType != null && expected.pieceType != type)) {
@@ -1214,10 +1217,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
+    final isAiTurn =
+        session.mode == GameMode.vsComputer && gameState.currentPlayer != session.playerColor;
     if (scenario != null &&
         guidanceActive &&
-        !(session.mode == GameMode.vsComputer &&
-            gameState.currentPlayer == PlayerColor.black)) {
+        !isAiTurn) {
       final guided = scenario.guidedMove;
       final expectedDrops = guided.drops ?? const [];
       final dropsMatch = expectedDrops.length == drops.length &&
@@ -1306,9 +1310,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
       final latestState = ref.read(gameStateProvider);
       final latestSession = ref.read(gameSessionProvider);
+      final latestAiColor = latestSession.playerColor == PlayerColor.white
+          ? PlayerColor.black
+          : PlayerColor.white;
       if (latestSession.mode != GameMode.vsComputer ||
           latestState.isGameOver ||
-          latestState.currentPlayer != PlayerColor.black) {
+          latestState.currentPlayer != latestAiColor) {
         return;
       }
 
