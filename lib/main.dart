@@ -422,8 +422,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.watch(gameSessionProvider);
     final scenarioState = ref.watch(scenarioStateProvider);
     final isAiThinking = ref.watch(aiThinkingProvider);
+<<<<<<< HEAD
     final isAiTurn = session.mode == GameMode.vsComputer &&
         gameState.currentPlayer != session.playerColor;
+=======
+    final isAiThinkingVisible = ref.watch(aiThinkingVisibleProvider);
+    final isAiTurn =
+        session.mode == GameMode.vsComputer && gameState.currentPlayer == PlayerColor.black;
+>>>>>>> origin/main
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
@@ -684,7 +690,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               padding: const EdgeInsets.only(top: 8),
                               child: _CompactTurnIndicator(
                                 gameState: gameState,
-                                isThinking: isAiThinking,
+                                isThinking: isAiThinkingVisible,
                                 onlineState: isOnline ? onlineState : null,
                               ),
                             ),
@@ -778,7 +784,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               child: Center(
                                 child: _CompactTurnIndicator(
                                   gameState: gameState,
-                                  isThinking: isAiThinking,
+                                  isThinking: isAiThinkingVisible,
                                   onlineState: isOnline ? onlineState : null,
                                 ),
                               ),
@@ -1311,8 +1317,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.read(uiStateProvider.notifier).reset();
     ref.read(aiThinkingProvider.notifier).state = true;
 
+    // Start a timer to show the thinking indicator after 500ms
+    // This avoids showing a spinner for quick moves
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (ref.read(aiThinkingProvider)) {
+        ref.read(aiThinkingVisibleProvider.notifier).state = true;
+      }
+    });
+
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Small delay before AI starts for better UX
+      await Future.delayed(const Duration(milliseconds: 200));
 
       final latestState = ref.read(gameStateProvider);
       final latestSession = ref.read(gameSessionProvider);
@@ -1342,6 +1357,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.read(uiStateProvider.notifier).reset();
     } finally {
       ref.read(aiThinkingProvider.notifier).state = false;
+      ref.read(aiThinkingVisibleProvider.notifier).state = false;
     }
   }
 
@@ -1492,6 +1508,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               // Chess clock toggle (only for local games)
               if (isLocalGame) ...[
                 const SizedBox(height: 16),
+<<<<<<< HEAD
                 _buildChessClockControls(
                   enabled: chessClockEnabled,
                   seconds: chessClockSeconds,
@@ -1499,6 +1516,51 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       setState(() => chessClockEnabled = enabled),
                   onSecondsChanged: (seconds) =>
                       setState(() => chessClockSeconds = seconds),
+=======
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final inactiveColor = isDark
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Colors.grey.shade700;
+                    return InkWell(
+                      onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.timer,
+                              size: 20,
+                              color: chessClockEnabled
+                                  ? GameColors.boardFrameInner
+                                  : inactiveColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Chess Clock',
+                              style: TextStyle(
+                                fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
+                                color: chessClockEnabled
+                                    ? GameColors.boardFrameInner
+                                    : inactiveColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: chessClockEnabled,
+                              onChanged: (v) => setState(() => chessClockEnabled = v),
+                              activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                              activeThumbColor: GameColors.boardFrameInner,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+>>>>>>> origin/main
                 ),
               ],
             ],
@@ -3342,50 +3404,109 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     );
   }
 
+  double _pieceFootprintHeight(PieceType type, double pieceSize) {
+    switch (type) {
+      case PieceType.flat:
+        return pieceSize * 0.55;
+      case PieceType.standing:
+        return pieceSize;
+      case PieceType.capstone:
+        return pieceSize * 0.85;
+    }
+  }
+
   Widget _buildExplodedStackView(PieceStack stack, double cellSize) {
-    final pieceSize = cellSize * 0.62;
-    final maxLift = cellSize * 0.75;
-    final fanSpread = cellSize * 0.08;
+    final pieceSize = cellSize * 0.7;
+    final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+    final baseLift = baseFootprint * 0.25;
+    final naturalSpacing = baseFootprint * 0.6;
+    final minSpacing = baseFootprint * 0.28;
+
+    // Compress spacing when the vertical stack would overflow the cell area
+    final availableHeight = cellSize * 1.2;
+    final adjustedSpacing = stack.height > 1
+        ? (availableHeight - baseFootprint) / (stack.height - 1)
+        : naturalSpacing;
+    final liftStep = math.max(minSpacing, math.min(naturalSpacing, adjustedSpacing));
 
     return AnimatedBuilder(
       animation: _stackReveal,
       builder: (context, child) {
         final progress = _stackReveal.value;
+        final height = stack.height;
+        final children = <Widget>[
+          // Soft glow at the base of the stack
+          Positioned(
+            bottom: cellSize * 0.06,
+            child: Opacity(
+              opacity: progress * 0.45,
+              child: Container(
+                width: cellSize * (0.65 + (0.25 * progress)),
+                height: cellSize * 0.16,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.25 * progress),
+                      Colors.black.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 1.0],
+                  ),
+                  borderRadius: BorderRadius.circular(cellSize),
+                ),
+              ),
+            ),
+          ),
+        ];
+
+        // Don't fan single pieces - just lift slightly for clarity
+        if (height <= 1) {
+          final piece = stack.topPiece;
+          if (piece != null) {
+            final isLightPlayer = piece.color == PlayerColor.white;
+            final pieceColors = GameColors.forPlayer(isLightPlayer);
+
+            children.add(
+              Transform.translate(
+                offset: Offset(0, -progress * baseLift),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                        blurRadius: 10 * progress + 2,
+                        spreadRadius: 0.6 * progress,
+                        offset: Offset(0, 2 - (progress)),
+                      ),
+                    ],
+                  ),
+                  child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+                ),
+              ),
+            );
+          }
+
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: children,
+          );
+        }
+
         return Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: [
-            // Soft glow at the base of the stack
-            Positioned(
-              bottom: cellSize * 0.06,
-              child: Opacity(
-                opacity: progress * 0.45,
-                child: Container(
-                  width: cellSize * (0.65 + (0.25 * progress)),
-                  height: cellSize * 0.16,
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: [
-                        Colors.black.withValues(alpha: 0.25 * progress),
-                        Colors.black.withValues(alpha: 0.0),
-                      ],
-                      stops: const [0.0, 1.0],
-                    ),
-                    borderRadius: BorderRadius.circular(cellSize),
-                  ),
-                ),
-              ),
+            ...children,
+        for (int i = 0; i < stack.height; i++)
+            _buildExplodedPiece(
+              stack.pieces[i],
+              i,
+              stack.height,
+              pieceSize,
+              baseLift,
+              liftStep,
+              progress,
             ),
-            for (int i = 0; i < stack.height; i++)
-              _buildExplodedPiece(
-                stack.pieces[i],
-                i,
-                stack.height,
-                pieceSize,
-                fanSpread,
-                maxLift,
-                progress,
-              ),
           ],
         );
       },
@@ -3395,40 +3516,41 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   Widget _buildExplodedPiece(
     Piece piece,
     int index,
-    int height,
+    int totalPieces,
     double pieceSize,
-    double fanSpread,
-    double maxLift,
+    double baseLift,
+    double liftStep,
     double progress,
   ) {
-    final fromTop = height - 1 - index;
-    final liftFactor = (fromTop + 1) / height;
-    final horizontalOffset = (fromTop - (height - 1) / 2) * fanSpread * progress;
-    final verticalOffset = -progress * maxLift * liftFactor;
-    final tilt = ((fromTop - (height - 1) / 2) * 0.04) * progress;
+    final fromBottom = index;
+    final verticalOffset = -progress * (baseLift + (fromBottom * liftStep));
+    double horizontalOffset = 0;
+
+    if (totalPieces > 1) {
+      final t = fromBottom / (totalPieces - 1);
+      final fanCurve = math.sin((t - 0.5) * math.pi);
+      horizontalOffset = progress * pieceSize * 0.08 * fanCurve;
+    }
 
     final isLightPlayer = piece.color == PlayerColor.white;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
 
     return Transform.translate(
       offset: Offset(horizontalOffset, verticalOffset),
-      child: Transform.rotate(
-        angle: tilt,
-        child: Transform.scale(
-          scale: 0.9 + (0.1 * progress),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
-                  blurRadius: 12 * progress + 3,
-                  spreadRadius: 0.8 * progress,
-                  offset: Offset(0, 3 - (progress * 1.5)),
-                ),
-              ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+              blurRadius: 12 * progress + 3,
+              spreadRadius: 0.8 * progress,
+              offset: Offset(0, 3 - (progress * 1.5)),
             ),
-            child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
-          ),
+          ],
+        ),
+        child: Transform.scale(
+          scale: 1.0 + (0.02 * progress),
+          child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
         ),
       ),
     );
@@ -3445,21 +3567,28 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final height = stack.height;
 
     // Calculate responsive values based on board size
-    // Vertical offset between pieces to show stacking
-    final verticalOffset = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.5 : 3.0);
-    final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
-    final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+    final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
+    final naturalOffset = baseFootprint * 0.32;
+    final minOffset = baseFootprint * 0.2;
+    final availableHeight = cellSize * 0.9;
 
     // Show up to 3 pieces visually, use badge for taller stacks
     const maxVisiblePieces = 3;
-    final visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
+    final int visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
+
+    final visibleOffset = visibleCount > 1
+        ? (availableHeight - baseFootprint) / (visibleCount - 1)
+        : naturalOffset;
+    final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
+    final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+    final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
     // Get the pieces to display (top N pieces of the stack)
     // pieces[0] is bottom, pieces[height-1] is top
     final startIndex = height - visibleCount;
 
     return Stack(
-      alignment: Alignment.center,
+      alignment: Alignment.bottomCenter,
       clipBehavior: Clip.none,
       children: [
         // Render pieces from bottom to top
@@ -3468,7 +3597,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           Transform.translate(
             // Each piece moves up as we go higher in the stack
             // i=0 is the lowest visible piece, i=visibleCount-1 is the top
-            offset: Offset(0, (visibleCount - 1 - i) * verticalOffset),
+            offset: Offset(0, -i * verticalOffset),
             child: _buildStackPiece(
               stack.pieces[startIndex + i],
               pieceSize,
@@ -3555,7 +3684,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   /// Flat stone: trapezoid for light, semi-circle for dark
   Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer) {
     return CustomPaint(
-      size: Size(size, size * 0.5),
+      size: Size(size, size * 0.55),
       painter: isLightPlayer
           ? _TrapezoidPainter(colors: colors)
           : _SemiCirclePainter(colors: colors),
@@ -4479,7 +4608,7 @@ class _TrapezoidPainter extends CustomPainter {
     final h = size.height;
 
     // Trapezoid: wider at bottom, narrower at top
-    final inset = w * 0.15;
+    final inset = w * 0.1;
     final path = Path()
       ..moveTo(inset, 0) // top left
       ..lineTo(w - inset, 0) // top right
@@ -4538,7 +4667,7 @@ class _SemiCirclePainter extends CustomPainter {
     // Semi-circle with chord below diameter (about 60% of circle showing)
     // The arc spans more than 180 degrees
     final radius = w * 0.5;
-    final chordY = h * 0.1; // Where the chord (flat bottom) sits
+    const chordY = 0.0; // Keep the flat base aligned with the bottom of the piece
 
     final path = Path();
     // Start from left side of chord

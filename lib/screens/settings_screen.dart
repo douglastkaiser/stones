@@ -129,10 +129,11 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: GameColors.titleColor,
+            color: isDark ? Colors.white : GameColors.titleColor,
             fontWeight: FontWeight.bold,
           ),
     );
@@ -155,24 +156,32 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ListTile(
-        leading: Icon(icon, color: GameColors.subtitleColor),
+        leading: Icon(
+          icon,
+          color: isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
+        ),
         title: Text(title),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Colors.grey.shade600),
+          style: TextStyle(
+            color: isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600,
+          ),
         ),
         trailing: trailing,
       ),
@@ -191,6 +200,9 @@ class _PlayGamesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     ImageProvider? avatar;
     if (playGames.iconImage != null) {
       try {
@@ -201,11 +213,11 @@ class _PlayGamesSection extends StatelessWidget {
     final isSignedIn = playGames.isSignedIn;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -225,7 +237,9 @@ class _PlayGamesSection extends StatelessWidget {
           isSignedIn
               ? 'Achievements, leaderboards, and cloud saves are enabled.'
               : 'Sign in to enable achievements, leaderboards, and cloud saves.',
-          style: TextStyle(color: Colors.grey.shade600),
+          style: TextStyle(
+            color: isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600,
+          ),
         ),
         trailing: isSignedIn
             ? const Icon(Icons.check_circle, color: Colors.green)

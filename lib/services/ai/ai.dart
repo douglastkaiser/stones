@@ -1,14 +1,14 @@
 import 'dart:math';
 
 import '../../models/models.dart';
-import 'intro_ai.dart';
 import 'easy_ai.dart';
 import 'medium_ai.dart';
 import 'hard_ai.dart';
+import 'expert_ai.dart';
 import 'move_generator.dart';
 
 /// AI difficulty levels
-enum AIDifficulty { intro, easy, medium, hard }
+enum AIDifficulty { easy, medium, hard, expert }
 
 /// Base class for Stones AI opponents
 abstract class StonesAI {
@@ -23,10 +23,10 @@ abstract class StonesAI {
   factory StonesAI.forDifficulty(AIDifficulty difficulty, {Random? random}) {
     final rng = random ?? Random();
     return switch (difficulty) {
-      AIDifficulty.intro => IntroStonesAI(rng),
       AIDifficulty.easy => EasyStonesAI(rng),
       AIDifficulty.medium => MediumStonesAI(rng),
       AIDifficulty.hard => HardStonesAI(rng),
+      AIDifficulty.expert => ExpertStonesAI(rng),
     };
   }
 }
