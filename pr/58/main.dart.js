@@ -96675,24 +96675,25 @@ s===$&&A.a()
 return A.aKW(b,null,s.b.a8(s.a.gq()))},
 $S:116}
 A.ate.prototype={
-$2(a4,a5){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0=this,a1=null,a2=a0.a,a3=a2.as
-a3===$&&A.a()
-s=a3.gq()
-a3=a0.b.a
-r=a3.length
-q=a0.c
+$2(a7,a8){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3=this,a4=null,a5=a3.a,a6=a5.as
+a6===$&&A.a()
+s=a6.gq()
+a6=a3.b.a
+r=a6.length
+q=a3.c
 p=0.25*s
 o=A.b([B.k.aG(p),B.k.aG(0)],t.c)
-n=A.b([A.ls(q*0.06,A.p6(A.bE(a1,a1,B.n,a1,new A.aZ(a1,a1,a1,A.b5(q),a1,new A.tt(B.a1,0.5,B.ag,a1,0,o,B.M4,a1),B.z),a1,q*0.16,a1,a1,a1,a1,q*(0.65+p)),s*0.45),a1,a1,a1,a1,a1,a1)],t.p)
-if(r<=1){m=a3.length!==0?B.b.gW(a3):a1
+n=A.b([A.ls(q*0.06,A.p6(A.bE(a4,a4,B.n,a4,new A.aZ(a4,a4,a4,A.b5(q),a4,new A.tt(B.a1,0.5,B.ag,a4,0,o,B.M4,a4),B.z),a4,q*0.16,a4,a4,a4,a4,q*(0.65+p)),s*0.45),a4,a4,a4,a4,a4,a4)],t.p)
+if(r<=1){m=a6.length!==0?B.b.gW(a6):a4
 if(m!=null){l=m.b===B.m
 k=l?B.dc:B.dd
-a3=A.b([new A.bl(0.6*s,B.N,k.c.aG(0.35*s+0.1),new A.h(0,2-s),10*s+2)],t.V)
-n.push(A.Gx(A.vD(a2.uw(m.a,a0.e,k,l),new A.aZ(a1,a1,a1,a1,a3,a1,B.z),B.d0),new A.h(0,-s*a0.d)))}return A.fY(B.e5,n,B.n,B.bm)}q=A.T(n,t.l7)
-for(p=0.35*s+0.1,o=12*s+3,j=0.8*s,i=3-s*1.5,h=t.V,g=1+0.02*s,f=a0.e,e=a0.d,d=a0.f,c=-s,b=0;b<a3.length;++b){a=a3[b]
-l=a.b===B.m
+a6=A.b([new A.bl(0.6*s,B.N,k.c.aG(0.35*s+0.1),new A.h(0,2-s),10*s+2)],t.V)
+n.push(A.Gx(A.vD(a5.uw(m.a,a3.e,k,l),new A.aZ(a4,a4,a4,a4,a6,a4,B.z),B.d0),new A.h(0,-s*a3.d)))}return A.fY(B.e5,n,B.n,B.bm)}q=A.T(n,t.l7)
+for(p=0.35*s+0.1,o=12*s+3,j=0.8*s,i=3-s*1.5,h=t.V,g=1+0.02*s,f=a3.e,e=a3.d,d=a3.f,c=-s,b=s*f*0.08,a=0;a0=a6.length,a<a0;++a){a1=a6[a]
+a2=a0>1?b*Math.sin((a/(a0-1)-0.5)*3.141592653589793):0
+l=a1.b===B.m
 k=l?B.dc:B.dd
-q.push(A.Gx(new A.Bh(new A.aZ(a1,a1,a1,a1,A.b([new A.bl(j,B.N,k.c.aG(p),new A.h(0,i),o)],h),a1,B.z),B.d0,A.aKW(a2.uw(a.a,f,k,l),g,a1),a1),new A.h(0,c*(e+b*d))))}return A.fY(B.e5,q,B.n,B.bm)},
+q.push(A.Gx(new A.Bh(new A.aZ(a4,a4,a4,a4,A.b([new A.bl(j,B.N,k.c.aG(p),new A.h(0,i),o)],h),a4,B.z),B.d0,A.aKW(a5.uw(a1.a,f,k,l),g,a4),a4),new A.h(a2,c*(e+a*d))))}return A.fY(B.e5,q,B.n,B.bm)},
 $S:642}
 A.VK.prototype={
 I(a){var s,r,q=null,p=A.F(a).ax.a===B.A,o=this.c.f===B.af,n=o?0:72
@@ -98081,7 +98082,7 @@ else l=l.Ki(o?B.i:B.cY,B.U,4)
 l=A.aa("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.fv
-s=A.aa("v1.0.0+173.gb4afc9a.d20251218 (b4afc9a)",p,p,p,A.aX(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
+s=A.aa("v1.0.0+174.g266635e.d20251218 (266635e)",p,p,p,A.aX(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
 r=A.F(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -98091,7 +98092,7 @@ r=q}return A.ev(A.bO(A.b([m,B.av,l,B.c3,s,B.aT,A.aa("An abstract strategy game",
 $S:671}
 A.a4q.prototype={
 $0(){var s=null
-A.bb9(new A.be(B.cx,A.d3(A.ew(s,s,s,new A.Kv(s),B.J),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+173.gb4afc9a.d20251218 (b4afc9a)",this.b)
+A.bb9(new A.be(B.cx,A.d3(A.ew(s,s,s,new A.Kv(s),B.J),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+174.g266635e.d20251218 (266635e)",this.b)
 return s},
 $S:0}
 A.GR.prototype={
@@ -98586,7 +98587,7 @@ r=s.ry
 if(r==null){r=s.u
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cX
-return A.bE(o,A.ev(A.cd(A.b([A.aa("v1.0.0+173.gb4afc9a.d20251218 (b4afc9a)",o,o,o,A.aX(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.aa("  \u2022  ",o,o,o,A.aX(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.l2(o,A.aa("Privacy",o,o,o,A.aX(o,o,q,o,B.nv,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.aj,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gal_(),o,o,o,o,o,o)],t.p),B.p,B.t,B.ar,0),o,o),B.n,o,o,o,o,o,B.iq,o,o,o)}}
+return A.bE(o,A.ev(A.cd(A.b([A.aa("v1.0.0+174.g266635e.d20251218 (266635e)",o,o,o,A.aX(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.aa("  \u2022  ",o,o,o,A.aX(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.l2(o,A.aa("Privacy",o,o,o,A.aX(o,o,q,o,B.nv,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.aj,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gal_(),o,o,o,o,o,o)],t.p),B.p,B.t,B.ar,0),o,o),B.n,o,o,o,o,o,B.iq,o,o,o)}}
 A.uo.prototype={
 I(a){var s,r,q,p,o,n,m,l=null,k=A.F(a).ax.a===B.A,j=this.d
 if(j)s=B.D
