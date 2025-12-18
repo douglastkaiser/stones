@@ -11,9 +11,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../firebase_options.dart';
 import '../models/models.dart';
+import 'chess_clock_provider.dart';
 import 'game_provider.dart';
 import 'game_session_provider.dart';
 import '../services/services.dart';
+import 'settings_provider.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
@@ -138,8 +140,12 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
   }
 
-  Future<void> createGame({required int boardSize}) async {
-    _debugLog('createGame() called with boardSize=$boardSize');
+  Future<void> createGame({
+    required int boardSize,
+    bool chessClockEnabled = false,
+    int? chessClockSeconds,
+  }) async {
+    _debugLog('createGame() called with boardSize=$boardSize, chessClock=$chessClockEnabled');
     await initialize();
     state = state.copyWith(creating: true, clearError: true);
     try {
@@ -151,10 +157,14 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       final code = _generateRoomCode();
       final player = _playerFor(user);
+      final clockSeconds =
+          chessClockSeconds ?? ChessClockDefaults.getTimeForBoardSize(boardSize);
       final session = OnlineGameSession(
         roomCode: code,
         white: player,
         boardSize: boardSize,
+        chessClockEnabled: chessClockEnabled,
+        chessClockSeconds: clockSeconds,
       );
 
       // Create with both createdAt and lastMoveAt fields
@@ -173,7 +183,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         appliedMoveCount: 0,
       );
       _debugLog('State updated: localColor=white, appliedMoveCount=0');
-      _beginLocalGame(boardSize);
+      _beginLocalGame(session);
     } catch (e) {
       _debugLog('createGame error: $e');
       state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
@@ -260,7 +270,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
 
       _debugLog('>>> JOINER: About to call _beginLocalGame <<<');
-      _beginLocalGame(joinedSession!.boardSize);
+      _beginLocalGame(joinedSession!);
       _debugLog('>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
 
       // Log the final state after joining
@@ -370,7 +380,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       'lastMoveAt': FieldValue.serverTimestamp(),
     });
     state = state.copyWith(appliedMoveCount: 0);
-    _beginLocalGame(activeSession.boardSize);
+    _beginLocalGame(activeSession);
   }
 
   Future<void> _listenToRoom(String roomCode, {required PlayerColor localColor}) async {
@@ -492,15 +502,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     return List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
-  void _beginLocalGame(int boardSize) {
-    _debugLog('_beginLocalGame: Starting new local game with boardSize=$boardSize');
-    _ref.read(gameSessionProvider.notifier).state =
-        const GameSessionConfig(mode: GameMode.online);
-    _ref.read(gameStateProvider.notifier).newGame(boardSize);
+  void _beginLocalGame(OnlineGameSession session) {
+    _debugLog(
+        '_beginLocalGame: Starting new local game with boardSize=${session.boardSize}, clock=${session.chessClockEnabled}');
+    _ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+      mode: GameMode.online,
+      chessClockEnabled: session.chessClockEnabled,
+      chessClockSeconds: session.chessClockSeconds,
+      playerColor: state.localColor ?? PlayerColor.white,
+    );
+    _ref.read(gameStateProvider.notifier).newGame(session.boardSize);
     _ref.read(moveHistoryProvider.notifier).clear();
     _ref.read(uiStateProvider.notifier).reset();
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(lastMoveProvider.notifier).state = null;
+    if (session.chessClockEnabled) {
+      _ref.read(chessClockProvider.notifier).initialize(session.chessClockSeconds);
+    } else {
+      _ref.read(chessClockProvider.notifier).stop();
+    }
     _debugLog('_beginLocalGame: Local game initialized, gameSessionProvider mode=online');
   }
 
@@ -517,7 +537,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     if (session.moves.length < applied) {
       _debugLog('_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
-      _beginLocalGame(session.boardSize);
+      _beginLocalGame(session);
       state = state.copyWith(appliedMoveCount: 0);
     }
 

@@ -111,6 +111,8 @@ class OnlineGameSession {
   final OnlineWinner? winner;
   final DateTime? createdAt;
   final DateTime? lastMoveAt;
+  final bool chessClockEnabled;
+  final int chessClockSeconds;
 
   const OnlineGameSession({
     required this.roomCode,
@@ -123,6 +125,8 @@ class OnlineGameSession {
     this.winner,
     this.createdAt,
     this.lastMoveAt,
+    this.chessClockEnabled = false,
+    this.chessClockSeconds = 300,
   });
 
   bool get hasOpponent => black != null;
@@ -136,6 +140,8 @@ class OnlineGameSession {
       'currentTurn': currentTurn.name,
       'status': status.name,
       'winner': winner?.name,
+      'chessClockEnabled': chessClockEnabled,
+      'chessClockSeconds': chessClockSeconds,
     };
   }
 
@@ -148,13 +154,34 @@ class OnlineGameSession {
       return <String, dynamic>{};
     }
 
+    int defaultClockFor(int size) {
+      switch (size) {
+        case 3:
+          return 60;
+        case 4:
+          return 120;
+        case 5:
+          return 300;
+        case 6:
+          return 600;
+        case 7:
+          return 900;
+        case 8:
+          return 1200;
+        default:
+          return 300;
+      }
+    }
+
+    final boardSize = (data['boardSize'] as num?)?.toInt() ?? 5;
+
     return OnlineGameSession(
       roomCode: code,
       white: OnlineGamePlayer.fromMap(toStringDynamicMap(data['white'])),
       black: data['black'] == null
           ? null
           : OnlineGamePlayer.fromMap(toStringDynamicMap(data['black'])),
-      boardSize: (data['boardSize'] as num?)?.toInt() ?? 5,
+      boardSize: boardSize,
       moves: ((data['moves'] as List?) ?? [])
           .whereType<Map>()
           .map((m) => OnlineGameMove.fromMap(toStringDynamicMap(m)))
@@ -168,6 +195,9 @@ class OnlineGameSession {
       lastMoveAt: (data['lastMoveAt'] is Timestamp)
           ? (data['lastMoveAt'] as Timestamp).toDate()
           : null,
+      chessClockEnabled: data['chessClockEnabled'] as bool? ?? false,
+      chessClockSeconds: (data['chessClockSeconds'] as num?)?.toInt() ??
+          defaultClockFor(boardSize),
     );
   }
 
@@ -181,6 +211,8 @@ class OnlineGameSession {
     OnlineWinner? winner,
     DateTime? createdAt,
     DateTime? lastMoveAt,
+    bool? chessClockEnabled,
+    int? chessClockSeconds,
   }) {
     return OnlineGameSession(
       roomCode: roomCode,
@@ -193,6 +225,8 @@ class OnlineGameSession {
       winner: winner ?? this.winner,
       createdAt: createdAt ?? this.createdAt,
       lastMoveAt: lastMoveAt ?? this.lastMoveAt,
+      chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
+      chessClockSeconds: chessClockSeconds ?? this.chessClockSeconds,
     );
   }
 }

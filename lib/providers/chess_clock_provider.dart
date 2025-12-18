@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
-import 'settings_provider.dart';
 
 /// State for the chess clock
 class ChessClockState {
@@ -63,14 +62,13 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
           blackTimeRemaining: 300,
         ));
 
-  /// Initialize the clock with time based on board size (fully resets state)
-  void initialize(int boardSize) {
+  /// Initialize the clock with a specific time in seconds (fully resets state)
+  void initialize(int timeSeconds) {
     _timer?.cancel();
-    final time = ChessClockDefaults.getTimeForBoardSize(boardSize);
     // Create fresh state with all defaults (isRunning=false, isExpired=false, etc.)
     state = ChessClockState(
-      whiteTimeRemaining: time,
-      blackTimeRemaining: time,
+      whiteTimeRemaining: timeSeconds,
+      blackTimeRemaining: timeSeconds,
       // All other fields use default values: activePlayer=null, isRunning=false, isExpired=false, expiredPlayer=null
     );
   }
