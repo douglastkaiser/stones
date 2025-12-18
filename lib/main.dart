@@ -1497,6 +1497,49 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       setState(() => chessClockEnabled = enabled),
                   onSecondsChanged: (seconds) =>
                       setState(() => chessClockSeconds = seconds),
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final inactiveColor = isDark
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Colors.grey.shade700;
+                    return InkWell(
+                      onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.timer,
+                              size: 20,
+                              color: chessClockEnabled
+                                  ? GameColors.boardFrameInner
+                                  : inactiveColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Chess Clock',
+                              style: TextStyle(
+                                fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
+                                color: chessClockEnabled
+                                    ? GameColors.boardFrameInner
+                                    : inactiveColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: chessClockEnabled,
+                              onChanged: (v) => setState(() => chessClockEnabled = v),
+                              activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                              activeThumbColor: GameColors.boardFrameInner,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ],

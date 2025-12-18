@@ -109,9 +109,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Choose the board size for your game:',
-                style: TextStyle(color: Colors.grey),
+              Builder(
+                builder: (context) {
+                  return Text(
+                    'Choose the board size for your game:',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -140,14 +146,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Text(
-                _getBoardSizeDescription(selectedSize),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
-                ),
-                textAlign: TextAlign.center,
+              Builder(
+                builder: (context) {
+                  return Text(
+                    _getBoardSizeDescription(selectedSize),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  );
+                },
               ),
               const SizedBox(height: 16),
               _buildChessClockSection(
@@ -155,6 +165,50 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 seconds: chessClockSeconds,
                 onEnabledChanged: (enabled) => setState(() => chessClockEnabled = enabled),
                 onSecondsChanged: (seconds) => setState(() => chessClockSeconds = seconds),
+              // Chess clock toggle
+              Builder(
+                builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final inactiveColor = isDark
+                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                      : Colors.grey.shade700;
+                  return InkWell(
+                    onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.timer,
+                            size: 20,
+                            color: chessClockEnabled
+                                ? GameColors.boardFrameInner
+                                : inactiveColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Chess Clock',
+                            style: TextStyle(
+                              fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
+                              color: chessClockEnabled
+                                  ? GameColors.boardFrameInner
+                                  : inactiveColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Switch(
+                            value: chessClockEnabled,
+                            onChanged: (v) => setState(() => chessClockEnabled = v),
+                            activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                            activeThumbColor: GameColors.boardFrameInner,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -452,12 +506,17 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Board Size Section
-                const Text(
-                  'Board Size',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: GameColors.titleColor,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return Text(
+                      'Board Size',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : GameColors.titleColor,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -478,13 +537,17 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  _getBoardSizeDescription(selectedSize),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                    fontStyle: FontStyle.italic,
-                  ),
+                Builder(
+                  builder: (context) {
+                    return Text(
+                      _getBoardSizeDescription(selectedSize),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -525,39 +588,36 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 const SizedBox(height: 20),
 
                 // Difficulty Section
-                const Text(
-                  'Difficulty',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: GameColors.titleColor,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return Text(
+                      'Difficulty',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : GameColors.titleColor,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 _DifficultyOption(
-                  icon: Icons.child_care,
                   title: 'Intro',
-                  subtitle: 'Random moves - great for learning',
                   isSelected: selectedDifficulty == AIDifficulty.intro,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.intro),
                 ),
                 _DifficultyOption(
-                  icon: Icons.smart_toy_outlined,
                   title: 'Easy',
-                  subtitle: 'Detects threats, builds roads',
                   isSelected: selectedDifficulty == AIDifficulty.easy,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
                 ),
                 _DifficultyOption(
-                  icon: Icons.psychology,
                   title: 'Medium',
-                  subtitle: 'Creates forks, blocks your plans',
                   isSelected: selectedDifficulty == AIDifficulty.medium,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.medium),
                 ),
                 _DifficultyOption(
-                  icon: Icons.local_fire_department,
                   title: 'Hard',
-                  subtitle: 'Aggressive 3-ply search',
                   isSelected: selectedDifficulty == AIDifficulty.hard,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
                 ),
@@ -677,11 +737,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       // Logo/Title
                       _buildLogo(context),
                       const SizedBox(height: 8),
-                      Text(
-                        'A game of roads and flats',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: GameColors.subtitleColor,
-                            ),
+                      Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return Text(
+                            'A game of roads and flats',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: isDark
+                                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                                      : GameColors.subtitleColor,
+                                ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 64),
 
@@ -757,34 +824,67 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         ),
                       ),
 
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return Text(
+                            'You play as White when facing the computer',
+                            style: TextStyle(
+                              color: isDark
+                                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                                  : GameColors.subtitleColor,
+                            ),
+                          );
+                        },
+                      ),
+
                       const SizedBox(height: 20),
 
                       // Tutorial and puzzle hub
-                      SizedBox(
-                        width: 220,
-                        height: 56,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _openScenarioSelector(context),
-                          icon: const Icon(Icons.school, size: 22),
-                          label: const Text(
-                            'Tutorials & Puzzles',
-                            style: TextStyle(fontSize: 17),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: GameColors.boardFrameInner,
-                            side: const BorderSide(color: GameColors.boardFrameInner, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          final colorScheme = Theme.of(context).colorScheme;
+                          // In dark mode, use primary color for better contrast
+                          final buttonColor = isDark
+                              ? colorScheme.primary
+                              : GameColors.boardFrameInner;
+                          return SizedBox(
+                            width: 220,
+                            height: 56,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openScenarioSelector(context),
+                              icon: Icon(Icons.school, size: 22, color: buttonColor),
+                              label: Text(
+                                'Tutorials & Puzzles',
+                                style: TextStyle(fontSize: 17, color: buttonColor),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: buttonColor,
+                                side: BorderSide(color: buttonColor, width: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 8),
-                      const Text(
-                        'Guided boards with scripted examples',
-                        style: TextStyle(color: GameColors.subtitleColor),
+                      Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return Text(
+                            'Guided boards with scripted examples',
+                            style: TextStyle(
+                              color: isDark
+                                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                                  : GameColors.subtitleColor,
+                            ),
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 16),
@@ -822,6 +922,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }
 
   Widget _buildLogo(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         // Stack of styled stones as logo
@@ -837,7 +939,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           'STONES',
           style: Theme.of(context).textTheme.displayLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: GameColors.titleColor,
+                color: isDark ? Colors.white : GameColors.titleColor,
                 letterSpacing: 8,
               ),
         ),
@@ -981,6 +1083,9 @@ class _PlayerChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     ImageProvider? avatar;
     if (iconImage != null) {
       try {
@@ -991,11 +1096,11 @@ class _PlayerChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1039,6 +1144,14 @@ class _VersionFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : Colors.grey.shade500;
+    final separatorColor = isDark
+        ? Theme.of(context).colorScheme.outline
+        : Colors.grey.shade400;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
@@ -1049,14 +1162,14 @@ class _VersionFooter extends StatelessWidget {
               AppVersion.displayVersion,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade500,
+                color: textColor,
               ),
             ),
             Text(
               '  \u2022  ',
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade400,
+                color: separatorColor,
               ),
             ),
             GestureDetector(
@@ -1065,9 +1178,9 @@ class _VersionFooter extends StatelessWidget {
                 'Privacy',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey.shade500,
+                  color: textColor,
                   decoration: TextDecoration.underline,
-                  decorationColor: Colors.grey.shade500,
+                  decorationColor: textColor,
                 ),
               ),
             ),
@@ -1080,67 +1193,54 @@ class _VersionFooter extends StatelessWidget {
 
 /// Difficulty option for AI picker
 class _DifficultyOption extends StatelessWidget {
-  final IconData icon;
   final String title;
-  final String subtitle;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _DifficultyOption({
-    required this.icon,
     required this.title,
-    required this.subtitle,
     required this.isSelected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isSelected
+        ? GameColors.boardFrameInner
+        : isDark
+            ? Colors.grey.shade600
+            : Colors.grey.shade300;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: isSelected
-              ? GameColors.boardFrameInner.withValues(alpha: 0.1)
+              ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
               : null,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected
-                ? GameColors.boardFrameInner
-                : Colors.grey.shade300,
+            color: borderColor,
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: isSelected ? GameColors.boardFrameInner : Colors.grey.shade600,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? GameColors.boardFrameInner : null,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? GameColors.boardFrameInner
+                      : isDark
+                          ? Colors.white
+                          : null,
+                ),
               ),
             ),
             if (isSelected)

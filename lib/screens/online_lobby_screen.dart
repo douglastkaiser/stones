@@ -229,10 +229,20 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                     hintText: 'e.g., ABCXYZ',
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.tag),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => _joinCodeController.clear(),
-                    ),
+                    suffixIcon: _joinCodeController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _joinCodeController.clear();
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                    helperText: _joinCodeController.text.isEmpty
+                        ? 'Enter 6-letter room code'
+                        : _joinCodeController.text.length < 6
+                            ? '${6 - _joinCodeController.text.length} more letter${6 - _joinCodeController.text.length == 1 ? '' : 's'} needed'
+                            : null,
                   ),
                   textCapitalization: TextCapitalization.characters,
                   inputFormatters: [
@@ -245,24 +255,12 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 48,
-                  child: OutlinedButton.icon(
-                    icon: online.joining
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login),
-                    label: Text(online.joining ? 'Joining...' : 'Join Game'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: GameColors.boardFrameOuter,
-                      side: const BorderSide(color: GameColors.boardFrameOuter, width: 2),
-                    ),
-                    onPressed: (online.joining || _joinCodeController.text.length != 6)
-                        ? null
-                        : () => ref
-                            .read(onlineGameProvider.notifier)
-                            .joinGame(_joinCodeController.text),
+                  child: _JoinGameButton(
+                    isJoining: online.joining,
+                    codeLength: _joinCodeController.text.length,
+                    onJoin: () => ref
+                        .read(onlineGameProvider.notifier)
+                        .joinGame(_joinCodeController.text),
                   ),
                 ),
               ],
@@ -291,11 +289,18 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 24),
-            Text(
-              'Share this code with a friend:',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
+            Builder(
+              builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                return Text(
+                  'Share this code with a friend:',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? Theme.of(context).colorScheme.onSurfaceVariant
+                            : Colors.grey.shade600,
+                      ),
+                );
+              },
             ),
             const SizedBox(height: 8),
             // Big room code display
@@ -350,11 +355,18 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               waiting: true,
             ),
             const SizedBox(height: 8),
-            Text(
-              'Board size: ${session.boardSize}×${session.boardSize}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
+            Builder(
+              builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                return Text(
+                  'Board size: ${session.boardSize}×${session.boardSize}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? Theme.of(context).colorScheme.onSurfaceVariant
+                            : Colors.grey.shade600,
+                      ),
+                );
+              },
             ),
             const SizedBox(height: 24),
             // Leave game button
@@ -416,46 +428,70 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
             ),
             if (online.opponentDisconnected && !online.opponentInactive) ...[
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.wifi_off, color: Colors.orange.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Opponent may have disconnected (no activity for 60s)',
-                        style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
-                      ),
+              Builder(
+                builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  return Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.orange.shade900 : Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.wifi_off,
+                          color: isDark ? Colors.orange.shade300 : Colors.orange.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Opponent may have disconnected (no activity for 60s)',
+                            style: TextStyle(
+                              color: isDark ? Colors.orange.shade200 : Colors.orange.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
             if (online.opponentInactive) ...[
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Opponent disconnected (no activity for 2+ minutes)',
-                        style: TextStyle(color: Colors.red.shade700, fontSize: 12),
-                      ),
+              Builder(
+                builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  return Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.red.shade900 : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: isDark ? Colors.red.shade300 : Colors.red.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Opponent disconnected (no activity for 2+ minutes)',
+                            style: TextStyle(
+                              color: isDark ? Colors.red.shade200 : Colors.red.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
             const SizedBox(height: 16),
@@ -676,32 +712,52 @@ class _PlayerInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Background colors
+    final bgColor = isActive
+        ? (isDark ? Colors.green.shade900 : Colors.green.shade50)
+        : isLocal
+            ? (isDark ? Colors.blue.shade900 : Colors.blue.shade50)
+            : (isDark ? colorScheme.surfaceContainerHighest : Colors.grey.shade100);
+
+    // Border colors
+    final borderColor = isActive
+        ? (isDark ? Colors.green.shade700 : Colors.green.shade300)
+        : isLocal
+            ? (isDark ? Colors.blue.shade700 : Colors.blue.shade200)
+            : (isDark ? colorScheme.outline : Colors.grey.shade300);
+
+    // Icon/text colors
+    final iconColor = isActive
+        ? (isDark ? Colors.green.shade300 : Colors.green.shade700)
+        : isLocal
+            ? (isDark ? Colors.blue.shade300 : Colors.blue.shade700)
+            : (isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600);
+
+    final labelColor = isActive
+        ? (isDark ? Colors.green.shade300 : Colors.green.shade700)
+        : isLocal
+            ? (isDark ? Colors.blue.shade300 : Colors.blue.shade700)
+            : (isDark ? Colors.white : Colors.grey.shade700);
+
+    final nameColor = waiting
+        ? (isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade500)
+        : (isDark ? colorScheme.onSurface : Colors.grey.shade700);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isActive
-            ? Colors.green.shade50
-            : isLocal
-                ? Colors.blue.shade50
-                : Colors.grey.shade100,
+        color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isActive
-              ? Colors.green.shade300
-              : isLocal
-                  ? Colors.blue.shade200
-                  : Colors.grey.shade300,
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
           Icon(
             isLocal ? Icons.person : Icons.person_outline,
-            color: isActive
-                ? Colors.green.shade700
-                : isLocal
-                    ? Colors.blue.shade700
-                    : Colors.grey.shade600,
+            color: iconColor,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -712,17 +768,13 @@ class _PlayerInfoCard extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: isActive
-                        ? Colors.green.shade700
-                        : isLocal
-                            ? Colors.blue.shade700
-                            : Colors.grey.shade700,
+                    color: labelColor,
                   ),
                 ),
                 Text(
                   waiting ? 'Waiting...' : (player?.displayName ?? 'Unknown'),
                   style: TextStyle(
-                    color: waiting ? Colors.grey.shade500 : Colors.grey.shade700,
+                    color: nameColor,
                     fontStyle: waiting ? FontStyle.italic : FontStyle.normal,
                   ),
                 ),
@@ -758,15 +810,27 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      color: Colors.red.shade50,
+      color: isDark ? Colors.red.shade900 : Colors.red.shade50,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.red),
+            Icon(
+              Icons.error_outline,
+              color: isDark ? Colors.red.shade300 : Colors.red,
+            ),
             const SizedBox(width: 8),
-            Expanded(child: Text(message)),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: isDark ? Colors.red.shade100 : null,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -851,6 +915,119 @@ class _UpperCaseTextFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: newValue.text.toUpperCase(),
       selection: newValue.selection,
+    );
+  }
+}
+
+/// Join Game button with visual feedback when disabled
+class _JoinGameButton extends StatefulWidget {
+  final bool isJoining;
+  final int codeLength;
+  final VoidCallback onJoin;
+
+  const _JoinGameButton({
+    required this.isJoining,
+    required this.codeLength,
+    required this.onJoin,
+  });
+
+  @override
+  State<_JoinGameButton> createState() => _JoinGameButtonState();
+}
+
+class _JoinGameButtonState extends State<_JoinGameButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  bool get _isEnabled => !widget.isJoining && widget.codeLength == 6;
+
+  void _handleTap() {
+    if (_isEnabled) {
+      widget.onJoin();
+    } else {
+      // Trigger shake animation for visual feedback
+      _shakeController.forward().then((_) => _shakeController.reset());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AnimatedBuilder(
+      animation: _shakeAnimation,
+      builder: (context, child) {
+        final shakeOffset = _shakeAnimation.value * 8 *
+            ((_shakeController.value * 8).floor().isEven ? 1 : -1);
+        return Transform.translate(
+          offset: Offset(shakeOffset, 0),
+          child: child,
+        );
+      },
+      child: OutlinedButton.icon(
+        icon: widget.isJoining
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                Icons.login,
+                color: _isEnabled
+                    ? GameColors.boardFrameOuter
+                    : isDark
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
+              ),
+        label: Text(
+          widget.isJoining ? 'Joining...' : 'Join Game',
+          style: TextStyle(
+            color: _isEnabled
+                ? GameColors.boardFrameOuter
+                : isDark
+                    ? Colors.grey.shade600
+                    : Colors.grey.shade400,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _isEnabled
+              ? GameColors.boardFrameOuter
+              : isDark
+                  ? Colors.grey.shade600
+                  : Colors.grey.shade400,
+          side: BorderSide(
+            color: _isEnabled
+                ? GameColors.boardFrameOuter
+                : isDark
+                    ? Colors.grey.shade700
+                    : Colors.grey.shade300,
+            width: 2,
+          ),
+          disabledForegroundColor: isDark
+              ? Colors.grey.shade600
+              : Colors.grey.shade400,
+        ),
+        onPressed: _isEnabled ? _handleTap : _handleTap,
+      ),
     );
   }
 }
