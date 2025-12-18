@@ -2194,7 +2194,12 @@ class _GameBoard extends StatelessWidget {
 
     final dropPath = uiState.getDropPath();
     final nextDropPos = uiState.getCurrentHandPosition();
-    final validMoveDestinations = uiState.getValidMoveDestinations(gameState);
+    // Get valid destinations for both movingStack and droppingPieces modes
+    final validMoveDestinations = uiState.mode == InteractionMode.movingStack
+        ? uiState.getValidMoveDestinations(gameState)
+        : uiState.mode == InteractionMode.droppingPieces
+            ? uiState.getValidDropDestinations(gameState)
+            : <Position>{};
     final boardSize = gameState.boardSize;
 
     // Calculate preview stacks for move operations
@@ -2913,16 +2918,21 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             (stackForDisplay.isNotEmpty || hasGhostPieces);
 
         // For exploded view, combine real stack with ghost pieces
-        final explodedStack = hasGhostPieces
-            ? stackForDisplay.pushAll(widget.ghostStackPieces)
-            : stackForDisplay;
-        final ghostStartIndex = stackForDisplay.height;
+        // BUT: if explodedStack is set, it already contains ghosts (from _getPreviewStack)
+        final bool explodedStackAlreadyCombined = widget.explodedStack != null;
+        final combinedStack = explodedStackAlreadyCombined
+            ? stackForDisplay  // Already has ghosts included
+            : (hasGhostPieces
+                ? widget.stack.pushAll(widget.ghostStackPieces)
+                : widget.stack);
+        // Ghost pieces start after the original display stack
+        final ghostStartIndex = widget.stack.height;
 
         // Build stack display (exploded fan-out or normal depth view)
         Widget content;
         if (isExplodedView) {
           content = _buildExplodedStackViewWithGhosts(
-            explodedStack,
+            combinedStack,
             cellSize,
             ghostStartIndex,
           );

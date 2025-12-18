@@ -260,13 +260,14 @@ class UIState {
         previews[currentPos] = (baseStack, droppedPieces);
       }
 
-      // Current hand position: show pending drop as ghost
+      // Current hand position: show ALL remaining pieces as ghosts
+      // This gives the user a full preview of what will land there
       if (piecesInHand.isNotEmpty) {
         final handPos = getCurrentHandPosition();
         if (handPos != null) {
           final targetStack = gameState.board.stackAt(handPos);
-          final pendingDrop = pendingDropCount.clamp(0, piecesInHand.length).toInt();
-          final ghostPieces = piecesInHand.sublist(0, pendingDrop);
+          // Show all pieces still in hand as ghosts at the current position
+          final ghostPieces = piecesInHand;
 
           // Check if we need to flatten a wall
           PieceStack baseStack = targetStack;
