@@ -50,7 +50,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   void _startNewGame(
     BuildContext context,
     GameMode mode, {
-    AIDifficulty difficulty = AIDifficulty.intro,
+    AIDifficulty difficulty = AIDifficulty.easy,
   }) {
     final gameState = ref.read(gameStateProvider);
     final isGameInProgress = !gameState.isGameOver &&
@@ -465,11 +465,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 ),
                 const SizedBox(height: 8),
                 _DifficultyOption(
-                  title: 'Intro',
-                  isSelected: selectedDifficulty == AIDifficulty.intro,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.intro),
-                ),
-                _DifficultyOption(
                   title: 'Easy',
                   isSelected: selectedDifficulty == AIDifficulty.easy,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
@@ -483,6 +478,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   title: 'Hard',
                   isSelected: selectedDifficulty == AIDifficulty.hard,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
+                ),
+                _DifficultyOption(
+                  title: 'Expert',
+                  isSelected: selectedDifficulty == AIDifficulty.expert,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.expert),
                 ),
               ],
             ),

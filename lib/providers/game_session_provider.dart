@@ -18,7 +18,7 @@ class GameSessionConfig {
 
   const GameSessionConfig({
     this.mode = GameMode.local,
-    this.aiDifficulty = AIDifficulty.intro,
+    this.aiDifficulty = AIDifficulty.easy,
     this.scenario,
   });
 
@@ -40,5 +40,8 @@ class GameSessionConfig {
 final gameSessionProvider =
     StateProvider<GameSessionConfig>((ref) => const GameSessionConfig());
 
-/// Whether the AI is currently thinking
+/// Whether the AI is currently thinking (blocks input)
 final aiThinkingProvider = StateProvider<bool>((ref) => false);
+
+/// Whether the AI thinking indicator should be visible (shown after 500ms delay)
+final aiThinkingVisibleProvider = StateProvider<bool>((ref) => false);
