@@ -356,6 +356,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       );
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeTriggerAiTurn(ref.read(gameStateProvider));
+    });
+
     // Listen for online game events (opponent moves/joins)
     ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
       final soundManager = ref.read(soundManagerProvider);
