@@ -82,7 +82,6 @@ class ExpertStonesAI extends StonesAI {
     final candidates = quickScored.take(_maxTopMoves).map((e) => e.$1).toList();
 
     AIMove? bestMove;
-    var bestScore = double.negativeInfinity;
 
     // Iterative deepening - start shallow and go deeper until time runs out
     for (var depth = _minDepth; depth <= _maxDepth; depth++) {
@@ -91,7 +90,6 @@ class ExpertStonesAI extends StonesAI {
       final depthBest = await _searchAtDepth(state, candidates, depth);
       if (depthBest != null && !_timeExpired) {
         bestMove = depthBest.$1;
-        bestScore = depthBest.$2;
       }
 
       // Allow other operations to run
@@ -143,7 +141,7 @@ class ExpertStonesAI extends StonesAI {
     for (final move in moves) {
       if (_isTimeExpired()) break;
 
-      final score = _evaluateMove(state, move, depth, alpha: alpha, beta: beta);
+      final score = _evaluateMove(state, move, depth, alpha: alpha);
 
       if (score > bestScore) {
         bestScore = score;
@@ -170,13 +168,13 @@ class ExpertStonesAI extends StonesAI {
 
     // Check if we win
     if (BoardAnalysis.hasRoad(afterOurMove, state.currentPlayer)) {
-      return 10000 + depth; // Prefer faster wins
+      return 10000.0 + depth; // Prefer faster wins
     }
 
     // Check for flat win
     final flatWin = _checkFlatWin(afterOurMove, state.currentPlayer);
     if (flatWin != null) {
-      return flatWin == state.currentPlayer ? 9000 + depth : -9000 - depth;
+      return flatWin == state.currentPlayer ? 9000.0 + depth : -9000.0 - depth;
     }
 
     if (depth <= 0 || _isTimeExpired()) {
@@ -210,17 +208,17 @@ class ExpertStonesAI extends StonesAI {
 
     // Check for terminal conditions
     if (BoardAnalysis.hasRoad(state, maximizingPlayer)) {
-      return 10000 + depth;
+      return 10000.0 + depth;
     }
     if (BoardAnalysis.hasRoad(state, maximizingPlayer == PlayerColor.white
         ? PlayerColor.black
         : PlayerColor.white)) {
-      return -10000 - depth;
+      return -10000.0 - depth;
     }
 
     final flatWin = _checkFlatWin(state, maximizingPlayer);
     if (flatWin != null) {
-      return flatWin == maximizingPlayer ? 9000 + depth : -9000 - depth;
+      return flatWin == maximizingPlayer ? 9000.0 + depth : -9000.0 - depth;
     }
 
     if (depth <= 0 || _isTimeExpired()) {
@@ -370,8 +368,8 @@ class ExpertStonesAI extends StonesAI {
     score -= _evaluateChainConnectivity(state, opponent) * 3;
 
     // Piece count advantage for flat wins
-    final ourPieces = state.getPieces(color);
-    final oppPieces = state.getPieces(opponent);
+    final ourPieces = state.piecesFor(color);
+    final oppPieces = state.piecesFor(opponent);
     final flatAdvantage = _countFlatsOnBoard(state, color) - _countFlatsOnBoard(state, opponent);
     score += flatAdvantage * 2;
 
@@ -487,8 +485,8 @@ class ExpertStonesAI extends StonesAI {
 
     if (emptySpaces > 0) {
       // Check if any player is out of pieces
-      final whitePieces = state.getPieces(PlayerColor.white);
-      final blackPieces = state.getPieces(PlayerColor.black);
+      final whitePieces = state.piecesFor(PlayerColor.white);
+      final blackPieces = state.piecesFor(PlayerColor.black);
       if (whitePieces.flatStones > 0 && blackPieces.flatStones > 0) {
         return null; // Game continues
       }
