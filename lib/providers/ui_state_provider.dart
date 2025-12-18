@@ -227,7 +227,7 @@ class UIState {
     if (mode == InteractionMode.droppingPieces &&
         selectedDirection != null) {
       final piecesToPickUp = piecesPickedUp + drops.fold(0, (a, b) => a + b);
-      final actualPickup = piecesToPickUp.clamp(0, sourceStack.height);
+      final actualPickup = piecesToPickUp.clamp(0, sourceStack.height).toInt();
 
       // Get the pieces being moved
       final (remaining, pickedUp) = sourceStack.pop(actualPickup);
