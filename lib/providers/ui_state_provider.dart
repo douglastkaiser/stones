@@ -208,18 +208,13 @@ class UIState {
 
     final previews = <Position, (PieceStack, List<Piece>)>{};
 
-    // In movingStack mode: show source with picked up pieces as ghosts
+    // In movingStack mode: show entire source stack as ghosts (move not confirmed)
     if (mode == InteractionMode.movingStack) {
-      // Source position: keep all pieces but mark top N as ghosts
-      final piecesToPickUp = piecesPickedUp.clamp(0, sourceStack.height).toInt();
-      final ghostPieces = sourceStack.pieces
-          .sublist(sourceStack.height - piecesToPickUp);
-      final remainingPieces = sourceStack.pieces
-          .sublist(0, sourceStack.height - piecesToPickUp);
-
+      // ALL pieces at source are ghosts since the move is unconfirmed
+      // The pickup count badge shows which ones will be picked up
       previews[selectedPosition!] = (
-        PieceStack(remainingPieces),
-        ghostPieces,
+        PieceStack.empty,  // no solid pieces - everything is part of the plan
+        sourceStack.pieces,  // entire stack as ghosts
       );
     }
 
