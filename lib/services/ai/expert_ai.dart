@@ -136,7 +136,6 @@ class ExpertStonesAI extends StonesAI {
     AIMove? bestMove;
     var bestScore = double.negativeInfinity;
     var alpha = double.negativeInfinity;
-    const beta = double.infinity;
 
     for (final move in moves) {
       if (_isTimeExpired()) break;
