@@ -8,3 +8,5 @@ export 'settings_provider.dart';
 export 'ui_state_provider.dart';
 export 'online_game_provider.dart';
 export 'scenario_provider.dart';
+export 'achievements_provider.dart';
+export 'customization_provider.dart';

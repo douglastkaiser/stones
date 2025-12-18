@@ -8,6 +8,8 @@ class SettingsKeys {
   static const String soundMuted = 'sound_muted';
   static const String themeMode = 'theme_mode';
   static const String chessClockEnabled = 'chess_clock_enabled';
+  static const String boardTheme = 'board_theme';
+  static const String pieceStyle = 'piece_style';
 }
 
 /// Default chess clock times in seconds by board size
@@ -45,12 +47,16 @@ class AppSettings {
   final bool isSoundMuted;
   final ThemeMode themeMode;
   final bool chessClockEnabled;
+  final String boardThemeId;
+  final String pieceStyleId;
 
   const AppSettings({
     this.boardSize = 5,
     this.isSoundMuted = false,
     this.themeMode = ThemeMode.system,
     this.chessClockEnabled = false,
+    this.boardThemeId = 'classic_wood',
+    this.pieceStyleId = 'standard',
   });
 
   AppSettings copyWith({
@@ -58,12 +64,16 @@ class AppSettings {
     bool? isSoundMuted,
     ThemeMode? themeMode,
     bool? chessClockEnabled,
+    String? boardThemeId,
+    String? pieceStyleId,
   }) {
     return AppSettings(
       boardSize: boardSize ?? this.boardSize,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
       themeMode: themeMode ?? this.themeMode,
       chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
+      boardThemeId: boardThemeId ?? this.boardThemeId,
+      pieceStyleId: pieceStyleId ?? this.pieceStyleId,
     );
   }
 }
@@ -83,6 +93,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
           ? ThemeMode.values[themeModeIndex]
           : ThemeMode.system,
       chessClockEnabled: prefs.getBool(SettingsKeys.chessClockEnabled) ?? false,
+      boardThemeId: prefs.getString(SettingsKeys.boardTheme) ?? 'classic_wood',
+      pieceStyleId: prefs.getString(SettingsKeys.pieceStyle) ?? 'standard',
     );
   }
 
@@ -117,6 +129,20 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(chessClockEnabled: enabled);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SettingsKeys.chessClockEnabled, enabled);
+  }
+
+  /// Select board theme and persist
+  Future<void> setBoardTheme(String id) async {
+    state = state.copyWith(boardThemeId: id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(SettingsKeys.boardTheme, id);
+  }
+
+  /// Select piece style and persist
+  Future<void> setPieceStyle(String id) async {
+    state = state.copyWith(pieceStyleId: id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(SettingsKeys.pieceStyle, id);
   }
 }
 

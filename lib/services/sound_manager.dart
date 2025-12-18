@@ -9,15 +9,19 @@ enum GameSound {
   wallFlatten,
   win,
   illegalMove,
+  achievement,
 }
 
 /// Manages game sounds with mute support
 class SoundManager {
   static const String _muteKey = 'sound_muted';
 
-  final Map<GameSound, AudioPlayer> _players = {};
+  final Map<String, AudioPlayer> _players = {};
   bool _isMuted = false;
   bool _isInitialized = false;
+
+  String _piecePlaceAsset = 'assets/sounds/piece_place.wav';
+  String _stackMoveAsset = 'assets/sounds/stack_move.wav';
 
   /// Whether sounds are muted
   bool get isMuted => _isMuted;
@@ -30,13 +34,6 @@ class SoundManager {
     final prefs = await SharedPreferences.getInstance();
     _isMuted = prefs.getBool(_muteKey) ?? false;
 
-    // Create audio players for each sound
-    for (final sound in GameSound.values) {
-      _players[sound] = AudioPlayer();
-      await _players[sound]!.setSource(AssetSource(_getAssetPath(sound)));
-      await _players[sound]!.setReleaseMode(ReleaseMode.stop);
-    }
-
     _isInitialized = true;
   }
 
@@ -44,27 +41,45 @@ class SoundManager {
   String _getAssetPath(GameSound sound) {
     switch (sound) {
       case GameSound.piecePlace:
-        return 'sounds/piece_place.wav';
+        return _piecePlaceAsset;
       case GameSound.stackMove:
-        return 'sounds/stack_move.wav';
+        return _stackMoveAsset;
       case GameSound.wallFlatten:
-        return 'sounds/wall_flatten.wav';
+        return 'assets/sounds/wall_flatten.wav';
       case GameSound.win:
-        return 'sounds/win.wav';
+        return 'assets/sounds/win.wav';
       case GameSound.illegalMove:
-        return 'sounds/illegal_move.wav';
+        return 'assets/sounds/illegal_move.wav';
+      case GameSound.achievement:
+        return 'assets/sounds/win.wav';
     }
+  }
+
+  /// Configure the audio variants used for the current cosmetics.
+  void setCosmeticSounds({required String boardSound, required String stackSound}) {
+    _piecePlaceAsset = boardSound;
+    _stackMoveAsset = stackSound;
   }
 
   /// Play a sound effect
   Future<void> play(GameSound sound) async {
     if (_isMuted || !_isInitialized) return;
 
-    final player = _players[sound];
-    if (player != null) {
-      await player.stop();
-      await player.resume();
+    final asset = _getAssetPath(sound);
+    final player = await _getPlayer(asset);
+    await player.stop();
+    await player.resume();
+  }
+
+  Future<AudioPlayer> _getPlayer(String asset) async {
+    if (_players.containsKey(asset)) {
+      return _players[asset]!;
     }
+    final player = AudioPlayer();
+    await player.setSource(AssetSource(asset.replaceFirst('assets/', '')));
+    await player.setReleaseMode(ReleaseMode.stop);
+    _players[asset] = player;
+    return player;
   }
 
   /// Set mute state and persist it
@@ -104,6 +119,9 @@ class SoundManager {
 
   /// Play illegal move sound (subtle error buzz)
   Future<void> playIllegalMove() => play(GameSound.illegalMove);
+
+  /// Play achievement unlock sound
+  Future<void> playAchievement() => play(GameSound.achievement);
 }
 
 /// Provider for the sound manager singleton

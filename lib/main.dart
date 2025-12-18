@@ -43,6 +43,7 @@ class _StonesAppState extends ConsumerState<StonesApp> {
     super.initState();
     // Load settings on app start
     ref.read(appSettingsProvider.notifier).load();
+    ref.read(achievementsProvider.notifier).load();
   }
 
   @override
@@ -72,6 +73,51 @@ class _StonesAppState extends ConsumerState<StonesApp> {
   }
 }
 
+class _BoardTexturePainter extends CustomPainter {
+  final BoardPalette palette;
+
+  const _BoardTexturePainter(this.palette);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final background = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          palette.boardBackground.withValues(alpha: 0.96),
+          palette.boardBackground.withValues(alpha: 0.86),
+          palette.boardBackground.withValues(alpha: 0.96),
+        ],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, Paint()..shader = background);
+
+    // Subtle cross-hatch to give the board a tactile feel without image assets.
+    final stripeSpacing = 22.0;
+    final stripePaintLight = Paint()
+      ..color = palette.gridLineHighlight.withValues(alpha: 0.07)
+      ..strokeWidth = 2;
+    final stripePaintDark = Paint()
+      ..color = palette.gridLineShadow.withValues(alpha: 0.05)
+      ..strokeWidth = 2;
+
+    for (double offset = -size.height; offset < size.width + size.height; offset += stripeSpacing) {
+      canvas.drawLine(Offset(offset, 0), Offset(offset + size.height, size.height), stripePaintLight);
+    }
+
+    for (double offset = size.height; offset > -size.width; offset -= stripeSpacing) {
+      canvas.drawLine(Offset(offset, 0), Offset(offset - size.height, size.height), stripePaintDark);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BoardTexturePainter oldDelegate) {
+    return oldDelegate.palette != palette;
+  }
+}
+
 /// Home screen with settings and start game
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -93,6 +139,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     await soundManager.initialize();
     // Sync mute state with provider
     ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+    final cosmetics = ref.read(activeCosmeticsProvider);
+    soundManager.setCosmeticSounds(
+      boardSound: cosmetics.boardTheme.placementSound,
+      stackSound: cosmetics.pieceStyle.stackSound,
+    );
   }
 
   @override
@@ -344,6 +395,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               moveCount: moveCount,
             ),
       );
+      if (previous?.isGameOver != true && next.isGameOver) {
+        unawaited(_recordGameConclusion(next));
+      }
     });
 
     // Listen for online game events (opponent moves/joins)
@@ -356,6 +410,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         soundManager.playStackMove();
       }
     });
+
+    ref.listen<UnlockedCosmetics>(activeCosmeticsProvider, (previous, next) {
+      final soundManager = ref.read(soundManagerProvider);
+      soundManager.setCosmeticSounds(
+        boardSound: next.boardTheme.placementSound,
+        stackSound: next.pieceStyle.stackSound,
+      );
+    });
+
+    ref.listen<AchievementState>(achievementsProvider, (previous, next) {
+      final notifier = ref.read(achievementsProvider.notifier);
+      AchievementType? unlocked;
+      while ((unlocked = notifier.consumeToast()) != null) {
+        _showAchievementToast(unlocked!);
+      }
+    });
+
+    final cosmetics = ref.read(activeCosmeticsProvider);
+    ref.read(soundManagerProvider).setCosmeticSounds(
+          boardSound: cosmetics.boardTheme.placementSound,
+          stackSound: cosmetics.pieceStyle.stackSound,
+        );
   }
 
   @override
@@ -484,6 +560,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         !scenarioState.completionShown &&
         (gameState.isGameOver || scenarioState.guidedStepComplete)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(
+          ref
+              .read(achievementsProvider.notifier)
+              .recordScenarioCompletion(activeScenario),
+        );
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
         showDialog(
           context: context,
@@ -554,23 +635,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           final showClockEnabled = session.mode == GameMode.local &&
               ref.watch(appSettingsProvider).chessClockEnabled;
 
+          final cosmetics = ref.watch(activeCosmeticsProvider);
+          final palette = cosmetics.boardTheme.palette;
+
           // Board widget (reused in both layouts)
           final boardWidget = Container(
             decoration: BoxDecoration(
-              // Wooden frame gradient
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  GameColors.boardFrameInner,
-                  GameColors.boardFrameOuter,
-                  GameColors.boardFrameInner,
+                  palette.boardFrameInner,
+                  palette.boardFrameOuter,
+                  palette.boardFrameInner,
                 ],
-                stops: [0.0, 0.5, 1.0],
+                stops: const [0.0, 0.5, 1.0],
               ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: GameColors.boardFrameOuter,
+                color: palette.boardFrameOuter,
                 width: 2,
               ),
               boxShadow: [
@@ -580,7 +663,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   offset: const Offset(2, 4),
                 ),
                 BoxShadow(
-                  color: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                  color: palette.boardFrameInner.withValues(alpha: 0.5),
                   blurRadius: 2,
                   offset: const Offset(-1, -1),
                 ),
@@ -588,20 +671,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
             child: IgnorePointer(
               ignoring: inputLocked,
-            child: _GameBoard(
-              gameState: gameState,
-              uiState: uiState,
-              animationState: animationState,
-              lastMovePositions: lastMovePositions,
-              explodedPosition: _longPressedPosition,
-              explodedStack: _longPressedStack,
-              highlightedPositions: scenarioHighlights,
-              onCellTap: (pos) =>
-                  _handleCellTap(context, ref, pos, guidedMove),
-              onLongPressStart: _startStackView,
-              onLongPressEnd: _endStackView,
+              child: _GameBoard(
+                gameState: gameState,
+                uiState: uiState,
+                animationState: animationState,
+                palette: palette,
+                pieceStyle: cosmetics.pieceStyle,
+                lastMovePositions: lastMovePositions,
+                explodedPosition: _longPressedPosition,
+                explodedStack: _longPressedStack,
+                highlightedPositions: scenarioHighlights,
+                onCellTap: (pos) =>
+                    _handleCellTap(context, ref, pos, guidedMove),
+                onLongPressStart: _startStackView,
+                onLongPressEnd: _endStackView,
+              ),
             ),
-          ),
           );
 
           // Bottom controls
@@ -1274,6 +1359,81 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.read(gameStateProvider);
     // The game state has already switched to the next player, so start their clock
     ref.read(chessClockProvider.notifier).start(gameState.currentPlayer);
+  }
+
+  Future<void> _recordGameConclusion(GameState state) async {
+    final session = ref.read(gameSessionProvider);
+    final scenarioActive =
+        session.scenario != null || ref.read(scenarioStateProvider).activeScenario != null;
+    final result = state.result;
+    if (result == null) return;
+    final winReason = state.winReason;
+
+    bool isLocalWinner;
+    switch (session.mode) {
+      case GameMode.vsComputer:
+        isLocalWinner = result == GameResult.whiteWins;
+        break;
+      case GameMode.online:
+        final online = ref.read(onlineGameProvider);
+        final winnerColor =
+            result == GameResult.whiteWins ? PlayerColor.white : PlayerColor.black;
+        isLocalWinner =
+            online.localColor != null && online.localColor == winnerColor;
+        break;
+      case GameMode.local:
+        isLocalWinner = result != GameResult.draw;
+        break;
+    }
+
+    await ref.read(achievementsProvider.notifier).recordWin(
+          mode: session.mode,
+          result: result,
+          winReason: winReason,
+          aiDifficulty: session.aiDifficulty,
+          isLocalPlayerWinner: isLocalWinner,
+          isScenario: scenarioActive,
+        );
+  }
+
+  void _showAchievementToast(AchievementType type) {
+    final detail = achievementDetails[type]!;
+    ref.read(soundManagerProvider).playAchievement();
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.black87,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              detail.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              detail.description,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            if (detail.unlocksText != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Unlocked: ${detail.unlocksText}',
+                style: const TextStyle(color: Colors.amberAccent),
+              ),
+            ],
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   List<Position> _calculateDropPositions(Position start, Direction dir, int steps) {
@@ -2155,6 +2315,8 @@ class _GameBoard extends StatelessWidget {
   final Function(Position) onCellTap;
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
+  final BoardPalette palette;
+  final PieceStyleDefinition pieceStyle;
 
   const _GameBoard({
     required this.gameState,
@@ -2163,6 +2325,8 @@ class _GameBoard extends StatelessWidget {
     required this.onCellTap,
     required this.onLongPressStart,
     required this.onLongPressEnd,
+    required this.palette,
+    required this.pieceStyle,
     this.highlightedPositions = const {},
     this.explodedPosition,
     this.explodedStack,
@@ -2206,20 +2370,20 @@ class _GameBoard extends StatelessWidget {
       // Inner board area with inset shadow effect
       margin: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: GameColors.gridLine,
+        color: palette.gridLine,
         borderRadius: BorderRadius.circular(6),
         // Inset shadow effect for the grid area
         boxShadow: [
           // Inner shadow (dark)
           BoxShadow(
-            color: GameColors.gridLineShadow.withValues(alpha: 0.6),
+            color: palette.gridLineShadow.withValues(alpha: 0.6),
             blurRadius: 4,
             spreadRadius: 1,
             offset: const Offset(2, 2),
           ),
           // Highlight edge
           BoxShadow(
-            color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
+            color: palette.gridLineHighlight.withValues(alpha: 0.3),
             blurRadius: 2,
             offset: const Offset(-1, -1),
           ),
@@ -2227,16 +2391,23 @@ class _GameBoard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.all(spacing),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: boardSize,
-            crossAxisSpacing: spacing,
-            mainAxisSpacing: spacing,
-          ),
-          itemCount: boardSize * boardSize,
-          itemBuilder: (context, index) {
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CustomPaint(
+              painter: _BoardTexturePainter(palette),
+              child: const SizedBox.expand(),
+            ),
+            GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(spacing),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: boardSize,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+              ),
+              itemCount: boardSize * boardSize,
+              itemBuilder: (context, index) {
             final row = index ~/ boardSize;
             final col = index % boardSize;
             final pos = Position(row, col);
@@ -2311,6 +2482,8 @@ class _GameBoard extends StatelessWidget {
                 piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
                 showExploded: isExploded,
                 explodedStack: stackForExplosion,
+                palette: palette,
+                pieceStyle: pieceStyle,
               ),
             );
           },
@@ -2415,6 +2588,8 @@ class _BoardCell extends StatefulWidget {
   final bool isScenarioHint;
   final bool showExploded;
   final PieceStack? explodedStack;
+  final BoardPalette palette;
+  final PieceStyleDefinition pieceStyle;
 
   /// Ghost piece to show (for placement preview)
   final PieceType? ghostPieceType;
@@ -2451,6 +2626,8 @@ class _BoardCell extends StatefulWidget {
     this.isScenarioHint = false,
     this.showExploded = false,
     this.explodedStack,
+    required this.palette,
+    required this.pieceStyle,
   });
 
   @override
@@ -2605,26 +2782,27 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     // Calculate responsive border radius based on board size
     final borderRadius = widget.boardSize <= 4 ? 6.0 : (widget.boardSize <= 6 ? 5.0 : 4.0);
     final borderWidth = widget.boardSize <= 4 ? 2.5 : (widget.boardSize <= 6 ? 2.0 : 1.5);
+    final palette = widget.palette;
 
     // Build decoration based on state
     BoxDecoration decoration;
 
     if (widget.isSelected) {
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellSelected,
-            GameColors.cellSelectedGlow,
+            palette.cellSelected,
+            palette.cellSelectedGlow,
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellSelectedBorder, width: borderWidth),
+        border: Border.all(color: palette.cellSelectedBorder, width: borderWidth),
         boxShadow: [
           // Glow effect
           BoxShadow(
-            color: GameColors.cellSelectedGlow.withValues(alpha: 0.6),
+            color: palette.cellSelectedGlow.withValues(alpha: 0.6),
             blurRadius: 8,
             spreadRadius: 1,
           ),
@@ -2638,38 +2816,38 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       );
     } else if (widget.isNextDrop) {
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellNextDrop,
-            GameColors.cellNextDropGlow,
+            palette.cellNextDrop,
+            palette.cellNextDropGlow,
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellNextDropBorder, width: borderWidth),
+        border: Border.all(color: palette.cellNextDropBorder, width: borderWidth),
         boxShadow: [
           BoxShadow(
-            color: GameColors.cellNextDropGlow.withValues(alpha: 0.5),
+            color: palette.cellNextDropGlow.withValues(alpha: 0.5),
             blurRadius: 6,
           ),
         ],
       );
     } else if (widget.isInDropPath) {
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellDropPath,
-            GameColors.cellDropPathGlow,
+            palette.cellDropPath,
+            palette.cellDropPathGlow,
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellDropPathBorder, width: borderWidth * 0.8),
+        border: Border.all(color: palette.cellDropPathBorder, width: borderWidth * 0.8),
         boxShadow: [
           BoxShadow(
-            color: GameColors.cellDropPathGlow.withValues(alpha: 0.4),
+            color: palette.cellDropPathGlow.withValues(alpha: 0.4),
             blurRadius: 4,
           ),
         ],
@@ -2686,12 +2864,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         ),
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: GameColors.boardFrameInner,
+          color: palette.boardFrameInner,
           width: borderWidth * 0.9,
         ),
         boxShadow: [
           BoxShadow(
-            color: GameColors.boardFrameInner.withValues(alpha: 0.35),
+            color: palette.boardFrameInner.withValues(alpha: 0.35),
             blurRadius: 8,
             spreadRadius: 1,
           ),
@@ -2700,19 +2878,19 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     } else if (widget.isLegalMoveHint) {
       // Legal move destination hint (cyan/teal highlight)
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellLegalMove,
-            GameColors.cellLegalMoveGlow,
+            palette.cellLegalMove,
+            palette.cellLegalMoveGlow,
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellLegalMoveBorder, width: borderWidth * 0.8),
+        border: Border.all(color: palette.cellLegalMoveBorder, width: borderWidth * 0.8),
         boxShadow: [
           BoxShadow(
-            color: GameColors.cellLegalMoveGlow.withValues(alpha: 0.5),
+            color: palette.cellLegalMoveGlow.withValues(alpha: 0.5),
             blurRadius: 6,
           ),
         ],
@@ -2720,21 +2898,21 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     } else {
       // Default wood-grain cell look
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellBackgroundLight,
-            GameColors.cellBackground,
-            GameColors.cellBackgroundDark,
+            palette.cellBackgroundLight,
+            palette.cellBackground,
+            palette.cellBackgroundDark,
           ],
-          stops: [0.0, 0.4, 1.0],
+          stops: const [0.0, 0.4, 1.0],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
         // Subtle inset effect
         boxShadow: [
           BoxShadow(
-            color: GameColors.gridLineShadow.withValues(alpha: 0.3),
+            color: palette.gridLineShadow.withValues(alpha: 0.3),
             blurRadius: 1,
             offset: const Offset(1, 1),
           ),
@@ -2807,12 +2985,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
-            color: GameColors.lastMoveBorder,
+            color: palette.lastMoveBorder,
             width: borderWidth * 0.8,
           ),
           boxShadow: [
             BoxShadow(
-              color: GameColors.lastMoveGlow.withValues(alpha: 0.3),
+              color: palette.lastMoveGlow.withValues(alpha: 0.3),
               blurRadius: 4,
             ),
           ],
@@ -2832,15 +3010,19 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         final pieceSize = cellSize * 0.7;
         final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
         final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+        final palette = widget.palette;
+        final pieceStyle = widget.pieceStyle;
 
         // If showing ghost piece (empty cell with placement preview)
         if (widget.ghostPieceType != null && widget.ghostPieceColor != null && widget.stack.isEmpty) {
           final isLightPlayer = widget.ghostPieceColor == PlayerColor.white;
-          final pieceColors = GameColors.forPlayer(isLightPlayer);
+          final material = isLightPlayer
+              ? pieceStyle.lightMaterial
+              : pieceStyle.darkMaterial;
 
           return Opacity(
             opacity: 0.5,
-            child: _buildPiece(widget.ghostPieceType!, pieceSize, pieceColors, isLightPlayer),
+            child: _buildPiece(widget.ghostPieceType!, pieceSize, material, isLightPlayer),
           );
         }
 
@@ -2858,7 +3040,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                     vertical: badgePadding,
                   ),
                   decoration: BoxDecoration(
-                    color: GameColors.cellNextDropBorder.withValues(alpha: 0.8),
+                    color: palette.cellNextDropBorder.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(badgePadding * 2),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.5),
@@ -3021,7 +3203,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     final top = stack.topPiece!;
     final isLightPlayer = top.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final material = _materialFor(isLightPlayer);
     final height = stack.height;
 
     return LayoutBuilder(
@@ -3032,10 +3214,10 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         Widget content;
         // For stacks, show depth visualization
         if (height > 1) {
-          content = _buildStackWithDepth(stack, cellSize, pieceSize, pieceColors, isLightPlayer);
+          content = _buildStackWithDepth(stack, cellSize, pieceSize);
         } else {
           // Single piece - just show it centered
-          content = _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer);
+          content = _buildPiece(top.type, pieceSize, material, isLightPlayer);
         }
 
         // Apply placement animation (scale with bounce)
@@ -3082,6 +3264,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       case PieceType.capstone:
         return pieceSize * 0.85;
     }
+  }
+
+  PieceMaterial _materialFor(bool isLightPlayer) {
+    return isLightPlayer
+        ? widget.pieceStyle.lightMaterial
+        : widget.pieceStyle.darkMaterial;
   }
 
   Widget _buildExplodedStackView(PieceStack stack, double cellSize) {
@@ -3132,7 +3320,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           final piece = stack.topPiece;
           if (piece != null) {
             final isLightPlayer = piece.color == PlayerColor.white;
-            final pieceColors = GameColors.forPlayer(isLightPlayer);
+            final material = _materialFor(isLightPlayer);
 
             children.add(
               Transform.translate(
@@ -3141,14 +3329,14 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(
-                        color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                        color: material.border.withValues(alpha: 0.35 * progress + 0.1),
                         blurRadius: 10 * progress + 2,
                         spreadRadius: 0.6 * progress,
                         offset: Offset(0, 2 - (progress)),
                       ),
                     ],
                   ),
-                  child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+                  child: _buildPiece(piece.type, pieceSize, material, isLightPlayer),
                 ),
               ),
             );
@@ -3202,7 +3390,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     }
 
     final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final material = _materialFor(isLightPlayer);
 
     return Transform.translate(
       offset: Offset(horizontalOffset, verticalOffset),
@@ -3210,7 +3398,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+              color: material.border.withValues(alpha: 0.35 * progress + 0.1),
               blurRadius: 12 * progress + 3,
               spreadRadius: 0.8 * progress,
               offset: Offset(0, 3 - (progress * 1.5)),
@@ -3219,7 +3407,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         ),
         child: Transform.scale(
           scale: 1.0 + (0.02 * progress),
-          child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+          child: _buildPiece(piece.type, pieceSize, material, isLightPlayer),
         ),
       ),
     );
@@ -3230,10 +3418,9 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     PieceStack stack,
     double cellSize,
     double pieceSize,
-    PieceColors topColors,
-    bool isLightPlayer,
   ) {
     final height = stack.height;
+    final topMaterial = _materialFor(stack.topPiece?.color == PlayerColor.white);
 
     // Calculate responsive values based on board size
     final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
@@ -3285,12 +3472,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
               vertical: badgePadding * 0.5,
             ),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF6D4C41),
-                  GameColors.stackBadge,
+                  topMaterial.border.withValues(alpha: 0.7),
+                  topMaterial.primary,
                 ],
               ),
               borderRadius: BorderRadius.circular(badgePadding),
@@ -3309,7 +3496,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: Text(
               '$height',
               style: TextStyle(
-                color: GameColors.stackBadgeText,
+                color: Colors.black.withValues(alpha: 0.75),
                 fontSize: badgeFontSize,
                 fontWeight: FontWeight.bold,
                 shadows: [
@@ -3330,28 +3517,28 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   /// Build a single piece in a stack with optional opacity
   Widget _buildStackPiece(Piece piece, double pieceSize, double opacity) {
     final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final material = _materialFor(isLightPlayer);
 
     return Opacity(
       opacity: opacity,
-      child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+      child: _buildPiece(piece.type, pieceSize, material, isLightPlayer),
     );
   }
 
   /// Build a piece widget based on type
-  Widget _buildPiece(PieceType type, double size, PieceColors colors, bool isLightPlayer) {
+  Widget _buildPiece(PieceType type, double size, PieceMaterial material, bool isLightPlayer) {
     switch (type) {
       case PieceType.flat:
-        return _buildFlatStone(size, colors, isLightPlayer);
+        return _buildFlatStone(size, material, isLightPlayer);
       case PieceType.standing:
-        return _buildStandingStone(size, colors);
+        return _buildStandingStone(size, material);
       case PieceType.capstone:
-        return _buildCapstone(size, colors);
+        return _buildCapstone(size, material);
     }
   }
 
   /// Flat stone: trapezoid for light, semi-circle for dark
-  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer) {
+  Widget _buildFlatStone(double size, PieceMaterial colors, bool isLightPlayer) {
     return CustomPaint(
       size: Size(size, size * 0.55),
       painter: isLightPlayer
@@ -3361,7 +3548,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 
   /// Standing stone (wall): diagonal bar across the cell
-  Widget _buildStandingStone(double size, PieceColors colors) {
+  Widget _buildStandingStone(double size, PieceMaterial colors) {
     return CustomPaint(
       size: Size(size, size),
       painter: _DiagonalWallPainter(colors: colors),
@@ -3369,7 +3556,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 
   /// Capstone: hexagon shape, slightly larger
-  Widget _buildCapstone(double size, PieceColors colors) {
+  Widget _buildCapstone(double size, PieceMaterial colors) {
     final capSize = size * 0.85;
     return CustomPaint(
       size: Size(capSize, capSize),
@@ -4193,7 +4380,7 @@ class VersionFooter extends StatelessWidget {
 
 /// Trapezoid painter for light player flat stones
 class _TrapezoidPainter extends CustomPainter {
-  final PieceColors colors;
+  final PieceMaterial colors;
 
   _TrapezoidPainter({required this.colors});
 
@@ -4249,7 +4436,7 @@ class _TrapezoidPainter extends CustomPainter {
 /// Semi-circle painter for dark player flat stones
 /// The chord is slightly below the diameter (more than a half circle)
 class _SemiCirclePainter extends CustomPainter {
-  final PieceColors colors;
+  final PieceMaterial colors;
 
   _SemiCirclePainter({required this.colors});
 
@@ -4310,7 +4497,7 @@ class _SemiCirclePainter extends CustomPainter {
 
 /// Diagonal wall painter - a bar laying diagonally across the cell
 class _DiagonalWallPainter extends CustomPainter {
-  final PieceColors colors;
+  final PieceMaterial colors;
 
   _DiagonalWallPainter({required this.colors});
 
@@ -4364,7 +4551,7 @@ class _DiagonalWallPainter extends CustomPainter {
 
 /// Custom painter for hexagon-shaped capstone
 class _HexagonPainter extends CustomPainter {
-  final PieceColors colors;
+  final PieceMaterial colors;
 
   _HexagonPainter({required this.colors});
 

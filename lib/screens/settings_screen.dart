@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
@@ -15,6 +16,9 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
     final playGames = ref.watch(playGamesServiceProvider);
+    final cosmetics = ref.watch(activeCosmeticsProvider);
+    final boardUnlocks = ref.watch(boardUnlockMapProvider);
+    final pieceUnlocks = ref.watch(pieceUnlockMapProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -52,6 +56,42 @@ class SettingsScreen extends ConsumerWidget {
             currentMode: settings.themeMode,
             onModeChanged: (mode) async {
               await ref.read(appSettingsProvider.notifier).setThemeMode(mode);
+            },
+          ),
+          const SizedBox(height: 12),
+          _CosmeticSelector(
+            title: 'Board Theme',
+            selectedId: cosmetics.boardTheme.id,
+            options: [
+              for (final theme in boardThemes)
+                _CosmeticOption(
+                  id: theme.id,
+                  name: theme.name,
+                  description: theme.description,
+                  unlocked: boardUnlocks[theme.id] ?? false,
+                  requirement: theme.unlockRequirement,
+                ),
+            ],
+            onSelected: (id) async {
+              await ref.read(appSettingsProvider.notifier).setBoardTheme(id);
+            },
+          ),
+          const SizedBox(height: 12),
+          _CosmeticSelector(
+            title: 'Piece Style',
+            selectedId: cosmetics.pieceStyle.id,
+            options: [
+              for (final style in pieceStyles)
+                _CosmeticOption(
+                  id: style.id,
+                  name: style.name,
+                  description: style.description,
+                  unlocked: pieceUnlocks[style.id] ?? false,
+                  requirement: style.unlockRequirement,
+                ),
+            ],
+            onSelected: (id) async {
+              await ref.read(appSettingsProvider.notifier).setPieceStyle(id);
             },
           ),
           const SizedBox(height: 32),
@@ -204,6 +244,144 @@ class _PlayGamesSection extends StatelessWidget {
                 label: Text(playGames.isSigningIn ? 'Signing in' : 'Sign in'),
               ),
       ),
+    );
+  }
+}
+
+class _CosmeticOption {
+  final String id;
+  final String name;
+  final String description;
+  final bool unlocked;
+  final AchievementType? requirement;
+
+  const _CosmeticOption({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.unlocked,
+    this.requirement,
+  });
+}
+
+class _CosmeticSelector extends StatelessWidget {
+  final String title;
+  final String selectedId;
+  final List<_CosmeticOption> options;
+  final ValueChanged<String> onSelected;
+
+  const _CosmeticSelector({
+    required this.title,
+    required this.selectedId,
+    required this.options,
+    required this.onSelected,
+  });
+
+  String _requirementText(AchievementType? requirement) {
+    if (requirement == null) return 'Available to everyone';
+    final detail = achievementDetails[requirement];
+    if (detail == null) return 'Play more to unlock';
+    return 'Unlock by: ${detail.description}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: options.map((option) {
+            final isSelected = option.id == selectedId;
+            final locked = !option.unlocked;
+            final tooltipText = locked
+                ? _requirementText(option.requirement)
+                : option.description;
+
+            final card = AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 180,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: locked
+                    ? colorScheme.surfaceContainerHighest
+                    : colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.outlineVariant,
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          option.name,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(Icons.check_circle, color: colorScheme.primary)
+                      else if (locked)
+                        Icon(Icons.lock, color: colorScheme.onSurfaceVariant),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    option.description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  if (locked) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _requirementText(option.requirement),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.secondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+
+            return Tooltip(
+              triggerMode: TooltipTriggerMode.longPress,
+              message: tooltipText,
+              child: GestureDetector(
+                onTap: locked ? null : () => onSelected(option.id),
+                child: Opacity(
+                  opacity: locked ? 0.55 : 1.0,
+                  child: card,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
