@@ -3209,16 +3209,16 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final minOffset = baseFootprint * 0.2;
     final availableHeight = cellSize * 0.9;
 
+    // Show up to 3 pieces visually, use badge for taller stacks
+    const maxVisiblePieces = 3;
+    final int visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
+
     final visibleOffset = visibleCount > 1
         ? (availableHeight - baseFootprint) / (visibleCount - 1)
         : naturalOffset;
     final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
     final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
     final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
-
-    // Show up to 3 pieces visually, use badge for taller stacks
-    const maxVisiblePieces = 3;
-    final visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
 
     // Get the pieces to display (top N pieces of the stack)
     // pieces[0] is bottom, pieces[height-1] is top
@@ -4230,7 +4230,7 @@ class _SemiCirclePainter extends CustomPainter {
     // Semi-circle with chord below diameter (about 60% of circle showing)
     // The arc spans more than 180 degrees
     final radius = w * 0.5;
-    final chordY = 0.0; // Keep the flat base aligned with the bottom of the piece
+    const chordY = 0.0; // Keep the flat base aligned with the bottom of the piece
 
     final path = Path();
     // Start from left side of chord
