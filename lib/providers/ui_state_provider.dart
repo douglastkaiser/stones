@@ -211,7 +211,7 @@ class UIState {
     // In movingStack mode: show source with picked up pieces as ghosts
     if (mode == InteractionMode.movingStack) {
       // Source position: keep all pieces but mark top N as ghosts
-      final piecesToPickUp = piecesPickedUp.clamp(0, sourceStack.height);
+      final piecesToPickUp = piecesPickedUp.clamp(0, sourceStack.height).toInt();
       final ghostPieces = sourceStack.pieces
           .sublist(sourceStack.height - piecesToPickUp);
       final remainingPieces = sourceStack.pieces
@@ -265,7 +265,7 @@ class UIState {
         final handPos = getCurrentHandPosition();
         if (handPos != null) {
           final targetStack = gameState.board.stackAt(handPos);
-          final pendingDrop = pendingDropCount.clamp(0, piecesInHand.length);
+          final pendingDrop = pendingDropCount.clamp(0, piecesInHand.length).toInt();
           final ghostPieces = piecesInHand.sublist(0, pendingDrop);
 
           // Check if we need to flatten a wall

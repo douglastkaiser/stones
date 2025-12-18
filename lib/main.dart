@@ -2872,8 +2872,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           );
         }
 
-        // If empty cell and no ghost, show nothing
-        if (widget.stack.isEmpty) {
+        // If empty cell and no ghost stack pieces, show nothing
+        if (widget.stack.isEmpty && widget.ghostStackPieces.isEmpty) {
           // But if this is the next drop position, show pending drop indicator
           if (widget.pendingDropCount != null && widget.piecesInHand != null) {
             return Stack(
