@@ -3147,6 +3147,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             _buildExplodedPiece(
               stack.pieces[i],
               i,
+              stack.height,
               pieceSize,
               baseLift,
               liftStep,
@@ -3161,6 +3162,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   Widget _buildExplodedPiece(
     Piece piece,
     int index,
+    int totalPieces,
     double pieceSize,
     double baseLift,
     double liftStep,
@@ -3168,12 +3170,19 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   ) {
     final fromBottom = index;
     final verticalOffset = -progress * (baseLift + (fromBottom * liftStep));
+    double horizontalOffset = 0;
+
+    if (totalPieces > 1) {
+      final t = fromBottom / (totalPieces - 1);
+      final fanCurve = math.sin((t - 0.5) * math.pi);
+      horizontalOffset = progress * pieceSize * 0.08 * fanCurve;
+    }
 
     final isLightPlayer = piece.color == PlayerColor.white;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
 
     return Transform.translate(
-      offset: Offset(0, verticalOffset),
+      offset: Offset(horizontalOffset, verticalOffset),
       child: DecoratedBox(
         decoration: BoxDecoration(
           boxShadow: [
