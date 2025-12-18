@@ -3065,8 +3065,15 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final pieceSize = cellSize * 0.7;
     final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
     final baseLift = baseFootprint * 0.25;
-    final liftStep = baseFootprint * 0.6;
-    final fanSpread = cellSize * 0.08;
+    final naturalSpacing = baseFootprint * 0.6;
+    final minSpacing = baseFootprint * 0.28;
+
+    // Compress spacing when the vertical stack would overflow the cell area
+    final availableHeight = cellSize * 1.2;
+    final adjustedSpacing = stack.height > 1
+        ? (availableHeight - baseFootprint) / (stack.height - 1)
+        : naturalSpacing;
+    final liftStep = math.max(minSpacing, math.min(naturalSpacing, adjustedSpacing));
 
     return AnimatedBuilder(
       animation: _stackReveal,
@@ -3137,16 +3144,14 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           children: [
             ...children,
         for (int i = 0; i < stack.height; i++)
-          _buildExplodedPiece(
-            stack.pieces[i],
-            i,
-            stack.height,
-            pieceSize,
-            fanSpread,
-            baseLift,
-            liftStep,
-            progress,
-          ),
+            _buildExplodedPiece(
+              stack.pieces[i],
+              i,
+              pieceSize,
+              baseLift,
+              liftStep,
+              progress,
+            ),
           ],
         );
       },
@@ -3156,42 +3161,33 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   Widget _buildExplodedPiece(
     Piece piece,
     int index,
-    int height,
     double pieceSize,
-    double fanSpread,
     double baseLift,
     double liftStep,
     double progress,
   ) {
     final fromBottom = index;
-    const maxSpreadLayers = 4;
-    final spreadLayer = math.min(fromBottom, maxSpreadLayers - 1);
-    final horizontalOffset = (spreadLayer - (maxSpreadLayers - 1) / 2) * fanSpread * progress;
     final verticalOffset = -progress * (baseLift + (fromBottom * liftStep));
-    final tilt = (spreadLayer - (maxSpreadLayers - 1) / 2) * 0.03 * progress;
 
     final isLightPlayer = piece.color == PlayerColor.white;
     final pieceColors = GameColors.forPlayer(isLightPlayer);
 
     return Transform.translate(
-      offset: Offset(horizontalOffset, verticalOffset),
-      child: Transform.rotate(
-        angle: tilt,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
-                blurRadius: 12 * progress + 3,
-                spreadRadius: 0.8 * progress,
-                offset: Offset(0, 3 - (progress * 1.5)),
-              ),
-            ],
-          ),
-          child: Transform.scale(
-            scale: 1.0 + (0.02 * progress),
-            child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
-          ),
+      offset: Offset(0, verticalOffset),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+              blurRadius: 12 * progress + 3,
+              spreadRadius: 0.8 * progress,
+              offset: Offset(0, 3 - (progress * 1.5)),
+            ),
+          ],
+        ),
+        child: Transform.scale(
+          scale: 1.0 + (0.02 * progress),
+          child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
         ),
       ),
     );
@@ -3209,7 +3205,14 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     // Calculate responsive values based on board size
     final baseFootprint = _pieceFootprintHeight(PieceType.flat, pieceSize);
-    final verticalOffset = baseFootprint * 0.3;
+    final naturalOffset = baseFootprint * 0.32;
+    final minOffset = baseFootprint * 0.2;
+    final availableHeight = cellSize * 0.9;
+
+    final visibleOffset = visibleCount > 1
+        ? (availableHeight - baseFootprint) / (visibleCount - 1)
+        : naturalOffset;
+    final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
     final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
     final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
@@ -4227,7 +4230,7 @@ class _SemiCirclePainter extends CustomPainter {
     // Semi-circle with chord below diameter (about 60% of circle showing)
     // The arc spans more than 180 degrees
     final radius = w * 0.5;
-    final chordY = h * 0.1; // Where the chord (flat bottom) sits
+    final chordY = 0.0; // Keep the flat base aligned with the bottom of the piece
 
     final path = Path();
     // Start from left side of chord
