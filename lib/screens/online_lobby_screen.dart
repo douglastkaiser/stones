@@ -19,6 +19,8 @@ class OnlineLobbyScreen extends ConsumerStatefulWidget {
 class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   final TextEditingController _joinCodeController = TextEditingController();
   int _selectedBoardSize = 5;
+  bool _chessClockEnabled = false;
+  int _chessClockSeconds = 300;
   bool _hasNavigatedToGame = false;
 
   @override
@@ -28,6 +30,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
     // Load saved board size preference
     final settings = ref.read(appSettingsProvider);
     _selectedBoardSize = settings.boardSize;
+    _chessClockEnabled = settings.chessClockEnabled;
+    _chessClockSeconds = settings.timeForBoardSize(_selectedBoardSize);
   }
 
   @override
@@ -149,8 +153,22 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                 _BoardSizeSelector(
                   selectedSize: _selectedBoardSize,
                   onSizeSelected: (size) {
-                    setState(() => _selectedBoardSize = size);
+                    final defaults =
+                        ref.read(appSettingsProvider).timeForBoardSize(size);
+                    setState(() {
+                      _selectedBoardSize = size;
+                      _chessClockSeconds = defaults;
+                    });
                   },
+                ),
+                const SizedBox(height: 16),
+                _ChessClockSelector(
+                  enabled: _chessClockEnabled,
+                  seconds: _chessClockSeconds,
+                  onEnabledChanged: (enabled) =>
+                      setState(() => _chessClockEnabled = enabled),
+                  onSecondsChanged: (seconds) =>
+                      setState(() => _chessClockSeconds = seconds),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -172,7 +190,11 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                         ? null
                         : () => ref
                             .read(onlineGameProvider.notifier)
-                            .createGame(boardSize: _selectedBoardSize),
+                            .createGame(
+                              boardSize: _selectedBoardSize,
+                              chessClockEnabled: _chessClockEnabled,
+                              chessClockSeconds: _chessClockSeconds,
+                            ),
                   ),
                 ),
               ],
@@ -748,6 +770,74 @@ class _ErrorBanner extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ChessClockSelector extends StatelessWidget {
+  final bool enabled;
+  final int seconds;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<int> onSecondsChanged;
+
+  const _ChessClockSelector({
+    required this.enabled,
+    required this.seconds,
+    required this.onEnabledChanged,
+    required this.onSecondsChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = (seconds / 60).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.timer,
+              color: enabled ? GameColors.boardFrameInner : Colors.grey,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Chess Clock',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: enabled ? GameColors.titleColor : Colors.grey.shade700,
+                    ),
+              ),
+            ),
+              Switch(
+                value: enabled,
+                onChanged: onEnabledChanged,
+                activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                activeThumbColor: GameColors.boardFrameInner,
+              ),
+          ],
+        ),
+        if (enabled) ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            key: ValueKey('online_clock_$seconds'),
+            initialValue: minutes.toString(),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'Time per player (minutes)',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              final parsed = int.tryParse(value);
+              if (parsed != null && parsed > 0) {
+                onSecondsChanged(parsed * 60);
+              }
+            },
+          ),
+        ],
+      ],
     );
   }
 }
