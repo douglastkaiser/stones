@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
+import '../widgets/chess_clock_toggle.dart';
 import 'game_screen.dart';
 
 class OnlineLobbyScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,7 @@ class OnlineLobbyScreen extends ConsumerStatefulWidget {
 class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   final TextEditingController _joinCodeController = TextEditingController();
   int _selectedBoardSize = 5;
+  bool _chessClockEnabled = false;
   bool _hasNavigatedToGame = false;
 
   @override
@@ -28,6 +30,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
     // Load saved board size preference
     final settings = ref.read(appSettingsProvider);
     _selectedBoardSize = settings.boardSize;
+    _chessClockEnabled = settings.chessClockEnabled;
   }
 
   @override
@@ -153,6 +156,11 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                ChessClockToggle(
+                  value: _chessClockEnabled,
+                  onChanged: (value) => setState(() => _chessClockEnabled = value),
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   height: 48,
                   child: ElevatedButton.icon(
@@ -170,9 +178,14 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                     ),
                     onPressed: online.creating
                         ? null
-                        : () => ref
-                            .read(onlineGameProvider.notifier)
-                            .createGame(boardSize: _selectedBoardSize),
+                        : () {
+                            ref
+                                .read(appSettingsProvider.notifier)
+                                .setChessClockEnabled(_chessClockEnabled);
+                            ref
+                                .read(onlineGameProvider.notifier)
+                                .createGame(boardSize: _selectedBoardSize);
+                          },
                   ),
                 ),
               ],
@@ -236,9 +249,14 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                   child: _JoinGameButton(
                     isJoining: online.joining,
                     codeLength: _joinCodeController.text.length,
-                    onJoin: () => ref
-                        .read(onlineGameProvider.notifier)
-                        .joinGame(_joinCodeController.text),
+                    onJoin: () {
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .setChessClockEnabled(_chessClockEnabled);
+                      ref
+                          .read(onlineGameProvider.notifier)
+                          .joinGame(_joinCodeController.text);
+                    },
                   ),
                 ),
               ],

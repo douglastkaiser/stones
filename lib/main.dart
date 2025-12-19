@@ -13,6 +13,7 @@ import 'models/models.dart';
 import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
+import 'widgets/chess_clock_toggle.dart';
 import 'screens/main_menu_screen.dart';
 import 'firebase_options.dart';
 
@@ -551,8 +552,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWideScreen = constraints.maxWidth > 700;
-          final showClockEnabled = session.mode == GameMode.local &&
-              ref.watch(appSettingsProvider).chessClockEnabled;
+          final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
 
           // Board widget (reused in both layouts)
           final boardWidget = Container(
@@ -1162,7 +1162,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.read(animationStateProvider.notifier).piecePlaced(pos, type, color);
       soundManager.playPiecePlace();
 
-      // Switch chess clock to next player (for local games)
+      // Switch chess clock to next player when enabled
       _switchChessClock(ref);
 
       if (ref.read(isGameOverProvider)) {
@@ -1246,7 +1246,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         soundManager.playStackMove();
       }
 
-      // Switch chess clock to next player (for local games)
+      // Switch chess clock to next player when enabled
       _switchChessClock(ref);
 
       if (ref.read(isGameOverProvider)) {
@@ -1264,10 +1264,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _switchChessClock(WidgetRef ref) {
-    final session = ref.read(gameSessionProvider);
-    // Only switch clock for local games with clock enabled
-    if (session.mode != GameMode.local) return;
-
     final settings = ref.read(appSettingsProvider);
     if (!settings.chessClockEnabled) return;
 
@@ -1425,9 +1421,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _showBoardSizeDialog(BuildContext context, WidgetRef ref) {
-    final session = ref.read(gameSessionProvider);
     final settings = ref.read(appSettingsProvider);
-    final isLocalGame = session.mode == GameMode.local;
     int selectedSize = settings.boardSize;
     bool chessClockEnabled = settings.chessClockEnabled;
 
@@ -1455,54 +1449,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                 ],
               ),
-              // Chess clock toggle (only for local games)
-              if (isLocalGame) ...[
-                const SizedBox(height: 16),
-                Builder(
-                  builder: (context) {
-                    final isDark = Theme.of(context).brightness == Brightness.dark;
-                    final inactiveColor = isDark
-                        ? Theme.of(context).colorScheme.onSurfaceVariant
-                        : Colors.grey.shade700;
-                    return InkWell(
-                      onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.timer,
-                              size: 20,
-                              color: chessClockEnabled
-                                  ? GameColors.boardFrameInner
-                                  : inactiveColor,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Chess Clock',
-                              style: TextStyle(
-                                fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
-                                color: chessClockEnabled
-                                    ? GameColors.boardFrameInner
-                                    : inactiveColor,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Switch(
-                              value: chessClockEnabled,
-                              onChanged: (v) => setState(() => chessClockEnabled = v),
-                              activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
-                              activeThumbColor: GameColors.boardFrameInner,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+              const SizedBox(height: 16),
+              ChessClockToggle(
+                value: chessClockEnabled,
+                onChanged: (value) => setState(() => chessClockEnabled = value),
+              ),
             ],
           ),
           actions: [
@@ -1513,9 +1464,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ElevatedButton(
               onPressed: () {
                 // Save chess clock preference
-                if (isLocalGame) {
-                  ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
-                }
+                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
 
                 ref.read(gameStateProvider.notifier).newGame(selectedSize);
                 ref.read(uiStateProvider.notifier).reset();
@@ -1524,7 +1473,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ref.read(lastMoveProvider.notifier).state = null;
 
                 // Reset chess clock for new game
-                if (isLocalGame && chessClockEnabled) {
+                if (chessClockEnabled) {
                   ref.read(chessClockProvider.notifier).initialize(selectedSize);
                 } else {
                   ref.read(chessClockProvider.notifier).stop();

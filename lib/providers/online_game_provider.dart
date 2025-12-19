@@ -280,6 +280,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> leaveRoom() async {
     await _subscription?.cancel();
     _subscription = null;
+    _ref.read(chessClockProvider.notifier).stop();
     state = const OnlineGameState();
   }
 
@@ -501,6 +502,12 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _ref.read(uiStateProvider.notifier).reset();
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(lastMoveProvider.notifier).state = null;
+    final settings = _ref.read(appSettingsProvider);
+    if (settings.chessClockEnabled) {
+      _ref.read(chessClockProvider.notifier).initialize(boardSize);
+    } else {
+      _ref.read(chessClockProvider.notifier).stop();
+    }
     _debugLog('_beginLocalGame: Local game initialized, gameSessionProvider mode=online');
   }
 
@@ -627,6 +634,15 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(uiStateProvider.notifier).reset();
+
+    final settings = _ref.read(appSettingsProvider);
+    if (!settings.chessClockEnabled) return;
+    final gameState = _ref.read(gameStateProvider);
+    if (gameState.isGameOver) {
+      _ref.read(chessClockProvider.notifier).stop();
+      return;
+    }
+    _ref.read(chessClockProvider.notifier).start(gameState.currentPlayer);
   }
 
   Position _positionFromNotation(String col, int rowNumber, int boardSize) {
