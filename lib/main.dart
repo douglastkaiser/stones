@@ -3181,7 +3181,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: _buildStackPiece(
               stack.pieces[startIndex + i],
               pieceSize,
-              i < visibleRealCount - 1 ? 0.7 + (0.1 * i) : 1.0,
+              1.0,  // All confirmed pieces are solid (no depth fade)
             ),
           ),
 
@@ -3294,7 +3294,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                   child: _buildStackPiece(
                     ghostPieces[startIndex + i],
                     pieceSize,
-                    i < visibleCount - 1 ? 0.7 + (0.1 * i) : 1.0,
+                    1.0,  // No depth fade (ghost opacity already applied by wrapper)
                   ),
                 ),
 
@@ -3565,8 +3565,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: _buildStackPiece(
               stack.pieces[startIndex + i],
               pieceSize,
-              // Fade lower pieces slightly
-              i < visibleCount - 1 ? 0.7 + (0.1 * i) : 1.0,
+              1.0,  // All confirmed pieces are solid (no depth fade)
             ),
           ),
 

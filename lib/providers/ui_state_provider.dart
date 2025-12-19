@@ -117,7 +117,7 @@ class UIState {
   }
 
   /// Get valid drop positions when in droppingPieces mode
-  /// Returns positions we can continue dropping to (next cell in direction)
+  /// Returns ALL positions we can reach with remaining pieces in hand
   Set<Position> getValidDropDestinations(GameState gameState) {
     if (selectedPosition == null || selectedDirection == null) return {};
     if (mode != InteractionMode.droppingPieces) return {};
@@ -144,17 +144,27 @@ class UIState {
     // The current hand position is always valid (already validated when we got here)
     validDestinations.add(handPos);
 
-    // Check if we can continue past current hand position
-    if (piecesPickedUp > pendingDropCount) {
-      final nextPos = selectedDirection!.apply(handPos);
-      if (gameState.board.isValidPosition(nextPos)) {
-        final targetStack = gameState.board.stackAt(nextPos);
-        if (targetStack.canMoveOnto(movingPiece)) {
-          validDestinations.add(nextPos);
-        } else if (targetStack.topPiece?.type == PieceType.standing &&
-            movingPiece.canFlattenWalls) {
-          validDestinations.add(nextPos);
-        }
+    // Check ALL positions we can reach with remaining pieces in hand
+    // We can move up to piecesPickedUp cells (one piece must be dropped at each)
+    var currentPos = handPos;
+    var remainingPieces = piecesPickedUp;
+
+    while (remainingPieces > 1) {  // Need at least 1 piece to drop, so can continue if > 1
+      final nextPos = selectedDirection!.apply(currentPos);
+      if (!gameState.board.isValidPosition(nextPos)) break;
+
+      final targetStack = gameState.board.stackAt(nextPos);
+      if (targetStack.canMoveOnto(movingPiece)) {
+        validDestinations.add(nextPos);
+        currentPos = nextPos;
+        remainingPieces--;  // Dropped one piece to get here
+      } else if (targetStack.topPiece?.type == PieceType.standing &&
+          movingPiece.canFlattenWalls) {
+        // Capstone can flatten wall as final move
+        validDestinations.add(nextPos);
+        break;  // Can't continue past a flattened wall
+      } else {
+        break;  // Can't move onto this cell
       }
     }
 
@@ -227,8 +237,8 @@ class UIState {
       // Get the pieces being moved
       final (remaining, pickedUp) = sourceStack.pop(actualPickup);
 
-      // Source position: show remaining pieces, no ghosts
-      previews[selectedPosition!] = (remaining, const []);
+      // Source position: remaining pieces are ghosts (move not confirmed)
+      previews[selectedPosition!] = (PieceStack.empty, remaining.pieces);
 
       // Calculate drops along the path
       var currentPos = selectedPosition!;
