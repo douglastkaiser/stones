@@ -1,13 +1,49 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/achievement.dart';
+import '../providers/providers.dart';
 import '../theme/theme.dart';
 import '../version.dart';
 
 /// About screen with game information and licenses
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends ConsumerStatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  ConsumerState<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends ConsumerState<AboutScreen> {
+  int _versionTapCount = 0;
+
+  void _onVersionTap() {
+    _versionTapCount++;
+    if (_versionTapCount >= 7) {
+      _versionTapCount = 0;
+      _unlockAllCosmetics();
+    }
+  }
+
+  void _unlockAllCosmetics() async {
+    final achievementNotifier = ref.read(achievementProvider.notifier);
+
+    // Unlock all achievements
+    for (final type in AchievementType.values) {
+      await achievementNotifier.unlock(type);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All cosmetics unlocked!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   void _showLicenses(BuildContext context) {
     showLicensePage(
@@ -74,13 +110,16 @@ class AboutScreen extends StatelessWidget {
                           ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      AppVersion.displayVersion,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? colorScheme.onSurfaceVariant
-                            : Colors.grey.shade500,
+                    GestureDetector(
+                      onTap: _onVersionTap,
+                      child: Text(
+                        AppVersion.displayVersion,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark
+                              ? colorScheme.onSurfaceVariant
+                              : Colors.grey.shade500,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),

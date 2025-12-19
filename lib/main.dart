@@ -401,6 +401,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final scenarioState = ref.read(scenarioStateProvider);
     final achievementNotifier = ref.read(achievementProvider.notifier);
 
+    // Debug logging
+    _debugLog('_checkAchievements called');
+    _debugLog('  gameState.result: ${gameState.result}');
+    _debugLog('  gameState.isGameOver: ${gameState.isGameOver}');
+    _debugLog('  session.mode: ${session.mode}');
+    _debugLog('  session.aiDifficulty: ${session.aiDifficulty}');
+    _debugLog('  session.vsComputerPlayerColor: ${session.vsComputerPlayerColor}');
+
     // Check if it's a win (not a draw)
     final isWhiteWin = gameState.result == GameResult.whiteWins;
     final isBlackWin = gameState.result == GameResult.blackWins;
@@ -420,8 +428,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // For local mode, any win counts
     final localPlayerWon = session.mode == GameMode.local && (isWhiteWin || isBlackWin);
 
+    _debugLog('  isWhiteWin: $isWhiteWin, isBlackWin: $isBlackWin');
+    _debugLog('  playerWon: $playerWon, onlinePlayerWon: $onlinePlayerWon, localPlayerWon: $localPlayerWon');
+
     // Record the win and show notifications for any unlocked achievements
     if (playerWon || onlinePlayerWon || localPlayerWon) {
+      _debugLog('  Recording win with aiDifficulty: ${session.aiDifficulty}');
       final unlockedAchievements = await achievementNotifier.recordWin(
         isOnline: session.mode == GameMode.online,
         aiDifficulty: session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
@@ -429,8 +441,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         byFlats: gameState.winReason == WinReason.flats,
       );
 
+      _debugLog('  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
+
       // Show notification for each unlocked achievement
       for (final achievementType in unlockedAchievements) {
+        _debugLog('  Showing notification for: $achievementType, mounted: $mounted');
         if (mounted) {
           _showAchievementNotification(achievementType);
           // Wait a bit before showing the next one if there are multiple
@@ -439,6 +454,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           }
         }
       }
+    } else {
+      _debugLog('  No win detected, skipping achievement check');
     }
 
     // Check for scenario completion
