@@ -224,7 +224,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     GameMode mode,
     AIDifficulty difficulty,
     int? chessClockSecondsOverride,
-    [PlayerColor? vsComputerPlayerColor],
+    {PlayerColor? vsComputerPlayerColor},
   ) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
@@ -566,7 +566,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   GameMode.vsComputer,
                   selectedDifficulty,
                   chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
-                  selectedPlayerColor,
+                  vsComputerPlayerColor: selectedPlayerColor,
                 );
               },
               style: ElevatedButton.styleFrom(
