@@ -145,11 +145,12 @@ class UIState {
     validDestinations.add(handPos);
 
     // Check ALL positions we can reach with remaining pieces in hand
-    // After dropping pendingDropCount at current position, we have the rest to continue
+    // After dropping pendingDropCount at current position, we have remainingPieces left
+    // Each subsequent cell requires dropping at least 1 piece
     var currentPos = handPos;
     var remainingPieces = piecesPickedUp - pendingDropCount;
 
-    while (remainingPieces > 1) {  // Need at least 1 piece to drop, so can continue if > 1
+    while (remainingPieces > 0) {  // Can continue if any pieces remain after pending drop
       final nextPos = selectedDirection!.apply(currentPos);
       if (!gameState.board.isValidPosition(nextPos)) break;
 
@@ -157,7 +158,7 @@ class UIState {
       if (targetStack.canMoveOnto(movingPiece)) {
         validDestinations.add(nextPos);
         currentPos = nextPos;
-        remainingPieces--;  // Dropped one piece to get here
+        remainingPieces--;  // Will drop one piece here
       } else if (targetStack.topPiece?.type == PieceType.standing &&
           movingPiece.canFlattenWalls) {
         // Capstone can flatten wall as final move
