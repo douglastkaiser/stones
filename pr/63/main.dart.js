@@ -96859,7 +96859,7 @@ if(m===0&&l.length!==0){n=t.p
 return A.bO(A.b([A.a8("Move complete! Dropped: "+B.b.aR(l," \u2192 "),p,p,p,A.aV(p,p,o,p,p,p,p,p,p,p,p,13,p,p,B.Z,p,p,!0,p,p,p,p,p,p,p,p),B.aP,p),B.hz,A.cd(A.b([A.vS(B.KO,B.a16,q.f,A.ik(p,p,B.mB,p,p,p,p,p,p,B.i,p,p,B.Jp,p,p,p,p,p,p,p)),B.di,A.u2(B.fS,B.bz,q.r,A.ns(p,p,p,p,p,p,p,p,p,o,p,p,B.fK,p,p,p,p,p,p,p))],n),B.p,B.aJ,B.A,0)],n),B.p,B.aJ,B.A)}s=n.r
 n=s>1?"s":""
 r=t.p
-return A.bO(A.b([A.a8("Dropping "+s+" piece"+n+" here. "+m+" remaining in hand.",p,p,p,A.aV(p,p,o,p,p,p,p,p,p,p,p,13,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),B.aP,p),B.c5,A.cd(A.b([A.a8("Tap cell to adjust, or continue to next cell.",p,p,p,A.aV(p,p,o.aA(0.8),p,p,p,p,p,p,p,p,12,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.b3,A.u2(B.fS,B.bz,q.r,A.ns(p,p,p,p,p,p,p,p,p,o,p,p,B.fK,p,p,p,p,p,p,p))],r),B.p,B.aJ,B.A,0)],r),B.p,B.aJ,B.A)}}
+return A.bO(A.b([A.a8("Dropping "+s+" piece"+n+" here. "+(m-s)+" remaining in hand.",p,p,p,A.aV(p,p,o,p,p,p,p,p,p,p,p,13,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),B.aP,p),B.c5,A.cd(A.b([A.a8("Tap cell to adjust, or continue to next cell.",p,p,p,A.aV(p,p,o.aA(0.8),p,p,p,p,p,p,p,p,12,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.b3,A.u2(B.fS,B.bz,q.r,A.ns(p,p,p,p,p,p,p,p,p,o,p,p,B.fK,p,p,p,p,p,p,p))],r),B.p,B.aJ,B.A,0)],r),B.p,B.aJ,B.A)}}
 A.aty.prototype={
 $0(){return this.a.e.$1(B.a_)},
 $S:0}
@@ -98188,12 +98188,13 @@ o=A.ai(e)
 n=g.xX()
 if(n==null)return A.ai(e)
 o.B(0,n)
-for(e=r.b,r=r.a,m=g.c,l=n;s>1;l=i){k=l.a+m.c
-j=l.b+m.d
+m=s-g.r
+for(e=r.b,r=r.a,s=g.c,l=n;m>1;l=i){k=l.a+s.c
+j=l.b+s.d
 i=new A.aK(k,j)
 if(!(k>=0&&k<r&&j>=0&&j<r))break
 h=e[k][j]
-if(h.lZ(p)){o.B(0,i);--s}else{e=h.a
+if(h.lZ(p)){o.B(0,i);--m}else{e=h.a
 e=e.length!==0?B.b.gP(e):f
 if((e==null?f:e.a)===B.J&&q===B.Q){o.B(0,i)
 break}else break}}return o},
@@ -98264,7 +98265,7 @@ else l=l.Ks(o?B.i:B.d0,B.T,4)
 l=A.a8("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.fy
-s=A.a8("v1.0.0+185.ge1a2422.d20251219 (e1a2422)",p,p,p,A.aV(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
+s=A.a8("v1.0.0+186.gad63354.d20251219 (ad63354)",p,p,p,A.aV(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p)
 r=A.F(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -98274,7 +98275,7 @@ r=q}return A.ey(A.bO(A.b([m,B.av,l,B.c5,s,B.aT,A.a8("An abstract strategy game",
 $S:673}
 A.a4t.prototype={
 $0(){var s=null
-A.bbr(new A.be(B.cz,A.d5(A.ez(s,s,s,new A.Ky(s),B.K),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+185.ge1a2422.d20251219 (e1a2422)",this.b)
+A.bbr(new A.be(B.cz,A.d5(A.ez(s,s,s,new A.Ky(s),B.K),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+186.gad63354.d20251219 (ad63354)",this.b)
 return s},
 $S:0}
 A.GT.prototype={
@@ -98769,7 +98770,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.d_
-return A.bz(o,A.ey(A.cd(A.b([A.a8("v1.0.0+185.ge1a2422.d20251219 (e1a2422)",o,o,o,A.aV(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a8("  \u2022  ",o,o,o,A.aV(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.l6(o,A.a8("Privacy",o,o,o,A.aV(o,o,q,o,B.ny,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.aj,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.galr(),o,o,o,o,o,o)],t.p),B.p,B.u,B.ar,0),o,o),B.n,o,o,o,o,o,B.is,o,o,o)}}
+return A.bz(o,A.ey(A.cd(A.b([A.a8("v1.0.0+186.gad63354.d20251219 (ad63354)",o,o,o,A.aV(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a8("  \u2022  ",o,o,o,A.aV(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.l6(o,A.a8("Privacy",o,o,o,A.aV(o,o,q,o,B.ny,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.aj,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.galr(),o,o,o,o,o,o)],t.p),B.p,B.u,B.ar,0),o,o),B.n,o,o,o,o,o,B.is,o,o,o)}}
 A.uq.prototype={
 I(a){var s,r,q,p,o,n,m,l=null,k=A.F(a).ax.a===B.B,j=this.d
 if(j)s=B.D
