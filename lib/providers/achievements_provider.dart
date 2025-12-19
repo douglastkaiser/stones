@@ -141,7 +141,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     final prefs = await SharedPreferences.getInstance();
     final newUnlocks = <AchievementType>[];
 
-    // Update total wins
+    // Update total wins first
     final newTotalWins = state.totalWins + 1;
     await prefs.setInt(AchievementKeys.totalWins, newTotalWins);
 
@@ -149,57 +149,61 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     if (isOnline) {
       newOnlineWins = state.onlineWins + 1;
       await prefs.setInt(AchievementKeys.onlineWins, newOnlineWins);
-
-      // Check for Connected achievement
-      if (!state.isUnlocked(AchievementType.connected)) {
-        await unlock(AchievementType.connected);
-        newUnlocks.add(AchievementType.connected);
-      }
     }
 
-    // Check AI difficulty achievements
-    if (aiDifficulty != null) {
-      AchievementType? aiAchievement;
-      switch (aiDifficulty) {
-        case AIDifficulty.easy:
-          aiAchievement = AchievementType.firstSteps;
-        case AIDifficulty.medium:
-          aiAchievement = AchievementType.competitor;
-        case AIDifficulty.hard:
-          aiAchievement = AchievementType.strategist;
-        case AIDifficulty.expert:
-          aiAchievement = AchievementType.grandmaster;
-      }
-      if (!state.isUnlocked(aiAchievement)) {
-        await unlock(aiAchievement);
-        newUnlocks.add(aiAchievement);
-      }
-    }
-
-    // Check win count achievements
-    if (newTotalWins >= 10 && !state.isUnlocked(AchievementType.dedicated)) {
-      await unlock(AchievementType.dedicated);
-      newUnlocks.add(AchievementType.dedicated);
-    }
-    if (newTotalWins >= 50 && !state.isUnlocked(AchievementType.veteran)) {
-      await unlock(AchievementType.veteran);
-      newUnlocks.add(AchievementType.veteran);
-    }
-
-    // Check win condition achievements
-    if (byTime && !state.isUnlocked(AchievementType.clockManager)) {
-      await unlock(AchievementType.clockManager);
-      newUnlocks.add(AchievementType.clockManager);
-    }
-    if (byFlats && !state.isUnlocked(AchievementType.domination)) {
-      await unlock(AchievementType.domination);
-      newUnlocks.add(AchievementType.domination);
-    }
-
+    // Update state with new win counts FIRST before checking achievements
     state = state.copyWith(
       totalWins: newTotalWins,
       onlineWins: newOnlineWins,
     );
+
+    // Now check for achievements (each unlock will trigger notification)
+
+    // Online win achievement
+    if (isOnline && !state.isUnlocked(AchievementType.connected)) {
+      if (await unlock(AchievementType.connected)) {
+        newUnlocks.add(AchievementType.connected);
+      }
+    }
+
+    // AI difficulty achievements
+    if (aiDifficulty != null) {
+      final aiAchievement = switch (aiDifficulty) {
+        AIDifficulty.easy => AchievementType.firstSteps,
+        AIDifficulty.medium => AchievementType.competitor,
+        AIDifficulty.hard => AchievementType.strategist,
+        AIDifficulty.expert => AchievementType.grandmaster,
+      };
+      if (!state.isUnlocked(aiAchievement)) {
+        if (await unlock(aiAchievement)) {
+          newUnlocks.add(aiAchievement);
+        }
+      }
+    }
+
+    // Win count achievements
+    if (newTotalWins >= 10 && !state.isUnlocked(AchievementType.dedicated)) {
+      if (await unlock(AchievementType.dedicated)) {
+        newUnlocks.add(AchievementType.dedicated);
+      }
+    }
+    if (newTotalWins >= 50 && !state.isUnlocked(AchievementType.veteran)) {
+      if (await unlock(AchievementType.veteran)) {
+        newUnlocks.add(AchievementType.veteran);
+      }
+    }
+
+    // Win condition achievements
+    if (byTime && !state.isUnlocked(AchievementType.clockManager)) {
+      if (await unlock(AchievementType.clockManager)) {
+        newUnlocks.add(AchievementType.clockManager);
+      }
+    }
+    if (byFlats && !state.isUnlocked(AchievementType.domination)) {
+      if (await unlock(AchievementType.domination)) {
+        newUnlocks.add(AchievementType.domination);
+      }
+    }
 
     return newUnlocks;
   }

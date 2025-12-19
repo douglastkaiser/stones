@@ -11,6 +11,7 @@ import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
 import '../widgets/chess_clock_setup.dart';
+import 'achievements_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
 import 'game_screen.dart';
@@ -635,6 +636,20 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       displayName: playGames.player!.displayName,
                       iconImage: playGames.iconImage,
                     ),
+                  // Achievements button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.emoji_events,
+                      color: GameColors.subtitleColor,
+                    ),
+                    tooltip: 'Achievements',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                      );
+                    },
+                  ),
                   // Settings gear on the right
                   IconButton(
                     icon: const Icon(
