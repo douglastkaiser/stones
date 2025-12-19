@@ -156,18 +156,18 @@ class _StatsSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatItem(
-                  icon: Icons.emoji_events,
-                  label: 'Total Wins',
-                  value: '${achievementState.totalWins}',
-                  color: Colors.amber,
-                ),
-              ),
-              Expanded(
-                child: _StatItem(
                   icon: Icons.public,
                   label: 'Online Wins',
                   value: '${achievementState.onlineWins}',
                   color: Colors.blue,
+                ),
+              ),
+              Expanded(
+                child: _StatItem(
+                  icon: Icons.school,
+                  label: 'Tutorials',
+                  value: '${achievementState.completedTutorials.length}/${AchievementState.allTutorialIds.length}',
+                  color: Colors.green,
                 ),
               ),
             ],
@@ -177,20 +177,13 @@ class _StatsSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatItem(
-                  icon: Icons.school,
-                  label: 'Tutorials',
-                  value: '${achievementState.completedTutorials.length}/${AchievementState.allTutorialIds.length}',
-                  color: Colors.green,
-                ),
-              ),
-              Expanded(
-                child: _StatItem(
                   icon: Icons.extension,
                   label: 'Puzzles',
                   value: '${achievementState.completedPuzzles.length}/${AchievementState.allPuzzleIds.length}',
                   color: Colors.purple,
                 ),
               ),
+              const Expanded(child: SizedBox()),
             ],
           ),
         ],

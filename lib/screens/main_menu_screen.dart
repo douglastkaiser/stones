@@ -636,33 +636,39 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       displayName: playGames.player!.displayName,
                       iconImage: playGames.iconImage,
                     ),
-                  // Achievements button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.emoji_events,
-                      color: GameColors.subtitleColor,
-                    ),
-                    tooltip: 'Achievements',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AchievementsScreen()),
-                      );
-                    },
-                  ),
-                  // Settings gear on the right
-                  IconButton(
-                    icon: const Icon(
-                      Icons.settings,
-                      color: GameColors.subtitleColor,
-                    ),
-                    tooltip: 'Settings',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      );
-                    },
+                  // Right side icons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Achievements button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.emoji_events,
+                          color: GameColors.subtitleColor,
+                        ),
+                        tooltip: 'Achievements',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                          );
+                        },
+                      ),
+                      // Settings gear
+                      IconButton(
+                        icon: const Icon(
+                          Icons.settings,
+                          color: GameColors.subtitleColor,
+                        ),
+                        tooltip: 'Settings',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

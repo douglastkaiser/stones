@@ -362,13 +362,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
     });
 
-    // Listen for achievement unlocks
-    ref.listen<AchievementType?>(justUnlockedAchievementProvider, (previous, next) {
-      if (next != null && previous != next) {
-        _showAchievementNotification(next);
-      }
-    });
-
     unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
   }
 
@@ -384,9 +377,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       barrierColor: Colors.black54,
       builder: (dialogContext) => _AchievementUnlockDialog(achievement: achievement),
     );
-
-    // Clear the just unlocked flag
-    ref.read(achievementProvider.notifier).clearJustUnlocked();
   }
 
   @override
@@ -430,23 +420,42 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // For local mode, any win counts
     final localPlayerWon = session.mode == GameMode.local && (isWhiteWin || isBlackWin);
 
-    // Record the win
+    // Record the win and show notifications for any unlocked achievements
     if (playerWon || onlinePlayerWon || localPlayerWon) {
-      await achievementNotifier.recordWin(
+      final unlockedAchievements = await achievementNotifier.recordWin(
         isOnline: session.mode == GameMode.online,
         aiDifficulty: session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
         byTime: gameState.winReason == WinReason.time,
         byFlats: gameState.winReason == WinReason.flats,
       );
+
+      // Show notification for each unlocked achievement
+      for (final achievementType in unlockedAchievements) {
+        if (mounted) {
+          _showAchievementNotification(achievementType);
+          // Wait a bit before showing the next one if there are multiple
+          if (unlockedAchievements.length > 1) {
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      }
     }
 
     // Check for scenario completion
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
     if (activeScenario != null && (gameState.isGameOver || scenarioState.guidedStepComplete)) {
+      List<AchievementType> scenarioUnlocks = [];
       if (activeScenario.type == ScenarioType.tutorial) {
-        await achievementNotifier.completeTutorial(activeScenario.id);
+        scenarioUnlocks = await achievementNotifier.completeTutorial(activeScenario.id);
       } else if (activeScenario.type == ScenarioType.puzzle) {
-        await achievementNotifier.completePuzzle(activeScenario.id);
+        scenarioUnlocks = await achievementNotifier.completePuzzle(activeScenario.id);
+      }
+
+      // Show notification for scenario achievements
+      for (final achievementType in scenarioUnlocks) {
+        if (mounted) {
+          _showAchievementNotification(achievementType);
+        }
       }
     }
   }
