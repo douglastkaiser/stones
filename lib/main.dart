@@ -336,6 +336,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     };
 
     ref.listen<GameState>(gameStateProvider, (previous, next) {
+      // Debug: Log every game state change
+      _debugLog('GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
+
       unawaited(_maybeTriggerAiTurn(next));
       final moveCount = ref.read(moveHistoryProvider).length;
       unawaited(
@@ -347,6 +350,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       );
       // Check for achievements when game ends
       if (next.isGameOver && (previous == null || !previous.isGameOver)) {
+        _debugLog('Game just ended! Calling _checkAchievements');
         unawaited(_checkAchievements(next));
       }
     });
