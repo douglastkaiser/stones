@@ -3999,7 +3999,7 @@ class _BottomControls extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. $remaining remaining in hand.',
+          'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.',
           style: TextStyle(color: textColor, fontSize: 13),
           textAlign: TextAlign.center,
         ),

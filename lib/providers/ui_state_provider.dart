@@ -145,9 +145,9 @@ class UIState {
     validDestinations.add(handPos);
 
     // Check ALL positions we can reach with remaining pieces in hand
-    // We can move up to piecesPickedUp cells (one piece must be dropped at each)
+    // After dropping pendingDropCount at current position, we have the rest to continue
     var currentPos = handPos;
-    var remainingPieces = piecesPickedUp;
+    var remainingPieces = piecesPickedUp - pendingDropCount;
 
     while (remainingPieces > 1) {  // Need at least 1 piece to drop, so can continue if > 1
       final nextPos = selectedDirection!.apply(currentPos);
