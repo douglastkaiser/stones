@@ -13,7 +13,7 @@ import 'models/models.dart';
 import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
-import 'widgets/chess_clock_toggle.dart';
+import 'widgets/chess_clock_setup.dart';
 import 'screens/main_menu_screen.dart';
 import 'firebase_options.dart';
 
@@ -1422,8 +1422,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void _showBoardSizeDialog(BuildContext context, WidgetRef ref) {
     final settings = ref.read(appSettingsProvider);
+    final session = ref.read(gameSessionProvider);
     int selectedSize = settings.boardSize;
     bool chessClockEnabled = settings.chessClockEnabled;
+    int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
+    bool chessClockOverridden = false;
+    final clockMinutesController = TextEditingController(
+      text: (chessClockSeconds ~/ 60).toString(),
+    );
 
     showDialog(
       context: context,
@@ -1443,16 +1449,31 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ChoiceChip(
                       label: Text('$size×$size'),
                       selected: selectedSize == size,
-                      onSelected: (_) => setState(() => selectedSize = size),
+                      onSelected: (_) => setState(() {
+                        selectedSize = size;
+                        if (!chessClockOverridden) {
+                          chessClockSeconds = settings.chessClockSecondsForSize(size);
+                          clockMinutesController.text =
+                              (chessClockSeconds ~/ 60).toString();
+                        }
+                      }),
                       selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
                       checkmarkColor: GameColors.boardFrameInner,
                     ),
                 ],
               ),
               const SizedBox(height: 16),
-              ChessClockToggle(
-                value: chessClockEnabled,
-                onChanged: (value) => setState(() => chessClockEnabled = value),
+              ChessClockSetup(
+                enabled: chessClockEnabled,
+                onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                minutesController: clockMinutesController,
+                onMinutesChanged: (value) {
+                  chessClockOverridden = true;
+                  final minutes = int.tryParse(value);
+                  if (minutes != null && minutes > 0) {
+                    chessClockSeconds = minutes * 60;
+                  }
+                },
               ),
             ],
           ),
@@ -1465,6 +1486,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onPressed: () {
                 // Save chess clock preference
                 ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
+                ref.read(gameSessionProvider.notifier).state = session.copyWith(
+                  chessClockSecondsOverride: chessClockEnabled && chessClockOverridden
+                      ? chessClockSeconds
+                      : null,
+                );
 
                 ref.read(gameStateProvider.notifier).newGame(selectedSize);
                 ref.read(uiStateProvider.notifier).reset();
@@ -1474,7 +1500,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
                 // Reset chess clock for new game
                 if (chessClockEnabled) {
-                  ref.read(chessClockProvider.notifier).initialize(selectedSize);
+                  ref.read(chessClockProvider.notifier).initialize(
+                        selectedSize,
+                        secondsOverride:
+                            chessClockOverridden ? chessClockSeconds : null,
+                      );
                 } else {
                   ref.read(chessClockProvider.notifier).stop();
                 }

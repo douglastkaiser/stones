@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,28 +10,23 @@ class SettingsKeys {
   static const String soundMuted = 'sound_muted';
   static const String themeMode = 'theme_mode';
   static const String chessClockEnabled = 'chess_clock_enabled';
+  static const String chessClockDefaults = 'chess_clock_defaults';
 }
 
 /// Default chess clock times in seconds by board size
 /// 4x4: 2 minutes, 5x5: 5 minutes, 6x6: 10 minutes
 class ChessClockDefaults {
+  static const Map<int, int> baseTimes = {
+    3: 60,
+    4: 120,
+    5: 300,
+    6: 600,
+    7: 900,
+    8: 1200,
+  };
+
   static int getTimeForBoardSize(int boardSize) {
-    switch (boardSize) {
-      case 3:
-        return 60; // 1 minute
-      case 4:
-        return 120; // 2 minutes
-      case 5:
-        return 300; // 5 minutes
-      case 6:
-        return 600; // 10 minutes
-      case 7:
-        return 900; // 15 minutes
-      case 8:
-        return 1200; // 20 minutes
-      default:
-        return 300; // 5 minutes default
-    }
+    return baseTimes[boardSize] ?? 300;
   }
 
   static String formatTime(int seconds) {
@@ -45,12 +42,14 @@ class AppSettings {
   final bool isSoundMuted;
   final ThemeMode themeMode;
   final bool chessClockEnabled;
+  final Map<int, int> chessClockDefaults;
 
   const AppSettings({
     this.boardSize = 5,
     this.isSoundMuted = false,
     this.themeMode = ThemeMode.system,
     this.chessClockEnabled = false,
+    this.chessClockDefaults = const {},
   });
 
   AppSettings copyWith({
@@ -58,13 +57,19 @@ class AppSettings {
     bool? isSoundMuted,
     ThemeMode? themeMode,
     bool? chessClockEnabled,
+    Map<int, int>? chessClockDefaults,
   }) {
     return AppSettings(
       boardSize: boardSize ?? this.boardSize,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
       themeMode: themeMode ?? this.themeMode,
       chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
+      chessClockDefaults: chessClockDefaults ?? this.chessClockDefaults,
     );
+  }
+
+  int chessClockSecondsForSize(int boardSize) {
+    return chessClockDefaults[boardSize] ?? ChessClockDefaults.getTimeForBoardSize(boardSize);
   }
 }
 
@@ -76,6 +81,9 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final themeModeIndex = prefs.getInt(SettingsKeys.themeMode);
+    final defaults = _parseChessClockDefaults(
+      prefs.getString(SettingsKeys.chessClockDefaults),
+    );
     state = AppSettings(
       boardSize: prefs.getInt(SettingsKeys.boardSize) ?? 5,
       isSoundMuted: prefs.getBool(SettingsKeys.soundMuted) ?? false,
@@ -83,6 +91,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
           ? ThemeMode.values[themeModeIndex]
           : ThemeMode.system,
       chessClockEnabled: prefs.getBool(SettingsKeys.chessClockEnabled) ?? false,
+      chessClockDefaults: defaults,
     );
   }
 
@@ -117,6 +126,43 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(chessClockEnabled: enabled);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SettingsKeys.chessClockEnabled, enabled);
+  }
+
+  Future<void> setChessClockDefault(int boardSize, int seconds) async {
+    final updated = Map<int, int>.from(state.chessClockDefaults);
+    updated[boardSize] = seconds;
+    state = state.copyWith(chessClockDefaults: Map.unmodifiable(updated));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(SettingsKeys.chessClockDefaults, _encodeChessClockDefaults(updated));
+  }
+
+  Map<int, int> _parseChessClockDefaults(String? raw) {
+    final defaults = Map<int, int>.from(ChessClockDefaults.baseTimes);
+    if (raw == null || raw.isEmpty) {
+      return defaults;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        for (final entry in decoded.entries) {
+          final key = int.tryParse(entry.key.toString());
+          final value = entry.value is int
+              ? entry.value as int
+              : int.tryParse(entry.value.toString());
+          if (key != null && value != null) {
+            defaults[key] = value;
+          }
+        }
+      }
+    } catch (_) {
+      return defaults;
+    }
+    return defaults;
+  }
+
+  String _encodeChessClockDefaults(Map<int, int> defaults) {
+    final data = defaults.map((key, value) => MapEntry(key.toString(), value));
+    return jsonEncode(data);
   }
 }
 

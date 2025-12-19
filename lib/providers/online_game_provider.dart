@@ -497,8 +497,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   void _beginLocalGame(int boardSize) {
     _debugLog('_beginLocalGame: Starting new local game with boardSize=$boardSize');
-    _ref.read(gameSessionProvider.notifier).state =
-        const GameSessionConfig(mode: GameMode.online);
+    final currentSession = _ref.read(gameSessionProvider);
+    _ref.read(gameSessionProvider.notifier).state = currentSession.copyWith(
+      mode: GameMode.online,
+    );
     _ref.read(gameStateProvider.notifier).newGame(boardSize);
     _ref.read(moveHistoryProvider.notifier).clear();
     _ref.read(uiStateProvider.notifier).reset();
@@ -506,7 +508,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _ref.read(lastMoveProvider.notifier).state = null;
     final settings = _ref.read(appSettingsProvider);
     if (settings.chessClockEnabled) {
-      _ref.read(chessClockProvider.notifier).initialize(boardSize);
+      _ref.read(chessClockProvider.notifier).initialize(
+            boardSize,
+            secondsOverride: currentSession.chessClockSecondsOverride,
+          );
     } else {
       _ref.read(chessClockProvider.notifier).stop();
     }
