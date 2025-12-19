@@ -5080,7 +5080,7 @@ class _HexagonPainter extends CustomPainter {
 
 /// Dialog shown when an achievement is unlocked
 class _AchievementUnlockDialog extends StatefulWidget {
-  final Achievement achievement;
+  final GameAchievement achievement;
 
   const _AchievementUnlockDialog({required this.achievement});
 

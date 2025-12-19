@@ -14,13 +14,13 @@ enum AchievementType {
 }
 
 /// Achievement definition with metadata
-class Achievement {
+class GameAchievement {
   final AchievementType type;
   final String name;
   final String description;
   final String? unlocksReward;
 
-  const Achievement({
+  const GameAchievement({
     required this.type,
     required this.name,
     required this.description,
@@ -28,70 +28,70 @@ class Achievement {
   });
 
   /// Get achievement definition by type
-  static Achievement forType(AchievementType type) {
+  static GameAchievement forType(AchievementType type) {
     return achievements.firstWhere((a) => a.type == type);
   }
 }
 
 /// All achievements in the game
-const List<Achievement> achievements = [
-  Achievement(
+const List<GameAchievement> achievements = [
+  GameAchievement(
     type: AchievementType.student,
     name: 'Student',
     description: 'Complete all tutorials',
     unlocksReward: 'Minimalist board theme',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.puzzleSolver,
     name: 'Puzzle Solver',
     description: 'Complete all puzzles',
     unlocksReward: 'Polished Marble piece style',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.firstSteps,
     name: 'First Steps',
     description: 'Beat Easy AI',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.competitor,
     name: 'Competitor',
     description: 'Beat Medium AI',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.strategist,
     name: 'Strategist',
     description: 'Beat Hard AI',
     unlocksReward: 'Dark Stone board theme',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.grandmaster,
     name: 'Grandmaster',
     description: 'Beat Expert AI',
     unlocksReward: 'Marble board theme',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.connected,
     name: 'Connected',
     description: 'Win first online game',
     unlocksReward: 'Hand Carved piece style',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.dedicated,
     name: 'Dedicated',
     description: 'Win 10 games (any mode)',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.veteran,
     name: 'Veteran',
     description: 'Win 50 games (any mode)',
     unlocksReward: 'Pixel Art board theme',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.clockManager,
     name: 'Clock Manager',
     description: 'Win by clock timeout',
   ),
-  Achievement(
+  GameAchievement(
     type: AchievementType.domination,
     name: 'Domination',
     description: 'Win by flat count',
