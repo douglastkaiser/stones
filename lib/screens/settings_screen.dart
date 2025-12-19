@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/cosmetics.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
@@ -61,6 +62,14 @@ class SettingsScreen extends ConsumerWidget {
           const _SectionHeader(title: 'Chess Clock Defaults'),
           const SizedBox(height: 12),
           const _ChessClockDefaultsSection(),
+          const SizedBox(height: 32),
+
+          // Cosmetics Section
+          const _SectionHeader(title: 'Cosmetics'),
+          const SizedBox(height: 12),
+          const _BoardThemeSelector(),
+          const SizedBox(height: 16),
+          const _PieceStyleSelector(),
           const SizedBox(height: 32),
 
           // Play Games Section
@@ -471,6 +480,249 @@ class _ThemeOption extends StatelessWidget {
                   color: isSelected
                       ? colorScheme.onPrimaryContainer
                       : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Board theme selector widget
+class _BoardThemeSelector extends ConsumerWidget {
+  const _BoardThemeSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cosmetics = ref.watch(cosmeticsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.grid_view,
+                  color: isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Board Theme',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final theme in BoardTheme.values)
+                  _CosmeticOption(
+                    name: BoardThemeData.forTheme(theme).name,
+                    description: BoardThemeData.forTheme(theme).description,
+                    isSelected: cosmetics.selectedBoardTheme == theme,
+                    isUnlocked: ref.watch(isBoardThemeUnlockedProvider(theme)),
+                    unlockRequirement: ref.watch(boardThemeUnlockRequirementProvider(theme)),
+                    previewColor: BoardThemeData.forTheme(theme).cellBackground,
+                    onTap: () {
+                      if (ref.read(isBoardThemeUnlockedProvider(theme))) {
+                        ref.read(cosmeticsProvider.notifier).setBoardTheme(theme);
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Piece style selector widget
+class _PieceStyleSelector extends ConsumerWidget {
+  const _PieceStyleSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cosmetics = ref.watch(cosmeticsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.circle,
+                  color: isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Piece Style',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final style in PieceStyle.values)
+                  _CosmeticOption(
+                    name: PieceStyleData.forStyle(style).name,
+                    description: PieceStyleData.forStyle(style).description,
+                    isSelected: cosmetics.selectedPieceStyle == style,
+                    isUnlocked: ref.watch(isPieceStyleUnlockedProvider(style)),
+                    unlockRequirement: ref.watch(pieceStyleUnlockRequirementProvider(style)),
+                    previewColor: PieceStyleData.forStyle(style).lightPrimary,
+                    onTap: () {
+                      if (ref.read(isPieceStyleUnlockedProvider(style))) {
+                        ref.read(cosmeticsProvider.notifier).setPieceStyle(style);
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Generic cosmetic option widget (for board themes and piece styles)
+class _CosmeticOption extends StatelessWidget {
+  final String name;
+  final String description;
+  final bool isSelected;
+  final bool isUnlocked;
+  final String? unlockRequirement;
+  final Color previewColor;
+  final VoidCallback onTap;
+
+  const _CosmeticOption({
+    required this.name,
+    required this.description,
+    required this.isSelected,
+    required this.isUnlocked,
+    required this.unlockRequirement,
+    required this.previewColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Tooltip(
+      message: isUnlocked ? description : (unlockRequirement ?? ''),
+      waitDuration: const Duration(milliseconds: 500),
+      child: GestureDetector(
+        onTap: isUnlocked ? onTap : null,
+        onLongPress: isUnlocked
+            ? null
+            : () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(unlockRequirement ?? 'Locked'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 100,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? colorScheme.primaryContainer
+                : isUnlocked
+                    ? (isDark ? colorScheme.surface : Colors.grey.shade100)
+                    : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected
+                  ? colorScheme.primary
+                  : isUnlocked
+                      ? colorScheme.outline.withValues(alpha: 0.3)
+                      : Colors.grey.shade400,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              // Color preview
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isUnlocked ? previewColor : Colors.grey,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isUnlocked ? previewColor.withValues(alpha: 0.5) : Colors.grey,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: isUnlocked
+                    ? null
+                    : const Icon(Icons.lock, size: 20, color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isUnlocked
+                      ? (isSelected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurface)
+                      : Colors.grey.shade600,
                 ),
               ),
             ],

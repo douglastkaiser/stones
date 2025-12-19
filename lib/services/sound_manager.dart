@@ -2,6 +2,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/cosmetics.dart';
+
 /// Sound types available in the game
 enum GameSound {
   piecePlace,
@@ -9,6 +11,17 @@ enum GameSound {
   wallFlatten,
   win,
   illegalMove,
+  achievementUnlock,
+  // Board theme sounds
+  piecePlaceWood,
+  piecePlaceStone,
+  piecePlaceMarble,
+  piecePlaceMinimal,
+  piecePlacePixel,
+  // Piece style sounds
+  stackMoveWood,
+  stackMoveMarble,
+  stackMoveCarved,
 }
 
 /// Manages game sounds with mute support
@@ -53,6 +66,26 @@ class SoundManager {
         return 'sounds/win.wav';
       case GameSound.illegalMove:
         return 'sounds/illegal_move.wav';
+      case GameSound.achievementUnlock:
+        return 'sounds/achievement_unlock.wav';
+      // Board theme placement sounds - fallback to piece_place.wav for now
+      case GameSound.piecePlaceWood:
+        return 'sounds/piece_place.wav';
+      case GameSound.piecePlaceStone:
+        return 'sounds/piece_place_stone.wav';
+      case GameSound.piecePlaceMarble:
+        return 'sounds/piece_place_marble.wav';
+      case GameSound.piecePlaceMinimal:
+        return 'sounds/piece_place_minimal.wav';
+      case GameSound.piecePlacePixel:
+        return 'sounds/piece_place_pixel.wav';
+      // Piece style stack move sounds - fallback to stack_move.wav for now
+      case GameSound.stackMoveWood:
+        return 'sounds/stack_move.wav';
+      case GameSound.stackMoveMarble:
+        return 'sounds/stack_move_marble.wav';
+      case GameSound.stackMoveCarved:
+        return 'sounds/stack_move_carved.wav';
     }
   }
 
@@ -104,6 +137,31 @@ class SoundManager {
 
   /// Play illegal move sound (subtle error buzz)
   Future<void> playIllegalMove() => play(GameSound.illegalMove);
+
+  /// Play achievement unlock sound
+  Future<void> playAchievementUnlock() => play(GameSound.achievementUnlock);
+
+  /// Play themed piece placement sound based on board theme
+  Future<void> playThemedPiecePlace(BoardTheme theme) {
+    final sound = switch (theme) {
+      BoardTheme.classicWood => GameSound.piecePlaceWood,
+      BoardTheme.darkStone => GameSound.piecePlaceStone,
+      BoardTheme.marble => GameSound.piecePlaceMarble,
+      BoardTheme.minimalist => GameSound.piecePlaceMinimal,
+      BoardTheme.pixelArt => GameSound.piecePlacePixel,
+    };
+    return play(sound);
+  }
+
+  /// Play themed stack move sound based on piece style
+  Future<void> playThemedStackMove(PieceStyle style) {
+    final sound = switch (style) {
+      PieceStyle.standard => GameSound.stackMoveWood,
+      PieceStyle.polishedMarble => GameSound.stackMoveMarble,
+      PieceStyle.handCarved => GameSound.stackMoveCarved,
+    };
+    return play(sound);
+  }
 }
 
 /// Provider for the sound manager singleton

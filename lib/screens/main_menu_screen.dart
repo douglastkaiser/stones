@@ -35,6 +35,12 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     // Load settings
     await ref.read(appSettingsProvider.notifier).load();
 
+    // Load achievements
+    await ref.read(achievementProvider.notifier).load();
+
+    // Load cosmetics
+    await ref.read(cosmeticsProvider.notifier).load();
+
     // Initialize sound manager
     final soundManager = ref.read(soundManagerProvider);
     await soundManager.initialize();

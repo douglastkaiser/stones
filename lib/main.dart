@@ -345,6 +345,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               moveCount: moveCount,
             ),
       );
+      // Check for achievements when game ends
+      if (next.isGameOver && (previous == null || !previous.isGameOver)) {
+        unawaited(_checkAchievements(next));
+      }
     });
 
     // Listen for online game events (opponent moves/joins)
@@ -358,7 +362,31 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
     });
 
+    // Listen for achievement unlocks
+    ref.listen<AchievementType?>(justUnlockedAchievementProvider, (previous, next) {
+      if (next != null && previous != next) {
+        _showAchievementNotification(next);
+      }
+    });
+
     unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+  }
+
+  void _showAchievementNotification(AchievementType type) {
+    final achievement = GameAchievement.forType(type);
+
+    // Play unlock sound
+    ref.read(soundManagerProvider).playAchievementUnlock();
+
+    // Show the notification dialog
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) => _AchievementUnlockDialog(achievement: achievement),
+    );
+
+    // Clear the just unlocked flag
+    ref.read(achievementProvider.notifier).clearJustUnlocked();
   }
 
   @override
@@ -376,6 +404,51 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _isAiTurn(GameSessionConfig session, GameState gameState) {
     return session.mode == GameMode.vsComputer &&
         gameState.currentPlayer == _aiPlayerColor(session);
+  }
+
+  Future<void> _checkAchievements(GameState gameState) async {
+    final session = ref.read(gameSessionProvider);
+    final scenarioState = ref.read(scenarioStateProvider);
+    final achievementNotifier = ref.read(achievementProvider.notifier);
+
+    // Check if it's a win (not a draw)
+    final isWhiteWin = gameState.result == GameResult.whiteWins;
+    final isBlackWin = gameState.result == GameResult.blackWins;
+
+    // For vs computer mode, check if the human player won
+    final playerColor = session.vsComputerPlayerColor;
+    final playerWon = session.mode == GameMode.vsComputer &&
+        ((playerColor == PlayerColor.white && isWhiteWin) ||
+         (playerColor == PlayerColor.black && isBlackWin));
+
+    // For online mode, check if local player won
+    final onlineState = ref.read(onlineGameProvider);
+    final onlinePlayerWon = session.mode == GameMode.online &&
+        ((onlineState.localColor == PlayerColor.white && isWhiteWin) ||
+         (onlineState.localColor == PlayerColor.black && isBlackWin));
+
+    // For local mode, any win counts
+    final localPlayerWon = session.mode == GameMode.local && (isWhiteWin || isBlackWin);
+
+    // Record the win
+    if (playerWon || onlinePlayerWon || localPlayerWon) {
+      await achievementNotifier.recordWin(
+        isOnline: session.mode == GameMode.online,
+        aiDifficulty: session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
+        byTime: gameState.winReason == WinReason.time,
+        byFlats: gameState.winReason == WinReason.flats,
+      );
+    }
+
+    // Check for scenario completion
+    final activeScenario = session.scenario ?? scenarioState.activeScenario;
+    if (activeScenario != null && (gameState.isGameOver || scenarioState.guidedStepComplete)) {
+      if (activeScenario.type == ScenarioType.tutorial) {
+        await achievementNotifier.completeTutorial(activeScenario.id);
+      } else if (activeScenario.type == ScenarioType.puzzle) {
+        await achievementNotifier.completePuzzle(activeScenario.id);
+      }
+    }
   }
 
   void _undo() {
@@ -5002,5 +5075,195 @@ class _HexagonPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _HexagonPainter oldDelegate) {
     return oldDelegate.colors != colors;
+  }
+}
+
+/// Dialog shown when an achievement is unlocked
+class _AchievementUnlockDialog extends StatefulWidget {
+  final Achievement achievement;
+
+  const _AchievementUnlockDialog({required this.achievement});
+
+  @override
+  State<_AchievementUnlockDialog> createState() =>
+      _AchievementUnlockDialogState();
+}
+
+class _AchievementUnlockDialogState extends State<_AchievementUnlockDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+
+    _controller.forward();
+
+    // Auto-dismiss after 4 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 320,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF4A3728),
+                  Color(0xFF2C1810),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFD4AF37),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+                const BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                const Text(
+                  'ACHIEVEMENT UNLOCKED',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Achievement name
+                Text(
+                  widget.achievement.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Achievement description
+                Text(
+                  widget.achievement.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                  ),
+                ),
+
+                // Unlocked reward (if any)
+                if (widget.achievement.unlocksReward != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xFFD4AF37),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Unlocked: ${widget.achievement.unlocksReward}',
+                            style: const TextStyle(
+                              color: Color(0xFFD4AF37),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                // Dismiss button
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                  ),
+                  child: const Text('TAP TO DISMISS'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
