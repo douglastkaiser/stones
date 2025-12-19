@@ -460,6 +460,19 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     );
                   },
                 ),
+                const SizedBox(height: 16),
+                ChessClockSetup(
+                  enabled: chessClockEnabled,
+                  onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                  minutesController: clockMinutesController,
+                  onMinutesChanged: (value) {
+                    chessClockOverridden = true;
+                    final minutes = int.tryParse(value);
+                    if (minutes != null && minutes > 0) {
+                      chessClockSeconds = minutes * 60;
+                    }
+                  },
+                ),
                 const SizedBox(height: 20),
 
                 // Difficulty Section
@@ -534,19 +547,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                ChessClockSetup(
-                  enabled: chessClockEnabled,
-                  onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
-                  minutesController: clockMinutesController,
-                  onMinutesChanged: (value) {
-                    chessClockOverridden = true;
-                    final minutes = int.tryParse(value);
-                    if (minutes != null && minutes > 0) {
-                      chessClockSeconds = minutes * 60;
-                    }
-                  },
                 ),
               ],
             ),

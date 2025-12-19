@@ -1718,6 +1718,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       fontStyle: FontStyle.italic,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  ChessClockSetup(
+                    enabled: chessClockEnabled,
+                    onEnabledChanged: (value) =>
+                        setState(() => chessClockEnabled = value),
+                    minutesController: clockMinutesController,
+                    onMinutesChanged: (value) {
+                      chessClockOverridden = true;
+                      final minutes = int.tryParse(value);
+                      if (minutes != null && minutes > 0) {
+                        chessClockSeconds = minutes * 60;
+                      }
+                    },
+                  ),
                   const SizedBox(height: 20),
                   Builder(
                     builder: (context) {
@@ -1756,20 +1770,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       const SizedBox(width: 8),
                       Expanded(child: buildColorOption('Black', PlayerColor.black)),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  ChessClockSetup(
-                    enabled: chessClockEnabled,
-                    onEnabledChanged: (value) =>
-                        setState(() => chessClockEnabled = value),
-                    minutesController: clockMinutesController,
-                    onMinutesChanged: (value) {
-                      chessClockOverridden = true;
-                      final minutes = int.tryParse(value);
-                      if (minutes != null && minutes > 0) {
-                        chessClockSeconds = minutes * 60;
-                      }
-                    },
                   ),
                 ],
               ),
