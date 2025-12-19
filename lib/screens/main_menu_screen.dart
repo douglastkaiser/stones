@@ -199,6 +199,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   mode,
                   difficulty,
                   chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
+                  ref.read(gameSessionProvider).vsComputerPlayerColor,
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -224,7 +225,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     GameMode mode,
     AIDifficulty difficulty,
     int? chessClockSecondsOverride,
-    {PlayerColor? vsComputerPlayerColor},
+    PlayerColor vsComputerPlayerColor,
   ) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
@@ -232,8 +233,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           mode: mode,
           aiDifficulty: difficulty,
           chessClockSecondsOverride: chessClockSecondsOverride,
-          vsComputerPlayerColor:
-              vsComputerPlayerColor ?? ref.read(gameSessionProvider).vsComputerPlayerColor,
+          vsComputerPlayerColor: vsComputerPlayerColor,
         );
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
@@ -566,7 +566,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   GameMode.vsComputer,
                   selectedDifficulty,
                   chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
-                  vsComputerPlayerColor: selectedPlayerColor,
+                  selectedPlayerColor,
                 );
               },
               style: ElevatedButton.styleFrom(
