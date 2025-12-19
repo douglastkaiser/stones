@@ -224,6 +224,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     GameMode mode,
     AIDifficulty difficulty,
     int? chessClockSecondsOverride,
+    [PlayerColor? vsComputerPlayerColor],
   ) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
@@ -231,6 +232,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           mode: mode,
           aiDifficulty: difficulty,
           chessClockSecondsOverride: chessClockSecondsOverride,
+          vsComputerPlayerColor:
+              vsComputerPlayerColor ?? ref.read(gameSessionProvider).vsComputerPlayerColor,
         );
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
@@ -392,6 +395,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     int selectedSize = settings.boardSize;
     AIDifficulty selectedDifficulty = AIDifficulty.easy;
     bool chessClockEnabled = settings.chessClockEnabled;
+    PlayerColor selectedPlayerColor = ref.read(gameSessionProvider).vsComputerPlayerColor;
     int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
     bool chessClockOverridden = false;
     final clockMinutesController = TextEditingController(
@@ -492,6 +496,45 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   isSelected: selectedDifficulty == AIDifficulty.expert,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.expert),
                 ),
+                const SizedBox(height: 20),
+
+                // Color Section
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return Text(
+                      'Your Color',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : GameColors.titleColor,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ColorOption(
+                        title: 'White',
+                        color: PlayerColor.white,
+                        isSelected: selectedPlayerColor == PlayerColor.white,
+                        onTap: () =>
+                            setState(() => selectedPlayerColor = PlayerColor.white),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ColorOption(
+                        title: 'Black',
+                        color: PlayerColor.black,
+                        isSelected: selectedPlayerColor == PlayerColor.black,
+                        onTap: () =>
+                            setState(() => selectedPlayerColor = PlayerColor.black),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 ChessClockSetup(
                   enabled: chessClockEnabled,
@@ -523,6 +566,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   GameMode.vsComputer,
                   selectedDifficulty,
                   chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
+                  selectedPlayerColor,
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -702,7 +746,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         builder: (context) {
                           final isDark = Theme.of(context).brightness == Brightness.dark;
                           return Text(
-                            'You play as White when facing the computer',
+                            'Choose your color in the setup',
                             style: TextStyle(
                               color: isDark
                                   ? Theme.of(context).colorScheme.onSurfaceVariant
@@ -1122,6 +1166,78 @@ class _DifficultyOption extends StatelessWidget {
                 color: GameColors.boardFrameInner,
                 size: 20,
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorOption extends StatelessWidget {
+  final String title;
+  final PlayerColor color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ColorOption({
+    required this.title,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isSelected
+        ? GameColors.boardFrameInner
+        : isDark
+            ? Colors.grey.shade600
+            : Colors.grey.shade300;
+    final chipColor =
+        color == PlayerColor.white ? GameColors.lightPiece : GameColors.darkPiece;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
+              : null,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: chipColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? GameColors.boardFrameInner
+                    : isDark
+                        ? Colors.white
+                        : null,
+              ),
+            ),
           ],
         ),
       ),
