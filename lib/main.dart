@@ -1571,8 +1571,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onTap: () => setState(() => selectedDifficulty = difficulty),
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                margin: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 2),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
@@ -1589,6 +1589,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       child: Text(
                         title,
                         style: TextStyle(
+                          fontSize: 13,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected
                               ? GameColors.boardFrameInner
@@ -1737,24 +1738,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     builder: (context) {
                       final isDark = Theme.of(context).brightness == Brightness.dark;
                       return Text(
-                        'Difficulty',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : GameColors.titleColor,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  buildDifficultyOption('Easy', AIDifficulty.easy),
-                  buildDifficultyOption('Medium', AIDifficulty.medium),
-                  buildDifficultyOption('Hard', AIDifficulty.hard),
-                  buildDifficultyOption('Expert', AIDifficulty.expert),
-                  const SizedBox(height: 20),
-                  Builder(
-                    builder: (context) {
-                      final isDark = Theme.of(context).brightness == Brightness.dark;
-                      return Text(
                         'Your Color',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -1771,6 +1754,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       Expanded(child: buildColorOption('Black', PlayerColor.black)),
                     ],
                   ),
+                  const SizedBox(height: 20),
+                  Builder(
+                    builder: (context) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      return Text(
+                        'Difficulty',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : GameColors.titleColor,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  buildDifficultyOption('Easy', AIDifficulty.easy),
+                  buildDifficultyOption('Medium', AIDifficulty.medium),
+                  buildDifficultyOption('Hard', AIDifficulty.hard),
+                  buildDifficultyOption('Expert', AIDifficulty.expert),
                 ],
               ),
             ),

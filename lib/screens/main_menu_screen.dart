@@ -475,42 +475,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Difficulty Section
-                Builder(
-                  builder: (context) {
-                    final isDark = Theme.of(context).brightness == Brightness.dark;
-                    return Text(
-                      'Difficulty',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : GameColors.titleColor,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                _DifficultyOption(
-                  title: 'Easy',
-                  isSelected: selectedDifficulty == AIDifficulty.easy,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
-                ),
-                _DifficultyOption(
-                  title: 'Medium',
-                  isSelected: selectedDifficulty == AIDifficulty.medium,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.medium),
-                ),
-                _DifficultyOption(
-                  title: 'Hard',
-                  isSelected: selectedDifficulty == AIDifficulty.hard,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
-                ),
-                _DifficultyOption(
-                  title: 'Expert',
-                  isSelected: selectedDifficulty == AIDifficulty.expert,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.expert),
-                ),
-                const SizedBox(height: 20),
-
                 // Color Section
                 Builder(
                   builder: (context) {
@@ -547,6 +511,46 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 20),
+
+                // Difficulty Section
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return Text(
+                      'Difficulty',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : GameColors.titleColor,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                _DifficultyOption(
+                  title: 'Easy',
+                  isSelected: selectedDifficulty == AIDifficulty.easy,
+                  dense: true,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
+                ),
+                _DifficultyOption(
+                  title: 'Medium',
+                  isSelected: selectedDifficulty == AIDifficulty.medium,
+                  dense: true,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.medium),
+                ),
+                _DifficultyOption(
+                  title: 'Hard',
+                  isSelected: selectedDifficulty == AIDifficulty.hard,
+                  dense: true,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
+                ),
+                _DifficultyOption(
+                  title: 'Expert',
+                  isSelected: selectedDifficulty == AIDifficulty.expert,
+                  dense: true,
+                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.expert),
                 ),
               ],
             ),
@@ -1113,11 +1117,13 @@ class _DifficultyOption extends StatelessWidget {
   final String title;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool dense;
 
   const _DifficultyOption({
     required this.title,
     required this.isSelected,
     required this.onTap,
+    this.dense = false,
   });
 
   @override
@@ -1133,8 +1139,8 @@ class _DifficultyOption extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        margin: const EdgeInsets.only(bottom: 4),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 8 : 12),
+        margin: EdgeInsets.only(bottom: dense ? 2 : 4),
         decoration: BoxDecoration(
           color: isSelected
               ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
@@ -1151,6 +1157,7 @@ class _DifficultyOption extends StatelessWidget {
               child: Text(
                 title,
                 style: TextStyle(
+                  fontSize: dense ? 13 : 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected
                       ? GameColors.boardFrameInner

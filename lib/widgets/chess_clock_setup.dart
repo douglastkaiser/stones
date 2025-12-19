@@ -21,27 +21,18 @@ class ChessClockSetup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ChessClockToggle(
-          value: enabled,
-          onChanged: onEnabledChanged,
-        ),
-        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
-              child: Text(
-                'Minutes per player',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isDark
-                          ? Theme.of(context).colorScheme.onSurfaceVariant
-                          : Colors.grey.shade700,
-                    ),
+              child: ChessClockToggle(
+                value: enabled,
+                onChanged: onEnabledChanged,
               ),
             ),
+            const SizedBox(width: 12),
             SizedBox(
               width: 88,
               child: TextField(
