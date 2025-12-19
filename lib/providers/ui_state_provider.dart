@@ -117,7 +117,7 @@ class UIState {
   }
 
   /// Get valid drop positions when in droppingPieces mode
-  /// Returns positions we can continue dropping to (next cell in direction)
+  /// Returns ALL positions we can reach with remaining pieces in hand
   Set<Position> getValidDropDestinations(GameState gameState) {
     if (selectedPosition == null || selectedDirection == null) return {};
     if (mode != InteractionMode.droppingPieces) return {};
@@ -144,17 +144,28 @@ class UIState {
     // The current hand position is always valid (already validated when we got here)
     validDestinations.add(handPos);
 
-    // Check if we can continue past current hand position
-    if (piecesPickedUp > pendingDropCount) {
-      final nextPos = selectedDirection!.apply(handPos);
-      if (gameState.board.isValidPosition(nextPos)) {
-        final targetStack = gameState.board.stackAt(nextPos);
-        if (targetStack.canMoveOnto(movingPiece)) {
-          validDestinations.add(nextPos);
-        } else if (targetStack.topPiece?.type == PieceType.standing &&
-            movingPiece.canFlattenWalls) {
-          validDestinations.add(nextPos);
-        }
+    // Check ALL positions we can reach with remaining pieces in hand
+    // After dropping pendingDropCount at current position, we have remainingPieces left
+    // Each subsequent cell requires dropping at least 1 piece
+    var currentPos = handPos;
+    var remainingPieces = piecesPickedUp - pendingDropCount;
+
+    while (remainingPieces > 0) {  // Can continue if any pieces remain after pending drop
+      final nextPos = selectedDirection!.apply(currentPos);
+      if (!gameState.board.isValidPosition(nextPos)) break;
+
+      final targetStack = gameState.board.stackAt(nextPos);
+      if (targetStack.canMoveOnto(movingPiece)) {
+        validDestinations.add(nextPos);
+        currentPos = nextPos;
+        remainingPieces--;  // Will drop one piece here
+      } else if (targetStack.topPiece?.type == PieceType.standing &&
+          movingPiece.canFlattenWalls) {
+        // Capstone can flatten wall as final move
+        validDestinations.add(nextPos);
+        break;  // Can't continue past a flattened wall
+      } else {
+        break;  // Can't move onto this cell
       }
     }
 
@@ -186,6 +197,98 @@ class UIState {
     }
 
     return false;
+  }
+
+  /// Calculate preview stacks for all positions during move operations.
+  /// Returns a map of Position -> (previewStack, ghostPieces) where:
+  /// - previewStack: what the stack at this position would look like after the move
+  /// - ghostPieces: pieces that are "ghost" (being moved, shown semi-transparent)
+  /// Returns null if not in a move preview state.
+  Map<Position, (PieceStack previewStack, List<Piece> ghostPieces)>?
+      getPreviewStacks(GameState gameState) {
+    // Only calculate previews during stack movement modes
+    if (mode != InteractionMode.movingStack &&
+        mode != InteractionMode.droppingPieces) {
+      return null;
+    }
+
+    if (selectedPosition == null || piecesPickedUp <= 0) return null;
+
+    final sourceStack = gameState.board.stackAt(selectedPosition!);
+    if (sourceStack.isEmpty) return null;
+
+    final previews = <Position, (PieceStack, List<Piece>)>{};
+
+    // In movingStack mode: show entire source stack as ghosts (move not confirmed)
+    if (mode == InteractionMode.movingStack) {
+      // ALL pieces at source are ghosts since the move is unconfirmed
+      // The pickup count badge shows which ones will be picked up
+      previews[selectedPosition!] = (
+        PieceStack.empty,  // no solid pieces - everything is part of the plan
+        sourceStack.pieces,  // entire stack as ghosts
+      );
+    }
+
+    // In droppingPieces mode: calculate full preview of the move
+    if (mode == InteractionMode.droppingPieces &&
+        selectedDirection != null) {
+      final piecesToPickUp = piecesPickedUp + drops.fold(0, (a, b) => a + b);
+      final actualPickup = piecesToPickUp.clamp(0, sourceStack.height).toInt();
+
+      // Get the pieces being moved
+      final (remaining, pickedUp) = sourceStack.pop(actualPickup);
+
+      // Source position: remaining pieces are ghosts (move not confirmed)
+      previews[selectedPosition!] = (PieceStack.empty, remaining.pieces);
+
+      // Calculate drops along the path
+      var currentPos = selectedPosition!;
+      var piecesInHand = List<Piece>.from(pickedUp);
+
+      // Process committed drops
+      for (final dropCount in drops) {
+        currentPos = selectedDirection!.apply(currentPos);
+        final targetStack = gameState.board.stackAt(currentPos);
+
+        // Get pieces to drop at this position
+        final droppedPieces = piecesInHand.sublist(0, dropCount);
+        piecesInHand = piecesInHand.sublist(dropCount);
+
+        // Check if we need to flatten a wall (capstone moving onto standing stone)
+        PieceStack baseStack = targetStack;
+        if (baseStack.topPiece?.type == PieceType.standing &&
+            droppedPieces.isNotEmpty &&
+            droppedPieces.last.canFlattenWalls) {
+          baseStack = baseStack.flattenTop();
+        }
+
+        // Preview shows existing pieces + dropped pieces as ghosts
+        previews[currentPos] = (baseStack, droppedPieces);
+      }
+
+      // Current hand position: show ALL remaining pieces as ghosts
+      // This gives the user a full preview of what will land there
+      if (piecesInHand.isNotEmpty) {
+        final handPos = getCurrentHandPosition();
+        if (handPos != null) {
+          final targetStack = gameState.board.stackAt(handPos);
+          // Show all pieces still in hand as ghosts at the current position
+          final ghostPieces = piecesInHand;
+
+          // Check if we need to flatten a wall
+          PieceStack baseStack = targetStack;
+          if (baseStack.topPiece?.type == PieceType.standing &&
+              ghostPieces.isNotEmpty &&
+              ghostPieces.last.canFlattenWalls) {
+            baseStack = baseStack.flattenTop();
+          }
+
+          previews[handPos] = (baseStack, ghostPieces);
+        }
+      }
+    }
+
+    return previews;
   }
 
   UIState copyWith({
