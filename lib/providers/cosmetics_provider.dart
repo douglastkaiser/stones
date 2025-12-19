@@ -130,7 +130,7 @@ final boardThemeUnlockRequirementProvider =
   final isUnlocked = ref.watch(isBoardThemeUnlockedProvider(theme));
   if (isUnlocked) return null;
 
-  final achievement = Achievement.forType(themeData.requiredAchievement!);
+  final achievement = GameAchievement.forType(themeData.requiredAchievement!);
   return 'Unlock: ${achievement.description}';
 });
 
@@ -143,6 +143,6 @@ final pieceStyleUnlockRequirementProvider =
   final isUnlocked = ref.watch(isPieceStyleUnlockedProvider(style));
   if (isUnlocked) return null;
 
-  final achievement = Achievement.forType(styleData.requiredAchievement!);
+  final achievement = GameAchievement.forType(styleData.requiredAchievement!);
   return 'Unlock: ${achievement.description}';
 });
