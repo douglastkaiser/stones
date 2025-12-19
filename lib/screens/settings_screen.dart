@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/providers.dart';
@@ -54,6 +55,12 @@ class SettingsScreen extends ConsumerWidget {
               await ref.read(appSettingsProvider.notifier).setThemeMode(mode);
             },
           ),
+          const SizedBox(height: 32),
+
+          // Chess Clock Defaults Section
+          const _SectionHeader(title: 'Chess Clock Defaults'),
+          const SizedBox(height: 12),
+          const _ChessClockDefaultsSection(),
           const SizedBox(height: 32),
 
           // Play Games Section
@@ -208,6 +215,124 @@ class _PlayGamesSection extends StatelessWidget {
   }
 }
 
+class _ChessClockDefaultsSection extends ConsumerStatefulWidget {
+  const _ChessClockDefaultsSection();
+
+  @override
+  ConsumerState<_ChessClockDefaultsSection> createState() =>
+      _ChessClockDefaultsSectionState();
+}
+
+class _ChessClockDefaultsSectionState
+    extends ConsumerState<_ChessClockDefaultsSection> {
+  final Map<int, TextEditingController> _controllers = {};
+  final Map<int, FocusNode> _focusNodes = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(appSettingsProvider);
+    for (int size = 3; size <= 8; size++) {
+      final minutes = settings.chessClockSecondsForSize(size) ~/ 60;
+      _controllers[size] = TextEditingController(text: minutes.toString());
+      _focusNodes[size] = FocusNode();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(appSettingsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    for (int size = 3; size <= 8; size++) {
+      final controller = _controllers[size]!;
+      final focusNode = _focusNodes[size]!;
+      if (!focusNode.hasFocus) {
+        final minutes = settings.chessClockSecondsForSize(size) ~/ 60;
+        final text = minutes.toString();
+        if (controller.text != text) {
+          controller.text = text;
+        }
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            for (int size = 3; size <= 8; size++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('$size×$size board'),
+                    ),
+                    SizedBox(
+                      width: 88,
+                      child: TextField(
+                        controller: _controllers[size],
+                        focusNode: _focusNodes[size],
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          suffixText: 'min',
+                        ),
+                        onChanged: (value) {
+                          final minutes = int.tryParse(value);
+                          if (minutes == null || minutes <= 0) return;
+                          ref
+                              .read(appSettingsProvider.notifier)
+                              .setChessClockDefault(size, minutes * 60);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Text(
+              'Defaults apply when starting new games; you can still override per game.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isDark
+                        ? colorScheme.onSurfaceVariant
+                        : Colors.grey.shade600,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Theme mode selector widget
 class _ThemeSelector extends StatelessWidget {
   final ThemeMode currentMode;
@@ -355,4 +480,3 @@ class _ThemeOption extends StatelessWidget {
     );
   }
 }
-

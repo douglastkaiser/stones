@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
+import '../widgets/chess_clock_setup.dart';
 import 'game_screen.dart';
 
 class OnlineLobbyScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,10 @@ class OnlineLobbyScreen extends ConsumerStatefulWidget {
 class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   final TextEditingController _joinCodeController = TextEditingController();
   int _selectedBoardSize = 5;
+  bool _chessClockEnabled = false;
+  int _chessClockSeconds = 300;
+  bool _chessClockOverridden = false;
+  final TextEditingController _clockMinutesController = TextEditingController();
   bool _hasNavigatedToGame = false;
 
   @override
@@ -28,11 +33,15 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
     // Load saved board size preference
     final settings = ref.read(appSettingsProvider);
     _selectedBoardSize = settings.boardSize;
+    _chessClockEnabled = settings.chessClockEnabled;
+    _chessClockSeconds = settings.chessClockSecondsForSize(_selectedBoardSize);
+    _clockMinutesController.text = (_chessClockSeconds ~/ 60).toString();
   }
 
   @override
   void dispose() {
     _joinCodeController.dispose();
+    _clockMinutesController.dispose();
     super.dispose();
   }
 
@@ -149,7 +158,29 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                 _BoardSizeSelector(
                   selectedSize: _selectedBoardSize,
                   onSizeSelected: (size) {
-                    setState(() => _selectedBoardSize = size);
+                    setState(() {
+                      _selectedBoardSize = size;
+                      if (!_chessClockOverridden) {
+                        final settings = ref.read(appSettingsProvider);
+                        _chessClockSeconds =
+                            settings.chessClockSecondsForSize(_selectedBoardSize);
+                        _clockMinutesController.text =
+                            (_chessClockSeconds ~/ 60).toString();
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                ChessClockSetup(
+                  enabled: _chessClockEnabled,
+                  onEnabledChanged: (value) => setState(() => _chessClockEnabled = value),
+                  minutesController: _clockMinutesController,
+                  onMinutesChanged: (value) {
+                    _chessClockOverridden = true;
+                    final minutes = int.tryParse(value);
+                    if (minutes != null && minutes > 0) {
+                      _chessClockSeconds = minutes * 60;
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -170,9 +201,20 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                     ),
                     onPressed: online.creating
                         ? null
-                        : () => ref
-                            .read(onlineGameProvider.notifier)
-                            .createGame(boardSize: _selectedBoardSize),
+                        : () {
+                            ref
+                                .read(appSettingsProvider.notifier)
+                                .setChessClockEnabled(_chessClockEnabled);
+                            ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+                              mode: GameMode.online,
+                              chessClockSecondsOverride: _chessClockEnabled && _chessClockOverridden
+                                  ? _chessClockSeconds
+                                  : null,
+                            );
+                            ref
+                                .read(onlineGameProvider.notifier)
+                                .createGame(boardSize: _selectedBoardSize);
+                          },
                   ),
                 ),
               ],
@@ -236,9 +278,20 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                   child: _JoinGameButton(
                     isJoining: online.joining,
                     codeLength: _joinCodeController.text.length,
-                    onJoin: () => ref
-                        .read(onlineGameProvider.notifier)
-                        .joinGame(_joinCodeController.text),
+                    onJoin: () {
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .setChessClockEnabled(_chessClockEnabled);
+                      ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+                        mode: GameMode.online,
+                        chessClockSecondsOverride: _chessClockEnabled && _chessClockOverridden
+                            ? _chessClockSeconds
+                            : null,
+                      );
+                      ref
+                          .read(onlineGameProvider.notifier)
+                          .joinGame(_joinCodeController.text);
+                    },
                   ),
                 ),
               ],

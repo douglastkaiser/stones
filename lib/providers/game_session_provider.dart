@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/scenario.dart';
+import '../models/models.dart';
 import '../services/ai/ai.dart';
 
 /// Type of game being played
@@ -15,23 +15,31 @@ class GameSessionConfig {
   final GameMode mode;
   final AIDifficulty aiDifficulty;
   final GameScenario? scenario;
+  final int? chessClockSecondsOverride;
+  final PlayerColor vsComputerPlayerColor;
 
   const GameSessionConfig({
     this.mode = GameMode.local,
     this.aiDifficulty = AIDifficulty.easy,
     this.scenario,
+    this.chessClockSecondsOverride,
+    this.vsComputerPlayerColor = PlayerColor.white,
   });
 
   GameSessionConfig copyWith({
     GameMode? mode,
     AIDifficulty? aiDifficulty,
     GameScenario? scenario,
+    int? chessClockSecondsOverride,
+    PlayerColor? vsComputerPlayerColor,
     bool clearScenario = false,
   }) {
     return GameSessionConfig(
       mode: mode ?? this.mode,
       aiDifficulty: aiDifficulty ?? this.aiDifficulty,
       scenario: clearScenario ? null : (scenario ?? this.scenario),
+      chessClockSecondsOverride: chessClockSecondsOverride ?? this.chessClockSecondsOverride,
+      vsComputerPlayerColor: vsComputerPlayerColor ?? this.vsComputerPlayerColor,
     );
   }
 }

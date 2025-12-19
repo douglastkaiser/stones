@@ -11,9 +11,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../firebase_options.dart';
 import '../models/models.dart';
+import 'chess_clock_provider.dart';
 import 'game_provider.dart';
 import 'game_session_provider.dart';
 import '../services/services.dart';
+import 'settings_provider.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
@@ -280,6 +282,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> leaveRoom() async {
     await _subscription?.cancel();
     _subscription = null;
+    _ref.read(chessClockProvider.notifier).stop();
     state = const OnlineGameState();
   }
 
@@ -494,13 +497,24 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   void _beginLocalGame(int boardSize) {
     _debugLog('_beginLocalGame: Starting new local game with boardSize=$boardSize');
-    _ref.read(gameSessionProvider.notifier).state =
-        const GameSessionConfig(mode: GameMode.online);
+    final currentSession = _ref.read(gameSessionProvider);
+    _ref.read(gameSessionProvider.notifier).state = currentSession.copyWith(
+      mode: GameMode.online,
+    );
     _ref.read(gameStateProvider.notifier).newGame(boardSize);
     _ref.read(moveHistoryProvider.notifier).clear();
     _ref.read(uiStateProvider.notifier).reset();
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(lastMoveProvider.notifier).state = null;
+    final settings = _ref.read(appSettingsProvider);
+    if (settings.chessClockEnabled) {
+      _ref.read(chessClockProvider.notifier).initialize(
+            boardSize,
+            secondsOverride: currentSession.chessClockSecondsOverride,
+          );
+    } else {
+      _ref.read(chessClockProvider.notifier).stop();
+    }
     _debugLog('_beginLocalGame: Local game initialized, gameSessionProvider mode=online');
   }
 
@@ -627,6 +641,15 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(uiStateProvider.notifier).reset();
+
+    final settings = _ref.read(appSettingsProvider);
+    if (!settings.chessClockEnabled) return;
+    final gameState = _ref.read(gameStateProvider);
+    if (gameState.isGameOver) {
+      _ref.read(chessClockProvider.notifier).stop();
+      return;
+    }
+    _ref.read(chessClockProvider.notifier).start(gameState.currentPlayer);
   }
 
   Position _positionFromNotation(String col, int rowNumber, int boardSize) {

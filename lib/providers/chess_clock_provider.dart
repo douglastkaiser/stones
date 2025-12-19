@@ -55,18 +55,20 @@ class ChessClockState {
 
 /// Notifier for the chess clock
 class ChessClockNotifier extends StateNotifier<ChessClockState> {
-  Timer? _timer;
-
-  ChessClockNotifier()
+  ChessClockNotifier(this._ref)
       : super(const ChessClockState(
           whiteTimeRemaining: 300,
           blackTimeRemaining: 300,
         ));
 
+  final Ref _ref;
+  Timer? _timer;
+
   /// Initialize the clock with time based on board size (fully resets state)
-  void initialize(int boardSize) {
+  void initialize(int boardSize, {int? secondsOverride}) {
     _timer?.cancel();
-    final time = ChessClockDefaults.getTimeForBoardSize(boardSize);
+    final settings = _ref.read(appSettingsProvider);
+    final time = secondsOverride ?? settings.chessClockSecondsForSize(boardSize);
     // Create fresh state with all defaults (isRunning=false, isExpired=false, etc.)
     state = ChessClockState(
       whiteTimeRemaining: time,
@@ -159,5 +161,5 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
 /// Provider for the chess clock
 final chessClockProvider =
     StateNotifierProvider<ChessClockNotifier, ChessClockState>((ref) {
-  return ChessClockNotifier();
+  return ChessClockNotifier(ref);
 });

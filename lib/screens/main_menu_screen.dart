@@ -10,6 +10,7 @@ import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
+import '../widgets/chess_clock_setup.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
 import 'game_screen.dart';
@@ -98,6 +99,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final settings = ref.read(appSettingsProvider);
     int selectedSize = settings.boardSize;
     bool chessClockEnabled = settings.chessClockEnabled;
+    int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
+    bool chessClockOverridden = false;
+    final clockMinutesController = TextEditingController(
+      text: (chessClockSeconds ~/ 60).toString(),
+    );
 
     showDialog(
       context: context,
@@ -134,7 +140,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         ),
                       ),
                       selected: selectedSize == size,
-                      onSelected: (_) => setState(() => selectedSize = size),
+                      onSelected: (_) => setState(() {
+                        selectedSize = size;
+                        if (!chessClockOverridden) {
+                          chessClockSeconds = settings.chessClockSecondsForSize(size);
+                          clockMinutesController.text =
+                              (chessClockSeconds ~/ 60).toString();
+                        }
+                      }),
                       selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
                       checkmarkColor: GameColors.boardFrameInner,
                     ),
@@ -156,48 +169,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               ),
               const SizedBox(height: 16),
               // Chess clock toggle
-              Builder(
-                builder: (context) {
-                  final isDark = Theme.of(context).brightness == Brightness.dark;
-                  final inactiveColor = isDark
-                      ? Theme.of(context).colorScheme.onSurfaceVariant
-                      : Colors.grey.shade700;
-                  return InkWell(
-                    onTap: () => setState(() => chessClockEnabled = !chessClockEnabled),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.timer,
-                            size: 20,
-                            color: chessClockEnabled
-                                ? GameColors.boardFrameInner
-                                : inactiveColor,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Chess Clock',
-                            style: TextStyle(
-                              fontWeight: chessClockEnabled ? FontWeight.bold : FontWeight.normal,
-                              color: chessClockEnabled
-                                  ? GameColors.boardFrameInner
-                                  : inactiveColor,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Switch(
-                            value: chessClockEnabled,
-                            onChanged: (v) => setState(() => chessClockEnabled = v),
-                            activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
-                            activeThumbColor: GameColors.boardFrameInner,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+              ChessClockSetup(
+                enabled: chessClockEnabled,
+                onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                minutesController: clockMinutesController,
+                onMinutesChanged: (value) {
+                  chessClockOverridden = true;
+                  final minutes = int.tryParse(value);
+                  if (minutes != null && minutes > 0) {
+                    chessClockSeconds = minutes * 60;
+                  }
                 },
               ),
             ],
@@ -212,7 +193,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 // Save chess clock preference
                 ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
                 Navigator.pop(dialogContext);
-                _doStartNewGame(context, selectedSize, mode, difficulty);
+                _doStartNewGame(
+                  context,
+                  selectedSize,
+                  mode,
+                  difficulty,
+                  chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
+                  ref.read(gameSessionProvider).vsComputerPlayerColor,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
@@ -236,10 +224,17 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     int size,
     GameMode mode,
     AIDifficulty difficulty,
+    int? chessClockSecondsOverride,
+    PlayerColor vsComputerPlayerColor,
   ) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state =
-        GameSessionConfig(mode: mode, aiDifficulty: difficulty);
+        GameSessionConfig(
+          mode: mode,
+          aiDifficulty: difficulty,
+          chessClockSecondsOverride: chessClockSecondsOverride,
+          vsComputerPlayerColor: vsComputerPlayerColor,
+        );
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -248,12 +243,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
     // Always reset chess clock when starting a new game
     final settings = ref.read(appSettingsProvider);
-    if (mode == GameMode.local && settings.chessClockEnabled) {
+    if (settings.chessClockEnabled) {
       // Initialize with new board size (resets times and stops any running timer)
-      ref.read(chessClockProvider.notifier).initialize(size);
+      ref.read(chessClockProvider.notifier).initialize(
+            size,
+            secondsOverride: chessClockSecondsOverride,
+          );
       // Clock will start when first move is made in _switchChessClock
     } else {
-      // Stop any running clock for non-local games or when clock is disabled
+      // Stop any running clock when clock is disabled
       ref.read(chessClockProvider.notifier).stop();
     }
 
@@ -396,6 +394,13 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final settings = ref.read(appSettingsProvider);
     int selectedSize = settings.boardSize;
     AIDifficulty selectedDifficulty = AIDifficulty.easy;
+    bool chessClockEnabled = settings.chessClockEnabled;
+    PlayerColor selectedPlayerColor = ref.read(gameSessionProvider).vsComputerPlayerColor;
+    int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
+    bool chessClockOverridden = false;
+    final clockMinutesController = TextEditingController(
+      text: (chessClockSeconds ~/ 60).toString(),
+    );
 
     showDialog(
       context: context,
@@ -425,11 +430,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (int size = 3; size <= 8; size++)
+                  for (int size = 3; size <= 8; size++)
                       ChoiceChip(
                         label: Text('$size×$size'),
                         selected: selectedSize == size,
-                        onSelected: (_) => setState(() => selectedSize = size),
+                        onSelected: (_) => setState(() {
+                          selectedSize = size;
+                          if (!chessClockOverridden) {
+                            chessClockSeconds = settings.chessClockSecondsForSize(size);
+                            clockMinutesController.text =
+                                (chessClockSeconds ~/ 60).toString();
+                          }
+                        }),
                         selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
                         checkmarkColor: GameColors.boardFrameInner,
                       ),
@@ -447,6 +459,58 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ),
                     );
                   },
+                ),
+                const SizedBox(height: 16),
+                ChessClockSetup(
+                  enabled: chessClockEnabled,
+                  onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                  minutesController: clockMinutesController,
+                  onMinutesChanged: (value) {
+                    chessClockOverridden = true;
+                    final minutes = int.tryParse(value);
+                    if (minutes != null && minutes > 0) {
+                      chessClockSeconds = minutes * 60;
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Color Section
+                Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return Text(
+                      'Your Color',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : GameColors.titleColor,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ColorOption(
+                        title: 'White',
+                        color: PlayerColor.white,
+                        isSelected: selectedPlayerColor == PlayerColor.white,
+                        onTap: () =>
+                            setState(() => selectedPlayerColor = PlayerColor.white),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ColorOption(
+                        title: 'Black',
+                        color: PlayerColor.black,
+                        isSelected: selectedPlayerColor == PlayerColor.black,
+                        onTap: () =>
+                            setState(() => selectedPlayerColor = PlayerColor.black),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
 
@@ -467,21 +531,25 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 _DifficultyOption(
                   title: 'Easy',
                   isSelected: selectedDifficulty == AIDifficulty.easy,
+                  dense: true,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
                 ),
                 _DifficultyOption(
                   title: 'Medium',
                   isSelected: selectedDifficulty == AIDifficulty.medium,
+                  dense: true,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.medium),
                 ),
                 _DifficultyOption(
                   title: 'Hard',
                   isSelected: selectedDifficulty == AIDifficulty.hard,
+                  dense: true,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
                 ),
                 _DifficultyOption(
                   title: 'Expert',
                   isSelected: selectedDifficulty == AIDifficulty.expert,
+                  dense: true,
                   onTap: () => setState(() => selectedDifficulty = AIDifficulty.expert),
                 ),
               ],
@@ -494,8 +562,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             ),
             ElevatedButton(
               onPressed: () {
+                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
                 Navigator.pop(dialogContext);
-                _doStartNewGame(context, selectedSize, GameMode.vsComputer, selectedDifficulty);
+                _doStartNewGame(
+                  context,
+                  selectedSize,
+                  GameMode.vsComputer,
+                  selectedDifficulty,
+                  chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
+                  selectedPlayerColor,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
@@ -674,7 +750,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         builder: (context) {
                           final isDark = Theme.of(context).brightness == Brightness.dark;
                           return Text(
-                            'You play as White when facing the computer',
+                            'Choose your color in the setup',
                             style: TextStyle(
                               color: isDark
                                   ? Theme.of(context).colorScheme.onSurfaceVariant
@@ -1041,11 +1117,13 @@ class _DifficultyOption extends StatelessWidget {
   final String title;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool dense;
 
   const _DifficultyOption({
     required this.title,
     required this.isSelected,
     required this.onTap,
+    this.dense = false,
   });
 
   @override
@@ -1061,8 +1139,8 @@ class _DifficultyOption extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        margin: const EdgeInsets.only(bottom: 4),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 8 : 12),
+        margin: EdgeInsets.only(bottom: dense ? 2 : 4),
         decoration: BoxDecoration(
           color: isSelected
               ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
@@ -1079,6 +1157,7 @@ class _DifficultyOption extends StatelessWidget {
               child: Text(
                 title,
                 style: TextStyle(
+                  fontSize: dense ? 13 : 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected
                       ? GameColors.boardFrameInner
@@ -1094,6 +1173,78 @@ class _DifficultyOption extends StatelessWidget {
                 color: GameColors.boardFrameInner,
                 size: 20,
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorOption extends StatelessWidget {
+  final String title;
+  final PlayerColor color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ColorOption({
+    required this.title,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isSelected
+        ? GameColors.boardFrameInner
+        : isDark
+            ? Colors.grey.shade600
+            : Colors.grey.shade300;
+    final chipColor =
+        color == PlayerColor.white ? GameColors.lightPiece : GameColors.darkPiece;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
+              : null,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: chipColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? GameColors.boardFrameInner
+                    : isDark
+                        ? Colors.white
+                        : null,
+              ),
+            ),
           ],
         ),
       ),
