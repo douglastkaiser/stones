@@ -908,7 +908,7 @@ class CarvedFlatPainter extends CustomPainter {
     // Create irregular polygon
     final path = Path();
     final points = <Offset>[];
-    final numPoints = 8;
+    const numPoints = 8;
 
     for (var i = 0; i < numPoints; i++) {
       final angle = (i / numPoints) * 2 * math.pi - math.pi / 2;
