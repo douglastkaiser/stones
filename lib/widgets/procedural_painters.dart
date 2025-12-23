@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -424,7 +423,7 @@ class PixelArtPatternPainter extends CustomPainter {
 
     // Add a dithered edge effect
     final edgePaint = Paint()..color = color2.withValues(alpha: 0.3);
-    for (var i = 0; i < size.width; i += pixelSize * 2) {
+    for (var i = 0.0; i < size.width; i += pixelSize * 2) {
       canvas.drawRect(Rect.fromLTWH(i, 0, pixelSize, pixelSize), edgePaint);
       canvas.drawRect(
         Rect.fromLTWH(i + pixelSize, size.height - pixelSize, pixelSize, pixelSize),
@@ -1134,7 +1133,7 @@ class CarvedCapstonePainter extends CustomPainter {
       canvas.translate(startX, startY);
       canvas.rotate(angle);
       canvas.drawLine(
-        Offset(-5, 0),
+        const Offset(-5, 0),
         Offset(5 + random.range(0, 8), 0),
         chiselPaint,
       );
@@ -1238,9 +1237,9 @@ class CornerOrnamentPainter extends CustomPainter {
     // Pixel art corner
     paint.style = PaintingStyle.fill;
     const px = 3.0;
-    canvas.drawRect(Rect.fromLTWH(0, 0, px, px * 3), paint);
-    canvas.drawRect(Rect.fromLTWH(0, 0, px * 3, px), paint);
-    canvas.drawRect(Rect.fromLTWH(px, px, px, px), paint);
+    canvas.drawRect(const Rect.fromLTWH(0, 0, px, px * 3), paint);
+    canvas.drawRect(const Rect.fromLTWH(0, 0, px * 3, px), paint);
+    canvas.drawRect(const Rect.fromLTWH(px, px, px, px), paint);
   }
 
   @override
