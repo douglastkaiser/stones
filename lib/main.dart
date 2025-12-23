@@ -330,11 +330,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   @override
   void initState() {
     super.initState();
+    _debugLog('>>> _GameScreenState.initState() called <<<');
+
     // Set up road win callback
     ref.read(gameStateProvider.notifier).onRoadWin = (roadPositions, winner) {
       ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
     };
 
+    _debugLog('Setting up gameStateProvider listener...');
     ref.listen<GameState>(gameStateProvider, (previous, next) {
       // Debug: Log every game state change
       _debugLog('GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
@@ -354,6 +357,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         unawaited(_checkAchievements(next));
       }
     });
+    _debugLog('gameStateProvider listener set up complete');
 
     // Listen for online game events (opponent moves/joins)
     ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
@@ -385,6 +389,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
+    _debugLog('>>> _GameScreenState.dispose() called <<<');
     ref.read(gameStateProvider.notifier).onRoadWin = null;
     super.dispose();
   }
@@ -525,6 +530,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isAiThinking = ref.watch(aiThinkingProvider);
     final isAiThinkingVisible = ref.watch(aiThinkingVisibleProvider);
     final isAiTurn = _isAiTurn(session, gameState);
+    final pieceStyleData = ref.watch(currentPieceStyleProvider);
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
@@ -711,6 +717,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               explodedPosition: _longPressedPosition,
               explodedStack: _longPressedStack,
               highlightedPositions: scenarioHighlights,
+              pieceStyleData: pieceStyleData,
               onCellTap: (pos) =>
                   _handleCellTap(context, ref, pos, guidedMove),
               onLongPressStart: _startStackView,
@@ -2539,6 +2546,7 @@ class _GameBoard extends StatelessWidget {
   final Function(Position) onCellTap;
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
+  final PieceStyleData pieceStyleData;
 
   const _GameBoard({
     required this.gameState,
@@ -2547,6 +2555,7 @@ class _GameBoard extends StatelessWidget {
     required this.onCellTap,
     required this.onLongPressStart,
     required this.onLongPressEnd,
+    required this.pieceStyleData,
     this.highlightedPositions = const {},
     this.explodedPosition,
     this.explodedStack,
@@ -2695,6 +2704,7 @@ class _GameBoard extends StatelessWidget {
                 isNextDrop: isNextDrop,
                 canSelect: !gameState.isGameOver,
                 boardSize: boardSize,
+                pieceStyleData: pieceStyleData,
                 isNewlyPlaced: isNewlyPlaced,
                 isInWinningRoad: isInWinningRoad,
                 isStackDropTarget: isStackDropTarget,
@@ -2827,6 +2837,7 @@ class _BoardCell extends StatefulWidget {
   final bool isScenarioHint;
   final bool showExploded;
   final PieceStack? explodedStack;
+  final PieceStyleData pieceStyleData;
 
   /// Ghost piece to show (for placement preview)
   final PieceType? ghostPieceType;
@@ -2849,6 +2860,7 @@ class _BoardCell extends StatefulWidget {
     super.key,
     required this.stack,
     required this.isSelected,
+    required this.pieceStyleData,
     this.isInDropPath = false,
     this.isNextDrop = false,
     required this.canSelect,
@@ -3253,7 +3265,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         // If showing ghost piece (empty cell with placement preview)
         if (widget.ghostPieceType != null && widget.ghostPieceColor != null && widget.stack.isEmpty) {
           final isLightPlayer = widget.ghostPieceColor == PlayerColor.white;
-          final pieceColors = GameColors.forPlayer(isLightPlayer);
+          final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
           return Opacity(
             opacity: 0.5,
@@ -3470,7 +3482,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     final top = stack.topPiece!;
     final isLightPlayer = top.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
     final height = stack.height;
 
     return LayoutBuilder(
@@ -3639,7 +3651,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       // Single ghost piece
       final piece = ghostPieces.first;
       final isLightPlayer = piece.color == PlayerColor.white;
-      final pieceColors = GameColors.forPlayer(isLightPlayer);
+      final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
       return Opacity(
         opacity: 0.5,
         child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
@@ -3790,7 +3802,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           final piece = stack.topPiece;
           if (piece != null) {
             final isLightPlayer = piece.color == PlayerColor.white;
-            final pieceColors = GameColors.forPlayer(isLightPlayer);
+            final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
             final isGhost = ghostStartIndex == 0;
 
             children.add(
@@ -3867,7 +3879,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     }
 
     final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
     return Transform.translate(
       offset: Offset(horizontalOffset, verticalOffset),
@@ -4008,7 +4020,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   /// Build a single piece in a stack with optional opacity
   Widget _buildStackPiece(Piece piece, double pieceSize, double opacity) {
     final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
     return Opacity(
       opacity: opacity,
