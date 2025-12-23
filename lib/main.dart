@@ -14,6 +14,7 @@ import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
+import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
 import 'firebase_options.dart';
 
@@ -335,30 +336,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
     };
 
-    ref.listen<GameState>(gameStateProvider, (previous, next) {
-      unawaited(_maybeTriggerAiTurn(next));
-      final moveCount = ref.read(moveHistoryProvider).length;
-      unawaited(
-        ref.read(playGamesServiceProvider.notifier).onGameStateChanged(
-              next,
-              previous: previous,
-              moveCount: moveCount,
-            ),
-      );
-    });
-
-    // Listen for online game events (opponent moves/joins)
-    ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
-      final soundManager = ref.read(soundManagerProvider);
-      if (next.opponentJustJoined) {
-        soundManager.playPiecePlace();
-      }
-      if (next.opponentJustMoved) {
-        soundManager.playStackMove();
-      }
-    });
-
+    // Trigger initial AI turn if needed
     unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+  }
+
+  void _showAchievementNotification(AchievementType type) {
+    final achievement = GameAchievement.forType(type);
+
+    // Play unlock sound
+    ref.read(soundManagerProvider).playAchievementUnlock();
+
+    // Show the notification dialog
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) => _AchievementUnlockDialog(achievement: achievement),
+    );
   }
 
   @override
@@ -376,6 +369,87 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _isAiTurn(GameSessionConfig session, GameState gameState) {
     return session.mode == GameMode.vsComputer &&
         gameState.currentPlayer == _aiPlayerColor(session);
+  }
+
+  Future<void> _checkAchievements(GameState gameState) async {
+    final session = ref.read(gameSessionProvider);
+    final scenarioState = ref.read(scenarioStateProvider);
+    final achievementNotifier = ref.read(achievementProvider.notifier);
+
+    // Debug logging
+    _debugLog('_checkAchievements called');
+    _debugLog('  gameState.result: ${gameState.result}');
+    _debugLog('  gameState.isGameOver: ${gameState.isGameOver}');
+    _debugLog('  session.mode: ${session.mode}');
+    _debugLog('  session.aiDifficulty: ${session.aiDifficulty}');
+    _debugLog('  session.vsComputerPlayerColor: ${session.vsComputerPlayerColor}');
+
+    // Check if it's a win (not a draw)
+    final isWhiteWin = gameState.result == GameResult.whiteWins;
+    final isBlackWin = gameState.result == GameResult.blackWins;
+
+    // For vs computer mode, check if the human player won
+    final playerColor = session.vsComputerPlayerColor;
+    final playerWon = session.mode == GameMode.vsComputer &&
+        ((playerColor == PlayerColor.white && isWhiteWin) ||
+         (playerColor == PlayerColor.black && isBlackWin));
+
+    // For online mode, check if local player won
+    final onlineState = ref.read(onlineGameProvider);
+    final onlinePlayerWon = session.mode == GameMode.online &&
+        ((onlineState.localColor == PlayerColor.white && isWhiteWin) ||
+         (onlineState.localColor == PlayerColor.black && isBlackWin));
+
+    // For local mode, any win counts
+    final localPlayerWon = session.mode == GameMode.local && (isWhiteWin || isBlackWin);
+
+    _debugLog('  isWhiteWin: $isWhiteWin, isBlackWin: $isBlackWin');
+    _debugLog('  playerWon: $playerWon, onlinePlayerWon: $onlinePlayerWon, localPlayerWon: $localPlayerWon');
+
+    // Record the win and show notifications for any unlocked achievements
+    if (playerWon || onlinePlayerWon || localPlayerWon) {
+      _debugLog('  Recording win with aiDifficulty: ${session.aiDifficulty}');
+      final unlockedAchievements = await achievementNotifier.recordWin(
+        isOnline: session.mode == GameMode.online,
+        aiDifficulty: session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
+        byTime: gameState.winReason == WinReason.time,
+        byFlats: gameState.winReason == WinReason.flats,
+      );
+
+      _debugLog('  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
+
+      // Show notification for each unlocked achievement
+      for (final achievementType in unlockedAchievements) {
+        _debugLog('  Showing notification for: $achievementType, mounted: $mounted');
+        if (mounted) {
+          _showAchievementNotification(achievementType);
+          // Wait a bit before showing the next one if there are multiple
+          if (unlockedAchievements.length > 1) {
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      }
+    } else {
+      _debugLog('  No win detected, skipping achievement check');
+    }
+
+    // Check for scenario completion
+    final activeScenario = session.scenario ?? scenarioState.activeScenario;
+    if (activeScenario != null && (gameState.isGameOver || scenarioState.guidedStepComplete)) {
+      List<AchievementType> scenarioUnlocks = [];
+      if (activeScenario.type == ScenarioType.tutorial) {
+        scenarioUnlocks = await achievementNotifier.completeTutorial(activeScenario.id);
+      } else if (activeScenario.type == ScenarioType.puzzle) {
+        scenarioUnlocks = await achievementNotifier.completePuzzle(activeScenario.id);
+      }
+
+      // Show notification for scenario achievements
+      for (final achievementType in scenarioUnlocks) {
+        if (mounted) {
+          _showAchievementNotification(achievementType);
+        }
+      }
+    }
   }
 
   void _undo() {
@@ -422,6 +496,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isAiThinking = ref.watch(aiThinkingProvider);
     final isAiThinkingVisible = ref.watch(aiThinkingVisibleProvider);
     final isAiTurn = _isAiTurn(session, gameState);
+    final pieceStyleData = ref.watch(currentPieceStyleProvider);
+    final boardThemeData = ref.watch(currentBoardThemeProvider);
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
@@ -443,6 +519,37 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.listen<ChessClockState>(chessClockProvider, (previous, next) {
       if (next.isExpired && next.expiredPlayer != null && !gameState.isGameOver) {
         ref.read(gameStateProvider.notifier).setTimeExpired(next.expiredPlayer!);
+      }
+    });
+
+    // Listen for game state changes (AI turns, achievements, etc.)
+    ref.listen<GameState>(gameStateProvider, (previous, next) {
+      _debugLog('GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
+
+      unawaited(_maybeTriggerAiTurn(next));
+      final moveCount = ref.read(moveHistoryProvider).length;
+      unawaited(
+        ref.read(playGamesServiceProvider.notifier).onGameStateChanged(
+              next,
+              previous: previous,
+              moveCount: moveCount,
+            ),
+      );
+      // Check for achievements when game ends
+      if (next.isGameOver && (previous == null || !previous.isGameOver)) {
+        _debugLog('Game just ended! Calling _checkAchievements');
+        unawaited(_checkAchievements(next));
+      }
+    });
+
+    // Listen for online game events (opponent moves/joins)
+    ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
+      final soundManager = ref.read(soundManagerProvider);
+      if (next.opponentJustJoined) {
+        soundManager.playPiecePlace();
+      }
+      if (next.opponentJustMoved) {
+        soundManager.playStackMove();
       }
     });
 
@@ -569,20 +676,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           // Board widget (reused in both layouts)
           final boardWidget = Container(
             decoration: BoxDecoration(
-              // Wooden frame gradient
-              gradient: const LinearGradient(
+              // Frame gradient using board theme
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  GameColors.boardFrameInner,
-                  GameColors.boardFrameOuter,
-                  GameColors.boardFrameInner,
+                  boardThemeData.frameInner,
+                  boardThemeData.frameOuter,
+                  boardThemeData.frameInner,
                 ],
-                stops: [0.0, 0.5, 1.0],
+                stops: const [0.0, 0.5, 1.0],
               ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: GameColors.boardFrameOuter,
+                color: boardThemeData.frameOuter,
                 width: 2,
               ),
               boxShadow: [
@@ -592,7 +699,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   offset: const Offset(2, 4),
                 ),
                 BoxShadow(
-                  color: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                  color: boardThemeData.frameInner.withValues(alpha: 0.5),
                   blurRadius: 2,
                   offset: const Offset(-1, -1),
                 ),
@@ -608,6 +715,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               explodedPosition: _longPressedPosition,
               explodedStack: _longPressedStack,
               highlightedPositions: scenarioHighlights,
+              pieceStyleData: pieceStyleData,
+              boardThemeData: boardThemeData,
               onCellTap: (pos) =>
                   _handleCellTap(context, ref, pos, guidedMove),
               onLongPressStart: _startStackView,
@@ -2436,6 +2545,8 @@ class _GameBoard extends StatelessWidget {
   final Function(Position) onCellTap;
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
+  final PieceStyleData pieceStyleData;
+  final BoardThemeData boardThemeData;
 
   const _GameBoard({
     required this.gameState,
@@ -2444,6 +2555,8 @@ class _GameBoard extends StatelessWidget {
     required this.onCellTap,
     required this.onLongPressStart,
     required this.onLongPressEnd,
+    required this.pieceStyleData,
+    required this.boardThemeData,
     this.highlightedPositions = const {},
     this.explodedPosition,
     this.explodedStack,
@@ -2592,6 +2705,8 @@ class _GameBoard extends StatelessWidget {
                 isNextDrop: isNextDrop,
                 canSelect: !gameState.isGameOver,
                 boardSize: boardSize,
+                pieceStyleData: pieceStyleData,
+                boardThemeData: boardThemeData,
                 isNewlyPlaced: isNewlyPlaced,
                 isInWinningRoad: isInWinningRoad,
                 isStackDropTarget: isStackDropTarget,
@@ -2724,6 +2839,8 @@ class _BoardCell extends StatefulWidget {
   final bool isScenarioHint;
   final bool showExploded;
   final PieceStack? explodedStack;
+  final PieceStyleData pieceStyleData;
+  final BoardThemeData boardThemeData;
 
   /// Ghost piece to show (for placement preview)
   final PieceType? ghostPieceType;
@@ -2746,6 +2863,8 @@ class _BoardCell extends StatefulWidget {
     super.key,
     required this.stack,
     required this.isSelected,
+    required this.pieceStyleData,
+    required this.boardThemeData,
     this.isInDropPath = false,
     this.isNextDrop = false,
     required this.canSelect,
@@ -3032,28 +3151,29 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         ],
       );
     } else {
-      // Default wood-grain cell look
+      // Default cell look - uses board theme colors
+      final theme = widget.boardThemeData;
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellBackgroundLight,
-            GameColors.cellBackground,
-            GameColors.cellBackgroundDark,
+            theme.cellBackgroundLight,
+            theme.cellBackground,
+            theme.cellBackgroundDark,
           ],
-          stops: [0.0, 0.4, 1.0],
+          stops: const [0.0, 0.4, 1.0],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
         // Subtle inset effect
         boxShadow: [
           BoxShadow(
-            color: GameColors.gridLineShadow.withValues(alpha: 0.3),
+            color: theme.gridLineShadow.withValues(alpha: 0.3),
             blurRadius: 1,
             offset: const Offset(1, 1),
           ),
           BoxShadow(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: theme.gridLineHighlight.withValues(alpha: 0.5),
             blurRadius: 1,
             offset: const Offset(-0.5, -0.5),
           ),
@@ -3150,7 +3270,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         // If showing ghost piece (empty cell with placement preview)
         if (widget.ghostPieceType != null && widget.ghostPieceColor != null && widget.stack.isEmpty) {
           final isLightPlayer = widget.ghostPieceColor == PlayerColor.white;
-          final pieceColors = GameColors.forPlayer(isLightPlayer);
+          final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
           return Opacity(
             opacity: 0.5,
@@ -3367,7 +3487,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     final top = stack.topPiece!;
     final isLightPlayer = top.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
     final height = stack.height;
 
     return LayoutBuilder(
@@ -3536,7 +3656,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       // Single ghost piece
       final piece = ghostPieces.first;
       final isLightPlayer = piece.color == PlayerColor.white;
-      final pieceColors = GameColors.forPlayer(isLightPlayer);
+      final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
       return Opacity(
         opacity: 0.5,
         child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
@@ -3687,7 +3807,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           final piece = stack.topPiece;
           if (piece != null) {
             final isLightPlayer = piece.color == PlayerColor.white;
-            final pieceColors = GameColors.forPlayer(isLightPlayer);
+            final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
             final isGhost = ghostStartIndex == 0;
 
             children.add(
@@ -3764,7 +3884,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     }
 
     final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
     return Transform.translate(
       offset: Offset(horizontalOffset, verticalOffset),
@@ -3905,7 +4025,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   /// Build a single piece in a stack with optional opacity
   Widget _buildStackPiece(Piece piece, double pieceSize, double opacity) {
     final isLightPlayer = piece.color == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
     return Opacity(
       opacity: opacity,
@@ -3913,42 +4033,52 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     );
   }
 
-  /// Build a piece widget based on type
+  /// Build a piece widget based on type - uses current piece style
   Widget _buildPiece(PieceType type, double size, PieceColors colors, bool isLightPlayer) {
+    final style = widget.pieceStyleData.style;
+
     switch (type) {
       case PieceType.flat:
-        return _buildFlatStone(size, colors, isLightPlayer);
+        return _buildFlatStone(size, colors, isLightPlayer, style);
       case PieceType.standing:
-        return _buildStandingStone(size, colors);
+        return _buildStandingStone(size, colors, style);
       case PieceType.capstone:
-        return _buildCapstone(size, colors);
+        return _buildCapstone(size, colors, style);
     }
   }
 
-  /// Flat stone: trapezoid for light, semi-circle for dark
-  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer) {
+  /// Flat stone - uses procedural painter based on style
+  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer, PieceStyle style) {
     return CustomPaint(
       size: Size(size, size * 0.55),
-      painter: isLightPlayer
-          ? _TrapezoidPainter(colors: colors)
-          : _SemiCirclePainter(colors: colors),
+      painter: getFlatPainter(
+        style: style,
+        colors: colors,
+        isLightPlayer: isLightPlayer,
+      ),
     );
   }
 
-  /// Standing stone (wall): diagonal bar across the cell
-  Widget _buildStandingStone(double size, PieceColors colors) {
+  /// Standing stone (wall) - uses procedural painter based on style
+  Widget _buildStandingStone(double size, PieceColors colors, PieceStyle style) {
     return CustomPaint(
       size: Size(size, size),
-      painter: _DiagonalWallPainter(colors: colors),
+      painter: getWallPainter(
+        style: style,
+        colors: colors,
+      ),
     );
   }
 
-  /// Capstone: hexagon shape, slightly larger
-  Widget _buildCapstone(double size, PieceColors colors) {
+  /// Capstone - uses procedural painter based on style
+  Widget _buildCapstone(double size, PieceColors colors, PieceStyle style) {
     final capSize = size * 0.85;
     return CustomPaint(
       size: Size(capSize, capSize),
-      painter: _HexagonPainter(colors: colors),
+      painter: getCapstonePainter(
+        style: style,
+        colors: colors,
+      ),
     );
   }
 }
@@ -4766,241 +4896,192 @@ class VersionFooter extends StatelessWidget {
   }
 }
 
-/// Trapezoid painter for light player flat stones
-class _TrapezoidPainter extends CustomPainter {
-  final PieceColors colors;
+/// Dialog shown when an achievement is unlocked
+class _AchievementUnlockDialog extends StatefulWidget {
+  final GameAchievement achievement;
 
-  _TrapezoidPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Trapezoid: wider at bottom, narrower at top
-    final inset = w * 0.1;
-    final path = Path()
-      ..moveTo(inset, 0) // top left
-      ..lineTo(w - inset, 0) // top right
-      ..lineTo(w, h) // bottom right
-      ..lineTo(0, h) // bottom left
-      ..close();
-
-    // Shadow
-    final shadowPath = Path()
-      ..moveTo(inset + 2, 2)
-      ..lineTo(w - inset + 2, 2)
-      ..lineTo(w + 2, h + 2)
-      ..lineTo(2, h + 2)
-      ..close();
-    final shadowPaint = Paint()
-      ..color = GameColors.flatStoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawPath(shadowPath, shadowPaint);
-
-    // Gradient fill
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-  }
+  const _AchievementUnlockDialog({required this.achievement});
 
   @override
-  bool shouldRepaint(covariant _TrapezoidPainter oldDelegate) {
-    return oldDelegate.colors != colors;
-  }
+  State<_AchievementUnlockDialog> createState() =>
+      _AchievementUnlockDialogState();
 }
 
-/// Semi-circle painter for dark player flat stones
-/// The chord is slightly below the diameter (more than a half circle)
-class _SemiCirclePainter extends CustomPainter {
-  final PieceColors colors;
-
-  _SemiCirclePainter({required this.colors});
+class _AchievementUnlockDialogState extends State<_AchievementUnlockDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final centerX = w / 2;
-
-    // Semi-circle with chord below diameter (about 60% of circle showing)
-    // The arc spans more than 180 degrees
-    final radius = w * 0.5;
-    const chordY = 0.0; // Keep the flat base aligned with the bottom of the piece
-
-    final path = Path();
-    // Start from left side of chord
-    path.moveTo(centerX - radius * 0.95, h - chordY);
-    // Arc over the top
-    path.arcToPoint(
-      Offset(centerX + radius * 0.95, h - chordY),
-      radius: Radius.circular(radius),
-      largeArc: true,
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
     );
-    // Close with the chord
-    path.close();
 
-    // Shadow
-    canvas.save();
-    canvas.translate(1, 2);
-    final shadowPaint = Paint()
-      ..color = GameColors.flatStoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawPath(path, shadowPaint);
-    canvas.restore();
-
-    // Gradient fill
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SemiCirclePainter oldDelegate) {
-    return oldDelegate.colors != colors;
-  }
-}
-
-/// Diagonal wall painter - a bar laying diagonally across the cell
-class _DiagonalWallPainter extends CustomPainter {
-  final PieceColors colors;
-
-  _DiagonalWallPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Diagonal bar from bottom-left to top-right
-    final barWidth = w * 0.25;
-    final margin = w * 0.1;
-
-    final path = Path()
-      ..moveTo(margin, h - margin - barWidth) // bottom-left top corner
-      ..lineTo(margin + barWidth, h - margin) // bottom-left bottom corner
-      ..lineTo(w - margin, margin + barWidth) // top-right bottom corner
-      ..lineTo(w - margin - barWidth, margin) // top-right top corner
-      ..close();
-
-    // Shadow (offset down-right)
-    canvas.save();
-    canvas.translate(2, 3);
-    final shadowPaint = Paint()
-      ..color = GameColors.standingStoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawPath(path, shadowPaint);
-    canvas.restore();
-
-    // Gradient fill (along the diagonal)
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DiagonalWallPainter oldDelegate) {
-    return oldDelegate.colors != colors;
-  }
-}
-
-/// Custom painter for hexagon-shaped capstone
-class _HexagonPainter extends CustomPainter {
-  final PieceColors colors;
-
-  _HexagonPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    // Create hexagon path
-    final path = _createHexagonPath(center, radius * 0.9);
-
-    // Draw shadow
-    final shadowPath = _createHexagonPath(
-      Offset(center.dx + 2, center.dy + 2),
-      radius * 0.9,
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
-    final shadowPaint = Paint()
-      ..color = GameColors.capstoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawPath(shadowPath, shadowPaint);
 
-    // Draw gradient fill
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    canvas.drawPath(path, gradientPaint);
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
 
-    // Draw border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
+    _controller.forward();
 
-    // Draw small inner circle for visual interest
-    final innerCirclePaint = Paint()..color = colors.border.withValues(alpha: 0.3);
-    canvas.drawCircle(center, radius * 0.25, innerCirclePaint);
-  }
-
-  Path _createHexagonPath(Offset center, double radius) {
-    final path = Path();
-    for (int i = 0; i < 6; i++) {
-      // Start from top point (rotate -90 degrees so flat side is at bottom)
-      final angle = (i * 60 - 90) * math.pi / 180;
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
+    // Auto-dismiss after 4 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        Navigator.of(context).pop();
       }
-    }
-    path.close();
-    return path;
+    });
   }
 
   @override
-  bool shouldRepaint(covariant _HexagonPainter oldDelegate) {
-    return oldDelegate.colors != colors;
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 320,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF4A3728),
+                  Color(0xFF2C1810),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFD4AF37),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+                const BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                const Text(
+                  'ACHIEVEMENT UNLOCKED',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Achievement name
+                Text(
+                  widget.achievement.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Achievement description
+                Text(
+                  widget.achievement.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                  ),
+                ),
+
+                // Unlocked reward (if any)
+                if (widget.achievement.unlocksReward != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xFFD4AF37),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Unlocked: ${widget.achievement.unlocksReward}',
+                            style: const TextStyle(
+                              color: Color(0xFFD4AF37),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                // Dismiss button
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                  ),
+                  child: const Text('TAP TO DISMISS'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

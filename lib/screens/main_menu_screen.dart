@@ -11,6 +11,7 @@ import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
 import '../widgets/chess_clock_setup.dart';
+import 'achievements_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
 import 'game_screen.dart';
@@ -34,6 +35,12 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   Future<void> _initialize() async {
     // Load settings
     await ref.read(appSettingsProvider.notifier).load();
+
+    // Load achievements
+    await ref.read(achievementProvider.notifier).load();
+
+    // Load cosmetics
+    await ref.read(cosmeticsProvider.notifier).load();
 
     // Initialize sound manager
     final soundManager = ref.read(soundManagerProvider);
@@ -629,19 +636,39 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       displayName: playGames.player!.displayName,
                       iconImage: playGames.iconImage,
                     ),
-                  // Settings gear on the right
-                  IconButton(
-                    icon: const Icon(
-                      Icons.settings,
-                      color: GameColors.subtitleColor,
-                    ),
-                    tooltip: 'Settings',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      );
-                    },
+                  // Right side icons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Achievements button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.emoji_events,
+                          color: GameColors.subtitleColor,
+                        ),
+                        tooltip: 'Achievements',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                          );
+                        },
+                      ),
+                      // Settings gear
+                      IconButton(
+                        icon: const Icon(
+                          Icons.settings,
+                          color: GameColors.subtitleColor,
+                        ),
+                        tooltip: 'Settings',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
