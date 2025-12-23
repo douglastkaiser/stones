@@ -14,6 +14,7 @@ import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
+import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
 import 'firebase_options.dart';
 
@@ -4032,42 +4033,52 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     );
   }
 
-  /// Build a piece widget based on type
+  /// Build a piece widget based on type - uses current piece style
   Widget _buildPiece(PieceType type, double size, PieceColors colors, bool isLightPlayer) {
+    final style = widget.pieceStyleData.style;
+
     switch (type) {
       case PieceType.flat:
-        return _buildFlatStone(size, colors, isLightPlayer);
+        return _buildFlatStone(size, colors, isLightPlayer, style);
       case PieceType.standing:
-        return _buildStandingStone(size, colors);
+        return _buildStandingStone(size, colors, style);
       case PieceType.capstone:
-        return _buildCapstone(size, colors);
+        return _buildCapstone(size, colors, style);
     }
   }
 
-  /// Flat stone: trapezoid for light, semi-circle for dark
-  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer) {
+  /// Flat stone - uses procedural painter based on style
+  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer, PieceStyle style) {
     return CustomPaint(
       size: Size(size, size * 0.55),
-      painter: isLightPlayer
-          ? _TrapezoidPainter(colors: colors)
-          : _SemiCirclePainter(colors: colors),
+      painter: getFlatPainter(
+        style: style,
+        colors: colors,
+        isLightPlayer: isLightPlayer,
+      ),
     );
   }
 
-  /// Standing stone (wall): diagonal bar across the cell
-  Widget _buildStandingStone(double size, PieceColors colors) {
+  /// Standing stone (wall) - uses procedural painter based on style
+  Widget _buildStandingStone(double size, PieceColors colors, PieceStyle style) {
     return CustomPaint(
       size: Size(size, size),
-      painter: _DiagonalWallPainter(colors: colors),
+      painter: getWallPainter(
+        style: style,
+        colors: colors,
+      ),
     );
   }
 
-  /// Capstone: hexagon shape, slightly larger
-  Widget _buildCapstone(double size, PieceColors colors) {
+  /// Capstone - uses procedural painter based on style
+  Widget _buildCapstone(double size, PieceColors colors, PieceStyle style) {
     final capSize = size * 0.85;
     return CustomPaint(
       size: Size(capSize, capSize),
-      painter: _HexagonPainter(colors: colors),
+      painter: getCapstonePainter(
+        style: style,
+        colors: colors,
+      ),
     );
   }
 }
@@ -4882,245 +4893,6 @@ class VersionFooter extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-}
-
-/// Trapezoid painter for light player flat stones
-class _TrapezoidPainter extends CustomPainter {
-  final PieceColors colors;
-
-  _TrapezoidPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Trapezoid: wider at bottom, narrower at top
-    final inset = w * 0.1;
-    final path = Path()
-      ..moveTo(inset, 0) // top left
-      ..lineTo(w - inset, 0) // top right
-      ..lineTo(w, h) // bottom right
-      ..lineTo(0, h) // bottom left
-      ..close();
-
-    // Shadow
-    final shadowPath = Path()
-      ..moveTo(inset + 2, 2)
-      ..lineTo(w - inset + 2, 2)
-      ..lineTo(w + 2, h + 2)
-      ..lineTo(2, h + 2)
-      ..close();
-    final shadowPaint = Paint()
-      ..color = GameColors.flatStoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawPath(shadowPath, shadowPaint);
-
-    // Gradient fill
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TrapezoidPainter oldDelegate) {
-    return oldDelegate.colors != colors;
-  }
-}
-
-/// Semi-circle painter for dark player flat stones
-/// The chord is slightly below the diameter (more than a half circle)
-class _SemiCirclePainter extends CustomPainter {
-  final PieceColors colors;
-
-  _SemiCirclePainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final centerX = w / 2;
-
-    // Semi-circle with chord below diameter (about 60% of circle showing)
-    // The arc spans more than 180 degrees
-    final radius = w * 0.5;
-    const chordY = 0.0; // Keep the flat base aligned with the bottom of the piece
-
-    final path = Path();
-    // Start from left side of chord
-    path.moveTo(centerX - radius * 0.95, h - chordY);
-    // Arc over the top
-    path.arcToPoint(
-      Offset(centerX + radius * 0.95, h - chordY),
-      radius: Radius.circular(radius),
-      largeArc: true,
-    );
-    // Close with the chord
-    path.close();
-
-    // Shadow
-    canvas.save();
-    canvas.translate(1, 2);
-    final shadowPaint = Paint()
-      ..color = GameColors.flatStoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawPath(path, shadowPaint);
-    canvas.restore();
-
-    // Gradient fill
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SemiCirclePainter oldDelegate) {
-    return oldDelegate.colors != colors;
-  }
-}
-
-/// Diagonal wall painter - a bar laying diagonally across the cell
-class _DiagonalWallPainter extends CustomPainter {
-  final PieceColors colors;
-
-  _DiagonalWallPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Diagonal bar from bottom-left to top-right
-    final barWidth = w * 0.25;
-    final margin = w * 0.1;
-
-    final path = Path()
-      ..moveTo(margin, h - margin - barWidth) // bottom-left top corner
-      ..lineTo(margin + barWidth, h - margin) // bottom-left bottom corner
-      ..lineTo(w - margin, margin + barWidth) // top-right bottom corner
-      ..lineTo(w - margin - barWidth, margin) // top-right top corner
-      ..close();
-
-    // Shadow (offset down-right)
-    canvas.save();
-    canvas.translate(2, 3);
-    final shadowPaint = Paint()
-      ..color = GameColors.standingStoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawPath(path, shadowPaint);
-    canvas.restore();
-
-    // Gradient fill (along the diagonal)
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DiagonalWallPainter oldDelegate) {
-    return oldDelegate.colors != colors;
-  }
-}
-
-/// Custom painter for hexagon-shaped capstone
-class _HexagonPainter extends CustomPainter {
-  final PieceColors colors;
-
-  _HexagonPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    // Create hexagon path
-    final path = _createHexagonPath(center, radius * 0.9);
-
-    // Draw shadow
-    final shadowPath = _createHexagonPath(
-      Offset(center.dx + 2, center.dy + 2),
-      radius * 0.9,
-    );
-    final shadowPaint = Paint()
-      ..color = GameColors.capstoneShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawPath(shadowPath, shadowPaint);
-
-    // Draw gradient fill
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    canvas.drawPath(path, gradientPaint);
-
-    // Draw border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-
-    // Draw small inner circle for visual interest
-    final innerCirclePaint = Paint()..color = colors.border.withValues(alpha: 0.3);
-    canvas.drawCircle(center, radius * 0.25, innerCirclePaint);
-  }
-
-  Path _createHexagonPath(Offset center, double radius) {
-    final path = Path();
-    for (int i = 0; i < 6; i++) {
-      // Start from top point (rotate -90 degrees so flat side is at bottom)
-      final angle = (i * 60 - 90) * math.pi / 180;
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldRepaint(covariant _HexagonPainter oldDelegate) {
-    return oldDelegate.colors != colors;
   }
 }
 
