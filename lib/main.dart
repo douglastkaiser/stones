@@ -330,46 +330,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _debugLog('>>> _GameScreenState.initState() called <<<');
-
     // Set up road win callback
     ref.read(gameStateProvider.notifier).onRoadWin = (roadPositions, winner) {
       ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
     };
 
-    _debugLog('Setting up gameStateProvider listener...');
-    ref.listen<GameState>(gameStateProvider, (previous, next) {
-      // Debug: Log every game state change
-      _debugLog('GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
-
-      unawaited(_maybeTriggerAiTurn(next));
-      final moveCount = ref.read(moveHistoryProvider).length;
-      unawaited(
-        ref.read(playGamesServiceProvider.notifier).onGameStateChanged(
-              next,
-              previous: previous,
-              moveCount: moveCount,
-            ),
-      );
-      // Check for achievements when game ends
-      if (next.isGameOver && (previous == null || !previous.isGameOver)) {
-        _debugLog('Game just ended! Calling _checkAchievements');
-        unawaited(_checkAchievements(next));
-      }
-    });
-    _debugLog('gameStateProvider listener set up complete');
-
-    // Listen for online game events (opponent moves/joins)
-    ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
-      final soundManager = ref.read(soundManagerProvider);
-      if (next.opponentJustJoined) {
-        soundManager.playPiecePlace();
-      }
-      if (next.opponentJustMoved) {
-        soundManager.playStackMove();
-      }
-    });
-
+    // Trigger initial AI turn if needed
     unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
   }
 
@@ -389,7 +355,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
-    _debugLog('>>> _GameScreenState.dispose() called <<<');
     ref.read(gameStateProvider.notifier).onRoadWin = null;
     super.dispose();
   }
@@ -552,6 +517,37 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.listen<ChessClockState>(chessClockProvider, (previous, next) {
       if (next.isExpired && next.expiredPlayer != null && !gameState.isGameOver) {
         ref.read(gameStateProvider.notifier).setTimeExpired(next.expiredPlayer!);
+      }
+    });
+
+    // Listen for game state changes (AI turns, achievements, etc.)
+    ref.listen<GameState>(gameStateProvider, (previous, next) {
+      _debugLog('GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
+
+      unawaited(_maybeTriggerAiTurn(next));
+      final moveCount = ref.read(moveHistoryProvider).length;
+      unawaited(
+        ref.read(playGamesServiceProvider.notifier).onGameStateChanged(
+              next,
+              previous: previous,
+              moveCount: moveCount,
+            ),
+      );
+      // Check for achievements when game ends
+      if (next.isGameOver && (previous == null || !previous.isGameOver)) {
+        _debugLog('Game just ended! Calling _checkAchievements');
+        unawaited(_checkAchievements(next));
+      }
+    });
+
+    // Listen for online game events (opponent moves/joins)
+    ref.listen<OnlineGameState>(onlineGameProvider, (previous, next) {
+      final soundManager = ref.read(soundManagerProvider);
+      if (next.opponentJustJoined) {
+        soundManager.playPiecePlace();
+      }
+      if (next.opponentJustMoved) {
+        soundManager.playStackMove();
       }
     });
 
