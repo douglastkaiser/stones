@@ -99447,7 +99447,7 @@ else l=l.KP(o?B.h:B.bU,B.E,4)
 l=A.a_("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.ez
-s=A.jl(p,A.a_("v1.0.0+210.g7b54043.d20251223 (7b54043)",p,p,p,A.aL(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.ak,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.galY(),p,p,p,p,p,p)
+s=A.jl(p,A.a_("v1.0.0+211.g0d7add0.d20251223 (0d7add0)",p,p,p,A.aL(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.ak,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.galY(),p,p,p,p,p,p)
 r=A.z(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -99457,7 +99457,7 @@ r=q}return A.eu(A.bm(A.b([m,B.a9,l,B.bO,s,B.am,A.a_("An abstract strategy game",
 $S:694}
 A.atP.prototype={
 $0(){var s=null
-A.bdA(new A.b8(B.bp,A.d4(A.eK(s,s,s,new A.Lc(s),B.M),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+210.g7b54043.d20251223 (7b54043)",this.b)
+A.bdA(new A.b8(B.bp,A.d4(A.eK(s,s,s,new A.Lc(s),B.M),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+211.g0d7add0.d20251223 (0d7add0)",this.b)
 return s},
 $S:0}
 A.Hs.prototype={
@@ -100105,7 +100105,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cH
-return A.b0(o,A.eu(A.bx(A.b([A.a_("v1.0.0+210.g7b54043.d20251223 (7b54043)",o,o,o,A.aL(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a_("  \u2022  ",o,o,o,A.aL(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.jl(o,A.a_("Privacy",o,o,o,A.aL(o,o,q,o,B.o3,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.ak,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gam7(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ah,0),o,o),B.m,o,o,o,o,o,B.lU,o,o,o)}}
+return A.b0(o,A.eu(A.bx(A.b([A.a_("v1.0.0+211.g0d7add0.d20251223 (0d7add0)",o,o,o,A.aL(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a_("  \u2022  ",o,o,o,A.aL(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.jl(o,A.a_("Privacy",o,o,o,A.aL(o,o,q,o,B.o3,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.ak,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gam7(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ah,0),o,o),B.m,o,o,o,o,o,B.lU,o,o,o)}}
 A.uV.prototype={
 I(a){var s,r,q,p,o,n,m,l=null,k=A.z(a).ax.a===B.x,j=this.d
 if(j)s=B.C
