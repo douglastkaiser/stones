@@ -496,6 +496,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isAiThinkingVisible = ref.watch(aiThinkingVisibleProvider);
     final isAiTurn = _isAiTurn(session, gameState);
     final pieceStyleData = ref.watch(currentPieceStyleProvider);
+    final boardThemeData = ref.watch(currentBoardThemeProvider);
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
@@ -674,20 +675,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           // Board widget (reused in both layouts)
           final boardWidget = Container(
             decoration: BoxDecoration(
-              // Wooden frame gradient
-              gradient: const LinearGradient(
+              // Frame gradient using board theme
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  GameColors.boardFrameInner,
-                  GameColors.boardFrameOuter,
-                  GameColors.boardFrameInner,
+                  boardThemeData.frameInner,
+                  boardThemeData.frameOuter,
+                  boardThemeData.frameInner,
                 ],
-                stops: [0.0, 0.5, 1.0],
+                stops: const [0.0, 0.5, 1.0],
               ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: GameColors.boardFrameOuter,
+                color: boardThemeData.frameOuter,
                 width: 2,
               ),
               boxShadow: [
@@ -697,7 +698,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   offset: const Offset(2, 4),
                 ),
                 BoxShadow(
-                  color: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                  color: boardThemeData.frameInner.withValues(alpha: 0.5),
                   blurRadius: 2,
                   offset: const Offset(-1, -1),
                 ),
@@ -714,6 +715,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               explodedStack: _longPressedStack,
               highlightedPositions: scenarioHighlights,
               pieceStyleData: pieceStyleData,
+              boardThemeData: boardThemeData,
               onCellTap: (pos) =>
                   _handleCellTap(context, ref, pos, guidedMove),
               onLongPressStart: _startStackView,
@@ -2543,6 +2545,7 @@ class _GameBoard extends StatelessWidget {
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
   final PieceStyleData pieceStyleData;
+  final BoardThemeData boardThemeData;
 
   const _GameBoard({
     required this.gameState,
@@ -2552,6 +2555,7 @@ class _GameBoard extends StatelessWidget {
     required this.onLongPressStart,
     required this.onLongPressEnd,
     required this.pieceStyleData,
+    required this.boardThemeData,
     this.highlightedPositions = const {},
     this.explodedPosition,
     this.explodedStack,
@@ -2701,6 +2705,7 @@ class _GameBoard extends StatelessWidget {
                 canSelect: !gameState.isGameOver,
                 boardSize: boardSize,
                 pieceStyleData: pieceStyleData,
+                boardThemeData: boardThemeData,
                 isNewlyPlaced: isNewlyPlaced,
                 isInWinningRoad: isInWinningRoad,
                 isStackDropTarget: isStackDropTarget,
@@ -2834,6 +2839,7 @@ class _BoardCell extends StatefulWidget {
   final bool showExploded;
   final PieceStack? explodedStack;
   final PieceStyleData pieceStyleData;
+  final BoardThemeData boardThemeData;
 
   /// Ghost piece to show (for placement preview)
   final PieceType? ghostPieceType;
@@ -2857,6 +2863,7 @@ class _BoardCell extends StatefulWidget {
     required this.stack,
     required this.isSelected,
     required this.pieceStyleData,
+    required this.boardThemeData,
     this.isInDropPath = false,
     this.isNextDrop = false,
     required this.canSelect,
@@ -3143,28 +3150,29 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         ],
       );
     } else {
-      // Default wood-grain cell look
+      // Default cell look - uses board theme colors
+      final theme = widget.boardThemeData;
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            GameColors.cellBackgroundLight,
-            GameColors.cellBackground,
-            GameColors.cellBackgroundDark,
+            theme.cellBackgroundLight,
+            theme.cellBackground,
+            theme.cellBackgroundDark,
           ],
-          stops: [0.0, 0.4, 1.0],
+          stops: const [0.0, 0.4, 1.0],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
         // Subtle inset effect
         boxShadow: [
           BoxShadow(
-            color: GameColors.gridLineShadow.withValues(alpha: 0.3),
+            color: theme.gridLineShadow.withValues(alpha: 0.3),
             blurRadius: 1,
             offset: const Offset(1, 1),
           ),
           BoxShadow(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: theme.gridLineHighlight.withValues(alpha: 0.5),
             blurRadius: 1,
             offset: const Offset(-0.5, -0.5),
           ),
