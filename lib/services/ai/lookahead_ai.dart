@@ -223,6 +223,10 @@ class LookaheadStonesAI extends StonesAI {
     return _maxBranchingLimit;
   }
 
+  GameState _switchPlayer(GameState state) {
+    return state.copyWith(currentPlayer: state.opponent);
+  }
+
   GameState? _applyMove(GameState state, AIMove move) {
     if (move is AIPlacementMove) {
       return _applyPlacement(state, move);
