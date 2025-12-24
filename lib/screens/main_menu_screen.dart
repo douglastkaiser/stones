@@ -772,22 +772,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
-                      Builder(
-                        builder: (context) {
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
-                          return Text(
-                            'Choose your color in the setup',
-                            style: TextStyle(
-                              color: isDark
-                                  ? Theme.of(context).colorScheme.onSurfaceVariant
-                                  : GameColors.subtitleColor,
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // Tutorial and puzzle hub
                       Builder(
@@ -820,22 +805,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         },
                       ),
 
-                      const SizedBox(height: 8),
-                      Builder(
-                        builder: (context) {
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
-                          return Text(
-                            'Guided boards with scripted examples',
-                            style: TextStyle(
-                              color: isDark
-                                  ? Theme.of(context).colorScheme.onSurfaceVariant
-                                  : GameColors.subtitleColor,
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
                       // Continue game button (if game in progress)
                       if (hasGameInProgress) ...[
