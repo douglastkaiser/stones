@@ -1,10 +1,7 @@
 import 'dart:math';
 
 import '../../models/models.dart';
-import 'easy_ai.dart';
-import 'medium_ai.dart';
-import 'hard_ai.dart';
-import 'expert_ai.dart';
+import 'lookahead_ai.dart';
 import 'move_generator.dart';
 
 /// AI difficulty levels
@@ -23,10 +20,10 @@ abstract class StonesAI {
   factory StonesAI.forDifficulty(AIDifficulty difficulty, {Random? random}) {
     final rng = random ?? Random();
     return switch (difficulty) {
-      AIDifficulty.easy => EasyStonesAI(rng),
-      AIDifficulty.medium => MediumStonesAI(rng),
-      AIDifficulty.hard => HardStonesAI(rng),
-      AIDifficulty.expert => ExpertStonesAI(rng),
+      AIDifficulty.easy => LookaheadStonesAI(rng, searchDepth: 1),
+      AIDifficulty.medium => LookaheadStonesAI(rng, searchDepth: 2),
+      AIDifficulty.hard => LookaheadStonesAI(rng, searchDepth: 3),
+      AIDifficulty.expert => LookaheadStonesAI(rng, searchDepth: 4),
     };
   }
 }
