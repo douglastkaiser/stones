@@ -510,48 +510,71 @@ class StandardFlatPainter extends CustomPainter {
   void _paintRoundedFlat(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, w, h),
-      Radius.circular(h * 0.5),
+
+    // Fuller semicircle - like a circle with a small chord cut off
+    // The chord line is near the bottom, so it's more full than a half circle
+    final centerX = w / 2;
+    final radius = w * 0.45;
+    // Chord is cut at about 20% from the bottom of the circle
+    final chordY = h * 0.85;
+    final centerY = chordY - radius * 0.7; // Position so chord cuts bottom 15%
+
+    final path = Path();
+    // Calculate the angle where the chord intersects the circle
+    final chordAngle = math.asin((chordY - centerY) / radius);
+    final startAngle = chordAngle;
+    final sweepAngle = math.pi - 2 * chordAngle + math.pi;
+
+    // Draw arc from one side of chord to the other
+    path.addArc(
+      Rect.fromCenter(center: Offset(centerX, centerY), width: radius * 2, height: radius * 2),
+      startAngle,
+      sweepAngle,
     );
+    path.close();
 
     // Shadow
-    canvas.drawRRect(
-      rect.shift(const Offset(2, 2)),
+    canvas.drawPath(
+      path.shift(const Offset(2, 2)),
       Paint()..color = colors.border.withValues(alpha: 0.3),
     );
 
-    // Main body
-    final gradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
+    // Main body with gradient
+    final gradient = RadialGradient(
+      center: const Alignment(-0.2, -0.4),
+      radius: 1.0,
       colors: [colors.primary, colors.secondary],
     );
 
-    canvas.drawRRect(
-      rect,
+    canvas.drawPath(
+      path,
       Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
     );
 
     // Border
-    canvas.drawRRect(
-      rect,
+    canvas.drawPath(
+      path,
       Paint()
         ..color = colors.border
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
 
-    // Highlight arc
+    // Highlight arc at top
     canvas.drawArc(
-      Rect.fromLTWH(w * 0.15, 2, w * 0.7, h * 0.5),
-      math.pi,
-      math.pi,
+      Rect.fromCenter(
+        center: Offset(centerX - radius * 0.15, centerY - radius * 0.2),
+        width: radius * 0.8,
+        height: radius * 0.6,
+      ),
+      -math.pi * 0.8,
+      math.pi * 0.5,
       false,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.3)
+        ..color = Colors.white.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round,
     );
   }
 
@@ -695,7 +718,9 @@ class StandardCapstonePainter extends CustomPainter {
 // PIECE PAINTERS - POLISHED MARBLE STYLE
 // =============================================================================
 
-/// Polished marble flat - smooth oval with shine
+/// Polished marble flat - smooth shapes with shine
+/// Light: elegant elongated oval (horizontal)
+/// Dark: smooth rounded square (rotated 45 degrees - diamond)
 class MarbleFlatPainter extends CustomPainter {
   final PieceColors colors;
   final bool isLightPlayer;
@@ -704,9 +729,18 @@ class MarbleFlatPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (isLightPlayer) {
+      _paintOvalFlat(canvas, size);
+    } else {
+      _paintDiamondFlat(canvas, size);
+    }
+  }
+
+  void _paintOvalFlat(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final rect = Rect.fromLTWH(0, 0, w, h);
+    // Elongated horizontal oval
+    final rect = Rect.fromLTWH(w * 0.05, h * 0.15, w * 0.9, h * 0.7);
 
     // Shadow
     canvas.drawOval(
@@ -719,7 +753,7 @@ class MarbleFlatPainter extends CustomPainter {
       center: const Alignment(-0.3, -0.4),
       radius: 1.0,
       colors: [
-        Color.lerp(colors.primary, Colors.white, 0.2)!,
+        Color.lerp(colors.primary, Colors.white, 0.25)!,
         colors.primary,
         colors.secondary,
       ],
@@ -738,24 +772,88 @@ class MarbleFlatPainter extends CustomPainter {
     );
 
     // Polished shine highlight
-    final shinePath = Path();
-    shinePath.addOval(Rect.fromLTWH(w * 0.15, h * 0.1, w * 0.4, h * 0.3));
-
-    canvas.drawPath(
-      shinePath,
+    canvas.drawOval(
+      Rect.fromLTWH(w * 0.15, h * 0.2, w * 0.35, h * 0.25),
       Paint()
         ..shader = RadialGradient(
           colors: [
             Colors.white.withValues(alpha: 0.6),
             Colors.white.withValues(alpha: 0.0),
           ],
-        ).createShader(Rect.fromLTWH(w * 0.15, h * 0.1, w * 0.4, h * 0.3)),
+        ).createShader(Rect.fromLTWH(w * 0.15, h * 0.2, w * 0.35, h * 0.25)),
+    );
+  }
+
+  void _paintDiamondFlat(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+    final centerY = h / 2;
+
+    // Rounded diamond shape (rotated rounded square)
+    final path = Path();
+    final radius = math.min(w, h) * 0.42;
+
+    // Draw rounded diamond
+    path.moveTo(centerX, centerY - radius); // Top
+    path.quadraticBezierTo(centerX + radius * 0.3, centerY - radius * 0.3,
+        centerX + radius, centerY); // Top-right curve
+    path.quadraticBezierTo(centerX + radius * 0.3, centerY + radius * 0.3,
+        centerX, centerY + radius); // Bottom-right curve
+    path.quadraticBezierTo(centerX - radius * 0.3, centerY + radius * 0.3,
+        centerX - radius, centerY); // Bottom-left curve
+    path.quadraticBezierTo(centerX - radius * 0.3, centerY - radius * 0.3,
+        centerX, centerY - radius); // Top-left curve
+    path.close();
+
+    // Shadow
+    canvas.drawPath(
+      path.shift(const Offset(2, 3)),
+      Paint()..color = colors.border.withValues(alpha: 0.3),
+    );
+
+    // Main body with marble gradient
+    final gradient = RadialGradient(
+      center: const Alignment(-0.3, -0.4),
+      radius: 1.0,
+      colors: [
+        Color.lerp(colors.primary, Colors.white, 0.15)!,
+        colors.primary,
+        colors.secondary,
+      ],
+      stops: const [0.0, 0.4, 1.0],
+    );
+
+    canvas.drawPath(
+      path,
+      Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+
+    // Subtle border
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = colors.border.withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+
+    // Polished shine highlight
+    canvas.drawOval(
+      Rect.fromLTWH(w * 0.25, h * 0.18, w * 0.3, h * 0.25),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.55),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromLTWH(w * 0.25, h * 0.18, w * 0.3, h * 0.25)),
     );
   }
 
   @override
   bool shouldRepaint(covariant MarbleFlatPainter oldDelegate) =>
-      colors != oldDelegate.colors;
+      colors != oldDelegate.colors || isLightPlayer != oldDelegate.isLightPlayer;
 }
 
 /// Polished marble wall - smooth diagonal slab
@@ -884,132 +982,47 @@ class MarbleCapstonePainter extends CustomPainter {
 }
 
 // =============================================================================
-// PIECE PAINTERS - HAND CARVED STYLE
+// PIECE PAINTERS - CHISELED STONE STYLE
 // =============================================================================
 
-/// Hand carved flat - irregular rough edges
-class CarvedFlatPainter extends CustomPainter {
+/// Stone flat - angular faceted shapes
+/// Light: hexagonal prism top-down view
+/// Dark: pentagon/angular shield shape
+class StoneFlatPainter extends CustomPainter {
   final PieceColors colors;
   final bool isLightPlayer;
-  final int seed;
 
-  CarvedFlatPainter({
-    required this.colors,
-    required this.isLightPlayer,
-    this.seed = 42,
-  });
+  StoneFlatPainter({required this.colors, required this.isLightPlayer});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final random = SeededRandom(seed);
-
-    // Create irregular polygon
-    final path = Path();
-    final points = <Offset>[];
-    const numPoints = 8;
-
-    for (var i = 0; i < numPoints; i++) {
-      final angle = (i / numPoints) * 2 * math.pi - math.pi / 2;
-      final radiusX = w * 0.4 + random.range(-w * 0.08, w * 0.08);
-      final radiusY = h * 0.4 + random.range(-h * 0.08, h * 0.08);
-      points.add(Offset(
-        w / 2 + math.cos(angle) * radiusX,
-        h / 2 + math.sin(angle) * radiusY,
-      ));
+    if (isLightPlayer) {
+      _paintHexagonFlat(canvas, size);
+    } else {
+      _paintShieldFlat(canvas, size);
     }
-
-    path.moveTo(points[0].dx, points[0].dy);
-    for (var i = 1; i < points.length; i++) {
-      // Slightly wavy lines between points
-      final prev = points[i - 1];
-      final curr = points[i];
-      final mid = Offset(
-        (prev.dx + curr.dx) / 2 + random.range(-3, 3),
-        (prev.dy + curr.dy) / 2 + random.range(-3, 3),
-      );
-      path.quadraticBezierTo(mid.dx, mid.dy, curr.dx, curr.dy);
-    }
-    path.close();
-
-    // Shadow
-    canvas.drawPath(
-      path.shift(const Offset(2, 2)),
-      Paint()..color = colors.border.withValues(alpha: 0.3),
-    );
-
-    // Wood grain effect
-    final grainGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        colors.primary,
-        Color.lerp(colors.primary, colors.secondary, 0.3)!,
-        colors.primary,
-        colors.secondary,
-      ],
-      stops: const [0.0, 0.3, 0.6, 1.0],
-    );
-
-    canvas.drawPath(
-      path,
-      Paint()..shader = grainGradient.createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
-
-    // Carved texture lines
-    final linePaint = Paint()
-      ..color = colors.border.withValues(alpha: 0.2)
-      ..strokeWidth = 0.5
-      ..style = PaintingStyle.stroke;
-
-    for (var i = 0; i < 5; i++) {
-      final y = h * 0.2 + i * h * 0.15;
-      canvas.drawLine(
-        Offset(w * 0.2 + random.range(0, 5), y + random.range(-2, 2)),
-        Offset(w * 0.8 + random.range(-5, 0), y + random.range(-2, 2)),
-        linePaint,
-      );
-    }
-
-    // Border
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = colors.border
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
   }
 
-  @override
-  bool shouldRepaint(covariant CarvedFlatPainter oldDelegate) =>
-      colors != oldDelegate.colors || seed != oldDelegate.seed;
-}
-
-/// Hand carved wall - rough hewn look
-class CarvedWallPainter extends CustomPainter {
-  final PieceColors colors;
-  final int seed;
-
-  CarvedWallPainter({required this.colors, this.seed = 42});
-
-  @override
-  void paint(Canvas canvas, Size size) {
+  void _paintHexagonFlat(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final random = SeededRandom(seed);
-    final thickness = w * 0.28;
+    final centerX = w / 2;
+    final centerY = h / 2;
 
-    // Create irregular wall shape
+    // Hexagon shape (stretched horizontally)
     final path = Path();
-    path.moveTo(w * 0.12 + random.range(-3, 3), h);
-    path.lineTo(w * 0.12 + thickness + random.range(-3, 3), h - random.range(0, 3));
-
-    // Irregular top edge
-    final topY = random.range(0, 4);
-    path.lineTo(w * 0.88 + random.range(-3, 3), topY);
-    path.lineTo(w * 0.88 - thickness + random.range(-3, 3), topY + random.range(0, 3));
+    final radiusX = w * 0.45;
+    final radiusY = h * 0.42;
+    for (var i = 0; i < 6; i++) {
+      final angle = (i / 6) * 2 * math.pi - math.pi / 2;
+      final x = centerX + math.cos(angle) * radiusX;
+      final y = centerY + math.sin(angle) * radiusY;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
     path.close();
 
     // Shadow
@@ -1018,12 +1031,15 @@ class CarvedWallPainter extends CustomPainter {
       Paint()..color = colors.border.withValues(alpha: 0.3),
     );
 
-    // Main body with wood grain
+    // Main body with stone gradient
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [colors.primary, colors.secondary, colors.primary],
-      stops: const [0.0, 0.5, 1.0],
+      colors: [
+        Color.lerp(colors.primary, Colors.white, 0.1)!,
+        colors.primary,
+        colors.secondary,
+      ],
     );
 
     canvas.drawPath(
@@ -1031,19 +1047,159 @@ class CarvedWallPainter extends CustomPainter {
       Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
     );
 
-    // Carving marks
-    final markPaint = Paint()
-      ..color = colors.border.withValues(alpha: 0.15)
+    // Facet lines for 3D effect
+    final facetPaint = Paint()
+      ..color = colors.border.withValues(alpha: 0.2)
       ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(centerX, centerY), Offset(centerX, h * 0.08), facetPaint);
+    canvas.drawLine(Offset(centerX, centerY), Offset(w * 0.08, h * 0.3), facetPaint);
+    canvas.drawLine(Offset(centerX, centerY), Offset(w * 0.92, h * 0.3), facetPaint);
+
+    // Border
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Highlight
+    canvas.drawLine(
+      Offset(w * 0.15, h * 0.35),
+      Offset(centerX - 2, h * 0.1),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.3)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _paintShieldFlat(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+
+    // Shield/pentagon shape - pointed at bottom
+    final path = Path();
+    path.moveTo(centerX, h * 0.92); // Bottom point
+    path.lineTo(w * 0.08, h * 0.55); // Left lower
+    path.lineTo(w * 0.08, h * 0.15); // Left upper
+    path.lineTo(w * 0.92, h * 0.15); // Right upper
+    path.lineTo(w * 0.92, h * 0.55); // Right lower
+    path.close();
+
+    // Shadow
+    canvas.drawPath(
+      path.shift(const Offset(2, 2)),
+      Paint()..color = colors.border.withValues(alpha: 0.3),
+    );
+
+    // Main body with stone gradient
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color.lerp(colors.primary, Colors.white, 0.05)!,
+        colors.primary,
+        colors.secondary,
+      ],
+    );
+
+    canvas.drawPath(
+      path,
+      Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+
+    // Central ridge line
+    final ridgePaint = Paint()
+      ..color = colors.border.withValues(alpha: 0.15)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(centerX, h * 0.18), Offset(centerX, h * 0.85), ridgePaint);
+
+    // Border
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Top edge highlight
+    canvas.drawLine(
+      Offset(w * 0.12, h * 0.15),
+      Offset(w * 0.88, h * 0.15),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.25)
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant StoneFlatPainter oldDelegate) =>
+      colors != oldDelegate.colors || isLightPlayer != oldDelegate.isLightPlayer;
+}
+
+/// Stone wall - angular slab with chiseled edges
+class StoneWallPainter extends CustomPainter {
+  final PieceColors colors;
+
+  StoneWallPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final thickness = w * 0.26;
+
+    // Angular slab shape with beveled edges
+    final path = Path();
+    path.moveTo(w * 0.12, h);
+    path.lineTo(w * 0.12 + thickness, h);
+    path.lineTo(w * 0.88, h * 0.05);
+    path.lineTo(w * 0.88 - thickness, 0);
+    path.lineTo(w * 0.12, h * 0.03);
+    path.close();
+
+    // Shadow
+    canvas.drawPath(
+      path.shift(const Offset(2, 2)),
+      Paint()..color = colors.border.withValues(alpha: 0.3),
+    );
+
+    // Main body with stone gradient
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color.lerp(colors.primary, Colors.white, 0.1)!,
+        colors.primary,
+        colors.secondary,
+      ],
+    );
+
+    canvas.drawPath(
+      path,
+      Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+
+    // Chisel marks texture
+    final chiselPaint = Paint()
+      ..color = colors.border.withValues(alpha: 0.12)
+      ..strokeWidth = 0.8
       ..style = PaintingStyle.stroke;
 
     for (var i = 0; i < 4; i++) {
-      final startX = w * 0.3 + random.range(0, w * 0.1);
-      final startY = h * 0.2 + i * h * 0.2;
+      final y = h * 0.25 + i * h * 0.18;
+      final startX = w * 0.25 + i * w * 0.05;
       canvas.drawLine(
-        Offset(startX, startY),
-        Offset(startX + w * 0.3 + random.range(-10, 10), startY + random.range(-5, 5)),
-        markPaint,
+        Offset(startX, y),
+        Offset(startX + w * 0.25, y - h * 0.08),
+        chiselPaint,
       );
     }
 
@@ -1055,50 +1211,41 @@ class CarvedWallPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
+
+    // Highlight edge
+    canvas.drawLine(
+      Offset(w * 0.88 - thickness + 3, 2),
+      Offset(w * 0.88 - 3, h * 0.06),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.3)
+        ..strokeWidth = 1.5,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CarvedWallPainter oldDelegate) =>
-      colors != oldDelegate.colors || seed != oldDelegate.seed;
+  bool shouldRepaint(covariant StoneWallPainter oldDelegate) =>
+      colors != oldDelegate.colors;
 }
 
-/// Hand carved capstone - rough dome with chisel marks
-class CarvedCapstonePainter extends CustomPainter {
+/// Stone capstone - angular obelisk/pyramid top
+class StoneCapstonePainter extends CustomPainter {
   final PieceColors colors;
-  final int seed;
 
-  CarvedCapstonePainter({required this.colors, this.seed = 42});
+  StoneCapstonePainter({required this.colors});
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final random = SeededRandom(seed);
     final centerX = w / 2;
 
-    // Create irregular dome shape
+    // Obelisk shape - tapered with flat top
     final path = Path();
-    path.moveTo(w * 0.1, h * 0.9);
-
-    // Irregular dome curve with slight bumps
-    final points = <Offset>[];
-    for (var i = 0; i <= 10; i++) {
-      final t = i / 10;
-      final x = w * 0.1 + t * w * 0.8;
-      final baseY = h * 0.9 - math.sin(t * math.pi) * h * 0.75;
-      final y = baseY + random.range(-3, 3);
-      points.add(Offset(x, y));
-    }
-
-    for (var i = 0; i < points.length - 1; i++) {
-      final mid = Offset(
-        (points[i].dx + points[i + 1].dx) / 2,
-        (points[i].dy + points[i + 1].dy) / 2 + random.range(-2, 2),
-      );
-      path.quadraticBezierTo(points[i].dx, points[i].dy, mid.dx, mid.dy);
-    }
-    path.lineTo(points.last.dx, points.last.dy);
-    path.lineTo(w * 0.9, h * 0.9);
+    path.moveTo(w * 0.15, h * 0.9); // Bottom left
+    path.lineTo(w * 0.85, h * 0.9); // Bottom right
+    path.lineTo(w * 0.7, h * 0.15); // Top right
+    path.lineTo(centerX, h * 0.05); // Peak
+    path.lineTo(w * 0.3, h * 0.15); // Top left
     path.close();
 
     // Shadow
@@ -1107,11 +1254,15 @@ class CarvedCapstonePainter extends CustomPainter {
       Paint()..color = colors.border.withValues(alpha: 0.3),
     );
 
-    // Main body
+    // Main body with stone gradient
     final gradient = RadialGradient(
-      center: const Alignment(-0.2, -0.3),
-      radius: 1.0,
-      colors: [colors.primary, colors.secondary],
+      center: const Alignment(-0.2, -0.4),
+      radius: 1.2,
+      colors: [
+        Color.lerp(colors.primary, Colors.white, 0.15)!,
+        colors.primary,
+        colors.secondary,
+      ],
     );
 
     canvas.drawPath(
@@ -1119,26 +1270,14 @@ class CarvedCapstonePainter extends CustomPainter {
       Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
     );
 
-    // Chisel marks
-    final chiselPaint = Paint()
-      ..color = colors.border.withValues(alpha: 0.15)
+    // Facet lines
+    final facetPaint = Paint()
+      ..color = colors.border.withValues(alpha: 0.2)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-
-    for (var i = 0; i < 6; i++) {
-      final angle = random.range(-0.5, 0.5);
-      final startX = centerX + random.range(-w * 0.25, w * 0.25);
-      final startY = h * 0.3 + random.range(0, h * 0.4);
-      canvas.save();
-      canvas.translate(startX, startY);
-      canvas.rotate(angle);
-      canvas.drawLine(
-        const Offset(-5, 0),
-        Offset(5 + random.range(0, 8), 0),
-        chiselPaint,
-      );
-      canvas.restore();
-    }
+    canvas.drawLine(Offset(centerX, h * 0.05), Offset(centerX, h * 0.88), facetPaint);
+    canvas.drawLine(Offset(centerX, h * 0.05), Offset(w * 0.3, h * 0.15), facetPaint);
+    canvas.drawLine(Offset(centerX, h * 0.05), Offset(w * 0.7, h * 0.15), facetPaint);
 
     // Border
     canvas.drawPath(
@@ -1148,11 +1287,484 @@ class CarvedCapstonePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
+
+    // Highlight on left face
+    canvas.drawLine(
+      Offset(w * 0.32, h * 0.18),
+      Offset(centerX - 2, h * 0.08),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.35)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CarvedCapstonePainter oldDelegate) =>
-      colors != oldDelegate.colors || seed != oldDelegate.seed;
+  bool shouldRepaint(covariant StoneCapstonePainter oldDelegate) =>
+      colors != oldDelegate.colors;
+}
+
+// =============================================================================
+// PIECE PAINTERS - MINIMALIST STYLE
+// =============================================================================
+
+/// Minimalist flat - clean geometric shapes
+/// Light: rounded square
+/// Dark: perfect circle
+class MinimalistFlatPainter extends CustomPainter {
+  final PieceColors colors;
+  final bool isLightPlayer;
+
+  MinimalistFlatPainter({required this.colors, required this.isLightPlayer});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (isLightPlayer) {
+      _paintSquareFlat(canvas, size);
+    } else {
+      _paintCircleFlat(canvas, size);
+    }
+  }
+
+  void _paintSquareFlat(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final inset = w * 0.1;
+    final cornerRadius = w * 0.12;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(inset, inset, w - inset * 2, h - inset * 2),
+      Radius.circular(cornerRadius),
+    );
+
+    // Subtle shadow
+    canvas.drawRRect(
+      rect.shift(const Offset(1.5, 1.5)),
+      Paint()..color = colors.border.withValues(alpha: 0.2),
+    );
+
+    // Clean solid fill
+    canvas.drawRRect(
+      rect,
+      Paint()..color = colors.primary,
+    );
+
+    // Thin precise border
+    canvas.drawRRect(
+      rect,
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+  }
+
+  void _paintCircleFlat(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+    final centerY = h / 2;
+    final radius = math.min(w, h) * 0.4;
+
+    // Subtle shadow
+    canvas.drawCircle(
+      Offset(centerX + 1.5, centerY + 1.5),
+      radius,
+      Paint()..color = colors.border.withValues(alpha: 0.2),
+    );
+
+    // Clean solid fill
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      radius,
+      Paint()..color = colors.primary,
+    );
+
+    // Thin precise border
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      radius,
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant MinimalistFlatPainter oldDelegate) =>
+      colors != oldDelegate.colors || isLightPlayer != oldDelegate.isLightPlayer;
+}
+
+/// Minimalist wall - clean diagonal rectangle
+class MinimalistWallPainter extends CustomPainter {
+  final PieceColors colors;
+
+  MinimalistWallPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final thickness = w * 0.2;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(w / 2, h / 2), width: thickness, height: h * 0.9),
+      Radius.circular(thickness * 0.15),
+    );
+
+    canvas.save();
+    canvas.translate(w / 2, h / 2);
+    canvas.rotate(-math.pi / 6);
+    canvas.translate(-w / 2, -h / 2);
+
+    // Subtle shadow
+    canvas.drawRRect(
+      rect.shift(const Offset(1.5, 1.5)),
+      Paint()..color = colors.border.withValues(alpha: 0.2),
+    );
+
+    // Clean solid fill
+    canvas.drawRRect(
+      rect,
+      Paint()..color = colors.primary,
+    );
+
+    // Thin precise border
+    canvas.drawRRect(
+      rect,
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant MinimalistWallPainter oldDelegate) =>
+      colors != oldDelegate.colors;
+}
+
+/// Minimalist capstone - clean cylinder
+class MinimalistCapstonePainter extends CustomPainter {
+  final PieceColors colors;
+
+  MinimalistCapstonePainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+    final radius = w * 0.32;
+
+    // Cylinder body
+    final bodyRect = RRect.fromRectAndCorners(
+      Rect.fromLTWH(centerX - radius, h * 0.25, radius * 2, h * 0.65),
+      topLeft: Radius.circular(radius * 0.1),
+      topRight: Radius.circular(radius * 0.1),
+    );
+
+    // Shadow
+    canvas.drawRRect(
+      bodyRect.shift(const Offset(1.5, 1.5)),
+      Paint()..color = colors.border.withValues(alpha: 0.2),
+    );
+
+    // Body fill
+    canvas.drawRRect(
+      bodyRect,
+      Paint()..color = colors.secondary,
+    );
+
+    // Top ellipse
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(centerX, h * 0.28), width: radius * 2, height: h * 0.2),
+      Paint()..color = colors.primary,
+    );
+
+    // Body border
+    canvas.drawRRect(
+      bodyRect,
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+
+    // Top ellipse border
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(centerX, h * 0.28), width: radius * 2, height: h * 0.2),
+      Paint()
+        ..color = colors.border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant MinimalistCapstonePainter oldDelegate) =>
+      colors != oldDelegate.colors;
+}
+
+// =============================================================================
+// PIECE PAINTERS - PIXEL ART STYLE
+// =============================================================================
+
+/// Pixel art flat - blocky 8-bit shapes
+/// Light: pixelated diamond
+/// Dark: pixelated cross/plus
+class PixelFlatPainter extends CustomPainter {
+  final PieceColors colors;
+  final bool isLightPlayer;
+
+  PixelFlatPainter({required this.colors, required this.isLightPlayer});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (isLightPlayer) {
+      _paintPixelDiamond(canvas, size);
+    } else {
+      _paintPixelCross(canvas, size);
+    }
+  }
+
+  void _paintPixelDiamond(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final px = w / 8; // Pixel size
+
+    // Diamond shape made of pixels
+    final pixels = <Offset>[
+      // Row 0 (top)
+      Offset(3, 0),
+      Offset(4, 0),
+      // Row 1
+      Offset(2, 1), Offset(3, 1), Offset(4, 1), Offset(5, 1),
+      // Row 2
+      Offset(1, 2), Offset(2, 2), Offset(3, 2), Offset(4, 2), Offset(5, 2), Offset(6, 2),
+      // Row 3 (middle)
+      Offset(0, 3), Offset(1, 3), Offset(2, 3), Offset(3, 3), Offset(4, 3), Offset(5, 3), Offset(6, 3), Offset(7, 3),
+      // Row 4
+      Offset(0, 4), Offset(1, 4), Offset(2, 4), Offset(3, 4), Offset(4, 4), Offset(5, 4), Offset(6, 4), Offset(7, 4),
+      // Row 5
+      Offset(1, 5), Offset(2, 5), Offset(3, 5), Offset(4, 5), Offset(5, 5), Offset(6, 5),
+      // Row 6
+      Offset(2, 6), Offset(3, 6), Offset(4, 6), Offset(5, 6),
+      // Row 7 (bottom)
+      Offset(3, 7),
+      Offset(4, 7),
+    ];
+
+    // Shadow pixels
+    final shadowPaint = Paint()..color = colors.border.withValues(alpha: 0.3);
+    for (final p in pixels) {
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px + 2, p.dy * (h / 8) + 2, px, h / 8),
+        shadowPaint,
+      );
+    }
+
+    // Main pixels with slight color variation for retro feel
+    for (final p in pixels) {
+      final isHighlight = p.dy < 3;
+      final color = isHighlight
+          ? Color.lerp(colors.primary, Colors.white, 0.1)!
+          : (p.dy > 5 ? colors.secondary : colors.primary);
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px, p.dy * (h / 8), px, h / 8),
+        Paint()..color = color,
+      );
+    }
+
+    // Pixel border effect (darker outline pixels)
+    final borderPaint = Paint()..color = colors.border;
+    // Top edge
+    canvas.drawRect(Rect.fromLTWH(3 * px, 0, px * 2, 1), borderPaint);
+    // Bottom edge
+    canvas.drawRect(Rect.fromLTWH(3 * px, h - 1, px * 2, 1), borderPaint);
+  }
+
+  void _paintPixelCross(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final px = w / 8; // Pixel size
+    final py = h / 8;
+
+    // Cross/plus shape made of pixels
+    final pixels = <Offset>[
+      // Vertical bar
+      Offset(3, 0), Offset(4, 0),
+      Offset(3, 1), Offset(4, 1),
+      Offset(3, 2), Offset(4, 2),
+      Offset(3, 5), Offset(4, 5),
+      Offset(3, 6), Offset(4, 6),
+      Offset(3, 7), Offset(4, 7),
+      // Horizontal bar (middle section)
+      Offset(0, 3), Offset(1, 3), Offset(2, 3), Offset(3, 3), Offset(4, 3), Offset(5, 3), Offset(6, 3), Offset(7, 3),
+      Offset(0, 4), Offset(1, 4), Offset(2, 4), Offset(3, 4), Offset(4, 4), Offset(5, 4), Offset(6, 4), Offset(7, 4),
+    ];
+
+    // Shadow pixels
+    final shadowPaint = Paint()..color = colors.border.withValues(alpha: 0.3);
+    for (final p in pixels) {
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px + 2, p.dy * py + 2, px, py),
+        shadowPaint,
+      );
+    }
+
+    // Main pixels
+    for (final p in pixels) {
+      final isCenter = p.dx >= 2 && p.dx <= 5 && p.dy >= 2 && p.dy <= 5;
+      final color = isCenter ? colors.primary : colors.secondary;
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px, p.dy * py, px, py),
+        Paint()..color = color,
+      );
+    }
+
+    // Pixel border effect
+    final borderPaint = Paint()..color = colors.border;
+    canvas.drawRect(Rect.fromLTWH(3 * px, 0, px * 2, 1), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(0, 3 * py, 1, py * 2), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(w - 1, 3 * py, 1, py * 2), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(3 * px, h - 1, px * 2, 1), borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant PixelFlatPainter oldDelegate) =>
+      colors != oldDelegate.colors || isLightPlayer != oldDelegate.isLightPlayer;
+}
+
+/// Pixel art wall - blocky diagonal bar
+class PixelWallPainter extends CustomPainter {
+  final PieceColors colors;
+
+  PixelWallPainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final px = w / 8;
+    final py = h / 8;
+
+    // Diagonal bar made of stair-step pixels
+    final pixels = <Offset>[
+      // Bottom left to top right diagonal
+      Offset(0, 6), Offset(0, 7), Offset(1, 6), Offset(1, 7),
+      Offset(1, 5), Offset(2, 5), Offset(2, 6),
+      Offset(2, 4), Offset(3, 4), Offset(3, 5),
+      Offset(3, 3), Offset(4, 3), Offset(4, 4),
+      Offset(4, 2), Offset(5, 2), Offset(5, 3),
+      Offset(5, 1), Offset(6, 1), Offset(6, 2),
+      Offset(6, 0), Offset(7, 0), Offset(7, 1),
+    ];
+
+    // Shadow
+    final shadowPaint = Paint()..color = colors.border.withValues(alpha: 0.3);
+    for (final p in pixels) {
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px + 2, p.dy * py + 2, px, py),
+        shadowPaint,
+      );
+    }
+
+    // Main pixels
+    for (final p in pixels) {
+      final isTop = p.dy < 3;
+      final color = isTop
+          ? Color.lerp(colors.primary, Colors.white, 0.1)!
+          : colors.primary;
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px, p.dy * py, px, py),
+        Paint()..color = color,
+      );
+    }
+
+    // Pixel border on edges
+    final borderPaint = Paint()..color = colors.border;
+    canvas.drawRect(Rect.fromLTWH(6 * px, 0, px * 2, 1), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(0, h - 1, px * 2, 1), borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant PixelWallPainter oldDelegate) =>
+      colors != oldDelegate.colors;
+}
+
+/// Pixel art capstone - blocky tower/castle piece
+class PixelCapstonePainter extends CustomPainter {
+  final PieceColors colors;
+
+  PixelCapstonePainter({required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final px = w / 8;
+    final py = h / 8;
+
+    // Castle tower shape
+    final pixels = <Offset>[
+      // Battlements (top)
+      Offset(1, 0), Offset(2, 0), Offset(5, 0), Offset(6, 0),
+      Offset(1, 1), Offset(2, 1), Offset(3, 1), Offset(4, 1), Offset(5, 1), Offset(6, 1),
+      // Tower body
+      Offset(2, 2), Offset(3, 2), Offset(4, 2), Offset(5, 2),
+      Offset(2, 3), Offset(3, 3), Offset(4, 3), Offset(5, 3),
+      Offset(2, 4), Offset(3, 4), Offset(4, 4), Offset(5, 4),
+      Offset(2, 5), Offset(3, 5), Offset(4, 5), Offset(5, 5),
+      // Base (wider)
+      Offset(1, 6), Offset(2, 6), Offset(3, 6), Offset(4, 6), Offset(5, 6), Offset(6, 6),
+      Offset(1, 7), Offset(2, 7), Offset(3, 7), Offset(4, 7), Offset(5, 7), Offset(6, 7),
+    ];
+
+    // Shadow
+    final shadowPaint = Paint()..color = colors.border.withValues(alpha: 0.3);
+    for (final p in pixels) {
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px + 2, p.dy * py + 2, px, py),
+        shadowPaint,
+      );
+    }
+
+    // Main pixels with shading
+    for (final p in pixels) {
+      Color color;
+      if (p.dy <= 1) {
+        color = Color.lerp(colors.primary, Colors.white, 0.15)!;
+      } else if (p.dy >= 6) {
+        color = colors.secondary;
+      } else {
+        color = colors.primary;
+      }
+      canvas.drawRect(
+        Rect.fromLTWH(p.dx * px, p.dy * py, px, py),
+        Paint()..color = color,
+      );
+    }
+
+    // Window detail
+    canvas.drawRect(
+      Rect.fromLTWH(3 * px, 3 * py, px * 2, py * 2),
+      Paint()..color = colors.border.withValues(alpha: 0.3),
+    );
+
+    // Pixel border
+    final borderPaint = Paint()..color = colors.border;
+    canvas.drawRect(Rect.fromLTWH(1 * px, 0, px * 2, 1), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(5 * px, 0, px * 2, 1), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(1 * px, h - 1, px * 6, 1), borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant PixelCapstonePainter oldDelegate) =>
+      colors != oldDelegate.colors;
 }
 
 // =============================================================================
@@ -1169,77 +1781,179 @@ class CornerOrnamentPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withValues(alpha: 0.3)
+      ..color = color.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
 
     switch (theme) {
       case BoardTheme.classicWood:
         _paintWoodCorner(canvas, size, paint);
-        break;
       case BoardTheme.darkStone:
         _paintStoneCorner(canvas, size, paint);
-        break;
       case BoardTheme.marble:
         _paintMarbleCorner(canvas, size, paint);
-        break;
       case BoardTheme.minimalist:
         _paintMinimalistCorner(canvas, size, paint);
-        break;
       case BoardTheme.pixelArt:
         _paintPixelCorner(canvas, size, paint);
-        break;
     }
   }
 
   void _paintWoodCorner(Canvas canvas, Size size, Paint paint) {
-    // Celtic knot style corner
-    final path = Path();
-    path.moveTo(0, size.height * 0.3);
-    path.quadraticBezierTo(size.width * 0.3, size.height * 0.3, size.width * 0.3, 0);
+    final w = size.width;
+    final h = size.height;
+
+    // Celtic knot style corner with interlacing curves
+    // Outer curve
+    var path = Path();
+    path.moveTo(0, h * 0.6);
+    path.cubicTo(w * 0.25, h * 0.6, w * 0.6, h * 0.25, w * 0.6, 0);
     canvas.drawPath(path, paint);
 
-    path.reset();
-    path.moveTo(0, size.height * 0.5);
-    path.quadraticBezierTo(size.width * 0.5, size.height * 0.5, size.width * 0.5, 0);
+    // Inner curve
+    path = Path();
+    path.moveTo(0, h * 0.35);
+    path.cubicTo(w * 0.15, h * 0.35, w * 0.35, h * 0.15, w * 0.35, 0);
     canvas.drawPath(path, paint);
+
+    // Decorative leaf/acorn shape
+    paint.style = PaintingStyle.stroke;
+    path = Path();
+    path.moveTo(w * 0.12, h * 0.12);
+    path.quadraticBezierTo(w * 0.2, h * 0.05, w * 0.18, h * 0.18);
+    path.quadraticBezierTo(w * 0.05, h * 0.2, w * 0.12, h * 0.12);
+    canvas.drawPath(path, paint);
+
+    // Small dot detail
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(w * 0.15, h * 0.15), 1.5, paint);
   }
 
   void _paintStoneCorner(Canvas canvas, Size size, Paint paint) {
-    // Runic style corner marks
-    canvas.drawLine(Offset(0, size.height * 0.2), Offset(size.width * 0.2, 0), paint);
-    canvas.drawLine(Offset(0, size.height * 0.4), Offset(size.width * 0.4, 0), paint);
-    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.15), 2, paint..style = PaintingStyle.fill);
+    final w = size.width;
+    final h = size.height;
+
+    // Runic/Norse style corner with angular patterns
+    // Main angular frame
+    final path = Path();
+    path.moveTo(0, h * 0.5);
+    path.lineTo(w * 0.15, h * 0.35);
+    path.lineTo(w * 0.35, h * 0.15);
+    path.lineTo(w * 0.5, 0);
+    canvas.drawPath(path, paint);
+
+    // Inner angular line
+    canvas.drawLine(Offset(0, h * 0.3), Offset(w * 0.3, 0), paint);
+
+    // Runic symbol detail (simplified Algiz rune)
+    final runePath = Path();
+    runePath.moveTo(w * 0.1, h * 0.25);
+    runePath.lineTo(w * 0.15, h * 0.1);
+    runePath.moveTo(w * 0.1, h * 0.15);
+    runePath.lineTo(w * 0.2, h * 0.12);
+    runePath.moveTo(w * 0.1, h * 0.15);
+    runePath.lineTo(w * 0.05, h * 0.08);
+    paint.strokeWidth = 1.2;
+    canvas.drawPath(runePath, paint);
+
+    // Stone dots
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(w * 0.25, h * 0.25), 2, paint);
+    canvas.drawCircle(Offset(w * 0.4, h * 0.1), 1.5, paint);
   }
 
   void _paintMarbleCorner(Canvas canvas, Size size, Paint paint) {
-    // Elegant scroll
-    final path = Path();
-    path.moveTo(0, size.height * 0.4);
-    path.cubicTo(
-      size.width * 0.2, size.height * 0.4,
-      size.width * 0.4, size.height * 0.2,
-      size.width * 0.4, 0,
-    );
+    final w = size.width;
+    final h = size.height;
+
+    // Elegant baroque-style scroll with flourishes
+    // Main scroll curve
+    var path = Path();
+    path.moveTo(0, h * 0.55);
+    path.cubicTo(w * 0.2, h * 0.55, w * 0.55, h * 0.2, w * 0.55, 0);
     canvas.drawPath(path, paint);
 
-    // Small flourish
-    canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.1), 3, paint..style = PaintingStyle.stroke);
+    // Inner accent curve
+    path = Path();
+    path.moveTo(0, h * 0.35);
+    path.cubicTo(w * 0.12, h * 0.35, w * 0.35, h * 0.12, w * 0.35, 0);
+    canvas.drawPath(path, paint);
+
+    // Decorative spiral flourish
+    path = Path();
+    path.moveTo(w * 0.15, h * 0.15);
+    path.quadraticBezierTo(w * 0.25, h * 0.08, w * 0.2, h * 0.18);
+    path.quadraticBezierTo(w * 0.12, h * 0.22, w * 0.18, h * 0.12);
+    canvas.drawPath(path, paint);
+
+    // Small decorative circles
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 1.0;
+    canvas.drawCircle(Offset(w * 0.08, h * 0.08), 3, paint);
+    canvas.drawCircle(Offset(w * 0.08, h * 0.08), 1.5, paint..style = PaintingStyle.fill);
+
+    // Leaf accent
+    path = Path();
+    path.moveTo(w * 0.28, h * 0.28);
+    path.quadraticBezierTo(w * 0.35, h * 0.22, w * 0.32, h * 0.32);
+    path.quadraticBezierTo(w * 0.22, h * 0.35, w * 0.28, h * 0.28);
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 1.0;
+    canvas.drawPath(path, paint);
   }
 
   void _paintMinimalistCorner(Canvas canvas, Size size, Paint paint) {
-    // Simple geometric
-    canvas.drawLine(Offset(0, size.height * 0.3), Offset(size.width * 0.3, size.height * 0.3), paint);
-    canvas.drawLine(Offset(size.width * 0.3, 0), Offset(size.width * 0.3, size.height * 0.3), paint);
+    final w = size.width;
+    final h = size.height;
+
+    // Clean geometric corner with precise lines
+    paint.strokeWidth = 1.0;
+
+    // L-shaped frame
+    canvas.drawLine(Offset(0, h * 0.4), Offset(w * 0.4, h * 0.4), paint);
+    canvas.drawLine(Offset(w * 0.4, 0), Offset(w * 0.4, h * 0.4), paint);
+
+    // Inner accent line
+    paint.color = paint.color.withValues(alpha: 0.2);
+    canvas.drawLine(Offset(0, h * 0.25), Offset(w * 0.25, h * 0.25), paint);
+    canvas.drawLine(Offset(w * 0.25, 0), Offset(w * 0.25, h * 0.25), paint);
+
+    // Small square accent
+    paint.color = color.withValues(alpha: 0.35);
+    paint.style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.08, h * 0.08, w * 0.08, h * 0.08),
+      paint,
+    );
   }
 
   void _paintPixelCorner(Canvas canvas, Size size, Paint paint) {
-    // Pixel art corner
+    final w = size.width;
+    final h = size.height;
+    final px = w / 12; // Pixel size
+
     paint.style = PaintingStyle.fill;
-    const px = 3.0;
-    canvas.drawRect(const Rect.fromLTWH(0, 0, px, px * 3), paint);
-    canvas.drawRect(const Rect.fromLTWH(0, 0, px * 3, px), paint);
-    canvas.drawRect(const Rect.fromLTWH(px, px, px, px), paint);
+
+    // Retro pixel art corner bracket pattern
+    // Outer pixels
+    canvas.drawRect(Rect.fromLTWH(0, 0, px, px * 5), paint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, px * 5, px), paint);
+
+    // Inner detail pixels
+    paint.color = color.withValues(alpha: 0.25);
+    canvas.drawRect(Rect.fromLTWH(px * 2, px * 2, px, px), paint);
+    canvas.drawRect(Rect.fromLTWH(px, px * 3, px, px), paint);
+    canvas.drawRect(Rect.fromLTWH(px * 3, px, px, px), paint);
+
+    // Highlight pixel
+    paint.color = color.withValues(alpha: 0.5);
+    canvas.drawRect(Rect.fromLTWH(px, px, px, px), paint);
+
+    // Secondary bracket (smaller)
+    paint.color = color.withValues(alpha: 0.2);
+    canvas.drawRect(Rect.fromLTWH(px * 6, 0, px, px * 3), paint);
+    canvas.drawRect(Rect.fromLTWH(0, px * 6, px * 3, px), paint);
   }
 
   @override
@@ -1256,15 +1970,18 @@ CustomPainter getFlatPainter({
   required PieceStyle style,
   required PieceColors colors,
   required bool isLightPlayer,
-  int seed = 42,
 }) {
   switch (style) {
     case PieceStyle.standard:
       return StandardFlatPainter(colors: colors, isLightPlayer: isLightPlayer);
+    case PieceStyle.stone:
+      return StoneFlatPainter(colors: colors, isLightPlayer: isLightPlayer);
     case PieceStyle.polishedMarble:
       return MarbleFlatPainter(colors: colors, isLightPlayer: isLightPlayer);
-    case PieceStyle.handCarved:
-      return CarvedFlatPainter(colors: colors, isLightPlayer: isLightPlayer, seed: seed);
+    case PieceStyle.minimalist:
+      return MinimalistFlatPainter(colors: colors, isLightPlayer: isLightPlayer);
+    case PieceStyle.pixel:
+      return PixelFlatPainter(colors: colors, isLightPlayer: isLightPlayer);
   }
 }
 
@@ -1272,15 +1989,18 @@ CustomPainter getFlatPainter({
 CustomPainter getWallPainter({
   required PieceStyle style,
   required PieceColors colors,
-  int seed = 42,
 }) {
   switch (style) {
     case PieceStyle.standard:
       return StandardWallPainter(colors: colors);
+    case PieceStyle.stone:
+      return StoneWallPainter(colors: colors);
     case PieceStyle.polishedMarble:
       return MarbleWallPainter(colors: colors);
-    case PieceStyle.handCarved:
-      return CarvedWallPainter(colors: colors, seed: seed);
+    case PieceStyle.minimalist:
+      return MinimalistWallPainter(colors: colors);
+    case PieceStyle.pixel:
+      return PixelWallPainter(colors: colors);
   }
 }
 
@@ -1288,15 +2008,18 @@ CustomPainter getWallPainter({
 CustomPainter getCapstonePainter({
   required PieceStyle style,
   required PieceColors colors,
-  int seed = 42,
 }) {
   switch (style) {
     case PieceStyle.standard:
       return StandardCapstonePainter(colors: colors);
+    case PieceStyle.stone:
+      return StoneCapstonePainter(colors: colors);
     case PieceStyle.polishedMarble:
       return MarbleCapstonePainter(colors: colors);
-    case PieceStyle.handCarved:
-      return CarvedCapstonePainter(colors: colors, seed: seed);
+    case PieceStyle.minimalist:
+      return MinimalistCapstonePainter(colors: colors);
+    case PieceStyle.pixel:
+      return PixelCapstonePainter(colors: colors);
   }
 }
 
