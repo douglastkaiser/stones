@@ -511,26 +511,23 @@ class StandardFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Fuller semicircle - like a circle with a small chord cut off
-    // The chord line is near the bottom, so it's more full than a half circle
+    // Fuller semicircle with flat base at bottom - like a dome sitting on a table
+    // The flat chord is at the bottom, curved part on top
     final centerX = w / 2;
     final radius = w * 0.45;
-    // Chord is cut at about 20% from the bottom of the circle
-    final chordY = h * 0.85;
-    final centerY = chordY - radius * 0.7; // Position so chord cuts bottom 15%
+    final baseY = h * 0.88; // Flat base near bottom
+    final centerY = baseY - radius * 0.25; // Circle center above base
 
     final path = Path();
-    // Calculate the angle where the chord intersects the circle
-    final chordAngle = math.asin((chordY - centerY) / radius);
-    final startAngle = chordAngle;
-    final sweepAngle = math.pi - 2 * chordAngle + math.pi;
-
-    // Draw arc from one side of chord to the other
-    path.addArc(
-      Rect.fromCenter(center: Offset(centerX, centerY), width: radius * 2, height: radius * 2),
-      startAngle,
-      sweepAngle,
+    // Start at left side of base
+    path.moveTo(centerX - radius, baseY);
+    // Draw arc over the top (from left to right, going up and over)
+    path.arcToPoint(
+      Offset(centerX + radius, baseY),
+      radius: Radius.circular(radius),
+      clockwise: false,
     );
+    // Close with flat base
     path.close();
 
     // Shadow
@@ -539,10 +536,10 @@ class StandardFlatPainter extends CustomPainter {
       Paint()..color = colors.border.withValues(alpha: 0.3),
     );
 
-    // Main body with gradient
-    final gradient = RadialGradient(
-      center: const Alignment(-0.2, -0.4),
-      radius: 1.0,
+    // Main body with flat gradient (like trapezoid - top to bottom)
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
       colors: [colors.primary, colors.secondary],
     );
 
@@ -560,18 +557,18 @@ class StandardFlatPainter extends CustomPainter {
         ..strokeWidth = 1.5,
     );
 
-    // Highlight arc at top
+    // Highlight line at top (flat style like trapezoid)
     canvas.drawArc(
       Rect.fromCenter(
-        center: Offset(centerX - radius * 0.15, centerY - radius * 0.2),
-        width: radius * 0.8,
-        height: radius * 0.6,
+        center: Offset(centerX, centerY),
+        width: radius * 1.4,
+        height: radius * 0.8,
       ),
-      -math.pi * 0.8,
-      math.pi * 0.5,
+      -math.pi * 0.85,
+      math.pi * 0.7,
       false,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.35)
+        ..color = Colors.white.withValues(alpha: 0.4)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round,
@@ -718,9 +715,9 @@ class StandardCapstonePainter extends CustomPainter {
 // PIECE PAINTERS - POLISHED MARBLE STYLE
 // =============================================================================
 
-/// Polished marble flat - smooth shapes with shine
-/// Light: elegant elongated oval (horizontal)
-/// Dark: smooth rounded square (rotated 45 degrees - diamond)
+/// Polished marble flat - smooth oval shapes with shine
+/// Both players use the same elegant oval shape (different colors)
+/// Enhanced contrast for visibility against marble board
 class MarbleFlatPainter extends CustomPainter {
   final PieceColors colors;
   final bool isLightPlayer;
@@ -729,11 +726,8 @@ class MarbleFlatPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (isLightPlayer) {
-      _paintOvalFlat(canvas, size);
-    } else {
-      _paintDiamondFlat(canvas, size);
-    }
+    // Both light and dark use the same elegant oval shape
+    _paintOvalFlat(canvas, size);
   }
 
   void _paintOvalFlat(Canvas canvas, Size size) {
@@ -742,18 +736,18 @@ class MarbleFlatPainter extends CustomPainter {
     // Elongated horizontal oval
     final rect = Rect.fromLTWH(w * 0.05, h * 0.15, w * 0.9, h * 0.7);
 
-    // Shadow
+    // Strong shadow for visibility
     canvas.drawOval(
       rect.shift(const Offset(2, 3)),
-      Paint()..color = colors.border.withValues(alpha: 0.3),
+      Paint()..color = colors.border.withValues(alpha: 0.5),
     );
 
-    // Main body - smooth oval
+    // Main body - smooth oval with enhanced gradient
     final gradient = RadialGradient(
       center: const Alignment(-0.3, -0.4),
       radius: 1.0,
       colors: [
-        Color.lerp(colors.primary, Colors.white, 0.25)!,
+        Color.lerp(colors.primary, Colors.white, isLightPlayer ? 0.3 : 0.2)!,
         colors.primary,
         colors.secondary,
       ],
@@ -762,13 +756,13 @@ class MarbleFlatPainter extends CustomPainter {
 
     canvas.drawOval(rect, Paint()..shader = gradient.createShader(rect));
 
-    // Subtle border
+    // Strong border for pop/visibility
     canvas.drawOval(
       rect,
       Paint()
-        ..color = colors.border.withValues(alpha: 0.5)
+        ..color = colors.border
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0,
+        ..strokeWidth = 1.5,
     );
 
     // Polished shine highlight
@@ -777,77 +771,22 @@ class MarbleFlatPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            Colors.white.withValues(alpha: 0.6),
+            Colors.white.withValues(alpha: isLightPlayer ? 0.7 : 0.5),
             Colors.white.withValues(alpha: 0.0),
           ],
         ).createShader(Rect.fromLTWH(w * 0.15, h * 0.2, w * 0.35, h * 0.25)),
     );
-  }
 
-  void _paintDiamondFlat(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final centerX = w / 2;
-    final centerY = h / 2;
-
-    // Rounded diamond shape (rotated rounded square)
-    final path = Path();
-    final radius = math.min(w, h) * 0.42;
-
-    // Draw rounded diamond
-    path.moveTo(centerX, centerY - radius); // Top
-    path.quadraticBezierTo(centerX + radius * 0.3, centerY - radius * 0.3,
-        centerX + radius, centerY); // Top-right curve
-    path.quadraticBezierTo(centerX + radius * 0.3, centerY + radius * 0.3,
-        centerX, centerY + radius); // Bottom-right curve
-    path.quadraticBezierTo(centerX - radius * 0.3, centerY + radius * 0.3,
-        centerX - radius, centerY); // Bottom-left curve
-    path.quadraticBezierTo(centerX - radius * 0.3, centerY - radius * 0.3,
-        centerX, centerY - radius); // Top-left curve
-    path.close();
-
-    // Shadow
-    canvas.drawPath(
-      path.shift(const Offset(2, 3)),
-      Paint()..color = colors.border.withValues(alpha: 0.3),
-    );
-
-    // Main body with marble gradient
-    final gradient = RadialGradient(
-      center: const Alignment(-0.3, -0.4),
-      radius: 1.0,
-      colors: [
-        Color.lerp(colors.primary, Colors.white, 0.15)!,
-        colors.primary,
-        colors.secondary,
-      ],
-      stops: const [0.0, 0.4, 1.0],
-    );
-
-    canvas.drawPath(
-      path,
-      Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
-
-    // Subtle border
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = colors.border.withValues(alpha: 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0,
-    );
-
-    // Polished shine highlight
+    // Secondary small highlight for extra polish
     canvas.drawOval(
-      Rect.fromLTWH(w * 0.25, h * 0.18, w * 0.3, h * 0.25),
+      Rect.fromLTWH(w * 0.55, h * 0.35, w * 0.15, h * 0.12),
       Paint()
         ..shader = RadialGradient(
           colors: [
-            Colors.white.withValues(alpha: 0.55),
+            Colors.white.withValues(alpha: 0.35),
             Colors.white.withValues(alpha: 0.0),
           ],
-        ).createShader(Rect.fromLTWH(w * 0.25, h * 0.18, w * 0.3, h * 0.25)),
+        ).createShader(Rect.fromLTWH(w * 0.55, h * 0.35, w * 0.15, h * 0.12)),
     );
   }
 
@@ -1081,13 +1020,13 @@ class StoneFlatPainter extends CustomPainter {
     final h = size.height;
     final centerX = w / 2;
 
-    // Shield/pentagon shape - pointed at bottom
+    // Shield/pentagon shape - pointed at TOP (flat bottom sits on table)
     final path = Path();
-    path.moveTo(centerX, h * 0.92); // Bottom point
-    path.lineTo(w * 0.08, h * 0.55); // Left lower
-    path.lineTo(w * 0.08, h * 0.15); // Left upper
-    path.lineTo(w * 0.92, h * 0.15); // Right upper
-    path.lineTo(w * 0.92, h * 0.55); // Right lower
+    path.moveTo(centerX, h * 0.08); // Top point
+    path.lineTo(w * 0.92, h * 0.45); // Right upper
+    path.lineTo(w * 0.92, h * 0.88); // Right lower
+    path.lineTo(w * 0.08, h * 0.88); // Left lower
+    path.lineTo(w * 0.08, h * 0.45); // Left upper
     path.close();
 
     // Shadow
@@ -1112,12 +1051,12 @@ class StoneFlatPainter extends CustomPainter {
       Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
     );
 
-    // Central ridge line
+    // Central ridge line from point to base
     final ridgePaint = Paint()
       ..color = colors.border.withValues(alpha: 0.15)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(centerX, h * 0.18), Offset(centerX, h * 0.85), ridgePaint);
+    canvas.drawLine(Offset(centerX, h * 0.12), Offset(centerX, h * 0.85), ridgePaint);
 
     // Border
     canvas.drawPath(
@@ -1128,10 +1067,10 @@ class StoneFlatPainter extends CustomPainter {
         ..strokeWidth = 1.5,
     );
 
-    // Top edge highlight
+    // Top edge highlight (from point to sides)
     canvas.drawLine(
-      Offset(w * 0.12, h * 0.15),
-      Offset(w * 0.88, h * 0.15),
+      Offset(centerX, h * 0.1),
+      Offset(w * 0.88, h * 0.43),
       Paint()
         ..color = Colors.white.withValues(alpha: 0.25)
         ..strokeWidth = 1.5
@@ -1309,8 +1248,7 @@ class StoneCapstonePainter extends CustomPainter {
 // =============================================================================
 
 /// Minimalist flat - clean geometric shapes
-/// Light: rounded square
-/// Dark: perfect circle
+/// Both players use the same rounded square shape (different colors)
 class MinimalistFlatPainter extends CustomPainter {
   final PieceColors colors;
   final bool isLightPlayer;
@@ -1319,11 +1257,8 @@ class MinimalistFlatPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (isLightPlayer) {
-      _paintSquareFlat(canvas, size);
-    } else {
-      _paintCircleFlat(canvas, size);
-    }
+    // Both light and dark use the same rounded square shape
+    _paintSquareFlat(canvas, size);
   }
 
   void _paintSquareFlat(Canvas canvas, Size size) {
@@ -1352,38 +1287,6 @@ class MinimalistFlatPainter extends CustomPainter {
     // Thin precise border
     canvas.drawRRect(
       rect,
-      Paint()
-        ..color = colors.border
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0,
-    );
-  }
-
-  void _paintCircleFlat(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final centerX = w / 2;
-    final centerY = h / 2;
-    final radius = math.min(w, h) * 0.4;
-
-    // Subtle shadow
-    canvas.drawCircle(
-      Offset(centerX + 1.5, centerY + 1.5),
-      radius,
-      Paint()..color = colors.border.withValues(alpha: 0.2),
-    );
-
-    // Clean solid fill
-    canvas.drawCircle(
-      Offset(centerX, centerY),
-      radius,
-      Paint()..color = colors.primary,
-    );
-
-    // Thin precise border
-    canvas.drawCircle(
-      Offset(centerX, centerY),
-      radius,
       Paint()
         ..color = colors.border
         ..style = PaintingStyle.stroke
@@ -1535,6 +1438,7 @@ class PixelFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final px = w / 8; // Pixel size
+    final py = h / 8;
 
     // Diamond shape made of pixels
     const pixels = <Offset>[
@@ -1558,11 +1462,40 @@ class PixelFlatPainter extends CustomPainter {
       Offset(4, 7),
     ];
 
+    // Black outline pixels for visibility (1 pixel larger border)
+    const outlinePixels = <Offset>[
+      // Top outline
+      Offset(2, -1), Offset(3, -1), Offset(4, -1), Offset(5, -1),
+      // Left side outline
+      Offset(-1, 3), Offset(-1, 4),
+      Offset(0, 2), Offset(0, 5),
+      Offset(1, 1), Offset(1, 6),
+      Offset(2, 0), Offset(2, 7),
+      // Right side outline
+      Offset(8, 3), Offset(8, 4),
+      Offset(7, 2), Offset(7, 5),
+      Offset(6, 1), Offset(6, 6),
+      Offset(5, 0), Offset(5, 7),
+      // Bottom outline
+      Offset(2, 8), Offset(3, 8), Offset(4, 8), Offset(5, 8),
+    ];
+
+    // Draw black outline first
+    final outlinePaint = Paint()..color = const Color(0xFF1A1C2C);
+    for (final p in outlinePixels) {
+      if (p.dx >= 0 && p.dx < 8 && p.dy >= 0 && p.dy < 8) {
+        canvas.drawRect(
+          Rect.fromLTWH(p.dx * px, p.dy * py, px, py),
+          outlinePaint,
+        );
+      }
+    }
+
     // Shadow pixels
-    final shadowPaint = Paint()..color = colors.border.withValues(alpha: 0.3);
+    final shadowPaint = Paint()..color = colors.border.withValues(alpha: 0.4);
     for (final p in pixels) {
       canvas.drawRect(
-        Rect.fromLTWH(p.dx * px + 2, p.dy * (h / 8) + 2, px, h / 8),
+        Rect.fromLTWH(p.dx * px + 2, p.dy * py + 2, px, py),
         shadowPaint,
       );
     }
@@ -1574,17 +1507,21 @@ class PixelFlatPainter extends CustomPainter {
           ? Color.lerp(colors.primary, Colors.white, 0.1)!
           : (p.dy > 5 ? colors.secondary : colors.primary);
       canvas.drawRect(
-        Rect.fromLTWH(p.dx * px, p.dy * (h / 8), px, h / 8),
+        Rect.fromLTWH(p.dx * px, p.dy * py, px, py),
         Paint()..color = color,
       );
     }
 
-    // Pixel border effect (darker outline pixels)
+    // Strong pixel border effect on edges
     final borderPaint = Paint()..color = colors.border;
     // Top edge
-    canvas.drawRect(Rect.fromLTWH(3 * px, 0, px * 2, 1), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(3 * px, 0, px * 2, 2), borderPaint);
     // Bottom edge
-    canvas.drawRect(Rect.fromLTWH(3 * px, h - 1, px * 2, 1), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(3 * px, h - 2, px * 2, 2), borderPaint);
+    // Left edge
+    canvas.drawRect(Rect.fromLTWH(0, 3 * py, 2, py * 2), borderPaint);
+    // Right edge
+    canvas.drawRect(Rect.fromLTWH(w - 2, 3 * py, 2, py * 2), borderPaint);
   }
 
   void _paintPixelCross(Canvas canvas, Size size) {
