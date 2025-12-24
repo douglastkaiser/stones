@@ -772,7 +772,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // Tutorial and puzzle hub
                       Builder(
@@ -805,7 +805,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         },
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // Continue game button (if game in progress)
                       if (hasGameInProgress) ...[
