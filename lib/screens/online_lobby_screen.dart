@@ -414,7 +414,6 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               ),
               child: QrImageView(
                 data: session.roomCode,
-                version: QrVersions.auto,
                 size: 150,
                 backgroundColor: Colors.white,
                 errorCorrectionLevel: QrErrorCorrectLevel.M,
@@ -1208,10 +1207,7 @@ class _QRScannerSheetState extends State<_QRScannerSheet> {
   @override
   void initState() {
     super.initState();
-    _scannerController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.normal,
-      facing: CameraFacing.back,
-    );
+    _scannerController = MobileScannerController();
   }
 
   @override
