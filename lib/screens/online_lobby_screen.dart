@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/models.dart';
 import '../providers/providers.dart';
@@ -25,6 +27,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   bool _chessClockOverridden = false;
   final TextEditingController _clockMinutesController = TextEditingController();
   bool _hasNavigatedToGame = false;
+  PlayerColor _creatorColor = PlayerColor.white;
 
   @override
   void initState() {
@@ -63,10 +66,14 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
       if (next.opponentJustMoved) {
         _playSound(GameSound.stackMove);
       }
-      // Auto-navigate to game when opponent joins and game starts
-      if (!_hasNavigatedToGame &&
-          next.session?.status == OnlineStatus.playing &&
-          previous?.session?.status == OnlineStatus.waiting) {
+      // Auto-navigate to game when:
+      // 1. Creator: opponent joins and game starts (waiting -> playing)
+      // 2. Joiner: successfully joined a game (no session -> playing)
+      final wasWaiting = previous?.session?.status == OnlineStatus.waiting;
+      final hadNoSession = previous?.session == null;
+      final nowPlaying = next.session?.status == OnlineStatus.playing;
+
+      if (!_hasNavigatedToGame && nowPlaying && (wasWaiting || hadNoSession)) {
         _hasNavigatedToGame = true;
         Navigator.pushReplacement(
           context,
@@ -184,6 +191,17 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                // Piece color selector
+                Text(
+                  'Your piece color:',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 8),
+                _PieceColorSelector(
+                  selectedColor: _creatorColor,
+                  onColorSelected: (color) => setState(() => _creatorColor = color),
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   height: 48,
                   child: ElevatedButton.icon(
@@ -213,7 +231,17 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                             );
                             ref
                                 .read(onlineGameProvider.notifier)
-                                .createGame(boardSize: _selectedBoardSize);
+                                .createGame(
+                                  boardSize: _selectedBoardSize,
+                                  chessClockEnabled: _chessClockEnabled,
+                                  chessClockSeconds: _chessClockEnabled
+                                      ? (_chessClockOverridden
+                                          ? _chessClockSeconds
+                                          : ref.read(appSettingsProvider)
+                                              .chessClockSecondsForSize(_selectedBoardSize))
+                                      : null,
+                                  creatorColor: _creatorColor,
+                                );
                           },
                   ),
                 ),
@@ -242,35 +270,53 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _joinCodeController,
-                  decoration: InputDecoration(
-                    labelText: 'Room Code',
-                    hintText: 'e.g., ABCXYZ',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.tag),
-                    suffixIcon: _joinCodeController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _joinCodeController.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
-                    helperText: _joinCodeController.text.isEmpty
-                        ? 'Enter 6-letter room code'
-                        : _joinCodeController.text.length < 6
-                            ? '${6 - _joinCodeController.text.length} more letter${6 - _joinCodeController.text.length == 1 ? '' : 's'} needed'
-                            : null,
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
-                    LengthLimitingTextInputFormatter(6),
-                    _UpperCaseTextFormatter(),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _joinCodeController,
+                        decoration: InputDecoration(
+                          labelText: 'Room Code',
+                          hintText: 'e.g., ABCXYZ',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.tag),
+                          suffixIcon: _joinCodeController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _joinCodeController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          helperText: _joinCodeController.text.isEmpty
+                              ? 'Enter 6-letter room code'
+                              : _joinCodeController.text.length < 6
+                                  ? '${6 - _joinCodeController.text.length} more letter${6 - _joinCodeController.text.length == 1 ? '' : 's'} needed'
+                                  : null,
+                        ),
+                        textCapitalization: TextCapitalization.characters,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
+                          LengthLimitingTextInputFormatter(6),
+                          _UpperCaseTextFormatter(),
+                        ],
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: () => _openQRScanner(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        child: const Icon(Icons.qr_code_scanner),
+                      ),
+                    ),
                   ],
-                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -304,6 +350,14 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
 
   Widget _buildWaitingScreen(BuildContext context, OnlineGameState online) {
     final session = online.session!;
+    final creatorColorLabel =
+        session.creatorColor == PlayerColor.white ? 'White' : 'Black';
+    final opponentColorLabel =
+        session.creatorColor == PlayerColor.white ? 'Black' : 'White';
+    final creatorPlayer = session.creatorColor == PlayerColor.white
+        ? session.white
+        : session.black;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -324,7 +378,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               builder: (context) {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
                 return Text(
-                  'Share this code with a friend:',
+                  'Share this code or QR with a friend:',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: isDark
                             ? Theme.of(context).colorScheme.onSurfaceVariant
@@ -355,6 +409,21 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            // QR Code display
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: QrImageView(
+                data: session.roomCode,
+                size: 150,
+                backgroundColor: Colors.white,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
+            ),
+            const SizedBox(height: 16),
             // Copy button
             OutlinedButton.icon(
               icon: const Icon(Icons.copy),
@@ -372,15 +441,15 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
             const SizedBox(height: 24),
             const LinearProgressIndicator(),
             const SizedBox(height: 24),
-            // Player info
+            // Player info - show correct colors based on creator's choice
             _PlayerInfoCard(
-              label: 'You (White)',
-              player: session.white,
+              label: 'You ($creatorColorLabel)',
+              player: creatorPlayer,
               isLocal: true,
             ),
             const SizedBox(height: 8),
-            const _PlayerInfoCard(
-              label: 'Opponent (Black)',
+            _PlayerInfoCard(
+              label: 'Opponent ($opponentColorLabel)',
               player: null,
               isLocal: false,
               waiting: true,
@@ -696,6 +765,20 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
       await ref.read(onlineGameProvider.notifier).resign();
     }
   }
+
+  Future<void> _openQRScanner(BuildContext context) async {
+    final scannedCode = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _QRScannerSheet(),
+    );
+
+    if (scannedCode != null && scannedCode.isNotEmpty && mounted) {
+      // Auto-join the game with the scanned code
+      await ref.read(onlineGameProvider.notifier).joinGame(scannedCode);
+    }
+  }
 }
 
 class _BoardSizeSelector extends StatelessWidget {
@@ -990,6 +1073,223 @@ class _JoinGameButtonState extends State<_JoinGameButton>
               : Colors.grey.shade400,
         ),
         onPressed: _isEnabled ? _handleTap : _handleTap,
+      ),
+    );
+  }
+}
+
+class _PieceColorSelector extends StatelessWidget {
+  final PlayerColor selectedColor;
+  final ValueChanged<PlayerColor> onColorSelected;
+
+  const _PieceColorSelector({
+    required this.selectedColor,
+    required this.onColorSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ColorOptionButton(
+            label: 'White',
+            color: Colors.white,
+            borderColor: Colors.grey.shade400,
+            isSelected: selectedColor == PlayerColor.white,
+            onTap: () => onColorSelected(PlayerColor.white),
+            subtitle: 'Go first',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _ColorOptionButton(
+            label: 'Black',
+            color: Colors.grey.shade800,
+            borderColor: Colors.grey.shade600,
+            isSelected: selectedColor == PlayerColor.black,
+            onTap: () => onColorSelected(PlayerColor.black),
+            subtitle: 'Go second',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ColorOptionButton extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color borderColor;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final String subtitle;
+
+  const _ColorOptionButton({
+    required this.label,
+    required this.color,
+    required this.borderColor,
+    required this.isSelected,
+    required this.onTap,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? GameColors.boardFrameInner.withValues(alpha: 0.1)
+              : (isDark ? Colors.grey.shade900 : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? GameColors.boardFrameInner
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? GameColors.boardFrameInner
+                        : (isDark ? Colors.white : Colors.black87),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QRScannerSheet extends StatefulWidget {
+  const _QRScannerSheet();
+
+  @override
+  State<_QRScannerSheet> createState() => _QRScannerSheetState();
+}
+
+class _QRScannerSheetState extends State<_QRScannerSheet> {
+  MobileScannerController? _scannerController;
+  bool _hasScanned = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scannerController = MobileScannerController();
+  }
+
+  @override
+  void dispose() {
+    _scannerController?.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_hasScanned) return;
+
+    final barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final code = barcodes.first.rawValue;
+    if (code == null || code.isEmpty) return;
+
+    // Validate: should be 6 letters
+    final cleanCode = code.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+    if (cleanCode.length == 6) {
+      _hasScanned = true;
+      Navigator.pop(context, cleanCode);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Scan Room QR Code',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              child: MobileScanner(
+                controller: _scannerController,
+                onDetect: _onDetect,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(24),
+            color: Colors.grey.shade900,
+            child: const Text(
+              'Point your camera at a game room QR code',
+              style: TextStyle(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }

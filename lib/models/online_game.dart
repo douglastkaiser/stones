@@ -102,7 +102,7 @@ class OnlineGameMove {
 
 class OnlineGameSession {
   final String roomCode;
-  final OnlineGamePlayer white;
+  final OnlineGamePlayer? white;
   final OnlineGamePlayer? black;
   final int boardSize;
   final List<OnlineGameMove> moves;
@@ -111,10 +111,15 @@ class OnlineGameSession {
   final OnlineWinner? winner;
   final DateTime? createdAt;
   final DateTime? lastMoveAt;
+  // Chess clock settings (synced from creator)
+  final bool chessClockEnabled;
+  final int? chessClockSeconds;
+  // Creator's chosen color (defaults to white)
+  final PlayerColor creatorColor;
 
   const OnlineGameSession({
     required this.roomCode,
-    required this.white,
+    this.white,
     this.black,
     this.boardSize = 5,
     this.moves = const [],
@@ -123,19 +128,25 @@ class OnlineGameSession {
     this.winner,
     this.createdAt,
     this.lastMoveAt,
+    this.chessClockEnabled = false,
+    this.chessClockSeconds,
+    this.creatorColor = PlayerColor.white,
   });
 
-  bool get hasOpponent => black != null;
+  bool get hasOpponent => white != null && black != null;
 
   Map<String, dynamic> toMap() {
     return {
-      'white': white.toMap(),
+      'white': white?.toMap(),
       'black': black?.toMap(),
       'boardSize': boardSize,
       'moves': moves.map((m) => m.toMap()).toList(),
       'currentTurn': currentTurn.name,
       'status': status.name,
       'winner': winner?.name,
+      'chessClockEnabled': chessClockEnabled,
+      'chessClockSeconds': chessClockSeconds,
+      'creatorColor': creatorColor.name,
     };
   }
 
@@ -150,7 +161,9 @@ class OnlineGameSession {
 
     return OnlineGameSession(
       roomCode: code,
-      white: OnlineGamePlayer.fromMap(toStringDynamicMap(data['white'])),
+      white: data['white'] == null
+          ? null
+          : OnlineGamePlayer.fromMap(toStringDynamicMap(data['white'])),
       black: data['black'] == null
           ? null
           : OnlineGamePlayer.fromMap(toStringDynamicMap(data['black'])),
@@ -168,6 +181,9 @@ class OnlineGameSession {
       lastMoveAt: (data['lastMoveAt'] is Timestamp)
           ? (data['lastMoveAt'] as Timestamp).toDate()
           : null,
+      chessClockEnabled: data['chessClockEnabled'] as bool? ?? false,
+      chessClockSeconds: (data['chessClockSeconds'] as num?)?.toInt(),
+      creatorColor: _colorFromString(data['creatorColor'] as String?),
     );
   }
 
@@ -181,6 +197,9 @@ class OnlineGameSession {
     OnlineWinner? winner,
     DateTime? createdAt,
     DateTime? lastMoveAt,
+    bool? chessClockEnabled,
+    int? chessClockSeconds,
+    PlayerColor? creatorColor,
   }) {
     return OnlineGameSession(
       roomCode: roomCode,
@@ -193,6 +212,9 @@ class OnlineGameSession {
       winner: winner ?? this.winner,
       createdAt: createdAt ?? this.createdAt,
       lastMoveAt: lastMoveAt ?? this.lastMoveAt,
+      chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
+      chessClockSeconds: chessClockSeconds ?? this.chessClockSeconds,
+      creatorColor: creatorColor ?? this.creatorColor,
     );
   }
 }
