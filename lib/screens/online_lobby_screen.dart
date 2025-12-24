@@ -776,7 +776,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
 
     if (scannedCode != null && scannedCode.isNotEmpty && mounted) {
       // Auto-join the game with the scanned code
-      ref.read(onlineGameProvider.notifier).joinGame(scannedCode);
+      await ref.read(onlineGameProvider.notifier).joinGame(scannedCode);
     }
   }
 }
