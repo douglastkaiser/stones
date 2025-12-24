@@ -3,10 +3,6 @@ name: Android Release
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: 'Branch, tag, or SHA to build'
-        required: true
-        default: main
       include_appbundle:
         description: 'Also build an Android App Bundle (AAB) artifact'
         required: false
@@ -21,7 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Setup Java
@@ -77,7 +72,7 @@ jobs:
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: stones-release-apk-${{ inputs.ref }}
+          name: stones-release-apk-${{ github.ref_name }}
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Build Android App Bundle (release)
