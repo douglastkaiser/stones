@@ -66,10 +66,14 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
       if (next.opponentJustMoved) {
         _playSound(GameSound.stackMove);
       }
-      // Auto-navigate to game when opponent joins and game starts
-      if (!_hasNavigatedToGame &&
-          next.session?.status == OnlineStatus.playing &&
-          previous?.session?.status == OnlineStatus.waiting) {
+      // Auto-navigate to game when:
+      // 1. Creator: opponent joins and game starts (waiting -> playing)
+      // 2. Joiner: successfully joined a game (no session -> playing)
+      final wasWaiting = previous?.session?.status == OnlineStatus.waiting;
+      final hadNoSession = previous?.session == null;
+      final nowPlaying = next.session?.status == OnlineStatus.playing;
+
+      if (!_hasNavigatedToGame && nowPlaying && (wasWaiting || hadNoSession)) {
         _hasNavigatedToGame = true;
         Navigator.pushReplacement(
           context,
@@ -771,9 +775,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
     );
 
     if (scannedCode != null && scannedCode.isNotEmpty && mounted) {
-      setState(() {
-        _joinCodeController.text = scannedCode.toUpperCase();
-      });
+      // Auto-join the game with the scanned code
+      ref.read(onlineGameProvider.notifier).joinGame(scannedCode);
     }
   }
 }
