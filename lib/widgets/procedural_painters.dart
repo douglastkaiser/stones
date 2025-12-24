@@ -520,11 +520,11 @@ class StandardFlatPainter extends CustomPainter {
     final path = Path();
     // Start at left side of base
     path.moveTo(centerX - radius, baseY);
-    // Draw arc over the top (from left to right, going up and over)
+    // Draw arc over the top (clockwise in Flutter's Y-down coordinate system = arc goes UP)
     path.arcToPoint(
       Offset(centerX + radius, baseY),
       radius: Radius.circular(radius),
-      clockwise: false,
+      clockwise: true, // In Flutter Y-down coords, clockwise from left-to-right goes UP
     );
     // Close with flat base
     path.close();
@@ -556,10 +556,10 @@ class StandardFlatPainter extends CustomPainter {
         ..strokeWidth = 1.5,
     );
 
-    // Simple highlight line at top edge (flat style like trapezoid)
+    // Simple highlight line at top of dome (flat style like trapezoid)
     canvas.drawLine(
-      Offset(centerX - radius * 0.6, baseY - radius * 0.85),
-      Offset(centerX + radius * 0.6, baseY - radius * 0.85),
+      Offset(centerX - radius * 0.5, baseY - radius * 0.9),
+      Offset(centerX + radius * 0.5, baseY - radius * 0.9),
       Paint()
         ..color = Colors.white.withValues(alpha: 0.4)
         ..strokeWidth = 1.5
