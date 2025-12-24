@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import '../../models/models.dart';
 import 'ai.dart';
 import 'board_analysis.dart';
@@ -228,7 +226,6 @@ class LookaheadStonesAI extends StonesAI {
   }
 
   PlayerColor? _flatWinner(GameState state) {
-    final size = state.boardSize;
     var emptySpaces = 0;
     var whiteFlats = 0;
     var blackFlats = 0;
