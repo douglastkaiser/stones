@@ -140,8 +140,13 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
   }
 
-  Future<void> createGame({required int boardSize}) async {
-    _debugLog('createGame() called with boardSize=$boardSize');
+  Future<void> createGame({
+    required int boardSize,
+    bool chessClockEnabled = false,
+    int? chessClockSeconds,
+    PlayerColor creatorColor = PlayerColor.white,
+  }) async {
+    _debugLog('createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
     await initialize();
     state = state.copyWith(creating: true, clearError: true);
     try {
@@ -153,10 +158,15 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       final code = _generateRoomCode();
       final player = _playerFor(user);
+      // Creator is assigned to their chosen color
       final session = OnlineGameSession(
         roomCode: code,
-        white: player,
+        white: creatorColor == PlayerColor.white ? player : null,
+        black: creatorColor == PlayerColor.black ? player : null,
         boardSize: boardSize,
+        chessClockEnabled: chessClockEnabled,
+        chessClockSeconds: chessClockSeconds,
+        creatorColor: creatorColor,
       );
 
       // Create with both createdAt and lastMoveAt fields
@@ -166,16 +176,16 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       _debugLog('Creating game in Firestore with code=$code');
       await _firestore.collection('games').doc(code).set(data);
-      _debugLog('Game created, setting up listener as WHITE');
-      await _listenToRoom(code, localColor: PlayerColor.white);
+      _debugLog('Game created, setting up listener as $creatorColor');
+      await _listenToRoom(code, localColor: creatorColor);
       state = state.copyWith(
         session: session,
         roomCode: code,
-        localColor: PlayerColor.white,
+        localColor: creatorColor,
         appliedMoveCount: 0,
       );
-      _debugLog('State updated: localColor=white, appliedMoveCount=0');
-      _beginLocalGame(boardSize);
+      _debugLog('State updated: localColor=$creatorColor, appliedMoveCount=0');
+      _beginLocalGame(boardSize, session: session);
     } catch (e) {
       _debugLog('createGame error: $e');
       state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
@@ -208,7 +218,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       final docRef = _firestore.collection('games').doc(code);
       OnlineGameSession? joinedSession;
-      int existingMoveCount = 0;
+      PlayerColor? joinerColor;
       _debugLog('Starting Firestore transaction to join game');
       await _firestore.runTransaction((txn) async {
         final snapshot = await txn.get(docRef);
@@ -218,51 +228,70 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         final data = snapshot.data();
         if (data == null) throw Exception('Game data missing.');
         final existing = OnlineGameSession.fromSnapshot(code, data);
-        existingMoveCount = existing.moves.length;
-        _debugLog('Found game: boardSize=${existing.boardSize}, moves=$existingMoveCount, currentTurn=${existing.currentTurn}');
+        _debugLog('Found game: boardSize=${existing.boardSize}, moves=${existing.moves.length}, currentTurn=${existing.currentTurn}, creatorColor=${existing.creatorColor}');
 
         if (existing.status == OnlineStatus.finished) {
           throw Exception('This game has already ended.');
         }
 
-        if (existing.black != null && existing.black!.id != user.uid) {
-          throw Exception('Game already has two players.');
-        }
+        // Determine joiner's color (opposite of creator's color)
+        joinerColor = existing.creatorColor == PlayerColor.white
+            ? PlayerColor.black
+            : PlayerColor.white;
 
-        final blackPlayer = existing.black ?? _playerFor(user);
-        joinedSession = existing.copyWith(
-          black: blackPlayer,
-          status: OnlineStatus.playing,
-        );
-        _debugLog('Updating game status to playing');
-        txn.update(docRef, {
-          'black': blackPlayer.toMap(),
-          'status': OnlineStatus.playing.name,
-          'lastMoveAt': FieldValue.serverTimestamp(),
-        });
+        // Check if the slot for joiner's color is available
+        final joinerPlayer = _playerFor(user);
+        if (joinerColor == PlayerColor.white) {
+          if (existing.white != null && existing.white!.id != user.uid) {
+            throw Exception('Game already has two players.');
+          }
+          joinedSession = existing.copyWith(
+            white: joinerPlayer,
+            status: OnlineStatus.playing,
+          );
+          txn.update(docRef, {
+            'white': joinerPlayer.toMap(),
+            'status': OnlineStatus.playing.name,
+            'lastMoveAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          if (existing.black != null && existing.black!.id != user.uid) {
+            throw Exception('Game already has two players.');
+          }
+          joinedSession = existing.copyWith(
+            black: joinerPlayer,
+            status: OnlineStatus.playing,
+          );
+          txn.update(docRef, {
+            'black': joinerPlayer.toMap(),
+            'status': OnlineStatus.playing.name,
+            'lastMoveAt': FieldValue.serverTimestamp(),
+          });
+        }
+        _debugLog('Updating game status to playing, joiner is $joinerColor');
       });
 
-      if (joinedSession == null) {
+      if (joinedSession == null || joinerColor == null) {
         throw Exception('Failed to join game.');
       }
 
-      _debugLog('Transaction complete, setting up listener as BLACK');
+      _debugLog('Transaction complete, setting up listener as $joinerColor');
       _debugLog('>>> JOINER: About to call _listenToRoom <<<');
-      await _listenToRoom(code, localColor: PlayerColor.black);
+      await _listenToRoom(code, localColor: joinerColor!);
 
       // IMPORTANT: Set session immediately so isLocalTurn works correctly
       _debugLog('>>> JOINER: Setting state with session <<<');
       state = state.copyWith(
         session: joinedSession,
         roomCode: code,
-        localColor: PlayerColor.black,
+        localColor: joinerColor,
         appliedMoveCount: 0, // Will be updated by _syncMovesWithLocalGame
       );
-      _debugLog('>>> JOINER: State set: localColor=black, roomCode=$code <<<');
+      _debugLog('>>> JOINER: State set: localColor=$joinerColor, roomCode=$code <<<');
       _debugLog('>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
 
       _debugLog('>>> JOINER: About to call _beginLocalGame <<<');
-      _beginLocalGame(joinedSession!.boardSize);
+      _beginLocalGame(joinedSession!.boardSize, session: joinedSession);
       _debugLog('>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
 
       // Log the final state after joining
@@ -373,7 +402,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       'lastMoveAt': FieldValue.serverTimestamp(),
     });
     state = state.copyWith(appliedMoveCount: 0);
-    _beginLocalGame(activeSession.boardSize);
+    _beginLocalGame(activeSession.boardSize, session: activeSession);
   }
 
   Future<void> _listenToRoom(String roomCode, {required PlayerColor localColor}) async {
@@ -495,23 +524,32 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     return List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
-  void _beginLocalGame(int boardSize) {
+  void _beginLocalGame(int boardSize, {OnlineGameSession? session}) {
     _debugLog('_beginLocalGame: Starting new local game with boardSize=$boardSize');
     final currentSession = _ref.read(gameSessionProvider);
+
+    // Use chess clock settings from the online session if available (synced from creator)
+    final useChessClock = session?.chessClockEnabled ?? false;
+    final clockSeconds = session?.chessClockSeconds;
+
     _ref.read(gameSessionProvider.notifier).state = currentSession.copyWith(
       mode: GameMode.online,
+      chessClockSecondsOverride: clockSeconds,
     );
     _ref.read(gameStateProvider.notifier).newGame(boardSize);
     _ref.read(moveHistoryProvider.notifier).clear();
     _ref.read(uiStateProvider.notifier).reset();
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(lastMoveProvider.notifier).state = null;
-    final settings = _ref.read(appSettingsProvider);
-    if (settings.chessClockEnabled) {
+
+    // Enable chess clock based on the online session settings (synced from creator)
+    if (useChessClock) {
+      _ref.read(appSettingsProvider.notifier).setChessClockEnabled(true);
       _ref.read(chessClockProvider.notifier).initialize(
             boardSize,
-            secondsOverride: currentSession.chessClockSecondsOverride,
+            secondsOverride: clockSeconds,
           );
+      _debugLog('_beginLocalGame: Chess clock enabled with ${clockSeconds ?? 'default'} seconds');
     } else {
       _ref.read(chessClockProvider.notifier).stop();
     }
@@ -531,7 +569,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     if (session.moves.length < applied) {
       _debugLog('_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
-      _beginLocalGame(session.boardSize);
+      _beginLocalGame(session.boardSize, session: session);
       state = state.copyWith(appliedMoveCount: 0);
     }
 
