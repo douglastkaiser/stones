@@ -8,6 +8,13 @@ on:
   pull_request:
     branches:
       - '**'
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: 'Also build the Android APK (debug) artifact'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   analyze-and-test:
@@ -48,6 +55,7 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     needs: analyze-and-test
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_android == true }}
 
     steps:
       - name: Checkout repository

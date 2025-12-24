@@ -2,6 +2,16 @@ name: Android Release
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag, or SHA to build'
+        required: true
+        default: main
+      include_appbundle:
+        description: 'Also build an Android App Bundle (AAB) artifact'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   android-release:
@@ -10,6 +20,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -20,9 +33,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
           channel: 'stable'
           cache: true
+
+      - name: Generate version info
+        run: ./scripts/generate_version.sh
 
       - name: Decode Android upload keystore
         run: |
@@ -41,17 +56,37 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
+
+      - name: Generate splash branding
+        run: ./scripts/generate_splash_branding.sh
+
+      - name: Generate splash screen
+        run: dart run flutter_native_splash:create
+
       - name: Flutter analyze
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
       - name: Flutter tests
         run: flutter test
 
+      - name: Build Android APK (release)
+        run: flutter build apk --release
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: stones-release-apk-${{ inputs.ref }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+
       - name: Build Android App Bundle (release)
+        if: inputs.include_appbundle == true
         run: flutter build appbundle --release
 
       - name: Upload AAB artifact
+        if: inputs.include_appbundle == true
         uses: actions/upload-artifact@v4
         with:
-          name: stones-release-aab
+          name: stones-release-aab-${{ inputs.ref }}
           path: build/app/outputs/bundle/release/app-release.aab

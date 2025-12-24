@@ -47,8 +47,8 @@ class DefaultFirebaseOptions {
 
   // TODO: Add your Android Firebase configuration
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_ANDROID_API_KEY',
-    appId: 'REPLACE_WITH_ANDROID_APP_ID',
+    apiKey: 'AIzaSyABTcneFEI7SBi3Vymbgqw2x51iwislTzc',
+    appId: '1:984712752792:android:9473fc91365ae8c3e96aed',
     messagingSenderId: '984712752792',
     projectId: 'stones-9a6a0',
     storageBucket: 'stones-9a6a0.firebasestorage.app',
