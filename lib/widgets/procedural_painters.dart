@@ -511,12 +511,11 @@ class StandardFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Fuller semicircle with flat base at bottom - like a dome sitting on a table
-    // The flat chord is at the bottom, curved part on top
+    // Semicircle with flat base at bottom (circle with bottom cut off)
+    // Curved part on top, flat chord at bottom - NO 3D effect
     final centerX = w / 2;
     final radius = w * 0.45;
-    final baseY = h * 0.88; // Flat base near bottom
-    final centerY = baseY - radius * 0.25; // Circle center above base
+    final baseY = h * 0.85; // Flat base near bottom
 
     final path = Path();
     // Start at left side of base
@@ -536,7 +535,7 @@ class StandardFlatPainter extends CustomPainter {
       Paint()..color = colors.border.withValues(alpha: 0.3),
     );
 
-    // Main body with flat gradient (like trapezoid - top to bottom)
+    // Main body - FLAT gradient like trapezoid (no 3D dome effect)
     final gradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
@@ -557,19 +556,12 @@ class StandardFlatPainter extends CustomPainter {
         ..strokeWidth = 1.5,
     );
 
-    // Highlight line at top (flat style like trapezoid)
-    canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset(centerX, centerY),
-        width: radius * 1.4,
-        height: radius * 0.8,
-      ),
-      -math.pi * 0.85,
-      math.pi * 0.7,
-      false,
+    // Simple highlight line at top edge (flat style like trapezoid)
+    canvas.drawLine(
+      Offset(centerX - radius * 0.6, baseY - radius * 0.85),
+      Offset(centerX + radius * 0.6, baseY - radius * 0.85),
       Paint()
         ..color = Colors.white.withValues(alpha: 0.4)
-        ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round,
     );
@@ -1999,4 +1991,316 @@ CustomPainter getBoardTexturePainter({
         seed: seed,
       );
   }
+}
+
+// =============================================================================
+// BOARD DECORATION OVERLAY PAINTER
+// =============================================================================
+
+/// Paints decorative elements at grid intersections and edges
+/// This creates the beautiful filigree and ornamental details between squares
+class BoardDecorationPainter extends CustomPainter {
+  final int boardSize;
+  final double spacing;
+  final double padding;
+  final double cellSize;
+  final BoardTheme theme;
+  final Color decorColor;
+
+  BoardDecorationPainter({
+    required this.boardSize,
+    required this.spacing,
+    required this.padding,
+    required this.cellSize,
+    required this.theme,
+    required this.decorColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = decorColor.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..color = decorColor.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    // Draw decorations at each grid intersection (between cells)
+    for (var row = 0; row <= boardSize; row++) {
+      for (var col = 0; col <= boardSize; col++) {
+        final x = padding + col * (cellSize + spacing) - spacing / 2;
+        final y = padding + row * (cellSize + spacing) - spacing / 2;
+
+        // Only draw at interior intersections and corners
+        final isCorner = (row == 0 || row == boardSize) && (col == 0 || col == boardSize);
+        final isEdge = row == 0 || row == boardSize || col == 0 || col == boardSize;
+        final isInterior = !isEdge;
+
+        if (isCorner) {
+          _paintCornerDecoration(canvas, x, y, row, col, paint, fillPaint);
+        } else if (isInterior) {
+          _paintIntersectionDecoration(canvas, x, y, paint, fillPaint);
+        } else if (isEdge) {
+          _paintEdgeDecoration(canvas, x, y, row, col, paint, fillPaint);
+        }
+      }
+    }
+
+    // Draw border decorations along edges
+    _paintBorderDecorations(canvas, size, paint);
+  }
+
+  void _paintCornerDecoration(Canvas canvas, double x, double y, int row, int col, Paint paint, Paint fillPaint) {
+    final ornamentSize = spacing * 1.8;
+
+    canvas.save();
+    canvas.translate(x, y);
+
+    // Rotate based on which corner
+    if (row == 0 && col == boardSize) {
+      canvas.rotate(math.pi / 2);
+    } else if (row == boardSize && col == boardSize) {
+      canvas.rotate(math.pi);
+    } else if (row == boardSize && col == 0) {
+      canvas.rotate(-math.pi / 2);
+    }
+
+    switch (theme) {
+      case BoardTheme.classicWood:
+        _paintWoodCornerOrnament(canvas, ornamentSize, paint, fillPaint);
+      case BoardTheme.darkStone:
+        _paintStoneCornerOrnament(canvas, ornamentSize, paint, fillPaint);
+      case BoardTheme.marble:
+        _paintMarbleCornerOrnament(canvas, ornamentSize, paint, fillPaint);
+      case BoardTheme.minimalist:
+        _paintMinimalistCornerOrnament(canvas, ornamentSize, paint);
+      case BoardTheme.pixelArt:
+        _paintPixelCornerOrnament(canvas, ornamentSize, paint, fillPaint);
+    }
+
+    canvas.restore();
+  }
+
+  void _paintIntersectionDecoration(Canvas canvas, double x, double y, Paint paint, Paint fillPaint) {
+    final size = spacing * 0.6;
+
+    switch (theme) {
+      case BoardTheme.classicWood:
+        // Small decorative cross/plus
+        canvas.drawLine(Offset(x - size, y), Offset(x + size, y), paint);
+        canvas.drawLine(Offset(x, y - size), Offset(x, y + size), paint);
+        // Central dot
+        canvas.drawCircle(Offset(x, y), size * 0.3, fillPaint);
+      case BoardTheme.darkStone:
+        // Angular diamond
+        final path = Path();
+        path.moveTo(x, y - size);
+        path.lineTo(x + size * 0.7, y);
+        path.lineTo(x, y + size);
+        path.lineTo(x - size * 0.7, y);
+        path.close();
+        canvas.drawPath(path, paint);
+      case BoardTheme.marble:
+        // Elegant small flower/rosette
+        for (var i = 0; i < 4; i++) {
+          final angle = i * math.pi / 2;
+          final px = x + math.cos(angle) * size * 0.8;
+          final py = y + math.sin(angle) * size * 0.8;
+          canvas.drawCircle(Offset(px, py), size * 0.25, paint);
+        }
+        canvas.drawCircle(Offset(x, y), size * 0.2, fillPaint);
+      case BoardTheme.minimalist:
+        // Simple dot
+        canvas.drawCircle(Offset(x, y), size * 0.25, fillPaint);
+      case BoardTheme.pixelArt:
+        // Small pixel square
+        final pxSize = spacing * 0.4;
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(x, y), width: pxSize, height: pxSize),
+          fillPaint,
+        );
+    }
+  }
+
+  void _paintEdgeDecoration(Canvas canvas, double x, double y, int row, int col, Paint paint, Paint fillPaint) {
+    final size = spacing * 0.5;
+    final isHorizontal = row == 0 || row == boardSize;
+
+    switch (theme) {
+      case BoardTheme.classicWood:
+        // Small leaf/curl motif
+        if (isHorizontal) {
+          canvas.drawLine(Offset(x - size, y), Offset(x + size, y), paint);
+        } else {
+          canvas.drawLine(Offset(x, y - size), Offset(x, y + size), paint);
+        }
+      case BoardTheme.darkStone:
+        // Rune-like tick marks
+        if (isHorizontal) {
+          canvas.drawLine(Offset(x, y - size * 0.5), Offset(x, y + size * 0.8), paint);
+        } else {
+          canvas.drawLine(Offset(x - size * 0.5, y), Offset(x + size * 0.8, y), paint);
+        }
+      case BoardTheme.marble:
+        // Small decorative bead
+        canvas.drawCircle(Offset(x, y), size * 0.3, paint);
+      case BoardTheme.minimalist:
+        // Nothing for minimalist - keep it clean
+        break;
+      case BoardTheme.pixelArt:
+        // Small pixel dash
+        final pxSize = spacing * 0.3;
+        if (isHorizontal) {
+          canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: pxSize * 2, height: pxSize), fillPaint);
+        } else {
+          canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: pxSize, height: pxSize * 2), fillPaint);
+        }
+    }
+  }
+
+  void _paintBorderDecorations(Canvas canvas, Size size, Paint paint) {
+    // Additional decorative elements along the outer frame based on theme
+    switch (theme) {
+      case BoardTheme.classicWood:
+        // Subtle wood grain lines along border
+        final wavePaint = Paint()
+          ..color = decorColor.withValues(alpha: 0.15)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8;
+        for (var i = 0; i < 3; i++) {
+          final offset = padding * 0.3 + i * 2;
+          canvas.drawLine(Offset(offset, padding), Offset(offset, size.height - padding), wavePaint);
+          canvas.drawLine(Offset(size.width - offset, padding), Offset(size.width - offset, size.height - padding), wavePaint);
+        }
+      case BoardTheme.marble:
+        // Decorative beaded border
+        final beadPaint = Paint()
+          ..color = decorColor.withValues(alpha: 0.2)
+          ..style = PaintingStyle.fill;
+        final beadSpacing = (size.width - padding * 2) / 12;
+        for (var i = 1; i < 12; i++) {
+          final bx = padding + i * beadSpacing;
+          canvas.drawCircle(Offset(bx, padding * 0.4), 1.5, beadPaint);
+          canvas.drawCircle(Offset(bx, size.height - padding * 0.4), 1.5, beadPaint);
+        }
+      default:
+        break;
+    }
+  }
+
+  // Theme-specific corner ornaments
+  void _paintWoodCornerOrnament(Canvas canvas, double size, Paint paint, Paint fillPaint) {
+    // Celtic knot inspired corner
+    final path = Path();
+    path.moveTo(0, size * 0.8);
+    path.cubicTo(size * 0.3, size * 0.8, size * 0.8, size * 0.3, size * 0.8, 0);
+    canvas.drawPath(path, paint);
+
+    path.reset();
+    path.moveTo(0, size * 0.5);
+    path.cubicTo(size * 0.2, size * 0.5, size * 0.5, size * 0.2, size * 0.5, 0);
+    canvas.drawPath(path, paint);
+
+    // Decorative leaf
+    path.reset();
+    path.moveTo(size * 0.15, size * 0.15);
+    path.quadraticBezierTo(size * 0.25, size * 0.05, size * 0.22, size * 0.22);
+    path.quadraticBezierTo(size * 0.05, size * 0.25, size * 0.15, size * 0.15);
+    canvas.drawPath(path, paint);
+    canvas.drawCircle(Offset(size * 0.18, size * 0.18), 1.5, fillPaint);
+  }
+
+  void _paintStoneCornerOrnament(Canvas canvas, double size, Paint paint, Paint fillPaint) {
+    // Angular runic corner
+    canvas.drawLine(Offset(0, size * 0.6), Offset(size * 0.2, size * 0.4), paint);
+    canvas.drawLine(Offset(size * 0.2, size * 0.4), Offset(size * 0.4, size * 0.2), paint);
+    canvas.drawLine(Offset(size * 0.4, size * 0.2), Offset(size * 0.6, 0), paint);
+
+    canvas.drawLine(Offset(0, size * 0.35), Offset(size * 0.35, 0), paint);
+
+    // Runic symbol
+    canvas.drawLine(Offset(size * 0.12, size * 0.3), Offset(size * 0.18, size * 0.1), paint);
+    canvas.drawLine(Offset(size * 0.15, size * 0.2), Offset(size * 0.25, size * 0.15), paint);
+
+    // Stone dots
+    canvas.drawCircle(Offset(size * 0.28, size * 0.28), 2, fillPaint);
+  }
+
+  void _paintMarbleCornerOrnament(Canvas canvas, double size, Paint paint, Paint fillPaint) {
+    // Baroque scroll flourish
+    var path = Path();
+    path.moveTo(0, size * 0.7);
+    path.cubicTo(size * 0.25, size * 0.7, size * 0.7, size * 0.25, size * 0.7, 0);
+    canvas.drawPath(path, paint);
+
+    path = Path();
+    path.moveTo(0, size * 0.45);
+    path.cubicTo(size * 0.15, size * 0.45, size * 0.45, size * 0.15, size * 0.45, 0);
+    canvas.drawPath(path, paint);
+
+    // Spiral flourish
+    path = Path();
+    path.moveTo(size * 0.18, size * 0.18);
+    path.quadraticBezierTo(size * 0.3, size * 0.1, size * 0.25, size * 0.22);
+    path.quadraticBezierTo(size * 0.15, size * 0.28, size * 0.22, size * 0.15);
+    canvas.drawPath(path, paint);
+
+    // Decorative circles
+    canvas.drawCircle(Offset(size * 0.1, size * 0.1), 3, paint);
+    canvas.drawCircle(Offset(size * 0.1, size * 0.1), 1.5, fillPaint);
+
+    // Leaf accent
+    path = Path();
+    path.moveTo(size * 0.35, size * 0.35);
+    path.quadraticBezierTo(size * 0.42, size * 0.28, size * 0.38, size * 0.38);
+    path.quadraticBezierTo(size * 0.28, size * 0.42, size * 0.35, size * 0.35);
+    canvas.drawPath(path, paint);
+  }
+
+  void _paintMinimalistCornerOrnament(Canvas canvas, double size, Paint paint) {
+    // Clean L-shaped corner
+    canvas.drawLine(Offset(0, size * 0.5), Offset(size * 0.5, size * 0.5), paint);
+    canvas.drawLine(Offset(size * 0.5, 0), Offset(size * 0.5, size * 0.5), paint);
+
+    // Inner accent
+    final innerPaint = Paint()
+      ..color = paint.color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    canvas.drawLine(Offset(0, size * 0.3), Offset(size * 0.3, size * 0.3), innerPaint);
+    canvas.drawLine(Offset(size * 0.3, 0), Offset(size * 0.3, size * 0.3), innerPaint);
+
+    // Small square accent
+    canvas.drawRect(
+      Rect.fromLTWH(size * 0.08, size * 0.08, size * 0.12, size * 0.12),
+      Paint()..color = paint.color.withValues(alpha: 0.3)..style = PaintingStyle.fill,
+    );
+  }
+
+  void _paintPixelCornerOrnament(Canvas canvas, double size, Paint paint, Paint fillPaint) {
+    final px = size / 6;
+
+    // Pixel art corner bracket
+    canvas.drawRect(Rect.fromLTWH(0, 0, px, px * 4), fillPaint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, px * 4, px), fillPaint);
+
+    // Inner detail pixels
+    final detailPaint = Paint()..color = paint.color.withValues(alpha: 0.2);
+    canvas.drawRect(Rect.fromLTWH(px * 2, px * 2, px, px), detailPaint);
+    canvas.drawRect(Rect.fromLTWH(px, px * 3, px, px), detailPaint);
+    canvas.drawRect(Rect.fromLTWH(px * 3, px, px, px), detailPaint);
+
+    // Highlight pixel
+    canvas.drawRect(Rect.fromLTWH(px, px, px, px), Paint()..color = paint.color.withValues(alpha: 0.4));
+  }
+
+  @override
+  bool shouldRepaint(covariant BoardDecorationPainter oldDelegate) =>
+      boardSize != oldDelegate.boardSize ||
+      spacing != oldDelegate.spacing ||
+      theme != oldDelegate.theme ||
+      decorColor != oldDelegate.decorColor;
 }
