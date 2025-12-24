@@ -1537,7 +1537,7 @@ class PixelFlatPainter extends CustomPainter {
     final px = w / 8; // Pixel size
 
     // Diamond shape made of pixels
-    final pixels = <Offset>[
+    const pixels = <Offset>[
       // Row 0 (top)
       Offset(3, 0),
       Offset(4, 0),
@@ -1594,7 +1594,7 @@ class PixelFlatPainter extends CustomPainter {
     final py = h / 8;
 
     // Cross/plus shape made of pixels
-    final pixels = <Offset>[
+    const pixels = <Offset>[
       // Vertical bar
       Offset(3, 0), Offset(4, 0),
       Offset(3, 1), Offset(4, 1),
@@ -1653,7 +1653,7 @@ class PixelWallPainter extends CustomPainter {
     final py = h / 8;
 
     // Diagonal bar made of stair-step pixels
-    final pixels = <Offset>[
+    const pixels = <Offset>[
       // Bottom left to top right diagonal
       Offset(0, 6), Offset(0, 7), Offset(1, 6), Offset(1, 7),
       Offset(1, 5), Offset(2, 5), Offset(2, 6),
@@ -1710,7 +1710,7 @@ class PixelCapstonePainter extends CustomPainter {
     final py = h / 8;
 
     // Castle tower shape
-    final pixels = <Offset>[
+    const pixels = <Offset>[
       // Battlements (top)
       Offset(1, 0), Offset(2, 0), Offset(5, 0), Offset(6, 0),
       Offset(1, 1), Offset(2, 1), Offset(3, 1), Offset(4, 1), Offset(5, 1), Offset(6, 1),
@@ -1930,7 +1930,6 @@ class CornerOrnamentPainter extends CustomPainter {
 
   void _paintPixelCorner(Canvas canvas, Size size, Paint paint) {
     final w = size.width;
-    final h = size.height;
     final px = w / 12; // Pixel size
 
     paint.style = PaintingStyle.fill;
