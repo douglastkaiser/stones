@@ -446,7 +446,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       final previousSession = state.session;
 
       _debugLog('Snapshot data: moves=${session.moves.length}, currentTurn=${session.currentTurn}, '
-          'status=${session.status}, white=${session.white.displayName}, black=${session.black?.displayName}');
+          'status=${session.status}, white=${session.white?.displayName}, black=${session.black?.displayName}');
       _debugLog('Previous state: appliedMoveCount=${state.appliedMoveCount}, session=${previousSession != null}');
 
       // Detect opponent join (for sound trigger)
