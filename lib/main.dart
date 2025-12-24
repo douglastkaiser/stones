@@ -2738,14 +2738,17 @@ class _GameBoard extends StatelessWidget {
               // Decorative overlay - filigree and ornaments between squares
               Positioned.fill(
                 child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: BoardDecorationPainter(
-                      boardSize: boardSize,
-                      spacing: spacing,
-                      padding: spacing, // Inner padding matches spacing
-                      cellSize: cellSize,
-                      theme: boardThemeData.theme,
-                      decorColor: boardThemeData.gridLine,
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                      painter: BoardDecorationPainter(
+                        boardSize: boardSize,
+                        spacing: spacing,
+                        padding: spacing, // Inner padding matches spacing
+                        cellSize: cellSize,
+                        theme: boardThemeData.theme,
+                        decorColor: boardThemeData.gridLine,
+                      ),
                     ),
                   ),
                 ),

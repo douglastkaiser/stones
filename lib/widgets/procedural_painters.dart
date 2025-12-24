@@ -511,22 +511,19 @@ class StandardFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Semicircle with flat base at bottom (circle with bottom cut off)
-    // Curved part on top, flat chord at bottom - NO 3D effect
+    // Fuller than semicircle - flat base cuts below center, showing more of circle
+    // Simple flat shape with no highlights or 3D effects
     final centerX = w / 2;
-    final radius = w * 0.45;
-    final baseY = h * 0.85; // Flat base near bottom
+    final radius = w * 0.42;
+    final baseY = h * 0.92; // Flat base very near bottom - makes it fuller
 
     final path = Path();
-    // Start at left side of base
     path.moveTo(centerX - radius, baseY);
-    // Draw arc over the top (clockwise in Flutter's Y-down coordinate system = arc goes UP)
+    // clockwise is true by default, which goes UP in Flutter's Y-down coords
     path.arcToPoint(
       Offset(centerX + radius, baseY),
       radius: Radius.circular(radius),
-      clockwise: true, // In Flutter Y-down coords, clockwise from left-to-right goes UP
     );
-    // Close with flat base
     path.close();
 
     // Shadow
@@ -535,7 +532,7 @@ class StandardFlatPainter extends CustomPainter {
       Paint()..color = colors.border.withValues(alpha: 0.3),
     );
 
-    // Main body - FLAT gradient like trapezoid (no 3D dome effect)
+    // Main body - simple flat gradient like trapezoid
     final gradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
@@ -547,23 +544,13 @@ class StandardFlatPainter extends CustomPainter {
       Paint()..shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h)),
     );
 
-    // Border
+    // Border only - no highlight
     canvas.drawPath(
       path,
       Paint()
         ..color = colors.border
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
-    );
-
-    // Simple highlight line at top of dome (flat style like trapezoid)
-    canvas.drawLine(
-      Offset(centerX - radius * 0.5, baseY - radius * 0.9),
-      Offset(centerX + radius * 0.5, baseY - radius * 0.9),
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.4)
-        ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round,
     );
   }
 
@@ -2018,14 +2005,17 @@ class BoardDecorationPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Skip if size is zero (no constraints)
+    if (size.width <= 0 || size.height <= 0) return;
+
     final paint = Paint()
-      ..color = decorColor.withValues(alpha: 0.4)
+      ..color = decorColor.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
+      ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
 
     final fillPaint = Paint()
-      ..color = decorColor.withValues(alpha: 0.25)
+      ..color = decorColor.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
 
     // Draw decorations at each grid intersection (between cells)
