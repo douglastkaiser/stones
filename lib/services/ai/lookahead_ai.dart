@@ -11,7 +11,9 @@ class LookaheadStonesAI extends StonesAI {
   final int searchDepth;
 
   static const double _winScore = 10000;
-  static const int _branchingLimit = 20;
+  static const int _maxBranchingLimit = 20;
+  static const int _midBranchingLimit = 14;
+  static const int _deepBranchingLimit = 10;
 
   final AIMoveGenerator _generator = const AIMoveGenerator();
 
@@ -20,12 +22,25 @@ class LookaheadStonesAI extends StonesAI {
     final moves = _generator.generateMoves(state);
     if (moves.isEmpty) return null;
 
+    // Fast path: take an immediate win if available.
+    final immediateWin = _findImmediateWinningMove(state, moves);
+    if (immediateWin != null) {
+      return immediateWin;
+    }
+
+    // Block any opponent winning threats before deeper search.
+    final blockingMoves = _findThreatBlockingMoves(state, moves);
+    if (blockingMoves.isNotEmpty) {
+      final orderedBlocks = _orderMoves(state, blockingMoves, state.currentPlayer);
+      return orderedBlocks.first.$1;
+    }
+
     final orderedMoves = _orderMoves(state, moves, state.currentPlayer);
 
     AIMove? bestMove;
     var bestScore = double.negativeInfinity;
 
-    for (final entry in orderedMoves.take(_branchingLimit)) {
+    for (final entry in orderedMoves.take(_branchLimitForDepth(searchDepth))) {
       final move = entry.$1;
       final applied = _applyMove(state, move);
       if (applied == null) continue;
@@ -69,7 +84,7 @@ class LookaheadStonesAI extends StonesAI {
 
     final orderedMoves = _orderMoves(state, moves, perspective);
 
-    for (final entry in orderedMoves.take(_branchingLimit)) {
+    for (final entry in orderedMoves.take(_branchLimitForDepth(depth))) {
       final move = entry.$1;
       final applied = _applyMove(state, move);
       if (applied == null) continue;
@@ -155,6 +170,57 @@ class LookaheadStonesAI extends StonesAI {
 
     scored.sort((a, b) => b.$2.compareTo(a.$2));
     return scored;
+  }
+
+  AIMove? _findImmediateWinningMove(GameState state, List<AIMove> moves) {
+    for (final move in moves) {
+      final applied = _applyMove(state, move);
+      if (applied != null && BoardAnalysis.hasRoad(applied, state.currentPlayer)) {
+        return move;
+      }
+    }
+    return null;
+  }
+
+  List<AIMove> _findThreatBlockingMoves(GameState state, List<AIMove> moves) {
+    final opponentState = _switchPlayer(state);
+    final opponentMoves = _generator.generateMoves(opponentState);
+    final threatenedPositions = <Position>{};
+
+    for (final oppMove in opponentMoves) {
+      final afterOpp = _applyMove(opponentState, oppMove);
+      if (afterOpp != null && BoardAnalysis.hasRoad(afterOpp, state.opponent)) {
+        threatenedPositions.addAll(_getAffectedPositions(oppMove));
+      }
+    }
+
+    if (threatenedPositions.isEmpty) return const [];
+
+    return moves.where((move) {
+      final affected = _getAffectedPositions(move);
+      return affected.any(threatenedPositions.contains);
+    }).toList();
+  }
+
+  Set<Position> _getAffectedPositions(AIMove move) {
+    if (move is AIPlacementMove) {
+      return {move.position};
+    } else if (move is AIStackMove) {
+      final positions = <Position>{move.from};
+      var pos = move.from;
+      for (var i = 0; i < move.drops.length; i++) {
+        pos = move.direction.apply(pos);
+        positions.add(pos);
+      }
+      return positions;
+    }
+    return {};
+  }
+
+  int _branchLimitForDepth(int depth) {
+    if (depth >= 3) return _deepBranchingLimit;
+    if (depth == 2) return _midBranchingLimit;
+    return _maxBranchingLimit;
   }
 
   GameState? _applyMove(GameState state, AIMove move) {
