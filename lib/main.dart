@@ -2748,7 +2748,7 @@ class _GameBoard extends StatelessWidget {
                   padding: spacing,
                   cellSize: cellSize,
                   theme: boardThemeData.theme,
-                  decorColor: boardThemeData.gridLineShadow,
+                  decorColor: boardThemeData.gridLineHighlight,
                 ),
               ),
             ),
