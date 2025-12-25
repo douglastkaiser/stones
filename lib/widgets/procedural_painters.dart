@@ -2016,14 +2016,24 @@ class BoardDecorationPainter extends CustomPainter {
     // Skip if size is zero (no constraints)
     if (size.width <= 0 || size.height <= 0) return;
 
-    final paint = Paint()
-      ..color = decorColor.withValues(alpha: 0.8)
+    // Debug: Draw visible border to verify painter is working
+    final debugPaint = Paint()
+      ..color = decorColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
+      ..strokeWidth = 3.0;
+    canvas.drawRect(
+      Rect.fromLTWH(padding / 2, padding / 2, size.width - padding, size.height - padding),
+      debugPaint,
+    );
+
+    final paint = Paint()
+      ..color = decorColor.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
 
     final fillPaint = Paint()
-      ..color = decorColor.withValues(alpha: 0.5)
+      ..color = decorColor.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     // Calculate coordinates for grid intersections
