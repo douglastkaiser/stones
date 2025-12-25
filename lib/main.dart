@@ -2627,135 +2627,164 @@ class _GameBoard extends StatelessWidget {
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // Calculate cell size for decoration painter
-          final availableWidth = constraints.maxWidth - spacing * 2;
-          final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
+      child: Stack(
+        children: [
+          // Main grid
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(spacing),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: boardSize,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+              ),
+              itemCount: boardSize * boardSize,
+              itemBuilder: (context, index) {
+            final row = index ~/ boardSize;
+            final col = index % boardSize;
+            final pos = Position(row, col);
+            final actualStack = gameState.board.stackAt(pos);
+            final isSelected = uiState.selectedPosition == pos;
+            final isInDropPath = dropPath.contains(pos);
+            final isNextDrop = nextDropPos == pos;
 
-          return Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.all(spacing),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: boardSize,
-                    crossAxisSpacing: spacing,
-                    mainAxisSpacing: spacing,
-                  ),
-                  itemCount: boardSize * boardSize,
-                  itemBuilder: (context, index) {
-                    final row = index ~/ boardSize;
-                    final col = index % boardSize;
-                    final pos = Position(row, col);
-                    final actualStack = gameState.board.stackAt(pos);
-                    final isSelected = uiState.selectedPosition == pos;
-                    final isInDropPath = dropPath.contains(pos);
-                    final isNextDrop = nextDropPos == pos;
+            // Get preview stack and ghost pieces for this position
+            final preview = previewStacks?[pos];
+            final displayStack = preview?.$1 ?? actualStack;
+            final ghostStackPieces = preview?.$2 ?? const <Piece>[];
 
-                    // Get preview stack and ghost pieces for this position
-                    final preview = previewStacks?[pos];
-                    final displayStack = preview?.$1 ?? actualStack;
-                    final ghostStackPieces = preview?.$2 ?? const <Piece>[];
+            // Check for animation events on this position
+            final lastEvent = animationState.lastEvent;
+            final isNewlyPlaced = lastEvent is PiecePlacedEvent && lastEvent.position == pos;
+            final isInWinningRoad = animationState.winningRoad?.contains(pos) ?? false;
 
-                    // Check for animation events on this position
-                    final lastEvent = animationState.lastEvent;
-                    final isNewlyPlaced = lastEvent is PiecePlacedEvent && lastEvent.position == pos;
-                    final isInWinningRoad = animationState.winningRoad?.contains(pos) ?? false;
+            // Check if this cell received pieces from a stack move
+            bool isStackDropTarget = false;
+            if (lastEvent is StackMovedEvent) {
+              isStackDropTarget = lastEvent.dropPositions.contains(pos);
+            }
 
-                    // Check if this cell received pieces from a stack move
-                    bool isStackDropTarget = false;
-                    if (lastEvent is StackMovedEvent) {
-                      isStackDropTarget = lastEvent.dropPositions.contains(pos);
-                    }
+            // Check for wall flattening
+            bool wasWallFlattened = false;
+            if (lastEvent is WallFlattenedEvent && lastEvent.position == pos) {
+              wasWallFlattened = true;
+            }
 
-                    // Check for wall flattening
-                    bool wasWallFlattened = false;
-                    if (lastEvent is WallFlattenedEvent && lastEvent.position == pos) {
-                      wasWallFlattened = true;
-                    }
+            // Check if this is part of the last move
+            final isLastMove = lastMovePositions?.contains(pos) ?? false;
 
-                    // Check if this is part of the last move
-                    final isLastMove = lastMovePositions?.contains(pos) ?? false;
+            final isExploded = explodedPosition == pos && explodedStack != null;
+            final stackForExplosion = isExploded ? explodedStack : null;
 
-                    final isExploded = explodedPosition == pos && explodedStack != null;
-                    final stackForExplosion = isExploded ? explodedStack : null;
+            // Check if this is a valid move destination (legal move hint)
+            final isLegalMoveHint = validMoveDestinations.contains(pos);
+            final isScenarioHint = highlightedPositions.contains(pos);
 
-                    // Check if this is a valid move destination (legal move hint)
-                    final isLegalMoveHint = validMoveDestinations.contains(pos);
-                    final isScenarioHint = highlightedPositions.contains(pos);
+            // Ghost piece info for placement mode
+            final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
 
-                    // Ghost piece info for placement mode
-                    final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
+            // For stack movement mode, show pieces being picked up count
+            final showPickupCount = uiState.mode == InteractionMode.movingStack &&
+                uiState.selectedPosition == pos;
 
-                    // For stack movement mode, show pieces being picked up count
-                    final showPickupCount = uiState.mode == InteractionMode.movingStack &&
-                        uiState.selectedPosition == pos;
+            // Show pending drop count when in droppingPieces mode at hand position
+            final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
+                nextDropPos == pos;
 
-                    // Show pending drop count when in droppingPieces mode at hand position
-                    final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
-                        nextDropPos == pos;
-
-                    return _CellInteractionLayer(
-                      position: pos,
-                      stack: displayStack,
-                      ghostStackPieces: ghostStackPieces,
-                      onTap: () => onCellTap(pos),
-                      onStackViewStart: onLongPressStart,
-                      onStackViewEnd: onLongPressEnd,
-                      child: _BoardCell(
-                        key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
-                        stack: displayStack,
-                        isSelected: isSelected,
-                        isInDropPath: isInDropPath,
-                        isNextDrop: isNextDrop,
-                        canSelect: !gameState.isGameOver,
-                        boardSize: boardSize,
-                        pieceStyleData: pieceStyleData,
-                        boardThemeData: boardThemeData,
-                        isNewlyPlaced: isNewlyPlaced,
-                        isInWinningRoad: isInWinningRoad,
-                        isStackDropTarget: isStackDropTarget,
-                        wasWallFlattened: wasWallFlattened,
-                        isLastMove: isLastMove,
-                        isLegalMoveHint: isLegalMoveHint,
-                        isScenarioHint: isScenarioHint,
-                        ghostPieceType: ghostPieceType,
-                        ghostPieceColor: ghostPieceColor,
-                        ghostStackPieces: ghostStackPieces,
-                        pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
-                        pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
-                        piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
-                        showExploded: isExploded,
-                        explodedStack: stackForExplosion,
-                      ),
-                    );
-                  },
+            return _CellInteractionLayer(
+              position: pos,
+              stack: displayStack,
+              ghostStackPieces: ghostStackPieces,
+              onTap: () => onCellTap(pos),
+              onStackViewStart: onLongPressStart,
+              onStackViewEnd: onLongPressEnd,
+              child: _BoardCell(
+                key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
+                stack: displayStack,
+                isSelected: isSelected,
+                isInDropPath: isInDropPath,
+                isNextDrop: isNextDrop,
+                canSelect: !gameState.isGameOver,
+                boardSize: boardSize,
+                pieceStyleData: pieceStyleData,
+                boardThemeData: boardThemeData,
+                isNewlyPlaced: isNewlyPlaced,
+                isInWinningRoad: isInWinningRoad,
+                isStackDropTarget: isStackDropTarget,
+                wasWallFlattened: wasWallFlattened,
+                isLastMove: isLastMove,
+                isLegalMoveHint: isLegalMoveHint,
+                isScenarioHint: isScenarioHint,
+                ghostPieceType: ghostPieceType,
+                ghostPieceColor: ghostPieceColor,
+                ghostStackPieces: ghostStackPieces,
+                pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
+                pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
+                piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
+                showExploded: isExploded,
+                explodedStack: stackForExplosion,
+              ),
+            );
+              },
+            ),
+          ),
+          // Corner decorations - thematic filigree at board corners
+          Positioned(
+            left: 2,
+            top: 2,
+            child: CustomPaint(
+              size: Size(spacing * 3, spacing * 3),
+              painter: CornerOrnamentPainter(
+                color: boardThemeData.gridLine,
+                theme: boardThemeData.theme,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Transform.rotate(
+              angle: 1.5708, // 90 degrees
+              child: CustomPaint(
+                size: Size(spacing * 3, spacing * 3),
+                painter: CornerOrnamentPainter(
+                  color: boardThemeData.gridLine,
+                  theme: boardThemeData.theme,
                 ),
               ),
-              // Decorative overlay - filigree and ornaments between squares
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      size: Size(constraints.maxWidth, constraints.maxHeight),
-                      painter: BoardDecorationPainter(
-                        boardSize: boardSize,
-                        spacing: spacing,
-                        padding: spacing, // Inner padding matches spacing
-                        cellSize: cellSize,
-                        theme: boardThemeData.theme,
-                        decorColor: boardThemeData.gridLine,
-                      ),
-                    ),
-                  ),
+            ),
+          ),
+          Positioned(
+            left: 2,
+            bottom: 2,
+            child: Transform.rotate(
+              angle: -1.5708, // -90 degrees
+              child: CustomPaint(
+                size: Size(spacing * 3, spacing * 3),
+                painter: CornerOrnamentPainter(
+                  color: boardThemeData.gridLine,
+                  theme: boardThemeData.theme,
                 ),
               ),
-            ],
-          );
-        },
+            ),
+          ),
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Transform.rotate(
+              angle: 3.1416, // 180 degrees
+              child: CustomPaint(
+                size: Size(spacing * 3, spacing * 3),
+                painter: CornerOrnamentPainter(
+                  color: boardThemeData.gridLine,
+                  theme: boardThemeData.theme,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

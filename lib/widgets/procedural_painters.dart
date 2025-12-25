@@ -515,7 +515,7 @@ class StandardFlatPainter extends CustomPainter {
     // Simple flat shape with no highlights or 3D effects
     final centerX = w / 2;
     final radius = w * 0.42;
-    final baseY = h * 0.92; // Flat base very near bottom - makes it fuller
+    final baseY = h * 0.96; // Flat base almost at bottom - fuller than semicircle
 
     final path = Path();
     path.moveTo(centerX - radius, baseY);
