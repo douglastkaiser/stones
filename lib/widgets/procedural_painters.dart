@@ -2017,25 +2017,52 @@ class BoardDecorationPainter extends CustomPainter {
     if (size.width <= 0 || size.height <= 0) return;
 
     final paint = Paint()
-      ..color = decorColor.withValues(alpha: 0.6)
+      ..color = decorColor.withValues(alpha: 0.8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
     final fillPaint = Paint()
-      ..color = decorColor.withValues(alpha: 0.4)
+      ..color = decorColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
-    // Draw decorations at each grid intersection (between cells)
+    // Calculate coordinates for grid intersections
+    // The grid cells start at (padding, padding) with spacing between them
+    // Corners and edges are at the actual cell boundaries
+    // Interior intersections are in the center of the gaps between cells
+
     for (var row = 0; row <= boardSize; row++) {
       for (var col = 0; col <= boardSize; col++) {
-        final x = padding + col * (cellSize + spacing) - spacing / 2;
-        final y = padding + row * (cellSize + spacing) - spacing / 2;
-
-        // Only draw at interior intersections and corners
-        final isCorner = (row == 0 || row == boardSize) && (col == 0 || col == boardSize);
-        final isEdge = row == 0 || row == boardSize || col == 0 || col == boardSize;
+        // Calculate position - different for edges vs interior
+        final isRowEdge = row == 0 || row == boardSize;
+        final isColEdge = col == 0 || col == boardSize;
+        final isCorner = isRowEdge && isColEdge;
+        final isEdge = isRowEdge || isColEdge;
         final isInterior = !isEdge;
+
+        double x, y;
+
+        if (col == 0) {
+          // Left edge of grid
+          x = padding;
+        } else if (col == boardSize) {
+          // Right edge of grid
+          x = padding + (boardSize - 1) * (cellSize + spacing) + cellSize;
+        } else {
+          // Interior: center of gap between columns
+          x = padding + col * (cellSize + spacing) - spacing / 2;
+        }
+
+        if (row == 0) {
+          // Top edge of grid
+          y = padding;
+        } else if (row == boardSize) {
+          // Bottom edge of grid
+          y = padding + (boardSize - 1) * (cellSize + spacing) + cellSize;
+        } else {
+          // Interior: center of gap between rows
+          y = padding + row * (cellSize + spacing) - spacing / 2;
+        }
 
         if (isCorner) {
           _paintCornerDecoration(canvas, x, y, row, col, paint, fillPaint);
@@ -2052,7 +2079,8 @@ class BoardDecorationPainter extends CustomPainter {
   }
 
   void _paintCornerDecoration(Canvas canvas, double x, double y, int row, int col, Paint paint, Paint fillPaint) {
-    final ornamentSize = spacing * 1.8;
+    // Use cellSize-based sizing for substantial corner ornaments
+    final ornamentSize = cellSize * 0.25;
 
     canvas.save();
     canvas.translate(x, y);
@@ -2083,7 +2111,8 @@ class BoardDecorationPainter extends CustomPainter {
   }
 
   void _paintIntersectionDecoration(Canvas canvas, double x, double y, Paint paint, Paint fillPaint) {
-    final size = spacing * 0.6;
+    // Use larger size based on spacing for visible interior decorations
+    final size = spacing * 1.2;
 
     switch (theme) {
       case BoardTheme.classicWood:
@@ -2124,7 +2153,8 @@ class BoardDecorationPainter extends CustomPainter {
   }
 
   void _paintEdgeDecoration(Canvas canvas, double x, double y, int row, int col, Paint paint, Paint fillPaint) {
-    final size = spacing * 0.5;
+    // Larger edge decorations for visibility
+    final size = spacing * 1.0;
     final isHorizontal = row == 0 || row == boardSize;
 
     switch (theme) {
