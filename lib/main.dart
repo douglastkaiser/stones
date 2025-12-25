@@ -865,6 +865,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     // Board area with overlays
                     Expanded(
                       child: Stack(
+                        clipBehavior: Clip.none, // Allow tall stacks to overflow
                         children: [
                           // Board
                           Center(
@@ -2636,22 +2637,7 @@ class _GameBoard extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none, // Allow pieces to overflow the board
             children: [
-              // Background decorations - filigree throughout the grid lines
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: BoardDecorationPainter(
-                      boardSize: boardSize,
-                      spacing: spacing,
-                      padding: spacing, // Inner padding matches spacing
-                      cellSize: cellSize,
-                      theme: boardThemeData.theme,
-                      decorColor: boardThemeData.gridLineShadow,
-                    ),
-                  ),
-                ),
-              ),
-              // Main grid on top
+              // Main grid
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: GridView.builder(
@@ -2750,6 +2736,21 @@ class _GameBoard extends StatelessWidget {
               ),
             );
               },
+            ),
+          ),
+          // Overlay decorations - filigree on top of grid lines (visible above cells)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: BoardDecorationPainter(
+                  boardSize: boardSize,
+                  spacing: spacing,
+                  padding: spacing,
+                  cellSize: cellSize,
+                  theme: boardThemeData.theme,
+                  decorColor: boardThemeData.gridLineShadow,
+                ),
+              ),
             ),
           ),
         ],

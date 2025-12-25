@@ -511,17 +511,27 @@ class StandardFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Fuller dome shape using bezier curve - more control than arc
-    // Simple flat shape with no highlights or 3D effects
+    // Almost a full circle with just a small sliver cut off at the bottom
+    // The chord line is below the diameter, showing most of the circle
     final centerX = w / 2;
-    final halfWidth = w * 0.42; // Half the width of the base
-    final baseY = h * 0.92; // Flat base near bottom
-    final topY = h * 0.15; // How high the dome goes (lower = taller dome)
+    final radius = w * 0.44; // Circle radius
+    final chordY = h * 0.85; // Where the flat bottom cuts the circle (below center)
+    // Calculate how wide the chord is at this Y position
+    // For a circle centered at (centerX, centerY), chord half-width = sqrt(r^2 - d^2)
+    // where d is distance from center to chord
+    final centerY = h * 0.5; // Circle center
+    final distFromCenter = chordY - centerY; // How far chord is below center
+    final chordHalfWidth = (radius * radius - distFromCenter * distFromCenter);
+    final halfWidth = chordHalfWidth > 0 ? math.sqrt(chordHalfWidth) : radius * 0.3;
 
     final path = Path();
-    path.moveTo(centerX - halfWidth, baseY);
-    // Quadratic bezier creates a smooth dome - control point at top center
-    path.quadraticBezierTo(centerX, topY, centerX + halfWidth, baseY);
+    path.moveTo(centerX - halfWidth, chordY);
+    // Arc going UP and around (the long way) to create almost-full circle
+    path.arcToPoint(
+      Offset(centerX + halfWidth, chordY),
+      radius: Radius.circular(radius),
+      largeArc: true, // Take the long way around (>180 degrees)
+    );
     path.close();
 
     // Shadow
