@@ -365,6 +365,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }
 
   void _openScenarioSelector(BuildContext context) {
+    final achievements = ref.read(achievementProvider);
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -378,6 +380,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 for (final scenario in tutorialAndPuzzleLibrary)
                   _ScenarioListTile(
                     scenario: scenario,
+                    completed: scenario.type == ScenarioType.tutorial
+                        ? achievements.completedTutorials.contains(scenario.id)
+                        : achievements.completedPuzzles.contains(scenario.id),
                     onTap: () {
                       Navigator.pop(dialogContext);
                       _startScenarioFlow(context, scenario);
@@ -932,9 +937,14 @@ class _LogoPainter extends CustomPainter {
 
 class _ScenarioListTile extends StatelessWidget {
   final GameScenario scenario;
+  final bool completed;
   final VoidCallback onTap;
 
-  const _ScenarioListTile({required this.scenario, required this.onTap});
+  const _ScenarioListTile({
+    required this.scenario,
+    required this.completed,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -980,10 +990,37 @@ class _ScenarioListTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        trailing: Chip(
-          label: Text(scenario.type == ScenarioType.puzzle ? 'Puzzle' : 'Tutorial'),
-          backgroundColor: accent.withValues(alpha: 0.15),
-          labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Chip(
+              label: Text(scenario.type == ScenarioType.puzzle ? 'Puzzle' : 'Tutorial'),
+              backgroundColor: accent.withValues(alpha: 0.15),
+              labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
+            ),
+            if (completed) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green.shade600,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Completed',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );
