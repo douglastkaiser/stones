@@ -2604,35 +2604,58 @@ class _GameBoard extends StatelessWidget {
     final spacing = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
     final padding = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 8.0 : 6.0);
 
-    return Container(
-      // Inner board area with inset shadow effect
-      margin: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: GameColors.gridLine,
-        borderRadius: BorderRadius.circular(6),
-        // Inset shadow effect for the grid area
-        boxShadow: [
-          // Inner shadow (dark)
-          BoxShadow(
-            color: GameColors.gridLineShadow.withValues(alpha: 0.6),
-            blurRadius: 4,
-            spreadRadius: 1,
-            offset: const Offset(2, 2),
-          ),
-          // Highlight edge
-          BoxShadow(
-            color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
-            blurRadius: 2,
-            offset: const Offset(-1, -1),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Main grid
-          ClipRRect(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate cell size for decoration painter
+        final availableWidth = constraints.maxWidth - padding * 2 - spacing * 2;
+        final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
+
+        return Container(
+          // Inner board area with inset shadow effect
+          margin: EdgeInsets.all(padding),
+          clipBehavior: Clip.none, // Allow pieces to overflow
+          decoration: BoxDecoration(
+            color: GameColors.gridLine,
             borderRadius: BorderRadius.circular(6),
-            child: GridView.builder(
+            // Inset shadow effect for the grid area
+            boxShadow: [
+              // Inner shadow (dark)
+              BoxShadow(
+                color: GameColors.gridLineShadow.withValues(alpha: 0.6),
+                blurRadius: 4,
+                spreadRadius: 1,
+                offset: const Offset(2, 2),
+              ),
+              // Highlight edge
+              BoxShadow(
+                color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
+                blurRadius: 2,
+                offset: const Offset(-1, -1),
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none, // Allow pieces to overflow the board
+            children: [
+              // Background decorations - filigree throughout the grid lines
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: BoardDecorationPainter(
+                      boardSize: boardSize,
+                      spacing: spacing,
+                      padding: spacing, // Inner padding matches spacing
+                      cellSize: cellSize,
+                      theme: boardThemeData.theme,
+                      decorColor: boardThemeData.gridLineShadow,
+                    ),
+                  ),
+                ),
+              ),
+              // Main grid on top
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.all(spacing),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -2730,62 +2753,10 @@ class _GameBoard extends StatelessWidget {
               },
             ),
           ),
-          // Corner decorations - thematic filigree at board corners
-          Positioned(
-            left: 4,
-            top: 4,
-            child: CustomPaint(
-              size: Size(spacing * 5, spacing * 5),
-              painter: CornerOrnamentPainter(
-                color: boardThemeData.gridLineShadow,
-                theme: boardThemeData.theme,
-              ),
-            ),
-          ),
-          Positioned(
-            right: 4,
-            top: 4,
-            child: Transform.rotate(
-              angle: 1.5708, // 90 degrees
-              child: CustomPaint(
-                size: Size(spacing * 5, spacing * 5),
-                painter: CornerOrnamentPainter(
-                  color: boardThemeData.gridLineShadow,
-                  theme: boardThemeData.theme,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 4,
-            bottom: 4,
-            child: Transform.rotate(
-              angle: -1.5708, // -90 degrees
-              child: CustomPaint(
-                size: Size(spacing * 5, spacing * 5),
-                painter: CornerOrnamentPainter(
-                  color: boardThemeData.gridLineShadow,
-                  theme: boardThemeData.theme,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 4,
-            bottom: 4,
-            child: Transform.rotate(
-              angle: 3.1416, // 180 degrees
-              child: CustomPaint(
-                size: Size(spacing * 5, spacing * 5),
-                painter: CornerOrnamentPainter(
-                  color: boardThemeData.gridLineShadow,
-                  theme: boardThemeData.theme,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
+    );
+      },
     );
   }
 }

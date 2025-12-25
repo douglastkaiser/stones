@@ -511,21 +511,17 @@ class StandardFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Fuller than semicircle - use smaller arc radius to force major arc (>180 degrees)
+    // Fuller dome shape using bezier curve - more control than arc
     // Simple flat shape with no highlights or 3D effects
     final centerX = w / 2;
-    final halfChord = w * 0.40; // Half the chord width
-    final arcRadius = halfChord * 0.75; // Smaller radius forces a fuller arc (>180 degrees)
-    final baseY = h * 0.88; // Flat base position
+    final halfWidth = w * 0.42; // Half the width of the base
+    final baseY = h * 0.92; // Flat base near bottom
+    final topY = h * 0.15; // How high the dome goes (lower = taller dome)
 
     final path = Path();
-    path.moveTo(centerX - halfChord, baseY);
-    // Use largeArc: true to get the major arc (>180 degrees = fuller than semicircle)
-    path.arcToPoint(
-      Offset(centerX + halfChord, baseY),
-      radius: Radius.circular(arcRadius),
-      largeArc: true, // This gives us the major arc (>180 degrees)
-    );
+    path.moveTo(centerX - halfWidth, baseY);
+    // Quadratic bezier creates a smooth dome - control point at top center
+    path.quadraticBezierTo(centerX, topY, centerX + halfWidth, baseY);
     path.close();
 
     // Shadow
