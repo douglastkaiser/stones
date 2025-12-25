@@ -2613,7 +2613,6 @@ class _GameBoard extends StatelessWidget {
         return Container(
           // Inner board area with inset shadow effect
           margin: EdgeInsets.all(padding),
-          clipBehavior: Clip.none, // Allow pieces to overflow
           decoration: BoxDecoration(
             color: GameColors.gridLine,
             borderRadius: BorderRadius.circular(6),
