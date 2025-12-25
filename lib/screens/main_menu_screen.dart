@@ -999,25 +999,27 @@ class _ScenarioListTile extends StatelessWidget {
               backgroundColor: accent.withValues(alpha: 0.15),
               labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  completed ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: completed ? Colors.green.shade600 : Colors.grey,
-                  size: 18,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  completed ? 'Completed' : 'Not completed',
-                  style: TextStyle(
-                    color: completed ? Colors.green.shade600 : Colors.grey.shade700,
-                    fontWeight: FontWeight.w600,
+            if (completed) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green.shade600,
+                    size: 18,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Completed',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
