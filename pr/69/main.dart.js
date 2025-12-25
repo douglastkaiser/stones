@@ -102552,7 +102552,7 @@ else l=l.Lj(o?B.h:B.c0,B.E,4)
 l=A.a1("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.dk
-s=A.iU(p,A.a1("v1.0.0+243.g0042010.d20251225 (0042010)",p,p,p,A.aM(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.ah,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gamM(),p,p,p,p,p,p)
+s=A.iU(p,A.a1("v1.0.0+244.g6ca77e5.d20251225 (6ca77e5)",p,p,p,A.aM(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.ah,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gamM(),p,p,p,p,p,p)
 r=A.A(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -102562,7 +102562,7 @@ r=q}return A.em(A.bo(A.b([m,B.a6,l,B.bU,s,B.ap,A.a1("An abstract strategy game",
 $S:722}
 A.avC.prototype={
 $0(){var s=null
-A.bgN(new A.b4(B.bk,A.cL(A.eq(s,s,s,new A.Mo(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+243.g0042010.d20251225 (0042010)",this.b)
+A.bgN(new A.b4(B.bk,A.cL(A.eq(s,s,s,new A.Mo(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+244.g6ca77e5.d20251225 (6ca77e5)",this.b)
 return s},
 $S:0}
 A.Iy.prototype={
@@ -103201,7 +103201,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cs
-return A.aV(o,A.em(A.bs(A.b([A.a1("v1.0.0+243.g0042010.d20251225 (0042010)",o,o,o,A.aM(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a1("  \u2022  ",o,o,o,A.aM(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.iU(o,A.a1("Privacy",o,o,o,A.aM(o,o,q,o,B.oQ,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.ah,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gamW(),o,o,o,o,o,o)],t.p),B.n,B.o,B.ad,0),o,o),B.l,o,o,o,o,o,o,B.mk,o,o,o)}}
+return A.aV(o,A.em(A.bs(A.b([A.a1("v1.0.0+244.g6ca77e5.d20251225 (6ca77e5)",o,o,o,A.aM(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a1("  \u2022  ",o,o,o,A.aM(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.iU(o,A.a1("Privacy",o,o,o,A.aM(o,o,q,o,B.oQ,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.ah,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gamW(),o,o,o,o,o,o)],t.p),B.n,B.o,B.ad,0),o,o),B.l,o,o,o,o,o,o,B.mk,o,o,o)}}
 A.vj.prototype={
 I(a){var s,r,q,p,o,n,m,l=null,k=A.A(a).ax.a===B.w,j=this.d
 if(j)s=B.B
@@ -105252,26 +105252,31 @@ m=f-1
 a.c1(new A.w(e,m,e+e*6,m+1),g)},
 cc(a){return this.b!==a.b}}
 A.P2.prototype={
-aw(a,b){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d=this
-if(b.a<=0||b.b<=0)return
+aw(a2,a3){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1=this
+if(a3.a<=0||a3.b<=0)return
 $.T()
 s=A.Y()
-r=d.r
-s.r=r.R(0.6).gn()
+r=a1.r
+s.r=r.R(0.8).gn()
 s.b=B.M
-s.c=1.5
+s.c=2
 s.d=B.d1
 q=A.Y()
-q.r=r.R(0.4).gn()
+q.r=r.R(0.5).gn()
 q.b=B.aF
-for(r=d.b,p=d.d,o=d.c,n=d.e+o,o/=2,m=0;m<=r;++m)for(l=m!==0,k=p+m*n-o,j=m===r,i=!j,h=0;h<=r;++h){g=p+h*n-o
-if(!l||j)f=h===0||h===r
-else f=!1
-e=!l||!i||h===0||h===r
-if(f)d.ane(a,g,k,m,h,s,q)
-else if(!e)d.anj(a,g,k,s,q)
-else d.ang(a,g,k,m,h,s,q)}d.ana(a,b,s)},
-ane(a,b,c,d,e,f,g){var s,r,q,p,o,n,m,l,k,j=this,i=j.c*1.8,h=a.a
+for(r=a1.b,p=a1.d,o=a1.e,n=a1.c,m=o+n,n/=2,l=p+(r-1)*m+o,k=0;k<=r;++k)for(j=p+k*m-n,i=k===r,o=k===0,h=!o,g=0;g<=r;++g){f=!h||i
+e=g===0
+d=e||g===r
+c=f&&d
+b=f||d
+if(e)a=p
+else a=g===r?l:p+g*m-n
+if(o)a0=p
+else a0=i?l:j
+if(c)a1.ane(a2,a,a0,k,g,s,q)
+else if(!b)a1.anj(a2,a,a0,s,q)
+else a1.ang(a2,a,a0,k,g,s,q)}a1.ana(a2,a3,s)},
+ane(a,b,c,d,e,f,g){var s,r,q,p,o,n,m,l,k,j=this,i=j.e*0.25,h=a.a
 J.ay(h.save())
 h.translate(b,c)
 if(d===0&&e===j.b)a.qu(1.5707963267948966)
@@ -105387,7 +105392,7 @@ p=A.Y()
 p.r=A.bt(f.r).R(0.4).gn()
 a.c1(new A.w(l,l,s,s),p)
 break}h.restore()},
-anj(a,b,c,d,e){var s,r,q,p,o,n,m,l,k=this.c,j=k*0.6
+anj(a,b,c,d,e){var s,r,q,p,o,n,m,l,k=this.c,j=k*1.2
 switch(this.f.a){case 0:a.cs(new A.e(b-j,c),new A.e(b+j,c),d)
 a.cs(new A.e(b,c-j),new A.e(b,c+j),d)
 a.dW(new A.e(b,c),j*0.3,e)
@@ -105413,22 +105418,22 @@ break
 case 4:l=k*0.4
 a.c1(A.ik(new A.e(b,c),l,l),e)
 break}},
-ang(a,b,c,d,e,f,g){var s,r,q=this.c,p=q*0.5,o=d===0||d===this.b
+ang(a,b,c,d,e,f,g){var s,r,q,p=this.c,o=d===0||d===this.b
 switch(this.f.a){case 0:if(o)a.cs(new A.e(b-p,c),new A.e(b+p,c),f)
 else a.cs(new A.e(b,c-p),new A.e(b,c+p),f)
 break
-case 1:q=p*0.5
-s=p*0.8
-if(o)a.cs(new A.e(b,c-q),new A.e(b,c+s),f)
-else a.cs(new A.e(b-q,c),new A.e(b+s,c),f)
+case 1:s=p*0.5
+r=p*0.8
+if(o)a.cs(new A.e(b,c-s),new A.e(b,c+r),f)
+else a.cs(new A.e(b-s,c),new A.e(b+r,c),f)
 break
 case 2:a.dW(new A.e(b,c),p*0.3,f)
 break
 case 3:break
-case 4:r=q*0.3
-q=r*2
-if(o)a.c1(A.ik(new A.e(b,c),r,q),g)
-else a.c1(A.ik(new A.e(b,c),q,r),g)
+case 4:q=p*0.3
+s=q*2
+if(o)a.c1(A.ik(new A.e(b,c),q,s),g)
+else a.c1(A.ik(new A.e(b,c),s,q),g)
 break}},
 ana(a,b,c){var s,r,q,p,o,n,m,l,k,j,i,h,g,f=this
 switch(f.f.a){case 0:$.T()
