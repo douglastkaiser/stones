@@ -2732,53 +2732,53 @@ class _GameBoard extends StatelessWidget {
           ),
           // Corner decorations - thematic filigree at board corners
           Positioned(
-            left: 2,
-            top: 2,
+            left: 4,
+            top: 4,
             child: CustomPaint(
-              size: Size(spacing * 3, spacing * 3),
+              size: Size(spacing * 5, spacing * 5),
               painter: CornerOrnamentPainter(
-                color: boardThemeData.gridLine,
+                color: boardThemeData.gridLineShadow,
                 theme: boardThemeData.theme,
               ),
             ),
           ),
           Positioned(
-            right: 2,
-            top: 2,
+            right: 4,
+            top: 4,
             child: Transform.rotate(
               angle: 1.5708, // 90 degrees
               child: CustomPaint(
-                size: Size(spacing * 3, spacing * 3),
+                size: Size(spacing * 5, spacing * 5),
                 painter: CornerOrnamentPainter(
-                  color: boardThemeData.gridLine,
+                  color: boardThemeData.gridLineShadow,
                   theme: boardThemeData.theme,
                 ),
               ),
             ),
           ),
           Positioned(
-            left: 2,
-            bottom: 2,
+            left: 4,
+            bottom: 4,
             child: Transform.rotate(
               angle: -1.5708, // -90 degrees
               child: CustomPaint(
-                size: Size(spacing * 3, spacing * 3),
+                size: Size(spacing * 5, spacing * 5),
                 painter: CornerOrnamentPainter(
-                  color: boardThemeData.gridLine,
+                  color: boardThemeData.gridLineShadow,
                   theme: boardThemeData.theme,
                 ),
               ),
             ),
           ),
           Positioned(
-            right: 2,
-            bottom: 2,
+            right: 4,
+            bottom: 4,
             child: Transform.rotate(
               angle: 3.1416, // 180 degrees
               child: CustomPaint(
-                size: Size(spacing * 3, spacing * 3),
+                size: Size(spacing * 5, spacing * 5),
                 painter: CornerOrnamentPainter(
-                  color: boardThemeData.gridLine,
+                  color: boardThemeData.gridLineShadow,
                   theme: boardThemeData.theme,
                 ),
               ),

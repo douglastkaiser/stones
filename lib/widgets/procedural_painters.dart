@@ -511,18 +511,20 @@ class StandardFlatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Fuller than semicircle - flat base cuts below center, showing more of circle
+    // Fuller than semicircle - use smaller arc radius to force major arc (>180 degrees)
     // Simple flat shape with no highlights or 3D effects
     final centerX = w / 2;
-    final radius = w * 0.42;
-    final baseY = h * 0.96; // Flat base almost at bottom - fuller than semicircle
+    final halfChord = w * 0.40; // Half the chord width
+    final arcRadius = halfChord * 0.75; // Smaller radius forces a fuller arc (>180 degrees)
+    final baseY = h * 0.88; // Flat base position
 
     final path = Path();
-    path.moveTo(centerX - radius, baseY);
-    // clockwise is true by default, which goes UP in Flutter's Y-down coords
+    path.moveTo(centerX - halfChord, baseY);
+    // Use largeArc: true to get the major arc (>180 degrees = fuller than semicircle)
     path.arcToPoint(
-      Offset(centerX + radius, baseY),
-      radius: Radius.circular(radius),
+      Offset(centerX + halfChord, baseY),
+      radius: Radius.circular(arcRadius),
+      largeArc: true, // This gives us the major arc (>180 degrees)
     );
     path.close();
 
@@ -1697,9 +1699,9 @@ class CornerOrnamentPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withValues(alpha: 0.35)
+      ..color = color.withValues(alpha: 0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
     switch (theme) {
