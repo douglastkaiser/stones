@@ -448,11 +448,7 @@ final _tutorial6StackMovement = GameScenario(
     'This stack has 6 pieces — more than the carry limit! Tap the stack to select it, then tap again to cycle how many to pick up.',
     'As you move, you must drop at least one piece per cell. Spread your pieces to claim territory!',
   ],
-  guidedMove: const GuidedMove.stackMove(
-    from: Position(2, 0),
-    direction: Direction.right,
-    drops: [1, 1, 1, 1, 1],
-  ),
+  guidedMove: const GuidedMove.anyStackMove(from: Position(2, 0)),
   completionText:
       'Excellent! You can only carry up to the board size (5 on a 5×5 board), even from taller stacks. Use this to spread influence across the board!',
   buildInitialState: () => _buildScenarioState(
@@ -841,11 +837,11 @@ final _puzzle6CaptureAndWin = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.black),
         ]),
       ),
-      // White stack to capture with
+      // White stack to capture with - 2 white pieces so moving 1 creates the road
       PositionedStack(
         position: Position(2, 0),
         stack: PieceStack([
-          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
       ),
@@ -968,8 +964,14 @@ final _puzzle9CapstoneTactics = GameScenario(
       PositionedStack(position: Position(2, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       // Wall blocking
       PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
-      // Capstone ready
-      PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.white)])),
+      // Capstone on top of white flat - so only capstone moves to flatten and complete road
+      PositionedStack(
+        position: Position(2, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.capstone, color: PlayerColor.white),
+        ]),
+      ),
       // Some black pieces
       PositionedStack(position: Position(1, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],

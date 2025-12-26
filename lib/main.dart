@@ -523,8 +523,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
     final guidedMove =
         scenarioState.guidedStepComplete ? null : activeScenario?.guidedMove;
-    final scenarioHighlights = guidedMove?.highlightedCells(gameState.boardSize) ??
-        <Position>{};
+    // Only show highlights for tutorials, not puzzles (puzzles should be ambiguous)
+    final isPuzzleScenario = activeScenario?.type == ScenarioType.puzzle;
+    final scenarioHighlights = (guidedMove != null && !isPuzzleScenario)
+        ? guidedMove.highlightedCells(gameState.boardSize)
+        : <Position>{};
     // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
     // This prevents race condition where creator can play multiple moves before
     // Firestore listener updates session.currentTurn
@@ -599,14 +602,65 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
 
-        // Find next scenario of the same type
-        final currentIndex = tutorialAndPuzzleLibrary.indexOf(activeScenario);
+        // Mark the scenario as complete in achievements
+        if (activeScenario.type == ScenarioType.tutorial) {
+          ref.read(achievementProvider.notifier).completeTutorial(activeScenario.id);
+        } else {
+          ref.read(achievementProvider.notifier).completePuzzle(activeScenario.id);
+        }
+
+        // Find next uncompleted scenario (smart logic)
+        final achievements = ref.read(achievementProvider);
         GameScenario? nextScenario;
-        if (currentIndex != -1 && currentIndex < tutorialAndPuzzleLibrary.length - 1) {
-          // Find next scenario of the same type (tutorial or puzzle)
-          for (var i = currentIndex + 1; i < tutorialAndPuzzleLibrary.length; i++) {
-            if (tutorialAndPuzzleLibrary[i].type == activeScenario.type) {
-              nextScenario = tutorialAndPuzzleLibrary[i];
+        String nextButtonText = 'Next';
+
+        // Helper to check if scenario is completed
+        bool isCompleted(GameScenario s) {
+          return s.type == ScenarioType.tutorial
+              ? achievements.completedTutorials.contains(s.id)
+              : achievements.completedPuzzles.contains(s.id);
+        }
+
+        // First, look for next uncompleted of same type
+        final currentIndex = tutorialAndPuzzleLibrary.indexOf(activeScenario);
+        for (var i = currentIndex + 1; i < tutorialAndPuzzleLibrary.length; i++) {
+          final s = tutorialAndPuzzleLibrary[i];
+          if (s.type == activeScenario.type && !isCompleted(s)) {
+            nextScenario = s;
+            nextButtonText = s.type == ScenarioType.tutorial ? 'Next Tutorial' : 'Next Puzzle';
+            break;
+          }
+        }
+
+        // If none found, wrap around to start of same type
+        if (nextScenario == null) {
+          for (var i = 0; i < currentIndex; i++) {
+            final s = tutorialAndPuzzleLibrary[i];
+            if (s.type == activeScenario.type && !isCompleted(s)) {
+              nextScenario = s;
+              nextButtonText = s.type == ScenarioType.tutorial ? 'Next Tutorial' : 'Next Puzzle';
+              break;
+            }
+          }
+        }
+
+        // If all of same type complete, try the other type (tutorials -> puzzles)
+        if (nextScenario == null && activeScenario.type == ScenarioType.tutorial) {
+          for (final s in tutorialAndPuzzleLibrary) {
+            if (s.type == ScenarioType.puzzle && !isCompleted(s)) {
+              nextScenario = s;
+              nextButtonText = 'Start Puzzles';
+              break;
+            }
+          }
+        }
+
+        // If all puzzles complete, try tutorials
+        if (nextScenario == null && activeScenario.type == ScenarioType.puzzle) {
+          for (final s in tutorialAndPuzzleLibrary) {
+            if (s.type == ScenarioType.tutorial && !isCompleted(s)) {
+              nextScenario = s;
+              nextButtonText = 'Back to Tutorials';
               break;
             }
           }
@@ -619,8 +673,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             content: Text(activeScenario.completionText),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Done'),
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  _startNextScenario(activeScenario);
+                },
+                child: const Text('Replay'),
               ),
               if (nextScenario != null)
                 ElevatedButton(
@@ -628,11 +685,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     Navigator.pop(dialogContext);
                     _startNextScenario(nextScenario!);
                   },
-                  child: Text(
-                    activeScenario.type == ScenarioType.tutorial
-                        ? 'Next Tutorial'
-                        : 'Next Puzzle',
-                  ),
+                  child: Text(nextButtonText),
                 ),
             ],
           ),
@@ -2612,19 +2665,21 @@ class _ScenarioInfoCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Show dialogue/instructions
-          for (final line in scenario.dialogue)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                line,
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.grey.shade800,
-                  fontSize: 13,
+          // Only show dialogue/instructions for tutorials, not puzzles
+          if (!isPuzzle && scenario.dialogue.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            for (final line in scenario.dialogue)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  line,
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.grey.shade800,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-            ),
+          ],
         ],
       ),
     );
