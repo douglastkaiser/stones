@@ -625,8 +625,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: () async {
+        if (canUndo) {
+          _undo();
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Stones'),
         leading: IconButton(
           icon: const Icon(Icons.home),
@@ -670,9 +678,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ? null
                 : () => _showNewGameDialog(context, ref),
           ),
-        ],
-      ),
-      body: LayoutBuilder(
+          ],
+        ),
+        body: LayoutBuilder(
         builder: (context, constraints) {
           final isWideScreen = constraints.maxWidth > 700;
           final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
