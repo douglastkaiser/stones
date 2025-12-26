@@ -1078,7 +1078,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // Handle guided move constraints if applicable
-    if (guidedMove != null && guidedMove.type == GuidedMoveType.stackMove) {
+    if (guidedMove != null &&
+        (guidedMove.type == GuidedMoveType.stackMove ||
+         guidedMove.type == GuidedMoveType.anyStackMove)) {
       if (pos != guidedMove.from) {
         return;
       }
@@ -1177,13 +1179,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (guidedMove != null) {
       if (guidedMove.type == GuidedMoveType.placement) {
-        if (stack.isEmpty && pos != guidedMove.target) {
-          return;
+        // Specific target required
+        if (guidedMove.allowedTargets != null) {
+          if (stack.isEmpty && !guidedMove.allowedTargets!.contains(pos)) {
+            return;
+          }
+        } else if (guidedMove.target != null) {
+          if (stack.isEmpty && pos != guidedMove.target) {
+            return;
+          }
         }
         if (stack.isNotEmpty) {
           return;
         }
+      } else if (guidedMove.type == GuidedMoveType.anyPlacement) {
+        // Any empty cell is valid
+        if (stack.isNotEmpty) {
+          return;
+        }
       } else if (guidedMove.type == GuidedMoveType.stackMove &&
+          pos != guidedMove.from) {
+        return;
+      } else if (guidedMove.type == GuidedMoveType.anyStackMove &&
           pos != guidedMove.from) {
         return;
       }
@@ -1213,10 +1230,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiNotifier = ref.read(uiStateProvider.notifier);
 
     if (guidedMove != null && guidedMove.type == GuidedMoveType.placement) {
-      if (pos != guidedMove.target) {
+      if (guidedMove.allowedTargets != null) {
+        if (!guidedMove.allowedTargets!.contains(pos)) {
+          return;
+        }
+      } else if (guidedMove.target != null && pos != guidedMove.target) {
         return;
       }
     }
+    // anyPlacement allows any position, no check needed
 
     if (uiState.selectedPosition == pos) {
       // Tap same cell: place the piece
@@ -1243,9 +1265,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final selectedPos = uiState.selectedPosition!;
 
-    if (guidedMove != null && guidedMove.type == GuidedMoveType.stackMove) {
+    if (guidedMove != null &&
+        (guidedMove.type == GuidedMoveType.stackMove ||
+         guidedMove.type == GuidedMoveType.anyStackMove)) {
       final allowedPositions = guidedMove.highlightedCells(gameState.boardSize);
-      if (!allowedPositions.contains(pos)) {
+      // For anyStackMove, we only highlight the from position, not restrict movement
+      if (guidedMove.type == GuidedMoveType.stackMove && !allowedPositions.contains(pos)) {
         return;
       }
     }
@@ -1410,14 +1435,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (scenario != null &&
         guidanceActive &&
-        scenario.guidedMove.type == GuidedMoveType.placement &&
+        (scenario.guidedMove.type == GuidedMoveType.placement ||
+         scenario.guidedMove.type == GuidedMoveType.anyPlacement) &&
         !_isAiTurn(session, gameState)) {
       final expected = scenario.guidedMove;
-      if (pos != expected.target ||
-          (expected.pieceType != null && expected.pieceType != type)) {
+      // Check piece type if specified
+      if (expected.pieceType != null && expected.pieceType != type) {
         soundManager.playIllegalMove();
         return false;
       }
+      // Check position for non-any placements
+      if (expected.type == GuidedMoveType.placement) {
+        if (expected.allowedTargets != null) {
+          if (!expected.allowedTargets!.contains(pos)) {
+            soundManager.playIllegalMove();
+            return false;
+          }
+        } else if (expected.target != null && pos != expected.target) {
+          soundManager.playIllegalMove();
+          return false;
+        }
+      }
+      // anyPlacement allows any position
     }
 
     _debugLog('_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
@@ -1426,7 +1465,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (success) {
         if (scenario != null &&
             guidanceActive &&
-            scenario.guidedMove.type == GuidedMoveType.placement) {
+            (scenario.guidedMove.type == GuidedMoveType.placement ||
+             scenario.guidedMove.type == GuidedMoveType.anyPlacement)) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
@@ -1487,16 +1527,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         guidanceActive &&
         !_isAiTurn(session, gameState)) {
       final guided = scenario.guidedMove;
-      final expectedDrops = guided.drops ?? const [];
-      final dropsMatch = expectedDrops.length == drops.length &&
-          List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
-              .every((e) => e);
-      if (guided.type != GuidedMoveType.stackMove ||
-          guided.from != from ||
-          guided.direction != dir ||
-          !dropsMatch) {
-        soundManager.playIllegalMove();
-        return false;
+      if (guided.type == GuidedMoveType.stackMove) {
+        // Strict validation for specific stack moves
+        final expectedDrops = guided.drops ?? const [];
+        final dropsMatch = expectedDrops.length == drops.length &&
+            List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
+                .every((e) => e);
+        if (guided.from != from ||
+            guided.direction != dir ||
+            !dropsMatch) {
+          soundManager.playIllegalMove();
+          return false;
+        }
+      } else if (guided.type == GuidedMoveType.anyStackMove) {
+        // Only validate from position for any stack move
+        if (guided.from != from) {
+          soundManager.playIllegalMove();
+          return false;
+        }
       }
     }
 
@@ -1504,7 +1552,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (success) {
       if (scenario != null &&
           guidanceActive &&
-          scenario.guidedMove.type == GuidedMoveType.stackMove) {
+          (scenario.guidedMove.type == GuidedMoveType.stackMove ||
+           scenario.guidedMove.type == GuidedMoveType.anyStackMove)) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
