@@ -625,63 +625,61 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (canUndo) {
-          _undo();
-          return false;
-        }
-        return true;
+    return PopScope(
+      canPop: !canUndo,
+      onPopInvoked: (didPop) {
+        if (didPop || !canUndo) return;
+        _undo();
       },
       child: Scaffold(
         appBar: AppBar(
-        title: const Text('Stones'),
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // Undo button
-          IconButton(
-            icon: Icon(
-              Icons.undo,
-              color: canUndo ? null : Colors.grey.shade400,
-            ),
-            tooltip: canUndo ? 'Undo last move' : 'No moves to undo',
-            onPressed: canUndo ? _undo : null,
+          title: const Text('Stones'),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => Navigator.pop(context),
           ),
-          // History toggle button
-          IconButton(
-            icon: Icon(_showHistory ? Icons.history_toggle_off : Icons.history),
-            tooltip: _showHistory ? 'Hide move history' : 'Show move history',
-            onPressed: () => setState(() => _showHistory = !_showHistory),
-          ),
-          if (session.mode == GameMode.online)
+          actions: [
+            // Undo button
             IconButton(
-              icon: const Icon(Icons.flag),
-              tooltip: 'Resign',
-              onPressed: () => _confirmResign(context),
+              icon: Icon(
+                Icons.undo,
+                color: canUndo ? null : Colors.grey.shade400,
+              ),
+              tooltip: canUndo ? 'Undo last move' : 'No moves to undo',
+              onPressed: canUndo ? _undo : null,
             ),
-          IconButton(
-            icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
-            tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
-            onPressed: () async {
-              final soundManager = ref.read(soundManagerProvider);
-              await soundManager.toggleMute();
-              ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'New Game',
-            onPressed: session.mode == GameMode.online
-                ? null
-                : () => _showNewGameDialog(context, ref),
-          ),
+            // History toggle button
+            IconButton(
+              icon: Icon(_showHistory ? Icons.history_toggle_off : Icons.history),
+              tooltip: _showHistory ? 'Hide move history' : 'Show move history',
+              onPressed: () => setState(() => _showHistory = !_showHistory),
+            ),
+            if (session.mode == GameMode.online)
+              IconButton(
+                icon: const Icon(Icons.flag),
+                tooltip: 'Resign',
+                onPressed: () => _confirmResign(context),
+              ),
+            IconButton(
+              icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
+              tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
+              onPressed: () async {
+                final soundManager = ref.read(soundManagerProvider);
+                await soundManager.toggleMute();
+                ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'New Game',
+              onPressed: session.mode == GameMode.online
+                  ? null
+                  : () => _showNewGameDialog(context, ref),
+            ),
           ],
         ),
         body: LayoutBuilder(
-        builder: (context, constraints) {
+          builder: (context, constraints) {
           final isWideScreen = constraints.maxWidth > 700;
           final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
 
