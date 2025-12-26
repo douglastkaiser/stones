@@ -627,7 +627,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     return PopScope(
       canPop: !canUndo,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop || !canUndo) return;
         _undo();
       },
@@ -680,74 +680,73 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         ),
         body: LayoutBuilder(
           builder: (context, constraints) {
-          final isWideScreen = constraints.maxWidth > 700;
-          final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
+            final isWideScreen = constraints.maxWidth > 700;
+            final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
 
-          // Board widget (reused in both layouts)
-          final boardWidget = Container(
-            decoration: BoxDecoration(
-              // Frame gradient using board theme
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  boardThemeData.frameInner,
-                  boardThemeData.frameOuter,
-                  boardThemeData.frameInner,
+            // Board widget (reused in both layouts)
+            final boardWidget = Container(
+              decoration: BoxDecoration(
+                // Frame gradient using board theme
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    boardThemeData.frameInner,
+                    boardThemeData.frameOuter,
+                    boardThemeData.frameInner,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: boardThemeData.frameOuter,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(2, 4),
+                  ),
+                  BoxShadow(
+                    color: boardThemeData.frameInner.withValues(alpha: 0.5),
+                    blurRadius: 2,
+                    offset: const Offset(-1, -1),
+                  ),
                 ],
-                stops: const [0.0, 0.5, 1.0],
               ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: boardThemeData.frameOuter,
-                width: 2,
+              child: IgnorePointer(
+                ignoring: inputLocked,
+                child: _GameBoard(
+                  gameState: gameState,
+                  uiState: uiState,
+                  animationState: animationState,
+                  lastMovePositions: lastMovePositions,
+                  explodedPosition: _longPressedPosition,
+                  explodedStack: _longPressedStack,
+                  highlightedPositions: scenarioHighlights,
+                  pieceStyleData: pieceStyleData,
+                  boardThemeData: boardThemeData,
+                  onCellTap: (pos) => _handleCellTap(context, ref, pos, guidedMove),
+                  onLongPressStart: _startStackView,
+                  onLongPressEnd: _endStackView,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(2, 4),
-                ),
-                BoxShadow(
-                  color: boardThemeData.frameInner.withValues(alpha: 0.5),
-                  blurRadius: 2,
-                  offset: const Offset(-1, -1),
-                ),
-              ],
-            ),
-            child: IgnorePointer(
-              ignoring: inputLocked,
-            child: _GameBoard(
-              gameState: gameState,
-              uiState: uiState,
-              animationState: animationState,
-              lastMovePositions: lastMovePositions,
-              explodedPosition: _longPressedPosition,
-              explodedStack: _longPressedStack,
-              highlightedPositions: scenarioHighlights,
-              pieceStyleData: pieceStyleData,
-              boardThemeData: boardThemeData,
-              onCellTap: (pos) =>
-                  _handleCellTap(context, ref, pos, guidedMove),
-              onLongPressStart: _startStackView,
-              onLongPressEnd: _endStackView,
-            ),
-          ),
-          );
+            );
 
-          // Bottom controls
-          final bottomControls = IgnorePointer(
-            ignoring: inputLocked,
-            child: _BottomControls(
-              gameState: gameState,
-              uiState: uiState,
-              onPieceTypeChanged: (type) =>
-                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
-              onConfirmMove: () => _confirmMove(ref),
-              onCancel: () => ref.read(uiStateProvider.notifier).reset(),
-              isWideScreen: isWideScreen,
-            ),
-          );
+            // Bottom controls
+            final bottomControls = IgnorePointer(
+              ignoring: inputLocked,
+              child: _BottomControls(
+                gameState: gameState,
+                uiState: uiState,
+                onPieceTypeChanged: (type) =>
+                    ref.read(uiStateProvider.notifier).setGhostPieceType(type),
+                onConfirmMove: () => _confirmMove(ref),
+                onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+                isWideScreen: isWideScreen,
+              ),
+            );
 
           return Stack(
             children: [
