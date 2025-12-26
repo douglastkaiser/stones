@@ -487,6 +487,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
   }
 
+  /// Start the next scenario without the "Replace current game" prompt
+  void _startNextScenario(GameScenario scenario) {
+    ref.read(scenarioStateProvider.notifier).startScenario(scenario);
+    ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+      mode: GameMode.vsComputer,
+      aiDifficulty: scenario.aiDifficulty,
+      scenario: scenario,
+    );
+    ref.read(gameStateProvider.notifier).loadState(scenario.buildInitialState());
+    ref.read(uiStateProvider.notifier).reset();
+    ref.read(animationStateProvider.notifier).reset();
+    ref.read(moveHistoryProvider.notifier).clear();
+    ref.read(lastMoveProvider.notifier).state = null;
+    ref.read(chessClockProvider.notifier).stop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameStateProvider);
@@ -507,8 +523,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
     final guidedMove =
         scenarioState.guidedStepComplete ? null : activeScenario?.guidedMove;
-    final scenarioHighlights = guidedMove?.highlightedCells(gameState.boardSize) ??
-        <Position>{};
+    // Only show highlights for tutorials, not puzzles (puzzles should be ambiguous)
+    final isPuzzleScenario = activeScenario?.type == ScenarioType.puzzle;
+    final scenarioHighlights = (guidedMove != null && !isPuzzleScenario)
+        ? guidedMove.highlightedCells(gameState.boardSize)
+        : <Position>{};
     // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
     // This prevents race condition where creator can play multiple moves before
     // Firestore listener updates session.currentTurn
@@ -570,37 +589,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       _debugLog('>>> END GAME SCREEN BUILD <<<');
     }
 
+    // Mark intro as shown immediately since text is displayed in the card
     if (activeScenario != null && !scenarioState.introShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markIntroShown();
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(activeScenario.title),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activeScenario.objective,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                for (final line in activeScenario.dialogue)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(line),
-                  ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Let\'s Play'),
-              ),
-            ],
-          ),
-        );
       });
     }
 
@@ -609,16 +601,103 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         (gameState.isGameOver || scenarioState.guidedStepComplete)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
+
+        // Mark the scenario as complete in achievements
+        if (activeScenario.type == ScenarioType.tutorial) {
+          ref.read(achievementProvider.notifier).completeTutorial(activeScenario.id);
+        } else {
+          ref.read(achievementProvider.notifier).completePuzzle(activeScenario.id);
+        }
+
+        // Find next uncompleted scenario (smart logic)
+        final achievements = ref.read(achievementProvider);
+        GameScenario? nextScenario;
+        String nextButtonText = 'Next';
+
+        // Helper to check if scenario is completed
+        bool isCompleted(GameScenario s) {
+          return s.type == ScenarioType.tutorial
+              ? achievements.completedTutorials.contains(s.id)
+              : achievements.completedPuzzles.contains(s.id);
+        }
+
+        // First, look for next uncompleted of same type
+        final currentIndex = tutorialAndPuzzleLibrary.indexOf(activeScenario);
+        for (var i = currentIndex + 1; i < tutorialAndPuzzleLibrary.length; i++) {
+          final s = tutorialAndPuzzleLibrary[i];
+          if (s.type == activeScenario.type && !isCompleted(s)) {
+            nextScenario = s;
+            nextButtonText = s.type == ScenarioType.tutorial ? 'Next Tutorial' : 'Next Puzzle';
+            break;
+          }
+        }
+
+        // If none found, wrap around to start of same type
+        if (nextScenario == null) {
+          for (var i = 0; i < currentIndex; i++) {
+            final s = tutorialAndPuzzleLibrary[i];
+            if (s.type == activeScenario.type && !isCompleted(s)) {
+              nextScenario = s;
+              nextButtonText = s.type == ScenarioType.tutorial ? 'Next Tutorial' : 'Next Puzzle';
+              break;
+            }
+          }
+        }
+
+        // If all of same type complete, try the other type (tutorials -> puzzles)
+        if (nextScenario == null && activeScenario.type == ScenarioType.tutorial) {
+          for (final s in tutorialAndPuzzleLibrary) {
+            if (s.type == ScenarioType.puzzle && !isCompleted(s)) {
+              nextScenario = s;
+              nextButtonText = 'Start Puzzles';
+              break;
+            }
+          }
+        }
+
+        // If all puzzles complete, try tutorials
+        if (nextScenario == null && activeScenario.type == ScenarioType.puzzle) {
+          for (final s in tutorialAndPuzzleLibrary) {
+            if (s.type == ScenarioType.tutorial && !isCompleted(s)) {
+              nextScenario = s;
+              nextButtonText = 'Back to Tutorials';
+              break;
+            }
+          }
+        }
+
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: Text('${activeScenario.title} complete'),
+            title: Text('${activeScenario.title} Complete!'),
             content: Text(activeScenario.completionText),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Got it'),
-              ),
+              if (nextScenario != null) ...[
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    _startNextScenario(activeScenario);
+                  },
+                  child: const Text('Replay'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    _startNextScenario(nextScenario!);
+                  },
+                  child: Text(nextButtonText),
+                ),
+              ] else ...[
+                // Last puzzle completed - show Home button
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    ref.read(scenarioStateProvider.notifier).clearScenario();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Home'),
+                ),
+              ],
             ],
           ),
         );
@@ -1078,7 +1157,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // Handle guided move constraints if applicable
-    if (guidedMove != null && guidedMove.type == GuidedMoveType.stackMove) {
+    if (guidedMove != null &&
+        (guidedMove.type == GuidedMoveType.stackMove ||
+         guidedMove.type == GuidedMoveType.anyStackMove)) {
       if (pos != guidedMove.from) {
         return;
       }
@@ -1177,13 +1258,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (guidedMove != null) {
       if (guidedMove.type == GuidedMoveType.placement) {
-        if (stack.isEmpty && pos != guidedMove.target) {
-          return;
+        // Specific target required
+        if (guidedMove.allowedTargets != null) {
+          if (stack.isEmpty && !guidedMove.allowedTargets!.contains(pos)) {
+            return;
+          }
+        } else if (guidedMove.target != null) {
+          if (stack.isEmpty && pos != guidedMove.target) {
+            return;
+          }
         }
         if (stack.isNotEmpty) {
           return;
         }
+      } else if (guidedMove.type == GuidedMoveType.anyPlacement) {
+        // Any empty cell is valid
+        if (stack.isNotEmpty) {
+          return;
+        }
       } else if (guidedMove.type == GuidedMoveType.stackMove &&
+          pos != guidedMove.from) {
+        return;
+      } else if (guidedMove.type == GuidedMoveType.anyStackMove &&
           pos != guidedMove.from) {
         return;
       }
@@ -1213,10 +1309,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiNotifier = ref.read(uiStateProvider.notifier);
 
     if (guidedMove != null && guidedMove.type == GuidedMoveType.placement) {
-      if (pos != guidedMove.target) {
+      if (guidedMove.allowedTargets != null) {
+        if (!guidedMove.allowedTargets!.contains(pos)) {
+          return;
+        }
+      } else if (guidedMove.target != null && pos != guidedMove.target) {
         return;
       }
     }
+    // anyPlacement allows any position, no check needed
 
     if (uiState.selectedPosition == pos) {
       // Tap same cell: place the piece
@@ -1243,9 +1344,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final selectedPos = uiState.selectedPosition!;
 
-    if (guidedMove != null && guidedMove.type == GuidedMoveType.stackMove) {
+    if (guidedMove != null &&
+        (guidedMove.type == GuidedMoveType.stackMove ||
+         guidedMove.type == GuidedMoveType.anyStackMove)) {
       final allowedPositions = guidedMove.highlightedCells(gameState.boardSize);
-      if (!allowedPositions.contains(pos)) {
+      // For anyStackMove, we only highlight the from position, not restrict movement
+      if (guidedMove.type == GuidedMoveType.stackMove && !allowedPositions.contains(pos)) {
         return;
       }
     }
@@ -1410,14 +1514,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (scenario != null &&
         guidanceActive &&
-        scenario.guidedMove.type == GuidedMoveType.placement &&
+        (scenario.guidedMove.type == GuidedMoveType.placement ||
+         scenario.guidedMove.type == GuidedMoveType.anyPlacement) &&
         !_isAiTurn(session, gameState)) {
       final expected = scenario.guidedMove;
-      if (pos != expected.target ||
-          (expected.pieceType != null && expected.pieceType != type)) {
+      // Check piece type if specified
+      if (expected.pieceType != null && expected.pieceType != type) {
         soundManager.playIllegalMove();
         return false;
       }
+      // Check position for non-any placements
+      if (expected.type == GuidedMoveType.placement) {
+        if (expected.allowedTargets != null) {
+          if (!expected.allowedTargets!.contains(pos)) {
+            soundManager.playIllegalMove();
+            return false;
+          }
+        } else if (expected.target != null && pos != expected.target) {
+          soundManager.playIllegalMove();
+          return false;
+        }
+      }
+      // anyPlacement allows any position
     }
 
     _debugLog('_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
@@ -1426,7 +1544,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (success) {
         if (scenario != null &&
             guidanceActive &&
-            scenario.guidedMove.type == GuidedMoveType.placement) {
+            (scenario.guidedMove.type == GuidedMoveType.placement ||
+             scenario.guidedMove.type == GuidedMoveType.anyPlacement)) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
@@ -1487,16 +1606,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         guidanceActive &&
         !_isAiTurn(session, gameState)) {
       final guided = scenario.guidedMove;
-      final expectedDrops = guided.drops ?? const [];
-      final dropsMatch = expectedDrops.length == drops.length &&
-          List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
-              .every((e) => e);
-      if (guided.type != GuidedMoveType.stackMove ||
-          guided.from != from ||
-          guided.direction != dir ||
-          !dropsMatch) {
-        soundManager.playIllegalMove();
-        return false;
+      if (guided.type == GuidedMoveType.stackMove) {
+        // Strict validation for specific stack moves
+        final expectedDrops = guided.drops ?? const [];
+        final dropsMatch = expectedDrops.length == drops.length &&
+            List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
+                .every((e) => e);
+        if (guided.from != from ||
+            guided.direction != dir ||
+            !dropsMatch) {
+          soundManager.playIllegalMove();
+          return false;
+        }
+      } else if (guided.type == GuidedMoveType.anyStackMove) {
+        // Only validate from position for any stack move
+        if (guided.from != from) {
+          soundManager.playIllegalMove();
+          return false;
+        }
       }
     }
 
@@ -1504,7 +1631,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (success) {
       if (scenario != null &&
           guidanceActive &&
-          scenario.guidedMove.type == GuidedMoveType.stackMove) {
+          (scenario.guidedMove.type == GuidedMoveType.stackMove ||
+           scenario.guidedMove.type == GuidedMoveType.anyStackMove)) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
@@ -2533,6 +2661,7 @@ class _ScenarioInfoCard extends StatelessWidget {
                 child: Icon(
                   isPuzzle ? Icons.extension : Icons.menu_book,
                   color: accent,
+                  size: 18,
                 ),
               ),
               const SizedBox(width: 10),
@@ -2545,31 +2674,23 @@ class _ScenarioInfoCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Chip(
-                label: Text(isPuzzle ? 'Puzzle' : 'Tutorial'),
-                backgroundColor: accent.withValues(alpha: 0.18),
-                labelStyle: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            scenario.objective,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : GameColors.subtitleColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            scenario.summary,
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.grey.shade800,
-            ),
-          ),
+          // Only show dialogue/instructions for tutorials, not puzzles
+          if (!isPuzzle && scenario.dialogue.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            for (final line in scenario.dialogue)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  line,
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.grey.shade800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );

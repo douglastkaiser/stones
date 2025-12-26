@@ -309,7 +309,12 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   void _startScenarioFlow(BuildContext context, GameScenario scenario) {
     final gameState = ref.read(gameStateProvider);
+    final scenarioState = ref.read(scenarioStateProvider);
+
+    // Don't prompt for replace if: game is over, tutorial/puzzle is complete, or no game in progress
+    final isScenarioComplete = scenarioState.guidedStepComplete || scenarioState.completionShown;
     final isGameInProgress = !gameState.isGameOver &&
+        !isScenarioComplete &&
         (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
 
     void startScenario() {
@@ -946,6 +951,20 @@ class _ScenarioListTile extends StatelessWidget {
     required this.onTap,
   });
 
+  String _getScenarioLabel() {
+    if (scenario.type == ScenarioType.tutorial) {
+      return 'Tutorial';
+    }
+    final difficulty = scenario.puzzleDifficulty;
+    if (difficulty == null) return 'Puzzle';
+    return switch (difficulty) {
+      PuzzleDifficulty.easy => 'Easy',
+      PuzzleDifficulty.medium => 'Medium',
+      PuzzleDifficulty.hard => 'Hard',
+      PuzzleDifficulty.expert => 'Expert',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPuzzle = scenario.type == ScenarioType.puzzle;
@@ -995,7 +1014,7 @@ class _ScenarioListTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Chip(
-              label: Text(scenario.type == ScenarioType.puzzle ? 'Puzzle' : 'Tutorial'),
+              label: Text(_getScenarioLabel()),
               backgroundColor: accent.withValues(alpha: 0.15),
               labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
             ),
