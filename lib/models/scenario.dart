@@ -864,7 +864,7 @@ final _puzzle7TheSpread = GameScenario(
   guidedMove: const GuidedMove.stackMove(
     from: Position(2, 0),
     direction: Direction.right,
-    drops: [1, 1, 1, 1],
+    drops: [1, 1, 1],
   ),
   completionText:
       'Tall stacks are potential roads waiting to be unrolled!',
@@ -873,7 +873,7 @@ final _puzzle7TheSpread = GameScenario(
     currentPlayer: PlayerColor.white,
     turnNumber: 21,
     stacks: const [
-      // White tall stack at (2,0)
+      // White tall stack at (2,0) - leave black + 1 white behind, spread 3 whites
       PositionedStack(
         position: Position(2, 0),
         stack: PieceStack([

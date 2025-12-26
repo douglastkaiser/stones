@@ -672,14 +672,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             title: Text('${activeScenario.title} Complete!'),
             content: Text(activeScenario.completionText),
             actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  _startNextScenario(activeScenario);
-                },
-                child: const Text('Replay'),
-              ),
-              if (nextScenario != null)
+              if (nextScenario != null) ...[
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    _startNextScenario(activeScenario);
+                  },
+                  child: const Text('Replay'),
+                ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(dialogContext);
@@ -687,6 +687,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   },
                   child: Text(nextButtonText),
                 ),
+              ] else ...[
+                // Last puzzle completed - show Home button
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    ref.read(scenarioStateProvider.notifier).clearScenario();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Home'),
+                ),
+              ],
             ],
           ),
         );
