@@ -1113,8 +1113,60 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         }
 
       case InteractionMode.droppingPieces:
-        // Already in dropping mode - ignore swipe
-        return;
+        // Handle swipe to continue movement
+        _handleDroppingPiecesSwipe(ref, pos, direction, gameState, uiState);
+    }
+  }
+
+  /// Handle swipe gesture when in droppingPieces mode
+  void _handleDroppingPiecesSwipe(WidgetRef ref, Position pos, Direction direction,
+      GameState gameState, UIState uiState) {
+    final uiNotifier = ref.read(uiStateProvider.notifier);
+    final handPos = uiState.getCurrentHandPosition();
+    final currentDir = uiState.selectedDirection;
+
+    if (handPos == null || currentDir == null) {
+      return;
+    }
+
+    // Only respond to swipes on the current hand position (where ghost pieces are)
+    if (pos != handPos) {
+      return;
+    }
+
+    // Only respond to swipes in the same direction as current movement
+    if (direction != currentDir) {
+      return;
+    }
+
+    // Check if we can continue to the next cell
+    final originalStack = gameState.board.stackAt(uiState.selectedPosition!);
+    final movingPiece = originalStack.topPiece;
+    if (movingPiece == null) {
+      return;
+    }
+
+    final nextPos = currentDir.apply(handPos);
+    if (!gameState.board.isValidPosition(nextPos)) {
+      return;
+    }
+
+    final targetStack = gameState.board.stackAt(nextPos);
+    final canContinue = targetStack.canMoveOnto(movingPiece) ||
+        (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls);
+
+    if (!canContinue) {
+      return;
+    }
+
+    // Drop pending pieces at current position and move to next
+    final dropCount = uiState.pendingDropCount;
+    uiNotifier.addDrop(dropCount);
+
+    // Check if all pieces are dropped
+    if (ref.read(uiStateProvider).piecesPickedUp == 0) {
+      // Auto-confirm the move
+      _confirmMove(ref);
     }
   }
 
