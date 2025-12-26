@@ -309,7 +309,12 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   void _startScenarioFlow(BuildContext context, GameScenario scenario) {
     final gameState = ref.read(gameStateProvider);
+    final scenarioState = ref.read(scenarioStateProvider);
+
+    // Don't prompt for replace if: game is over, tutorial/puzzle is complete, or no game in progress
+    final isScenarioComplete = scenarioState.guidedStepComplete || scenarioState.completionShown;
     final isGameInProgress = !gameState.isGameOver &&
+        !isScenarioComplete &&
         (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
 
     void startScenario() {

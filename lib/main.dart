@@ -487,6 +487,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
   }
 
+  /// Start the next scenario without the "Replace current game" prompt
+  void _startNextScenario(GameScenario scenario) {
+    ref.read(scenarioStateProvider.notifier).startScenario(scenario);
+    ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+      mode: GameMode.vsComputer,
+      aiDifficulty: scenario.aiDifficulty,
+      scenario: scenario,
+    );
+    ref.read(gameStateProvider.notifier).loadState(scenario.buildInitialState());
+    ref.read(uiStateProvider.notifier).reset();
+    ref.read(animationStateProvider.notifier).reset();
+    ref.read(moveHistoryProvider.notifier).clear();
+    ref.read(lastMoveProvider.notifier).state = null;
+    ref.read(chessClockProvider.notifier).stop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameStateProvider);
@@ -570,37 +586,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       _debugLog('>>> END GAME SCREEN BUILD <<<');
     }
 
+    // Mark intro as shown immediately since text is displayed in the card
     if (activeScenario != null && !scenarioState.introShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markIntroShown();
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(activeScenario.title),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activeScenario.objective,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                for (final line in activeScenario.dialogue)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(line),
-                  ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Let\'s Play'),
-              ),
-            ],
-          ),
-        );
       });
     }
 
@@ -609,16 +598,42 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         (gameState.isGameOver || scenarioState.guidedStepComplete)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
+
+        // Find next scenario of the same type
+        final currentIndex = tutorialAndPuzzleLibrary.indexOf(activeScenario);
+        GameScenario? nextScenario;
+        if (currentIndex != -1 && currentIndex < tutorialAndPuzzleLibrary.length - 1) {
+          // Find next scenario of the same type (tutorial or puzzle)
+          for (var i = currentIndex + 1; i < tutorialAndPuzzleLibrary.length; i++) {
+            if (tutorialAndPuzzleLibrary[i].type == activeScenario.type) {
+              nextScenario = tutorialAndPuzzleLibrary[i];
+              break;
+            }
+          }
+        }
+
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: Text('${activeScenario.title} complete'),
+            title: Text('${activeScenario.title} Complete!'),
             content: Text(activeScenario.completionText),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Got it'),
+                child: const Text('Done'),
               ),
+              if (nextScenario != null)
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    _startNextScenario(nextScenario!);
+                  },
+                  child: Text(
+                    activeScenario.type == ScenarioType.tutorial
+                        ? 'Next Tutorial'
+                        : 'Next Puzzle',
+                  ),
+                ),
             ],
           ),
         );
@@ -2582,6 +2597,7 @@ class _ScenarioInfoCard extends StatelessWidget {
                 child: Icon(
                   isPuzzle ? Icons.extension : Icons.menu_book,
                   color: accent,
+                  size: 18,
                 ),
               ),
               const SizedBox(width: 10),
@@ -2594,31 +2610,21 @@ class _ScenarioInfoCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Chip(
-                label: Text(isPuzzle ? 'Puzzle' : 'Tutorial'),
-                backgroundColor: accent.withValues(alpha: 0.18),
-                labelStyle: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            scenario.objective,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : GameColors.subtitleColor,
+          // Show dialogue/instructions
+          for (final line in scenario.dialogue)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                line,
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.grey.shade800,
+                  fontSize: 13,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            scenario.summary,
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.grey.shade800,
-            ),
-          ),
         ],
       ),
     );

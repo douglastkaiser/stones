@@ -228,45 +228,21 @@ PlayerPieces _consumePiece(PlayerPieces pieces, PieceType type) {
 }
 
 // ============================================================================
-// TUTORIALS (11 total)
+// TUTORIALS (9 total)
 // ============================================================================
 
-final _tutorial1PlacingStones = GameScenario(
+final _tutorial1BuildingRoad = GameScenario(
   id: 'tutorial_1',
-  title: 'Placing Stones',
-  type: ScenarioType.tutorial,
-  summary: 'Learn to place your first flat stone.',
-  objective: 'Tap any empty cell to place a flat stone.',
-  dialogue: const [
-    'Welcome to Tak! The goal is simple: build a road — a connected path of your stones linking opposite edges of the board.',
-    'Let\'s start by placing a stone. Tap any empty cell to place a flat stone.',
-  ],
-  guidedMove: const GuidedMove.anyPlacement(pieceType: PieceType.flat),
-  completionText:
-      'That\'s a flat stone. Flat stones are the building blocks of your road. They lie flat on the board and can be part of your winning path. In a real game, you and your opponent take turns placing or moving pieces.',
-  buildInitialState: () => _buildScenarioState(
-    boardSize: 4,
-    currentPlayer: PlayerColor.white,
-    turnNumber: 3,
-    stacks: const [],
-  ),
-  scriptedResponses: const [],
-);
-
-final _tutorial2BuildingRoad = GameScenario(
-  id: 'tutorial_2',
   title: 'Building a Road',
   type: ScenarioType.tutorial,
   summary: 'Complete a road from top to bottom.',
-  objective: 'Place stones to complete a vertical road reaching both edges.',
+  objective: 'Place a stone to complete the road.',
   dialogue: const [
-    'A road connects two opposite edges of the board — top to bottom, or left to right.',
-    'You have two stones already. Complete the road by connecting to both the top and bottom edges.',
+    'Welcome to Tak! The goal is simple: build a road — a connected path of your flat stones linking opposite edges of the board.',
+    'You have three stones already forming most of a vertical road. Place one more flat stone to connect the top and bottom edges.',
   ],
-  hintText: 'Place stones above and below your existing pieces to reach both edges.',
-  hintDelay: const Duration(seconds: 10),
-  guidedMove: GuidedMove.multipleTargets(
-    allowedTargets: {const Position(0, 1), const Position(3, 1)},
+  guidedMove: const GuidedMove.placement(
+    target: Position(3, 1),
     pieceType: PieceType.flat,
   ),
   completionText:
@@ -274,9 +250,13 @@ final _tutorial2BuildingRoad = GameScenario(
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
-    turnNumber: 5,
+    turnNumber: 7,
     stacks: const [
-      // White stones at rows 1 and 2, col 1 (0-indexed: rows 1-2, col 1)
+      // White stones at rows 0, 1, 2 at col 1 - need row 3 to complete
+      PositionedStack(
+        position: Position(0, 1),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
       PositionedStack(
         position: Position(1, 1),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
@@ -285,63 +265,37 @@ final _tutorial2BuildingRoad = GameScenario(
         position: Position(2, 1),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
       ),
+      // Some black pieces elsewhere
+      PositionedStack(
+        position: Position(1, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(2, 3),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
     ],
   ),
   scriptedResponses: const [],
 );
 
-final _tutorial3TurnsTaking = GameScenario(
-  id: 'tutorial_3',
-  title: 'Your Turn, Their Turn',
-  type: ScenarioType.tutorial,
-  summary: 'Learn about alternating turns and blocking.',
-  objective: 'Place a stone, then respond to Black\'s threat.',
-  dialogue: const [
-    'Tak is a two-player game. You and your opponent alternate turns.',
-    'Your opponent (Black) is also trying to build a road. Sometimes you need to block their plans while building your own.',
-    'It\'s your turn. Place a stone.',
-  ],
-  guidedMove: const GuidedMove.anyPlacement(pieceType: PieceType.flat),
-  completionText:
-      'Well played! Balancing offense and defense is key. Sometimes you block, sometimes you race to complete your own road first.',
-  buildInitialState: () => _buildScenarioState(
-    boardSize: 4,
-    currentPlayer: PlayerColor.white,
-    turnNumber: 3,
-    stacks: const [
-      PositionedStack(
-        position: Position(1, 1),
-        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
-      ),
-      PositionedStack(
-        position: Position(2, 2),
-        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
-      ),
-    ],
-  ),
-  scriptedResponses: const [
-    // Black builds toward a road threat
-    AIPlacementMove(Position(2, 1), PieceType.flat),
-  ],
-);
-
-final _tutorial4StandingStones = GameScenario(
-  id: 'tutorial_4',
+final _tutorial2StandingStones = GameScenario(
+  id: 'tutorial_2',
   title: 'Standing Stones (Walls)',
   type: ScenarioType.tutorial,
   summary: 'Use a wall to block an opponent\'s road.',
-  objective: 'Place a standing stone to block Black\'s winning move.',
+  objective: 'Select the wall piece type, then place it to block Black.',
   dialogue: const [
     'Black is about to complete a road along the bottom edge!',
-    'A standing stone (or "wall") is placed upright. Walls block movement and placement — but they don\'t count as part of roads.',
-    'Place a wall to block Black\'s winning move.',
+    'A standing stone (or "wall") blocks roads and movement — but doesn\'t count as part of YOUR road either.',
+    'Use the piece selector on the side of the screen to choose "Wall", then place it to block Black\'s winning move.',
   ],
   guidedMove: const GuidedMove.placement(
     target: Position(3, 2),
     pieceType: PieceType.standing,
   ),
   completionText:
-      'Your wall blocks their road! Black\'s path is broken. Remember: walls are powerful blockers, but they can\'t be part of YOUR road either. Use them strategically.',
+      'Your wall blocks their road! Walls are powerful blockers, but remember they can\'t be part of your road. Use them strategically.',
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
@@ -374,16 +328,16 @@ final _tutorial4StandingStones = GameScenario(
   scriptedResponses: const [],
 );
 
-final _tutorial5Capstone = GameScenario(
-  id: 'tutorial_5',
+final _tutorial3Capstone = GameScenario(
+  id: 'tutorial_3',
   title: 'The Capstone',
   type: ScenarioType.tutorial,
   summary: 'Use the Capstone to flatten a wall.',
-  objective: 'Move the Capstone onto the wall to flatten it and complete your road.',
+  objective: 'Move the Capstone onto the wall to flatten it.',
   dialogue: const [
-    'You\'re building a road downward, but a wall blocks your path!',
+    'You\'re building a road, but a wall blocks your path!',
     'Regular flat stones can\'t go on top of walls. Enter the Capstone — your most powerful piece.',
-    'The Capstone: counts as part of roads (like flat stones), can flatten walls by moving onto them, and cannot be covered by other pieces.',
+    'The Capstone counts as part of roads, can flatten walls by moving onto them, and cannot be covered.',
     'Move your Capstone onto the wall to flatten it and complete your road.',
   ],
   guidedMove: const GuidedMove.stackMove(
@@ -422,20 +376,20 @@ final _tutorial5Capstone = GameScenario(
   scriptedResponses: const [],
 );
 
-final _tutorial6MovingSinglePiece = GameScenario(
-  id: 'tutorial_6',
+final _tutorial4MovingSinglePiece = GameScenario(
+  id: 'tutorial_4',
   title: 'Moving a Single Piece',
   type: ScenarioType.tutorial,
   summary: 'Learn to move pieces on the board.',
-  objective: 'Tap your stone, then tap an adjacent cell to move it.',
+  objective: 'Swipe your stone in any direction to move it.',
   dialogue: const [
     'Instead of placing a new stone, you can move a piece you already control.',
     'Pieces move in a straight line: up, down, left, or right (not diagonally).',
-    'Tap your stone, then tap an adjacent cell to move it.',
+    'Swipe your stone toward an adjacent cell to move it. On desktop, you can also tap the stone then tap where to move.',
   ],
   guidedMove: const GuidedMove.anyStackMove(from: Position(1, 1)),
   completionText:
-      'Pieces can only move onto empty cells or onto other pieces (creating stacks). Moving lets you reposition without using new pieces from your supply.',
+      'Pieces can move onto empty cells or onto other pieces (creating stacks). Moving lets you reposition without using new pieces from your supply.',
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
@@ -450,8 +404,8 @@ final _tutorial6MovingSinglePiece = GameScenario(
   scriptedResponses: const [],
 );
 
-final _tutorial7StacksAndControl = GameScenario(
-  id: 'tutorial_7',
+final _tutorial5StacksAndControl = GameScenario(
+  id: 'tutorial_5',
   title: 'Stacks and Control',
   type: ScenarioType.tutorial,
   summary: 'Understand stack control.',
@@ -460,11 +414,11 @@ final _tutorial7StacksAndControl = GameScenario(
     'When pieces occupy the same cell, they form a stack.',
     'Here\'s the key rule: whoever has the top piece controls the stack.',
     'You have White on top, so you control this stack — even though there\'s a Black piece underneath.',
-    'Move the stack.',
+    'Move the stack by swiping it.',
   ],
   guidedMove: const GuidedMove.anyStackMove(from: Position(1, 1)),
   completionText:
-      'The whole stack moved together! Controlling your opponent\'s pieces in stacks is a powerful tactic. Only the top piece determines the stack\'s color for roads. The Black piece underneath doesn\'t help Black at all right now.',
+      'The whole stack moved together! Controlling your opponent\'s pieces in stacks is a powerful tactic. Only the top piece determines the stack\'s color for roads.',
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
@@ -483,35 +437,36 @@ final _tutorial7StacksAndControl = GameScenario(
   scriptedResponses: const [],
 );
 
-final _tutorial8StackMovement = GameScenario(
-  id: 'tutorial_8',
+final _tutorial6StackMovement = GameScenario(
+  id: 'tutorial_6',
   title: 'Stack Movement & Carry Limit',
   type: ScenarioType.tutorial,
   summary: 'Learn about carry limits and dropping pieces.',
-  objective: 'Pick up pieces from the stack and drop them across multiple cells.',
+  objective: 'Spread the stack across the board.',
   dialogue: const [
-    'When moving a stack, you choose how many pieces to pick up from the top — up to the carry limit.',
-    'The carry limit equals the board size. On a 5×5 board, you can carry up to 5 pieces.',
-    'This stack has 4 pieces. Pick up 3 and spread them as you move.',
-    'As you move, you must drop at least one piece per cell. You\'ll keep moving until your hand is empty.',
+    'When moving a stack, you can only pick up pieces equal to the board size. On a 5×5 board, you can carry up to 5 pieces.',
+    'This stack has 6 pieces — more than the carry limit! Tap the stack to select it, then tap again to cycle how many to pick up.',
+    'As you move, you must drop at least one piece per cell. Spread your pieces to claim territory!',
   ],
   guidedMove: const GuidedMove.stackMove(
-    from: Position(2, 1),
+    from: Position(2, 0),
     direction: Direction.right,
-    drops: [1, 1, 1],
+    drops: [1, 1, 1, 1, 1],
   ),
   completionText:
-      'Stack movement lets you spread influence, capture opponent stacks, or set up complex tactics. Remember: carry limit equals board size, drop at least 1 per cell, and move in a straight line only.',
+      'Excellent! You can only carry up to the board size (5 on a 5×5 board), even from taller stacks. Use this to spread influence across the board!',
   buildInitialState: () => _buildScenarioState(
     boardSize: 5,
     currentPlayer: PlayerColor.white,
-    turnNumber: 11,
+    turnNumber: 13,
     stacks: const [
-      // 4-piece stack White controls
+      // 6-piece stack (exceeds carry limit of 5) in corner
       PositionedStack(
-        position: Position(2, 1),
+        position: Position(2, 0),
         stack: PieceStack([
           Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
@@ -522,20 +477,20 @@ final _tutorial8StackMovement = GameScenario(
   scriptedResponses: const [],
 );
 
-final _tutorial9OpeningRule = GameScenario(
-  id: 'tutorial_9',
+final _tutorial7OpeningRule = GameScenario(
+  id: 'tutorial_7',
   title: 'The Opening Rule',
   type: ScenarioType.tutorial,
   summary: 'Learn the special first-turn rule.',
-  objective: 'Place a Black flat stone (your opponent\'s color) to start the game.',
+  objective: 'Place a Black flat stone (your opponent\'s color).',
   dialogue: const [
     'There\'s one special rule: on the very first turn, each player places a piece of their opponent\'s color.',
     'This prevents a first-player advantage and creates interesting opening positions.',
-    'You\'re White, going first. Place a Black flat stone.',
+    'You\'re White, going first. Place a Black flat stone anywhere.',
   ],
   guidedMove: const GuidedMove.anyPlacement(pieceType: PieceType.flat),
   completionText:
-      'The opening rule is easy to forget! Some players place the opponent\'s piece in a corner (giving them little value), others place it centrally (creating interesting positions). Now the game continues normally — you place your own White pieces from here on.',
+      'The opening rule is easy to forget! Some players place the opponent\'s piece in a corner (giving them little value), others place it centrally (creating interesting positions).',
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
@@ -546,28 +501,32 @@ final _tutorial9OpeningRule = GameScenario(
   scriptedResponses: const [],
 );
 
-final _tutorial10FlatCount = GameScenario(
-  id: 'tutorial_10',
+final _tutorial8FlatCount = GameScenario(
+  id: 'tutorial_8',
   title: 'Winning by Flat Count',
   type: ScenarioType.tutorial,
   summary: 'Learn the alternative win condition.',
-  objective: 'Place your remaining stones to maximize your flat count.',
+  objective: 'Place your last stone to fill the board and win!',
   dialogue: const [
     'Not every game ends with a road. When the board fills up or a player runs out of pieces, the game ends.',
     'If there\'s no road, the winner is whoever has more flat stones visible on top.',
     'Walls and Capstones don\'t count for flat count — only flat stones.',
-    'The board is almost full. Place your remaining stones to maximize your flat count.',
+    'The board has one empty space. Place your stone to end the game!',
   ],
-  guidedMove: const GuidedMove.anyPlacement(pieceType: PieceType.flat),
+  guidedMove: const GuidedMove.placement(
+    target: Position(3, 3),
+    pieceType: PieceType.flat,
+  ),
   completionText:
-      'You won by flat count! You had more flat stones showing on top. This is why walls are a tradeoff — they block, but they hurt your flat count. Use them wisely.',
+      'You won by flat count! You had more flat stones showing on top. Walls block roads but hurt your flat count — use them wisely.',
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
-    turnNumber: 27,
-    whiteFlatStones: 2,
-    blackFlatStones: 1,
+    turnNumber: 29,
+    whiteFlatStones: 1,
+    blackFlatStones: 0,
     stacks: const [
+      // Board almost full with checkerboard pattern, no roads possible
       // Row 0: W B W B
       PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(0, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
@@ -578,29 +537,30 @@ final _tutorial10FlatCount = GameScenario(
       PositionedStack(position: Position(1, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Row 2: W B W (empty at col 3)
+      // Row 2: W B W B
       PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Row 3: B W (empty at col 2, 3)
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // Row 3: B W B (empty at col 3)
       PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(3, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
   scriptedResponses: const [],
 );
 
-final _tutorial11PieceSupply = GameScenario(
-  id: 'tutorial_11',
+final _tutorial9PieceSupply = GameScenario(
+  id: 'tutorial_9',
   title: 'Running Out of Pieces',
   type: ScenarioType.tutorial,
   summary: 'Manage your limited piece supply.',
-  objective: 'Complete the game wisely with your limited pieces.',
+  objective: 'Place your last piece to end the game.',
   dialogue: const [
     'Each player has a limited supply of pieces — the number depends on board size.',
     'The game ends immediately when either player places their last piece.',
-    'If there\'s no road, highest flat count wins.',
-    'You only have 2 pieces left! Finish the game wisely.',
+    'You have only 1 piece left! Place it to end the game. If there\'s no road, highest flat count wins.',
   ],
   guidedMove: const GuidedMove.anyPlacement(pieceType: PieceType.flat),
   completionText:
@@ -608,19 +568,56 @@ final _tutorial11PieceSupply = GameScenario(
   buildInitialState: () => _buildScenarioState(
     boardSize: 4,
     currentPlayer: PlayerColor.white,
-    turnNumber: 23,
-    whiteFlatStones: 2,
+    turnNumber: 27,
+    // White has 1 piece left (placed 14 of 15)
+    whiteFlatStones: 1,
     whiteCapstones: 0,
-    blackFlatStones: 5,
+    // Black has 2 pieces left (placed 13 of 15)
+    blackFlatStones: 2,
     blackCapstones: 0,
     stacks: const [
-      // Mid-game state with several pieces
+      // Scattered pieces, no roads possible
+      // White pieces (9 standalone + 5 in stack = 14 total)
       PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(1, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(3, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Stack with white on top of black pieces
+      PositionedStack(
+        position: Position(0, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // Black pieces (4 standalone + 3 in stack above + 6 in other stack = 13 total)
+      PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // Stack with black on top
+      PositionedStack(
+        position: Position(2, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
     ],
   ),
   scriptedResponses: const [],
@@ -1033,18 +1030,16 @@ final _puzzle10GrandCombination = GameScenario(
 
 /// Library of scenarios shown in the tutorial/puzzle selector.
 final List<GameScenario> tutorialAndPuzzleLibrary = [
-  // Tutorials (11)
-  _tutorial1PlacingStones,
-  _tutorial2BuildingRoad,
-  _tutorial3TurnsTaking,
-  _tutorial4StandingStones,
-  _tutorial5Capstone,
-  _tutorial6MovingSinglePiece,
-  _tutorial7StacksAndControl,
-  _tutorial8StackMovement,
-  _tutorial9OpeningRule,
-  _tutorial10FlatCount,
-  _tutorial11PieceSupply,
+  // Tutorials (9)
+  _tutorial1BuildingRoad,
+  _tutorial2StandingStones,
+  _tutorial3Capstone,
+  _tutorial4MovingSinglePiece,
+  _tutorial5StacksAndControl,
+  _tutorial6StackMovement,
+  _tutorial7OpeningRule,
+  _tutorial8FlatCount,
+  _tutorial9PieceSupply,
   // Puzzles (10)
   _puzzle1CompleteRoad,
   _puzzle2BlockAndWin,
