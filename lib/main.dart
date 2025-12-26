@@ -374,6 +374,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Future<void> _checkAchievements(GameState gameState) async {
     final session = ref.read(gameSessionProvider);
     final scenarioState = ref.read(scenarioStateProvider);
+    final isScenarioGame = session.scenario != null || scenarioState.hasScenario;
     final achievementNotifier = ref.read(achievementProvider.notifier);
 
     // Debug logging
@@ -382,6 +383,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _debugLog('  gameState.isGameOver: ${gameState.isGameOver}');
     _debugLog('  session.mode: ${session.mode}');
     _debugLog('  session.aiDifficulty: ${session.aiDifficulty}');
+    _debugLog('  isScenarioGame: $isScenarioGame');
     _debugLog('  session.vsComputerPlayerColor: ${session.vsComputerPlayerColor}');
 
     // Check if it's a win (not a draw)
@@ -411,7 +413,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       _debugLog('  Recording win with aiDifficulty: ${session.aiDifficulty}');
       final unlockedAchievements = await achievementNotifier.recordWin(
         isOnline: session.mode == GameMode.online,
-        aiDifficulty: session.mode == GameMode.vsComputer ? session.aiDifficulty : null,
+        aiDifficulty: session.mode == GameMode.vsComputer && !isScenarioGame
+            ? session.aiDifficulty
+            : null,
         byTime: gameState.winReason == WinReason.time,
         byFlats: gameState.winReason == WinReason.flats,
       );
