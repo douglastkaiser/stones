@@ -865,6 +865,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     // Board area with overlays
                     Expanded(
                       child: Stack(
+                        clipBehavior: Clip.none, // Allow tall stacks to overflow
                         children: [
                           // Board
                           Center(
@@ -2604,41 +2605,51 @@ class _GameBoard extends StatelessWidget {
     final spacing = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
     final padding = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 8.0 : 6.0);
 
-    return Container(
-      // Inner board area with inset shadow effect
-      margin: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: GameColors.gridLine,
-        borderRadius: BorderRadius.circular(6),
-        // Inset shadow effect for the grid area
-        boxShadow: [
-          // Inner shadow (dark)
-          BoxShadow(
-            color: GameColors.gridLineShadow.withValues(alpha: 0.6),
-            blurRadius: 4,
-            spreadRadius: 1,
-            offset: const Offset(2, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate cell size for decoration painter
+        final availableWidth = constraints.maxWidth - padding * 2 - spacing * 2;
+        final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
+
+        return Container(
+          // Inner board area with inset shadow effect
+          margin: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: GameColors.gridLine,
+            borderRadius: BorderRadius.circular(6),
+            // Inset shadow effect for the grid area
+            boxShadow: [
+              // Inner shadow (dark)
+              BoxShadow(
+                color: GameColors.gridLineShadow.withValues(alpha: 0.6),
+                blurRadius: 4,
+                spreadRadius: 1,
+                offset: const Offset(2, 2),
+              ),
+              // Highlight edge
+              BoxShadow(
+                color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
+                blurRadius: 2,
+                offset: const Offset(-1, -1),
+              ),
+            ],
           ),
-          // Highlight edge
-          BoxShadow(
-            color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
-            blurRadius: 2,
-            offset: const Offset(-1, -1),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.all(spacing),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: boardSize,
-            crossAxisSpacing: spacing,
-            mainAxisSpacing: spacing,
-          ),
-          itemCount: boardSize * boardSize,
-          itemBuilder: (context, index) {
+          child: Stack(
+            clipBehavior: Clip.none, // Allow pieces to overflow the board
+            children: [
+              // Main grid
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(spacing),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: boardSize,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+              ),
+              itemCount: boardSize * boardSize,
+              itemBuilder: (context, index) {
             final row = index ~/ boardSize;
             final col = index % boardSize;
             final pos = Position(row, col);
@@ -2724,9 +2735,28 @@ class _GameBoard extends StatelessWidget {
                 explodedStack: stackForExplosion,
               ),
             );
-          },
-        ),
+              },
+            ),
+          ),
+          // Overlay decorations - filigree on top of grid lines (visible above cells)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: BoardDecorationPainter(
+                  boardSize: boardSize,
+                  spacing: spacing,
+                  padding: spacing,
+                  cellSize: cellSize,
+                  theme: boardThemeData.theme,
+                  decorColor: boardThemeData.gridLineHighlight,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+      },
     );
   }
 }

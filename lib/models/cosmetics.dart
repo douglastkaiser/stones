@@ -12,11 +12,13 @@ enum BoardTheme {
   pixelArt,
 }
 
-/// Piece style types
+/// Piece style types - each matches a board theme
 enum PieceStyle {
-  standard,
-  polishedMarble,
-  handCarved,
+  standard, // Matches Classic Wood
+  stone, // Matches Dark Stone
+  polishedMarble, // Matches Marble
+  minimalist, // Matches Minimalist
+  pixel, // Matches Pixel Art
 }
 
 /// Board theme definition with colors and metadata
@@ -229,9 +231,9 @@ class PieceStyleData {
   );
 }
 
-/// All piece styles
+/// All piece styles - each matches a board theme
 const List<PieceStyleData> pieceStyles = [
-  // Standard - default, available to all
+  // Standard - default, matches Classic Wood
   PieceStyleData(
     style: PieceStyle.standard,
     name: 'Standard',
@@ -244,7 +246,21 @@ const List<PieceStyleData> pieceStyles = [
     darkBorder: Color(0xFF6B6B6B),
     stackMoveSound: 'stack_move_wood',
   ),
-  // Polished Marble - unlocks with "Puzzle Solver" (Complete all puzzles)
+  // Stone - matches Dark Stone board, unlocks with "Connected"
+  PieceStyleData(
+    style: PieceStyle.stone,
+    name: 'Chiseled Stone',
+    description: 'Hewn stone pieces',
+    requiredAchievement: AchievementType.connected,
+    lightPrimary: Color(0xFFB0BEC5),
+    lightSecondary: Color(0xFF90A4AE),
+    lightBorder: Color(0xFF546E7A),
+    darkPrimary: Color(0xFF37474F),
+    darkSecondary: Color(0xFF455A64),
+    darkBorder: Color(0xFF263238),
+    stackMoveSound: 'stack_move_stone',
+  ),
+  // Polished Marble - matches Marble board, unlocks with "Puzzle Solver"
   PieceStyleData(
     style: PieceStyle.polishedMarble,
     name: 'Polished Marble',
@@ -258,18 +274,32 @@ const List<PieceStyleData> pieceStyles = [
     darkBorder: Color(0xFF5A6570),
     stackMoveSound: 'stack_move_marble',
   ),
-  // Hand Carved - unlocks with "Connected" (Win first online game)
+  // Minimalist - matches Minimalist board, unlocks with "First Steps"
   PieceStyleData(
-    style: PieceStyle.handCarved,
-    name: 'Hand Carved',
-    description: 'Rustic carved pieces',
-    requiredAchievement: AchievementType.connected,
-    lightPrimary: Color(0xFFDEB887),
-    lightSecondary: Color(0xFFD2A86E),
-    lightBorder: Color(0xFF8B4513),
-    darkPrimary: Color(0xFF4A3728),
-    darkSecondary: Color(0xFF5C4533),
-    darkBorder: Color(0xFF8B7355),
-    stackMoveSound: 'stack_move_carved',
+    style: PieceStyle.minimalist,
+    name: 'Minimalist',
+    description: 'Clean geometric pieces',
+    requiredAchievement: AchievementType.firstSteps,
+    lightPrimary: Color(0xFFFAFAFA),
+    lightSecondary: Color(0xFFE0E0E0),
+    lightBorder: Color(0xFF9E9E9E),
+    darkPrimary: Color(0xFF212121),
+    darkSecondary: Color(0xFF424242),
+    darkBorder: Color(0xFF616161),
+    stackMoveSound: 'stack_move_minimal',
+  ),
+  // Pixel - matches Pixel Art board, unlocks with "Competitor"
+  PieceStyleData(
+    style: PieceStyle.pixel,
+    name: 'Pixel Art',
+    description: 'Retro 8-bit pieces',
+    requiredAchievement: AchievementType.competitor,
+    lightPrimary: Color(0xFFFFCD75),
+    lightSecondary: Color(0xFFEF7D57),
+    lightBorder: Color(0xFFB13E53),
+    darkPrimary: Color(0xFF38B764),
+    darkSecondary: Color(0xFF257953),
+    darkBorder: Color(0xFF0D2B45),
+    stackMoveSound: 'stack_move_pixel',
   ),
 ];

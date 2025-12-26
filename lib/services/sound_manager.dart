@@ -20,8 +20,10 @@ enum GameSound {
   piecePlacePixel,
   // Piece style sounds
   stackMoveWood,
+  stackMoveStone,
   stackMoveMarble,
-  stackMoveCarved,
+  stackMoveMinimal,
+  stackMovePixel,
 }
 
 /// Manages game sounds with mute support
@@ -82,10 +84,14 @@ class SoundManager {
       // Piece style stack move sounds - fallback to stack_move.wav for now
       case GameSound.stackMoveWood:
         return 'sounds/stack_move.wav';
+      case GameSound.stackMoveStone:
+        return 'sounds/piece_place_stone.wav'; // Use stone placement sound
       case GameSound.stackMoveMarble:
         return 'sounds/stack_move_marble.wav';
-      case GameSound.stackMoveCarved:
-        return 'sounds/stack_move_carved.wav';
+      case GameSound.stackMoveMinimal:
+        return 'sounds/piece_place_minimal.wav'; // Use minimal sound
+      case GameSound.stackMovePixel:
+        return 'sounds/piece_place_pixel.wav'; // Use pixel sound
     }
   }
 
@@ -157,8 +163,10 @@ class SoundManager {
   Future<void> playThemedStackMove(PieceStyle style) {
     final sound = switch (style) {
       PieceStyle.standard => GameSound.stackMoveWood,
+      PieceStyle.stone => GameSound.stackMoveStone,
       PieceStyle.polishedMarble => GameSound.stackMoveMarble,
-      PieceStyle.handCarved => GameSound.stackMoveCarved,
+      PieceStyle.minimalist => GameSound.stackMoveMinimal,
+      PieceStyle.pixel => GameSound.stackMovePixel,
     };
     return play(sound);
   }

@@ -51,11 +51,13 @@ const List<GameAchievement> achievements = [
     type: AchievementType.firstSteps,
     name: 'First Steps',
     description: 'Beat Easy AI',
+    unlocksReward: 'Minimalist piece style',
   ),
   GameAchievement(
     type: AchievementType.competitor,
     name: 'Competitor',
     description: 'Beat Medium AI',
+    unlocksReward: 'Pixel Art piece style',
   ),
   GameAchievement(
     type: AchievementType.strategist,
@@ -73,7 +75,7 @@ const List<GameAchievement> achievements = [
     type: AchievementType.connected,
     name: 'Connected',
     description: 'Win first online game',
-    unlocksReward: 'Hand Carved piece style',
+    unlocksReward: 'Chiseled Stone piece style',
   ),
   GameAchievement(
     type: AchievementType.dedicated,

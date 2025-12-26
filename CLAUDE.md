@@ -68,7 +68,23 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
    - **Check for cascading deletions** - if you deleted a class, search for helper classes/methods that were only used by it
    - Add `const` to constructors where all arguments are constant
 
-9. **Avoid deprecated Flutter APIs** - The analyzer flags deprecated APIs as info-level issues, which fail with `--fatal-infos`. Common deprecations to avoid:
+9. **Avoid redundant argument values** - Don't pass arguments that match the default value. The analyzer flags this as `avoid_redundant_argument_values`:
+   ```dart
+   // BAD - clockwise: true is the default for arcToPoint
+   path.arcToPoint(
+     Offset(x, y),
+     radius: Radius.circular(r),
+     clockwise: true,  // Redundant! This is the default
+   );
+
+   // GOOD - omit default values
+   path.arcToPoint(
+     Offset(x, y),
+     radius: Radius.circular(r),
+   );
+   ```
+
+10. **Avoid deprecated Flutter APIs** - The analyzer flags deprecated APIs as info-level issues, which fail with `--fatal-infos`. Common deprecations to avoid:
    ```dart
    // BAD - activeColor is deprecated (Flutter 3.31+)
    Switch(
