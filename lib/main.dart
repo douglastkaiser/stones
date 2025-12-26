@@ -4156,29 +4156,35 @@ class _BottomControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomPadding = math.max(MediaQuery.of(context).padding.bottom, 12.0);
+
+    if (gameState.isGameOver) {
+      return SizedBox(height: bottomPadding);
+    }
 
     // Fixed height container to prevent board rescaling when controls change
     // Taller height for more breathing room with full hints
-    return SizedBox(
-      height: gameState.isGameOver ? 0 : 72,
-      child: gameState.isGameOver
-          ? null
-          : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
-                    : GameColors.controlPanelBg.withValues(alpha: 0.95),
-                border: Border(
-                  top: BorderSide(
-                    color: isDark
-                        ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)
-                        : GameColors.controlPanelBorder.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              child: _buildControls(context),
-            ),
+    return Container(
+      height: 72 + bottomPadding,
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 10,
+        bottom: 10 + bottomPadding,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+            : GameColors.controlPanelBg.withValues(alpha: 0.95),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)
+                : GameColors.controlPanelBorder.withValues(alpha: 0.5),
+          ),
+        ),
+      ),
+      child: _buildControls(context),
     );
   }
 
