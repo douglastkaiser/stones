@@ -723,6 +723,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               boardThemeData: boardThemeData,
               onCellTap: (pos) =>
                   _handleCellTap(context, ref, pos, guidedMove),
+              onCellSwipe: (pos, dir) =>
+                  _handleCellSwipe(context, ref, pos, dir, guidedMove),
               onLongPressStart: _startStackView,
               onLongPressEnd: _endStackView,
             ),
@@ -1014,6 +1016,105 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
       case InteractionMode.droppingPieces:
         _handleDroppingPiecesTap(ref, pos, stack, gameState, uiState);
+    }
+  }
+
+  /// Handle swipe gesture on a cell - selects stack and starts movement
+  void _handleCellSwipe(
+      BuildContext context, WidgetRef ref, Position pos, Direction direction, GuidedMove? guidedMove) {
+    _debugLog('_handleCellSwipe: pos=$pos, direction=$direction');
+    final gameState = ref.read(gameStateProvider);
+    final uiState = ref.read(uiStateProvider);
+    final uiNotifier = ref.read(uiStateProvider.notifier);
+    final session = ref.read(gameSessionProvider);
+
+    // Online turn check
+    if (session.mode == GameMode.online) {
+      final onlineState = ref.read(onlineGameProvider);
+      final isMyTurnLocally = onlineState.localColor != null &&
+          gameState.currentPlayer == onlineState.localColor;
+      if (!isMyTurnLocally || onlineState.waitingForOpponent) {
+        return;
+      }
+    }
+
+    // AI turn check
+    final isAiTurn = _isAiTurn(session, gameState);
+    if (gameState.isGameOver || isAiTurn || ref.read(aiThinkingProvider)) {
+      return;
+    }
+
+    // Can't move stacks during opening phase
+    if (gameState.isOpeningPhase) {
+      return;
+    }
+
+    final stack = gameState.board.stackAt(pos);
+
+    // Must have a stack to move
+    if (stack.isEmpty) {
+      return;
+    }
+
+    // Must be current player's stack
+    if (stack.controller != gameState.currentPlayer) {
+      return;
+    }
+
+    // Check if swipe direction leads to a valid move
+    final targetPos = direction.apply(pos);
+    if (!gameState.board.isValidPosition(targetPos)) {
+      return;
+    }
+
+    // Check if target can be moved onto
+    final targetStack = gameState.board.stackAt(targetPos);
+    final topPiece = stack.topPiece!;
+    final canMove = targetStack.canMoveOnto(topPiece) ||
+        (targetStack.topPiece?.type == PieceType.standing && topPiece.canFlattenWalls);
+
+    if (!canMove) {
+      return;
+    }
+
+    // Handle guided move constraints if applicable
+    if (guidedMove != null && guidedMove.type == GuidedMoveType.stackMove) {
+      if (pos != guidedMove.from) {
+        return;
+      }
+    }
+
+    // If currently in idle or movingStack mode on a different cell, select this stack
+    // Calculate max pieces that can be picked up
+    final maxPieces = stack.height > gameState.boardSize
+        ? gameState.boardSize
+        : stack.height;
+
+    // Based on current mode, handle the swipe
+    switch (uiState.mode) {
+      case InteractionMode.idle:
+        // Select stack and immediately start moving
+        uiNotifier.selectStack(pos, maxPieces);
+        uiNotifier.startMoving(direction);
+
+      case InteractionMode.placingPiece:
+        // Cancel placement and start stack move
+        uiNotifier.selectStack(pos, maxPieces);
+        uiNotifier.startMoving(direction);
+
+      case InteractionMode.movingStack:
+        if (uiState.selectedPosition == pos) {
+          // Same stack selected - start moving in swipe direction
+          uiNotifier.startMoving(direction);
+        } else {
+          // Different stack - select new one and start moving
+          uiNotifier.selectStack(pos, maxPieces);
+          uiNotifier.startMoving(direction);
+        }
+
+      case InteractionMode.droppingPieces:
+        // Already in dropping mode - ignore swipe
+        return;
     }
   }
 
@@ -2548,6 +2649,7 @@ class _GameBoard extends StatelessWidget {
   final Position? explodedPosition;
   final PieceStack? explodedStack;
   final Function(Position) onCellTap;
+  final Function(Position, Direction) onCellSwipe;
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
   final PieceStyleData pieceStyleData;
@@ -2558,6 +2660,7 @@ class _GameBoard extends StatelessWidget {
     required this.uiState,
     required this.animationState,
     required this.onCellTap,
+    required this.onCellSwipe,
     required this.onLongPressStart,
     required this.onLongPressEnd,
     required this.pieceStyleData,
@@ -2710,6 +2813,7 @@ class _GameBoard extends StatelessWidget {
               stack: displayStack,
               ghostStackPieces: ghostStackPieces,
               onTap: () => onCellTap(pos),
+              onSwipe: (dir) => onCellSwipe(pos, dir),
               onStackViewStart: onLongPressStart,
               onStackViewEnd: onLongPressEnd,
               child: _BoardCell(
@@ -2765,7 +2869,7 @@ class _GameBoard extends StatelessWidget {
   }
 }
 
-/// Interaction wrapper to support taps, long press, right-click, and hover hold for stack view
+/// Interaction wrapper to support taps, long press, right-click, hover hold, and swipe for stack view
 class _CellInteractionLayer extends StatefulWidget {
   final Position position;
   final PieceStack stack;
@@ -2777,6 +2881,9 @@ class _CellInteractionLayer extends StatefulWidget {
   /// Ghost pieces that would be added to the stack (for hover preview)
   final List<Piece> ghostStackPieces;
 
+  /// Called when user swipes on the cell with a direction
+  final Function(Direction)? onSwipe;
+
   const _CellInteractionLayer({
     required this.position,
     required this.stack,
@@ -2785,6 +2892,7 @@ class _CellInteractionLayer extends StatefulWidget {
     required this.onStackViewEnd,
     required this.child,
     this.ghostStackPieces = const [],
+    this.onSwipe,
   });
 
   @override
@@ -2794,6 +2902,9 @@ class _CellInteractionLayer extends StatefulWidget {
 class _CellInteractionLayerState extends State<_CellInteractionLayer> {
   Timer? _hoverTimer;
   bool _isViewing = false;
+
+  /// Minimum velocity in pixels/second to recognize as a swipe
+  static const double _swipeVelocityThreshold = 100.0;
 
   @override
   void dispose() {
@@ -2834,6 +2945,41 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
     _hoverTimer = Timer(const Duration(milliseconds: 280), _activateView);
   }
 
+  /// Convert velocity to a Direction based on swipe gesture
+  Direction? _getSwipeDirection(Offset velocity) {
+    final dx = velocity.dx;
+    final dy = velocity.dy;
+
+    // Check if the swipe velocity is fast enough
+    if (dx.abs() < _swipeVelocityThreshold && dy.abs() < _swipeVelocityThreshold) {
+      return null;
+    }
+
+    // Determine primary direction based on which axis has greater velocity
+    if (dx.abs() > dy.abs()) {
+      // Horizontal swipe
+      return dx > 0 ? Direction.right : Direction.left;
+    } else {
+      // Vertical swipe - note: in screen coordinates, positive Y is down
+      return dy > 0 ? Direction.down : Direction.up;
+    }
+  }
+
+  void _handlePanEnd(DragEndDetails details) {
+    if (widget.onSwipe == null) {
+      return;
+    }
+
+    // Use the velocity to determine swipe direction for better UX
+    final velocity = details.velocity.pixelsPerSecond;
+    final direction = _getSwipeDirection(velocity);
+
+    if (direction != null) {
+      _deactivateView();
+      widget.onSwipe!(direction);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -2844,6 +2990,7 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
           _deactivateView();
           widget.onTap();
         },
+        onPanEnd: widget.onSwipe != null ? _handlePanEnd : null,
         onLongPressStart: _hasContent ? (_) => _activateView() : null,
         onLongPressEnd: _hasContent ? (_) => _deactivateView() : null,
         onLongPressCancel: _hasContent ? _deactivateView : null,
