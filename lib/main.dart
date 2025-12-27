@@ -1053,7 +1053,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           );
         },
       ),
-    );
+    ),
+  );
   }
 
   void _handleCellTap(
