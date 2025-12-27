@@ -805,10 +805,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return PopScope(
-      // Block back navigation when there are moves to undo
-      canPop: !canUndo,
+      // On web, let the web popstate handler manage undo exclusively
+      // On mobile, PopScope handles the system back button for undo
+      canPop: kIsWeb ? true : !canUndo,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && canUndo) {
+        // Only handle on mobile - web uses the popstate handler to avoid double-firing
+        if (!kIsWeb && !didPop && canUndo) {
           // Back button pressed with moves to undo - undo instead of navigating
           _undo();
         }
