@@ -603,8 +603,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }
 
   void _continueGame(BuildContext context) {
-    Navigator.push(
-      context,
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const GameScreen()),
     );
   }

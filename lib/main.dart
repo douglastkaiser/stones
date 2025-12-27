@@ -290,8 +290,7 @@ class _BoardSizeButton extends ConsumerWidget {
     ref.read(animationStateProvider.notifier).reset();
     ref.read(moveHistoryProvider.notifier).clear();
     ref.read(lastMoveProvider.notifier).state = null;
-    Navigator.push(
-      context,
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const GameScreen()),
     );
   }
