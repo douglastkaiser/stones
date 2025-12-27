@@ -3,8 +3,11 @@ import 'dart:developer' as developer;
 import 'dart:math' as math;
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'services/web_back_button_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -338,6 +341,58 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Trigger initial AI turn if needed
     unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+
+    // Set up web back button handler
+    if (kIsWeb) {
+      initWebBackButtonHandler(_handleWebBackButton);
+    }
+  }
+
+  /// Handle web back button press.
+  /// Returns true if undo was performed (push new history state to stay on screen),
+  /// false to allow normal browser/Flutter navigation back to menu.
+  bool _handleWebBackButton() {
+    if (_canPerformUndo()) {
+      _undo();
+      return true; // Undo performed - push history state to stay on game screen
+    } else {
+      // No moves to undo - let browser/Flutter handle navigation
+      // PopScope will allow the pop (canPop: true when canUndo is false)
+      return false;
+    }
+  }
+
+  /// Check if undo can be performed in current game state
+  bool _canPerformUndo() {
+    if (ref.read(aiThinkingProvider)) return false;
+
+    final session = ref.read(gameSessionProvider);
+    final gameState = ref.read(gameStateProvider);
+    final gameNotifier = ref.read(gameStateProvider.notifier);
+
+    if (!gameNotifier.canUndo) return false;
+
+    // Disable undo when chess clock is enabled (would allow time manipulation)
+    final settings = ref.read(appSettingsProvider);
+    if (settings.chessClockEnabled) return false;
+
+    // Online mode: can only undo if it's opponent's turn (we just moved)
+    if (session.mode == GameMode.online) {
+      final onlineState = ref.read(onlineGameProvider);
+      // Also check if online game has chess clock enabled
+      if (onlineState.session?.chessClockEnabled == true) return false;
+      final isOpponentTurn = onlineState.localColor != null &&
+          gameState.currentPlayer != onlineState.localColor;
+      return isOpponentTurn;
+    }
+
+    // VS Computer: can undo if it's player's turn
+    if (session.mode == GameMode.vsComputer) {
+      return !_isAiTurn(session, gameState);
+    }
+
+    // Local mode: can always undo if there are moves
+    return true;
   }
 
   void _showAchievementNotification(AchievementType type) {
@@ -357,6 +412,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   @override
   void dispose() {
     ref.read(gameStateProvider.notifier).onRoadWin = null;
+    if (kIsWeb) {
+      disposeWebBackButtonHandler();
+    }
     super.dispose();
   }
 
@@ -460,31 +518,70 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (ref.read(aiThinkingProvider)) return;
     final session = ref.read(gameSessionProvider);
     final gameState = ref.read(gameStateProvider);
+    final gameNotifier = ref.read(gameStateProvider.notifier);
+
+    // Online mode: only allow undo of your own move before opponent responds
     if (session.mode == GameMode.online) {
+      final onlineState = ref.read(onlineGameProvider);
+      // Can only undo if:
+      // 1. It's currently opponent's turn (we just moved)
+      // 2. We have moves to undo
+      // 3. The last move was ours (check move count)
+      final isOpponentTurn = onlineState.localColor != null &&
+          gameState.currentPlayer != onlineState.localColor;
+      if (!isOpponentTurn || !gameNotifier.canUndo) {
+        return;
+      }
+      // Undo our last move
+      _performSingleUndo();
       return;
     }
+
+    // Don't undo during AI's turn
     if (_isAiTurn(session, gameState)) {
       return;
     }
 
-    final gameNotifier = ref.read(gameStateProvider.notifier);
-    if (gameNotifier.canUndo) {
-      // Remove from move history
-      ref.read(moveHistoryProvider.notifier).removeLast();
-      // Undo game state
-      gameNotifier.undo();
-      // Reset UI state
-      ref.read(uiStateProvider.notifier).reset();
-      // Update last move highlight
-      final history = ref.read(moveHistoryProvider);
-      if (history.isNotEmpty) {
-        ref.read(lastMoveProvider.notifier).state = history.last.affectedPositions;
-      } else {
-        ref.read(lastMoveProvider.notifier).state = null;
+    if (!gameNotifier.canUndo) return;
+
+    // VS Computer mode: undo both computer's move AND player's move
+    if (session.mode == GameMode.vsComputer) {
+      // First undo: the computer's last move (if any)
+      // The current turn should be player's turn, so the last move was computer's
+      if (gameNotifier.canUndo) {
+        _performSingleUndo();
       }
-      // Reset animation state
-      ref.read(animationStateProvider.notifier).reset();
+      // Second undo: the player's previous move
+      if (gameNotifier.canUndo) {
+        _performSingleUndo();
+      }
+      return;
     }
+
+    // Local mode: undo single move
+    _performSingleUndo();
+  }
+
+  /// Performs a single undo operation
+  void _performSingleUndo() {
+    final gameNotifier = ref.read(gameStateProvider.notifier);
+    if (!gameNotifier.canUndo) return;
+
+    // Remove from move history
+    ref.read(moveHistoryProvider.notifier).removeLast();
+    // Undo game state
+    gameNotifier.undo();
+    // Reset UI state
+    ref.read(uiStateProvider.notifier).reset();
+    // Update last move highlight
+    final history = ref.read(moveHistoryProvider);
+    if (history.isNotEmpty) {
+      ref.read(lastMoveProvider.notifier).state = history.last.affectedPositions;
+    } else {
+      ref.read(lastMoveProvider.notifier).state = null;
+    }
+    // Reset animation state
+    ref.read(animationStateProvider.notifier).reset();
   }
 
   /// Start the next scenario without the "Replace current game" prompt
@@ -535,7 +632,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         gameState.currentPlayer == onlineState.localColor;
     final isRemoteTurn = isOnline && !isMyTurnLocally;
     final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
-    final canUndo = !isOnline && ref.read(gameStateProvider.notifier).canUndo;
+    final canUndo = _canPerformUndo();
     final inputLocked = isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
 
     // Listen for chess clock expiration to trigger game end
@@ -704,13 +801,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stones'),
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () => Navigator.pop(context),
-        ),
+    return PopScope(
+      // Block navigation when there are moves to undo (both web and mobile)
+      // On web, PopScope blocks Flutter navigation but doesn't trigger undo
+      // (the web popstate handler does the undo)
+      canPop: !canUndo,
+      onPopInvokedWithResult: (didPop, result) {
+        // Only handle undo on mobile - web uses the popstate handler
+        if (!kIsWeb && !didPop && canUndo) {
+          // Back button pressed with moves to undo - undo instead of navigating
+          _undo();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Stones'),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => Navigator.pop(context),
+          ),
         actions: [
           // Undo button
           IconButton(
@@ -1043,6 +1152,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ],
           );
         },
+      ),
       ),
     );
   }
