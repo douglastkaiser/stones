@@ -1,8 +1,8 @@
-import 'dart:async';
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 
-StreamSubscription<html.PopStateEvent>? _popStateSubscription;
 bool Function()? _onBackCallback;
+web.EventListener? _popStateListener;
 
 /// Initialize the web back button handler.
 /// [onBack] is called when the browser back button is pressed.
@@ -15,7 +15,7 @@ void initWebBackButtonHandler(bool Function() onBack) {
   pushWebHistoryState();
 
   // Listen for popstate events (browser back/forward)
-  _popStateSubscription = html.window.onPopState.listen((event) {
+  _popStateListener = ((web.Event event) {
     if (_onBackCallback != null) {
       final handled = _onBackCallback!();
       if (handled) {
@@ -24,17 +24,21 @@ void initWebBackButtonHandler(bool Function() onBack) {
       }
       // If not handled, let normal navigation proceed
     }
-  });
+  }).toJS;
+
+  web.window.addEventListener('popstate', _popStateListener);
 }
 
 /// Push a new history state (call this when moves are made).
 void pushWebHistoryState() {
-  html.window.history.pushState({'game': 'stones'}, '', null);
+  web.window.history.pushState({'game': 'stones'}.jsify(), '', null);
 }
 
 /// Clean up the handler when leaving the game screen.
 void disposeWebBackButtonHandler() {
-  _popStateSubscription?.cancel();
-  _popStateSubscription = null;
+  if (_popStateListener != null) {
+    web.window.removeEventListener('popstate', _popStateListener);
+    _popStateListener = null;
+  }
   _onBackCallback = null;
 }
