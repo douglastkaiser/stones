@@ -349,19 +349,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Handle web back button press.
-  /// Returns true if the back was handled (stay on game screen),
-  /// false to allow normal navigation back to menu.
+  /// Returns true if undo was performed (push new history state to stay on screen),
+  /// false to allow normal browser/Flutter navigation back to menu.
   bool _handleWebBackButton() {
-    // Always handle the back button ourselves to prevent browser navigation issues
     if (_canPerformUndo()) {
       _undo();
-      return true; // Undo performed - stay on game screen
+      return true; // Undo performed - push history state to stay on game screen
     } else {
-      // No moves to undo - navigate back to menu using Flutter
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-      return true; // We handled it (by navigating via Flutter)
+      // No moves to undo - let browser/Flutter handle navigation
+      // PopScope will allow the pop (canPop: true when canUndo is false)
+      return false;
     }
   }
 
@@ -805,11 +802,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return PopScope(
-      // On web, let the web popstate handler manage undo exclusively
-      // On mobile, PopScope handles the system back button for undo
-      canPop: kIsWeb ? true : !canUndo,
+      // Block navigation when there are moves to undo (both web and mobile)
+      // On web, PopScope blocks Flutter navigation but doesn't trigger undo
+      // (the web popstate handler does the undo)
+      canPop: !canUndo,
       onPopInvokedWithResult: (didPop, result) {
-        // Only handle on mobile - web uses the popstate handler to avoid double-firing
+        // Only handle undo on mobile - web uses the popstate handler
         if (!kIsWeb && !didPop && canUndo) {
           // Back button pressed with moves to undo - undo instead of navigating
           _undo();
