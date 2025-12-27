@@ -34,7 +34,7 @@ void initWebBackButtonHandler(bool Function() onBack) {
 
 /// Push a new history state (call this when moves are made).
 void pushWebHistoryState() {
-  web.window.history.pushState({'game': 'stones'}.jsify(), '', null);
+  web.window.history.pushState({'game': 'stones'}.jsify(), '');
 }
 
 /// Clean up the handler when leaving the game screen.
