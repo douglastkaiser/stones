@@ -370,9 +370,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (!gameNotifier.canUndo) return false;
 
+    // Disable undo when chess clock is enabled (would allow time manipulation)
+    final settings = ref.read(appSettingsProvider);
+    if (settings.chessClockEnabled) return false;
+
     // Online mode: can only undo if it's opponent's turn (we just moved)
     if (session.mode == GameMode.online) {
       final onlineState = ref.read(onlineGameProvider);
+      // Also check if online game has chess clock enabled
+      if (onlineState.session?.chessClockEnabled == true) return false;
       final isOpponentTurn = onlineState.localColor != null &&
           gameState.currentPlayer != onlineState.localColor;
       return isOpponentTurn;
