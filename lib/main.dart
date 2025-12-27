@@ -3,8 +3,11 @@ import 'dart:developer' as developer;
 import 'dart:math' as math;
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'services/web_back_button_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -338,6 +341,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Trigger initial AI turn if needed
     unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+
+    // Set up web back button handler
+    if (kIsWeb) {
+      initWebBackButtonHandler(_handleWebBackButton);
+    }
+  }
+
+  /// Handle web back button press.
+  /// Returns true if undo was performed, false to allow normal navigation.
+  bool _handleWebBackButton() {
+    final session = ref.read(gameSessionProvider);
+    final isOnline = session.mode == GameMode.online;
+    final canUndo = !isOnline && ref.read(gameStateProvider.notifier).canUndo;
+
+    if (canUndo) {
+      _undo();
+      return true; // Handled - undo performed
+    } else {
+      // No moves to undo - allow navigation back to menu
+      return false;
+    }
   }
 
   void _showAchievementNotification(AchievementType type) {
@@ -357,6 +381,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   @override
   void dispose() {
     ref.read(gameStateProvider.notifier).onRoadWin = null;
+    if (kIsWeb) {
+      disposeWebBackButtonHandler();
+    }
     super.dispose();
   }
 
