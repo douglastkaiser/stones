@@ -704,13 +704,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stones'),
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () => Navigator.pop(context),
-        ),
+    return PopScope(
+      // Block back navigation when there are moves to undo
+      canPop: !canUndo,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && canUndo) {
+          // Back button pressed with moves to undo - undo instead of navigating
+          _undo();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Stones'),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => Navigator.pop(context),
+          ),
         actions: [
           // Undo button
           IconButton(
@@ -1043,6 +1052,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ],
           );
         },
+      ),
       ),
     );
   }
