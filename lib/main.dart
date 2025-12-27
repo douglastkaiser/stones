@@ -536,6 +536,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isRemoteTurn = isOnline && !isMyTurnLocally;
     final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
     final canUndo = !isOnline && ref.read(gameStateProvider.notifier).canUndo;
+    final canHandleBackAsUndo = canUndo && !isAiThinking && !isAiTurn;
     final inputLocked = isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
 
     // Listen for chess clock expiration to trigger game end
@@ -704,111 +705,119 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stones'),
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // Undo button
-          IconButton(
-            icon: Icon(
-              Icons.undo,
-              color: canUndo ? null : Colors.grey.shade400,
-            ),
-            tooltip: canUndo ? 'Undo last move' : 'No moves to undo',
-            onPressed: canUndo ? _undo : null,
+    return PopScope(
+      canPop: !canHandleBackAsUndo,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (canHandleBackAsUndo) {
+          _undo();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Stones'),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => Navigator.pop(context),
           ),
-          // History toggle button
-          IconButton(
-            icon: Icon(_showHistory ? Icons.history_toggle_off : Icons.history),
-            tooltip: _showHistory ? 'Hide move history' : 'Show move history',
-            onPressed: () => setState(() => _showHistory = !_showHistory),
-          ),
-          if (session.mode == GameMode.online)
+          actions: [
+            // Undo button
             IconButton(
-              icon: const Icon(Icons.flag),
-              tooltip: 'Resign',
-              onPressed: () => _confirmResign(context),
+              icon: Icon(
+                Icons.undo,
+                color: canUndo ? null : Colors.grey.shade400,
+              ),
+              tooltip: canUndo ? 'Undo last move' : 'No moves to undo',
+              onPressed: canUndo ? _undo : null,
             ),
-          IconButton(
-            icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
-            tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
-            onPressed: () async {
-              final soundManager = ref.read(soundManagerProvider);
-              await soundManager.toggleMute();
-              ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'New Game',
-            onPressed: session.mode == GameMode.online
-                ? null
-                : () => _showNewGameDialog(context, ref),
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWideScreen = constraints.maxWidth > 700;
-          final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
+            // History toggle button
+            IconButton(
+              icon: Icon(_showHistory ? Icons.history_toggle_off : Icons.history),
+              tooltip: _showHistory ? 'Hide move history' : 'Show move history',
+              onPressed: () => setState(() => _showHistory = !_showHistory),
+            ),
+            if (session.mode == GameMode.online)
+              IconButton(
+                icon: const Icon(Icons.flag),
+                tooltip: 'Resign',
+                onPressed: () => _confirmResign(context),
+              ),
+            IconButton(
+              icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
+              tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
+              onPressed: () async {
+                final soundManager = ref.read(soundManagerProvider);
+                await soundManager.toggleMute();
+                ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'New Game',
+              onPressed: session.mode == GameMode.online
+                  ? null
+                  : () => _showNewGameDialog(context, ref),
+            ),
+          ],
+        ),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 700;
+            final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
 
-          // Board widget (reused in both layouts)
-          final boardWidget = Container(
-            decoration: BoxDecoration(
-              // Frame gradient using board theme
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  boardThemeData.frameInner,
-                  boardThemeData.frameOuter,
-                  boardThemeData.frameInner,
+            // Board widget (reused in both layouts)
+            final boardWidget = Container(
+              decoration: BoxDecoration(
+                // Frame gradient using board theme
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    boardThemeData.frameInner,
+                    boardThemeData.frameOuter,
+                    boardThemeData.frameInner,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: boardThemeData.frameOuter,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(2, 4),
+                  ),
+                  BoxShadow(
+                    color: boardThemeData.frameInner.withValues(alpha: 0.5),
+                    blurRadius: 2,
+                    offset: const Offset(-1, -1),
+                  ),
                 ],
-                stops: const [0.0, 0.5, 1.0],
               ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: boardThemeData.frameOuter,
-                width: 2,
+              child: IgnorePointer(
+                ignoring: inputLocked,
+                child: _GameBoard(
+                  gameState: gameState,
+                  uiState: uiState,
+                  animationState: animationState,
+                  lastMovePositions: lastMovePositions,
+                  explodedPosition: _longPressedPosition,
+                  explodedStack: _longPressedStack,
+                  highlightedPositions: scenarioHighlights,
+                  pieceStyleData: pieceStyleData,
+                  boardThemeData: boardThemeData,
+                  onCellTap: (pos) =>
+                      _handleCellTap(context, ref, pos, guidedMove),
+                  onCellSwipe: (pos, dir) =>
+                      _handleCellSwipe(context, ref, pos, dir, guidedMove),
+                  onLongPressStart: _startStackView,
+                  onLongPressEnd: _endStackView,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(2, 4),
-                ),
-                BoxShadow(
-                  color: boardThemeData.frameInner.withValues(alpha: 0.5),
-                  blurRadius: 2,
-                  offset: const Offset(-1, -1),
-                ),
-              ],
-            ),
-            child: IgnorePointer(
-              ignoring: inputLocked,
-            child: _GameBoard(
-              gameState: gameState,
-              uiState: uiState,
-              animationState: animationState,
-              lastMovePositions: lastMovePositions,
-              explodedPosition: _longPressedPosition,
-              explodedStack: _longPressedStack,
-              highlightedPositions: scenarioHighlights,
-              pieceStyleData: pieceStyleData,
-              boardThemeData: boardThemeData,
-              onCellTap: (pos) =>
-                  _handleCellTap(context, ref, pos, guidedMove),
-              onCellSwipe: (pos, dir) =>
-                  _handleCellSwipe(context, ref, pos, dir, guidedMove),
-              onLongPressStart: _startStackView,
-              onLongPressEnd: _endStackView,
-            ),
-          ),
-          );
+            );
 
           // Bottom controls
           final bottomControls = IgnorePointer(
