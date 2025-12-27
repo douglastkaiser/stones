@@ -9,6 +9,9 @@ web.EventListener? _popStateListener;
 /// It should return true if the back was handled (undo performed),
 /// or false if navigation should proceed.
 void initWebBackButtonHandler(bool Function() onBack) {
+  // Clean up any existing listener first to prevent duplicates
+  disposeWebBackButtonHandler();
+
   _onBackCallback = onBack;
 
   // Push initial history state so we have something to pop
