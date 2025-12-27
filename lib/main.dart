@@ -706,7 +706,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return PopScope(
-      canPop: !canHandleBackAsUndo,
+      // Prevent navigating away via system/back gestures; handle locally instead.
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (canHandleBackAsUndo) {
