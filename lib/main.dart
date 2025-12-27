@@ -349,14 +349,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Handle web back button press.
-  /// Returns true if undo was performed, false to allow normal navigation.
+  /// Returns true if the back was handled (stay on game screen),
+  /// false to allow normal navigation back to menu.
   bool _handleWebBackButton() {
+    // Always handle the back button ourselves to prevent browser navigation issues
     if (_canPerformUndo()) {
       _undo();
-      return true; // Handled - undo performed
+      return true; // Undo performed - stay on game screen
     } else {
-      // No moves to undo - allow navigation back to menu
-      return false;
+      // No moves to undo - navigate back to menu using Flutter
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      return true; // We handled it (by navigating via Flutter)
     }
   }
 
