@@ -31229,7 +31229,7 @@ s=A.dk(new A.aMv())
 $.aQI=s
 v.G.window.addEventListener("popstate",s)},
 aZX(){var s=t.N
-v.G.window.history.pushState(A.ad(A.ai(["game","stones"],s,s)),"",null)},
+v.G.window.history.pushState(A.ad(A.ai(["game","stones"],s,s)),"")},
 aZo(){var s=$.aQI
 if(s!=null){v.G.window.removeEventListener("popstate",s)
 $.aQI=null}$.aQG=null},
@@ -102846,7 +102846,7 @@ else l=l.Lo(o?B.h:B.c8,B.E,4)
 l=A.a3("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.dv
-s=A.iX(p,A.a3("v1.0.0+264.gc10d098.d20251227 (c10d098)",p,p,p,A.aM(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.ai,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gamY(),p,p,p,p,p,p)
+s=A.iX(p,A.a3("v1.0.0+265.g479ebe2.d20251227 (479ebe2)",p,p,p,A.aM(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.ai,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gamY(),p,p,p,p,p,p)
 r=A.A(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -102856,7 +102856,7 @@ r=q}return A.eo(A.bu(A.b([m,B.a6,l,B.c1,s,B.as,A.a3("An abstract strategy game",
 $S:725}
 A.avE.prototype={
 $0(){var s=null
-A.bhs(new A.b7(B.bq,A.cM(A.es(s,s,s,new A.Mr(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+264.gc10d098.d20251227 (c10d098)",this.b)
+A.bhs(new A.b7(B.bq,A.cM(A.es(s,s,s,new A.Mr(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+265.g479ebe2.d20251227 (479ebe2)",this.b)
 return s},
 $S:0}
 A.IB.prototype={
@@ -103508,7 +103508,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cG
-return A.aV(o,A.eo(A.bt(A.b([A.a3("v1.0.0+264.gc10d098.d20251227 (c10d098)",o,o,o,A.aM(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a3("  \u2022  ",o,o,o,A.aM(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.iX(o,A.a3("Privacy",o,o,o,A.aM(o,o,q,o,B.pm,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.ai,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gan7(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ag,0),o,o),B.l,o,o,o,o,o,o,B.mA,o,o,o)}}
+return A.aV(o,A.eo(A.bt(A.b([A.a3("v1.0.0+265.g479ebe2.d20251227 (479ebe2)",o,o,o,A.aM(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a3("  \u2022  ",o,o,o,A.aM(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.iX(o,A.a3("Privacy",o,o,o,A.aM(o,o,q,o,B.pm,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.ai,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gan7(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ag,0),o,o),B.l,o,o,o,o,o,o,B.mA,o,o,o)}}
 A.vo.prototype={
 J(a){var s,r,q,p,o,n,m,l=null,k=A.A(a).ax.a===B.w,j=this.d
 if(j)s=B.B
