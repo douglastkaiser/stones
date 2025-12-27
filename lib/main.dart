@@ -311,6 +311,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   // Long press stack view state
   Position? _longPressedPosition;
   PieceStack? _longPressedStack;
+  bool _allowNavigationPop = false;
 
   void _startStackView(Position pos, PieceStack stack) {
     if (_longPressedPosition == pos && _longPressedStack == stack) return;
@@ -328,6 +329,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     setState(() {
       _longPressedPosition = null;
       _longPressedStack = null;
+    });
+  }
+
+  void _navigateHome() {
+    setState(() => _allowNavigationPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.pop(context);
+      }
     });
   }
 
@@ -790,7 +800,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   onPressed: () {
                     Navigator.pop(dialogContext);
                     ref.read(scenarioStateProvider.notifier).clearScenario();
-                    Navigator.pop(context);
+                    _navigateHome();
                   },
                   child: const Text('Home'),
                 ),
@@ -805,8 +815,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       // Block navigation when there are moves to undo (both web and mobile)
       // On web, PopScope blocks Flutter navigation but doesn't trigger undo
       // (the web popstate handler does the undo)
-      canPop: !canUndo,
+      canPop: _allowNavigationPop || !canUndo,
       onPopInvokedWithResult: (didPop, result) {
+        if (_allowNavigationPop) {
+          if (!didPop) {
+            setState(() => _allowNavigationPop = false);
+          }
+          return;
+        }
         // Only handle undo on mobile - web uses the popstate handler
         if (!kIsWeb && !didPop && canUndo) {
           // Back button pressed with moves to undo - undo instead of navigating
@@ -818,7 +834,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           title: const Text('Stones'),
           leading: IconButton(
             icon: const Icon(Icons.home),
-            onPressed: () => Navigator.pop(context),
+            onPressed: _navigateHome,
           ),
         actions: [
           // Undo button
