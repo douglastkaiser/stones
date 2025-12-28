@@ -819,20 +819,17 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       // Continue game button (if game in progress)
                       if (hasGameInProgress) ...[
                         SizedBox(
-                          width: 220,
-                          height: 56,
+                          width: 200,
                           child: OutlinedButton.icon(
                             onPressed: () => _continueGame(context),
-                            icon: const Icon(Icons.replay, size: 22),
-                            label: const Text(
-                              'Continue Game',
-                              style: TextStyle(fontSize: 18),
-                            ),
+                            icon: const Icon(Icons.replay, size: 20),
+                            label: const Text('Continue Game'),
                             style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(44),
                               foregroundColor: GameColors.subtitleColor,
-                              side: const BorderSide(color: GameColors.subtitleColor, width: 2),
+                              side: const BorderSide(color: GameColors.subtitleColor),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                           ),
