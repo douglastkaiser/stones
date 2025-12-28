@@ -603,8 +603,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }
 
   void _continueGame(BuildContext context) {
-    Navigator.push(
-      context,
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const GameScreen()),
     );
   }
@@ -823,9 +822,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                           width: 200,
                           child: OutlinedButton.icon(
                             onPressed: () => _continueGame(context),
-                            icon: const Icon(Icons.replay),
+                            icon: const Icon(Icons.replay, size: 20),
                             label: const Text('Continue Game'),
                             style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(44),
                               foregroundColor: GameColors.subtitleColor,
                               side: const BorderSide(color: GameColors.subtitleColor),
                               shape: RoundedRectangleBorder(
