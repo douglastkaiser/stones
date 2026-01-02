@@ -914,24 +914,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
             child: IgnorePointer(
               ignoring: inputLocked,
-            child: _GameBoard(
-              gameState: gameState,
-              uiState: uiState,
-              animationState: animationState,
-              lastMovePositions: lastMovePositions,
-              explodedPosition: _longPressedPosition,
-              explodedStack: _longPressedStack,
-              highlightedPositions: scenarioHighlights,
-              pieceStyleData: pieceStyleData,
-              boardThemeData: boardThemeData,
-              onCellTap: (pos) =>
-                  _handleCellTap(context, ref, pos, guidedMove),
-              onCellSwipe: (pos, dir) =>
-                  _handleCellSwipe(context, ref, pos, dir, guidedMove),
-              onLongPressStart: _startStackView,
-              onLongPressEnd: _endStackView,
+              child: _GameBoard(
+                gameState: gameState,
+                uiState: uiState,
+                animationState: animationState,
+                lastMovePositions: lastMovePositions,
+                explodedPosition: _longPressedPosition,
+                explodedStack: _longPressedStack,
+                highlightedPositions: scenarioHighlights,
+                pieceStyleData: pieceStyleData,
+                boardThemeData: boardThemeData,
+                onCellTap: (pos) =>
+                    _handleCellTap(context, ref, pos, guidedMove),
+                onCellSwipe: (pos, dir) =>
+                    _handleCellSwipe(context, ref, pos, dir, guidedMove),
+                onLongPressStart: _startStackView,
+                onLongPressEnd: _endStackView,
+                onBoardFrameTap: () => _handleBoardFrameTap(ref),
+              ),
             ),
-          ),
           );
 
           // Bottom controls
@@ -1172,6 +1173,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
+  /// Handle tap on the board frame (outside cells) - cancels stack movement
+  void _handleBoardFrameTap(WidgetRef ref) {
+    final uiState = ref.read(uiStateProvider);
+    // Cancel movement modes when tapping on board frame
+    if (uiState.mode == InteractionMode.movingStack ||
+        uiState.mode == InteractionMode.droppingPieces) {
+      ref.read(uiStateProvider.notifier).reset();
+    }
+  }
+
   void _handleCellTap(
       BuildContext context, WidgetRef ref, Position pos, GuidedMove? guidedMove) {
     _debugLog('_handleCellTap: pos=$pos');
@@ -1365,13 +1376,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
+    // Calculate total pieces in this move (for determining if it's a stack move)
+    final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold(0, (a, b) => a + b);
+    final isStackMove = totalPiecesInMove > 1;
+
     // Drop pending pieces at current position and move to next
     final dropCount = uiState.pendingDropCount;
     uiNotifier.addDrop(dropCount);
 
-    // Check if all pieces are dropped
-    if (ref.read(uiStateProvider).piecesPickedUp == 0) {
-      // Auto-confirm the move
+    // Check if all pieces are dropped - only auto-confirm for single-piece moves
+    if (ref.read(uiStateProvider).piecesPickedUp == 0 && !isStackMove) {
       _confirmMove(ref);
     }
   }
@@ -1527,6 +1541,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final handPos = uiState.getCurrentHandPosition();
     final dir = uiState.selectedDirection!;
+    final dropPath = uiState.getDropPath();
+
+    // Calculate total pieces in this move (for determining if it's a stack move)
+    final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold(0, (a, b) => a + b);
+    final isStackMove = totalPiecesInMove > 1;
 
     if (handPos == null) {
       // No more pieces to drop, this shouldn't happen
@@ -1550,6 +1569,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls);
     })();
 
+    // Tapping on origin position: undo all drops and go back to start
+    if (pos == uiState.selectedPosition) {
+      uiNotifier.undoAllDrops();
+      return;
+    }
+
+    // Tapping on a position in the drop path: undo to that position
+    if (dropPath.contains(pos)) {
+      final pathIndex = dropPath.indexOf(pos);
+      uiNotifier.undoDropsTo(pathIndex);
+      return;
+    }
+
     if (pos == handPos) {
       // Tap current hand position
       final piecesInHand = uiState.piecesPickedUp;
@@ -1558,9 +1590,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (pendingDrop == piecesInHand) {
         // All pieces selected to drop here
         if (!canContinue) {
-          // Can't continue, so commit all pieces here and finish the move
+          // Can't continue, so commit all pieces here
           uiNotifier.addDrop(pendingDrop);
-          _confirmMove(ref);
+          // For single-piece moves, auto-confirm; for stack moves, require explicit confirm
+          if (!isStackMove) {
+            _confirmMove(ref);
+          }
           return;
         } else {
           // Can continue, so cycle back to 1
@@ -1580,22 +1615,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       final dropCount = uiState.pendingDropCount;
       uiNotifier.addDrop(dropCount);
 
-      // Check if all pieces are dropped
-      if (ref.read(uiStateProvider).piecesPickedUp == 0) {
-        // Auto-confirm the move
+      // Check if all pieces are dropped - only auto-confirm for single-piece moves
+      if (ref.read(uiStateProvider).piecesPickedUp == 0 && !isStackMove) {
         _confirmMove(ref);
       }
       return;
     }
 
-    // Tapping on already-dropped path or origin: do nothing
-    final dropPath = uiState.getDropPath();
-    if (dropPath.contains(pos) || pos == uiState.selectedPosition) {
-      return;
-    }
-
-    // Otherwise cancel the move
+    // Tapping elsewhere on the board: cancel and potentially start a new action
     uiNotifier.reset();
+    // Handle the tap as if in idle mode to start a new action
+    _handleIdleTap(ref, pos, stack, gameState, null);
   }
 
   /// Get the direction from one position to an adjacent position
@@ -2950,6 +2980,7 @@ class _GameBoard extends StatelessWidget {
   final Function(Position, Direction) onCellSwipe;
   final Function(Position, PieceStack) onLongPressStart;
   final VoidCallback onLongPressEnd;
+  final VoidCallback? onBoardFrameTap;
   final PieceStyleData pieceStyleData;
   final BoardThemeData boardThemeData;
 
@@ -2963,6 +2994,7 @@ class _GameBoard extends StatelessWidget {
     required this.onLongPressEnd,
     required this.pieceStyleData,
     required this.boardThemeData,
+    this.onBoardFrameTap,
     this.highlightedPositions = const {},
     this.explodedPosition,
     this.explodedStack,
@@ -3016,152 +3048,156 @@ class _GameBoard extends StatelessWidget {
         final availableWidth = constraints.maxWidth - padding * 2 - spacing * 2;
         final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
 
-        return Container(
-          // Inner board area with inset shadow effect
-          margin: EdgeInsets.all(padding),
-          decoration: BoxDecoration(
-            color: GameColors.gridLine,
-            borderRadius: BorderRadius.circular(6),
-            // Inset shadow effect for the grid area
-            boxShadow: [
-              // Inner shadow (dark)
-              BoxShadow(
-                color: GameColors.gridLineShadow.withValues(alpha: 0.6),
-                blurRadius: 4,
-                spreadRadius: 1,
-                offset: const Offset(2, 2),
-              ),
-              // Highlight edge
-              BoxShadow(
-                color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
-                blurRadius: 2,
-                offset: const Offset(-1, -1),
-              ),
-            ],
-          ),
-          child: Stack(
-            clipBehavior: Clip.none, // Allow pieces to overflow the board
-            children: [
-              // Main grid
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.all(spacing),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: boardSize,
-                crossAxisSpacing: spacing,
-                mainAxisSpacing: spacing,
-              ),
-              itemCount: boardSize * boardSize,
-              itemBuilder: (context, index) {
-            final row = index ~/ boardSize;
-            final col = index % boardSize;
-            final pos = Position(row, col);
-            final actualStack = gameState.board.stackAt(pos);
-            final isSelected = uiState.selectedPosition == pos;
-            final isInDropPath = dropPath.contains(pos);
-            final isNextDrop = nextDropPos == pos;
-
-            // Get preview stack and ghost pieces for this position
-            final preview = previewStacks?[pos];
-            final displayStack = preview?.$1 ?? actualStack;
-            final ghostStackPieces = preview?.$2 ?? const <Piece>[];
-
-            // Check for animation events on this position
-            final lastEvent = animationState.lastEvent;
-            final isNewlyPlaced = lastEvent is PiecePlacedEvent && lastEvent.position == pos;
-            final isInWinningRoad = animationState.winningRoad?.contains(pos) ?? false;
-
-            // Check if this cell received pieces from a stack move
-            bool isStackDropTarget = false;
-            if (lastEvent is StackMovedEvent) {
-              isStackDropTarget = lastEvent.dropPositions.contains(pos);
-            }
-
-            // Check for wall flattening
-            bool wasWallFlattened = false;
-            if (lastEvent is WallFlattenedEvent && lastEvent.position == pos) {
-              wasWallFlattened = true;
-            }
-
-            // Check if this is part of the last move
-            final isLastMove = lastMovePositions?.contains(pos) ?? false;
-
-            final isExploded = explodedPosition == pos && explodedStack != null;
-            final stackForExplosion = isExploded ? explodedStack : null;
-
-            // Check if this is a valid move destination (legal move hint)
-            final isLegalMoveHint = validMoveDestinations.contains(pos);
-            final isScenarioHint = highlightedPositions.contains(pos);
-
-            // Ghost piece info for placement mode
-            final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
-
-            // For stack movement mode, show pieces being picked up count
-            final showPickupCount = uiState.mode == InteractionMode.movingStack &&
-                uiState.selectedPosition == pos;
-
-            // Show pending drop count when in droppingPieces mode at hand position
-            final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
-                nextDropPos == pos;
-
-            return _CellInteractionLayer(
-              position: pos,
-              stack: displayStack,
-              ghostStackPieces: ghostStackPieces,
-              onTap: () => onCellTap(pos),
-              onSwipe: (dir) => onCellSwipe(pos, dir),
-              onStackViewStart: onLongPressStart,
-              onStackViewEnd: onLongPressEnd,
-              child: _BoardCell(
-                key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
-                stack: displayStack,
-                isSelected: isSelected,
-                isInDropPath: isInDropPath,
-                isNextDrop: isNextDrop,
-                canSelect: !gameState.isGameOver,
-                boardSize: boardSize,
-                pieceStyleData: pieceStyleData,
-                boardThemeData: boardThemeData,
-                isNewlyPlaced: isNewlyPlaced,
-                isInWinningRoad: isInWinningRoad,
-                isStackDropTarget: isStackDropTarget,
-                wasWallFlattened: wasWallFlattened,
-                isLastMove: isLastMove,
-                isLegalMoveHint: isLegalMoveHint,
-                isScenarioHint: isScenarioHint,
-                ghostPieceType: ghostPieceType,
-                ghostPieceColor: ghostPieceColor,
-                ghostStackPieces: ghostStackPieces,
-                pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
-                pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
-                piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
-                showExploded: isExploded,
-                explodedStack: stackForExplosion,
-              ),
-            );
-              },
-            ),
-          ),
-          // Overlay decorations - filigree on top of grid lines (visible above cells)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: BoardDecorationPainter(
-                  boardSize: boardSize,
-                  spacing: spacing,
-                  padding: spacing,
-                  cellSize: cellSize,
-                  theme: boardThemeData.theme,
-                  decorColor: boardThemeData.gridLineHighlight,
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: onBoardFrameTap,
+          child: Container(
+            // Inner board area with inset shadow effect
+            margin: EdgeInsets.all(padding),
+            decoration: BoxDecoration(
+              color: GameColors.gridLine,
+              borderRadius: BorderRadius.circular(6),
+              // Inset shadow effect for the grid area
+              boxShadow: [
+                // Inner shadow (dark)
+                BoxShadow(
+                  color: GameColors.gridLineShadow.withValues(alpha: 0.6),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                  offset: const Offset(2, 2),
                 ),
-              ),
+                // Highlight edge
+                BoxShadow(
+                  color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
+                  blurRadius: 2,
+                  offset: const Offset(-1, -1),
+                ),
+              ],
+            ),
+            child: Stack(
+              clipBehavior: Clip.none, // Allow pieces to overflow the board
+              children: [
+                // Main grid
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.all(spacing),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: boardSize,
+                      crossAxisSpacing: spacing,
+                      mainAxisSpacing: spacing,
+                    ),
+                    itemCount: boardSize * boardSize,
+                    itemBuilder: (context, index) {
+                      final row = index ~/ boardSize;
+                      final col = index % boardSize;
+                      final pos = Position(row, col);
+                      final actualStack = gameState.board.stackAt(pos);
+                      final isSelected = uiState.selectedPosition == pos;
+                      final isInDropPath = dropPath.contains(pos);
+                      final isNextDrop = nextDropPos == pos;
+
+                      // Get preview stack and ghost pieces for this position
+                      final preview = previewStacks?[pos];
+                      final displayStack = preview?.$1 ?? actualStack;
+                      final ghostStackPieces = preview?.$2 ?? const <Piece>[];
+
+                      // Check for animation events on this position
+                      final lastEvent = animationState.lastEvent;
+                      final isNewlyPlaced = lastEvent is PiecePlacedEvent && lastEvent.position == pos;
+                      final isInWinningRoad = animationState.winningRoad?.contains(pos) ?? false;
+
+                      // Check if this cell received pieces from a stack move
+                      bool isStackDropTarget = false;
+                      if (lastEvent is StackMovedEvent) {
+                        isStackDropTarget = lastEvent.dropPositions.contains(pos);
+                      }
+
+                      // Check for wall flattening
+                      bool wasWallFlattened = false;
+                      if (lastEvent is WallFlattenedEvent && lastEvent.position == pos) {
+                        wasWallFlattened = true;
+                      }
+
+                      // Check if this is part of the last move
+                      final isLastMove = lastMovePositions?.contains(pos) ?? false;
+
+                      final isExploded = explodedPosition == pos && explodedStack != null;
+                      final stackForExplosion = isExploded ? explodedStack : null;
+
+                      // Check if this is a valid move destination (legal move hint)
+                      final isLegalMoveHint = validMoveDestinations.contains(pos);
+                      final isScenarioHint = highlightedPositions.contains(pos);
+
+                      // Ghost piece info for placement mode
+                      final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
+
+                      // For stack movement mode, show pieces being picked up count
+                      final showPickupCount = uiState.mode == InteractionMode.movingStack &&
+                          uiState.selectedPosition == pos;
+
+                      // Show pending drop count when in droppingPieces mode at hand position
+                      final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
+                          nextDropPos == pos;
+
+                      return _CellInteractionLayer(
+                        position: pos,
+                        stack: displayStack,
+                        ghostStackPieces: ghostStackPieces,
+                        onTap: () => onCellTap(pos),
+                        onSwipe: (dir) => onCellSwipe(pos, dir),
+                        onStackViewStart: onLongPressStart,
+                        onStackViewEnd: onLongPressEnd,
+                        child: _BoardCell(
+                          key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
+                          stack: displayStack,
+                          isSelected: isSelected,
+                          isInDropPath: isInDropPath,
+                          isNextDrop: isNextDrop,
+                          canSelect: !gameState.isGameOver,
+                          boardSize: boardSize,
+                          pieceStyleData: pieceStyleData,
+                          boardThemeData: boardThemeData,
+                          isNewlyPlaced: isNewlyPlaced,
+                          isInWinningRoad: isInWinningRoad,
+                          isStackDropTarget: isStackDropTarget,
+                          wasWallFlattened: wasWallFlattened,
+                          isLastMove: isLastMove,
+                          isLegalMoveHint: isLegalMoveHint,
+                          isScenarioHint: isScenarioHint,
+                          ghostPieceType: ghostPieceType,
+                          ghostPieceColor: ghostPieceColor,
+                          ghostStackPieces: ghostStackPieces,
+                          pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
+                          pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
+                          piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
+                          showExploded: isExploded,
+                          explodedStack: stackForExplosion,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                // Overlay decorations - filigree on top of grid lines (visible above cells)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: BoardDecorationPainter(
+                        boardSize: boardSize,
+                        spacing: spacing,
+                        padding: spacing,
+                        cellSize: cellSize,
+                        theme: boardThemeData.theme,
+                        decorColor: boardThemeData.gridLineHighlight,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
+        );
       },
     );
   }
@@ -4847,10 +4883,17 @@ class _BottomControls extends StatelessWidget {
     final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final remaining = uiState.piecesPickedUp;
     final drops = uiState.drops;
-    final canConfirm = remaining == 0 && drops.isNotEmpty;
 
-    if (canConfirm) {
-      // All pieces dropped - show confirm
+    // Calculate total pieces in this move to determine if it's a stack move
+    final totalPiecesInMove = remaining + drops.fold(0, (a, b) => a + b);
+    final isStackMove = totalPiecesInMove > 1;
+
+    // Can confirm when at least one drop has been made
+    final canConfirm = drops.isNotEmpty;
+    final allPiecesDropped = remaining == 0;
+
+    if (allPiecesDropped && canConfirm) {
+      // All pieces dropped - show confirm (for stack moves) or auto-confirmed (single piece)
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -4891,11 +4934,17 @@ class _BottomControls extends StatelessWidget {
 
     // Still dropping - show status
     final pendingDrop = uiState.pendingDropCount;
+
+    // Build status text based on drops made
+    final statusText = drops.isEmpty
+        ? 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.'
+        : 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.',
+          statusText,
           style: TextStyle(color: textColor, fontSize: 13),
           textAlign: TextAlign.center,
         ),
@@ -4903,11 +4952,20 @@ class _BottomControls extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Tap cell to adjust, or continue to next cell.',
-              style: TextStyle(color: textColor.withValues(alpha: 0.8), fontSize: 12),
-            ),
-            const SizedBox(width: 8),
+            // Show confirm button for stack moves with at least one drop
+            if (isStackMove && canConfirm) ...[
+              ElevatedButton.icon(
+                onPressed: onConfirmMove,
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('Confirm'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             TextButton.icon(
               onPressed: onCancel,
               icon: const Icon(Icons.close, size: 16),

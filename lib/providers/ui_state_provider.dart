@@ -405,6 +405,45 @@ class UIStateNotifier extends StateNotifier<UIState> {
     state = state.copyWith(piecesPickedUp: count);
   }
 
+  /// Undo drops back to a specific position in the drop path.
+  /// If pathIndex is 0, goes back to the first drop position (undoes all but first).
+  /// Returns true if undo was performed.
+  bool undoDropsTo(int pathIndex) {
+    if (state.mode != InteractionMode.droppingPieces) return false;
+    if (pathIndex < 0 || pathIndex >= state.drops.length) return false;
+
+    // Calculate pieces to restore (sum of drops after pathIndex)
+    final dropsToUndo = state.drops.sublist(pathIndex + 1);
+    final piecesToRestore = dropsToUndo.fold(0, (sum, drop) => sum + drop);
+
+    // Keep only drops up to and including pathIndex
+    final newDrops = state.drops.sublist(0, pathIndex + 1);
+
+    state = state.copyWith(
+      drops: newDrops,
+      piecesPickedUp: state.piecesPickedUp + piecesToRestore,
+      pendingDropCount: 1,
+    );
+    return true;
+  }
+
+  /// Undo all drops and go back to the first drop position.
+  /// Returns true if undo was performed.
+  bool undoAllDrops() {
+    if (state.mode != InteractionMode.droppingPieces) return false;
+    if (state.drops.isEmpty) return false;
+
+    // Calculate all pieces to restore
+    final piecesToRestore = state.drops.fold(0, (sum, drop) => sum + drop);
+
+    state = state.copyWith(
+      drops: const [],
+      piecesPickedUp: state.piecesPickedUp + piecesToRestore,
+      pendingDropCount: 1,
+    );
+    return true;
+  }
+
   void reset() {
     state = UIState.initial;
   }
