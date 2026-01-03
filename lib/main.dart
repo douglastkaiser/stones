@@ -1376,18 +1376,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    // Calculate total pieces in this move (for determining if it's a stack move)
-    final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold(0, (a, b) => a + b);
-    final isStackMove = totalPiecesInMove > 1;
-
     // Drop pending pieces at current position and move to next
     final dropCount = uiState.pendingDropCount;
     uiNotifier.addDrop(dropCount);
-
-    // Check if all pieces are dropped - only auto-confirm for single-piece moves
-    if (ref.read(uiStateProvider).piecesPickedUp == 0 && !isStackMove) {
-      _confirmMove(ref);
-    }
+    // Stack moves require explicit confirm button (no auto-confirm)
   }
 
   /// Handle tap when in idle mode
@@ -1509,8 +1501,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       // Determine direction from selected position to tapped position
       final dir = _getDirectionBetween(selectedPos, pos);
       if (dir != null) {
-        // Start movement in this direction - enters dropping mode at first cell
-        // No drops committed yet, user will choose how many to drop
+        // For single-piece moves, auto-confirm immediately (tap to move)
+        if (uiState.piecesPickedUp == 1) {
+          // Directly perform the move without entering droppingPieces mode
+          _performStackMove(selectedPos, dir, [1], ref);
+          uiNotifier.reset();
+          return;
+        }
+        // For stack moves (2+ pieces), enter dropping mode
         uiNotifier.startMoving(dir);
         return;
       }
@@ -1543,12 +1541,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final dir = uiState.selectedDirection!;
     final dropPath = uiState.getDropPath();
 
-    // Calculate total pieces in this move (for determining if it's a stack move)
+    // Calculate total pieces in this move
     final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold(0, (a, b) => a + b);
-    final isStackMove = totalPiecesInMove > 1;
 
+    // If all pieces are dropped (handPos is null), any click cancels
     if (handPos == null) {
-      // No more pieces to drop, this shouldn't happen
       uiNotifier.reset();
       return;
     }
@@ -1569,9 +1566,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls);
     })();
 
-    // Tapping on origin position: undo all drops and go back to start
+    // Tapping on origin position: go back to movingStack mode (direction selection)
     if (pos == uiState.selectedPosition) {
-      uiNotifier.undoAllDrops();
+      // Restore all pieces and return to movingStack mode
+      uiNotifier.selectStack(pos, totalPiecesInMove);
       return;
     }
 
@@ -1583,7 +1581,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     if (pos == handPos) {
-      // Tap current hand position
+      // Tap current hand position: cycle drop count
       final piecesInHand = uiState.piecesPickedUp;
       final pendingDrop = uiState.pendingDropCount;
 
@@ -1592,10 +1590,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         if (!canContinue) {
           // Can't continue, so commit all pieces here
           uiNotifier.addDrop(pendingDrop);
-          // For single-piece moves, auto-confirm; for stack moves, require explicit confirm
-          if (!isStackMove) {
-            _confirmMove(ref);
-          }
+          // Stack moves require explicit confirm button
           return;
         } else {
           // Can continue, so cycle back to 1
@@ -1614,18 +1609,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       // Drop current pending at hand position and move to next
       final dropCount = uiState.pendingDropCount;
       uiNotifier.addDrop(dropCount);
-
-      // Check if all pieces are dropped - only auto-confirm for single-piece moves
-      if (ref.read(uiStateProvider).piecesPickedUp == 0 && !isStackMove) {
-        _confirmMove(ref);
-      }
+      // Stack moves require explicit confirm button
       return;
     }
 
-    // Tapping elsewhere on the board: cancel and potentially start a new action
+    // Tapping elsewhere on the board (not on path, origin, hand, or next cell): cancel completely
     uiNotifier.reset();
-    // Handle the tap as if in idle mode to start a new action
-    _handleIdleTap(ref, pos, stack, gameState, null);
   }
 
   /// Get the direction from one position to an adjacent position
