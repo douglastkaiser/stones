@@ -1542,7 +1542,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final dropPath = uiState.getDropPath();
 
     // Calculate total pieces in this move
-    final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold(0, (a, b) => a + b);
+    final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold<int>(0, (a, b) => a + b);
 
     // If all pieces are dropped (handPos is null), any click cancels
     if (handPos == null) {
@@ -4874,7 +4874,7 @@ class _BottomControls extends StatelessWidget {
     final drops = uiState.drops;
 
     // Calculate total pieces in this move to determine if it's a stack move
-    final totalPiecesInMove = remaining + drops.fold(0, (a, b) => a + b);
+    final totalPiecesInMove = remaining + drops.fold<int>(0, (a, b) => a + b);
     final isStackMove = totalPiecesInMove > 1;
 
     // Can confirm when at least one drop has been made
