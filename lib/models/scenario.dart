@@ -274,6 +274,10 @@ final _tutorial1BuildingRoad = GameScenario(
         position: Position(2, 3),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
       ),
+      PositionedStack(
+        position: Position(0, 3),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
     ],
   ),
   scriptedResponses: const [],
@@ -310,6 +314,10 @@ final _tutorial2StandingStones = GameScenario(
         position: Position(1, 2),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
       ),
+      PositionedStack(
+        position: Position(2, 1),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
       // Black has road threat along bottom (row 3)
       PositionedStack(
         position: Position(3, 0),
@@ -341,35 +349,60 @@ final _tutorial3Capstone = GameScenario(
     'Move your Capstone onto the wall to flatten it and complete your road.',
   ],
   guidedMove: const GuidedMove.stackMove(
-    from: Position(3, 1),
-    direction: Direction.up,
+    from: Position(2, 1),
+    direction: Direction.right,
     drops: [1],
   ),
   completionText:
       'The wall is now flat — and your road is complete! The Capstone is essential for breaking through defenses.',
   buildInitialState: () => _buildScenarioState(
-    boardSize: 4,
+    boardSize: 5,
     currentPlayer: PlayerColor.white,
-    turnNumber: 9,
+    turnNumber: 11,
     stacks: const [
-      // White road with gap blocked by wall
+      // White vertical road at column 2, missing row 2 (blocked by wall)
       PositionedStack(
-        position: Position(0, 1),
+        position: Position(0, 2),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
       ),
       PositionedStack(
-        position: Position(1, 1),
+        position: Position(1, 2),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
       ),
-      // Black wall blocking at row 2
       PositionedStack(
-        position: Position(2, 1),
+        position: Position(3, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      PositionedStack(
+        position: Position(4, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // Black wall blocking the road at row 2
+      PositionedStack(
+        position: Position(2, 2),
         stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
       ),
-      // White capstone ready to flatten
+      // White capstone on the side of the road, ready to flatten
       PositionedStack(
-        position: Position(3, 1),
+        position: Position(2, 1),
         stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.white)]),
+      ),
+      // Additional black pieces for realism
+      PositionedStack(
+        position: Position(1, 0),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(3, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(0, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(4, 0),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
       ),
     ],
   ),
@@ -381,11 +414,11 @@ final _tutorial4MovingSinglePiece = GameScenario(
   title: 'Moving a Single Piece',
   type: ScenarioType.tutorial,
   summary: 'Learn to move pieces on the board.',
-  objective: 'Swipe your stone in any direction to move it.',
+  objective: 'Move your stone onto the adjacent black piece.',
   dialogue: const [
     'Instead of placing a new stone, you can move a piece you already control.',
     'Pieces move in a straight line: up, down, left, or right (not diagonally).',
-    'Swipe your stone toward an adjacent cell to move it. On desktop, you can also tap the stone then tap where to move.',
+    'You can move onto empty cells or onto other flat stones — creating a stack! Try moving onto the adjacent black piece.',
   ],
   guidedMove: const GuidedMove.anyStackMove(from: Position(1, 1)),
   completionText:
@@ -397,6 +430,20 @@ final _tutorial4MovingSinglePiece = GameScenario(
     stacks: const [
       PositionedStack(
         position: Position(1, 1),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // Adjacent black piece - player can move onto it
+      PositionedStack(
+        position: Position(1, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      // Additional pieces for realism
+      PositionedStack(
+        position: Position(3, 0),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(0, 3),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
       ),
     ],
@@ -414,7 +461,7 @@ final _tutorial5StacksAndControl = GameScenario(
     'When pieces occupy the same cell, they form a stack.',
     'Here\'s the key rule: whoever has the top piece controls the stack.',
     'You have White on top, so you control this stack — even though there\'s a Black piece underneath.',
-    'Move the stack by swiping it.',
+    'Select the stack and move it in any direction.',
   ],
   guidedMove: const GuidedMove.anyStackMove(from: Position(1, 1)),
   completionText:
@@ -467,6 +514,27 @@ final _tutorial6StackMovement = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
+      ),
+      // Additional black pieces around the board for realism
+      PositionedStack(
+        position: Position(0, 3),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(1, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(3, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(4, 1),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(4, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
       ),
     ],
   ),
@@ -522,20 +590,27 @@ final _tutorial8FlatCount = GameScenario(
     whiteFlatStones: 1,
     blackFlatStones: 0,
     stacks: const [
-      // Board almost full with checkerboard pattern, no roads possible
+      // Board almost full, no roads possible, White wins by flat count
       // Row 0: W B W B
       PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(0, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(0, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      // Row 1: B W B W
+      // Row 1: B W stack(B-W) W - white controls stack at (1,2)
       PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(1, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 2), stack: PieceStack([
+        Piece(type: PieceType.flat, color: PlayerColor.black),
+        Piece(type: PieceType.flat, color: PlayerColor.white),
+      ])),
       PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Row 2: W B W B
+      // Row 2: W stack(W-B-W) W B - white controls stack at (2,1)
       PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(2, 1), stack: PieceStack([
+        Piece(type: PieceType.flat, color: PlayerColor.white),
+        Piece(type: PieceType.flat, color: PlayerColor.black),
+        Piece(type: PieceType.flat, color: PlayerColor.white),
+      ])),
       PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       // Row 3: B W B (empty at col 3)
@@ -572,17 +647,10 @@ final _tutorial9PieceSupply = GameScenario(
     blackFlatStones: 2,
     blackCapstones: 0,
     stacks: const [
-      // Scattered pieces, no roads possible
-      // White pieces (9 standalone + 5 in stack = 14 total)
+      // Scattered pieces arranged to prevent any road wins
+      // Row 0: W stack(W) B empty - broken by black at (0,2)
       PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(1, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(3, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Stack with white on top of black pieces
+      // Stack with white on top of black pieces at (0,1)
       PositionedStack(
         position: Position(0, 1),
         stack: PieceStack([
@@ -596,12 +664,16 @@ final _tutorial9PieceSupply = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
       ),
-      // Black pieces (4 standalone + 3 in stack above + 6 in other stack = 13 total)
+      PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // (0,3) empty
+      // Row 1: B W B W - alternating, no road
       PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      // Stack with black on top
+      PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Row 2: W stack(B) W B - alternating, no road
+      PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Stack with black on top at (2,1)
       PositionedStack(
         position: Position(2, 1),
         stack: PieceStack([
@@ -614,6 +686,13 @@ final _tutorial9PieceSupply = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.black),
         ]),
       ),
+      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // Row 3: B W empty W - broken by black at (3,0)
+      PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // (3,2) empty
+      PositionedStack(position: Position(3, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
     ],
   ),
   scriptedResponses: const [],
