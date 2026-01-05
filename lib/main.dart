@@ -1501,14 +1501,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       // Determine direction from selected position to tapped position
       final dir = _getDirectionBetween(selectedPos, pos);
       if (dir != null) {
-        // For single-piece moves, auto-confirm immediately (tap to move)
-        if (uiState.piecesPickedUp == 1) {
-          // Directly perform the move without entering droppingPieces mode
-          _performStackMove(selectedPos, dir, [1], ref);
-          uiNotifier.reset();
-          return;
-        }
-        // For stack moves (2+ pieces), enter dropping mode
+        // Enter dropping mode - shows ghost piece preview
         uiNotifier.startMoving(dir);
         return;
       }
@@ -1581,10 +1574,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     if (pos == handPos) {
-      // Tap current hand position: cycle drop count
+      // Tap current hand position
       final piecesInHand = uiState.piecesPickedUp;
       final pendingDrop = uiState.pendingDropCount;
+      final isSinglePieceMove = totalPiecesInMove == 1;
 
+      // For single-piece moves, tapping confirms immediately (no cycling needed)
+      if (isSinglePieceMove) {
+        uiNotifier.addDrop(1);
+        _confirmMove(ref);
+        return;
+      }
+
+      // For stack moves (2+ pieces), cycle drop count
       if (pendingDrop == piecesInHand) {
         // All pieces selected to drop here
         if (!canContinue) {
@@ -3127,8 +3129,12 @@ class _GameBoard extends StatelessWidget {
                           uiState.selectedPosition == pos;
 
                       // Show pending drop count when in droppingPieces mode at hand position
+                      // but only for stack moves (2+ pieces), not single-piece moves
+                      final totalPiecesInMove = uiState.piecesPickedUp +
+                          uiState.drops.fold<int>(0, (a, b) => a + b);
                       final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
-                          nextDropPos == pos;
+                          nextDropPos == pos &&
+                          totalPiecesInMove > 1;
 
                       return _CellInteractionLayer(
                         position: pos,
@@ -4924,7 +4930,31 @@ class _BottomControls extends StatelessWidget {
     // Still dropping - show status
     final pendingDrop = uiState.pendingDropCount;
 
-    // Build status text based on drops made
+    // For single-piece moves, show simpler message
+    if (!isStackMove) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Tap the highlighted cell to confirm move.',
+            style: TextStyle(color: textColor, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: onCancel,
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Cancel'),
+            style: TextButton.styleFrom(
+              foregroundColor: textColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Build status text for stack moves based on drops made
     final statusText = drops.isEmpty
         ? 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.'
         : 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
@@ -4942,7 +4972,7 @@ class _BottomControls extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Show confirm button for stack moves with at least one drop
-            if (isStackMove && canConfirm) ...[
+            if (canConfirm) ...[
               ElevatedButton.icon(
                 onPressed: onConfirmMove,
                 icon: const Icon(Icons.check, size: 16),
