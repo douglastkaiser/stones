@@ -1586,19 +1586,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         return;
       }
 
-      // For stack moves (2+ pieces), cycle drop count
+      // For stack moves (2+ pieces)
       if (pendingDrop == piecesInHand) {
-        // All pieces selected to drop here
-        if (!canContinue) {
-          // Can't continue, so commit all pieces here
-          uiNotifier.addDrop(pendingDrop);
-          // Stack moves require explicit confirm button
-          return;
-        } else {
-          // Can continue, so cycle back to 1
-          uiNotifier.cyclePendingDropCount(piecesInHand);
-          return;
-        }
+        // All pieces selected to drop here - commit the drop
+        // User can then either confirm with button or continue by tapping next cell
+        uiNotifier.addDrop(pendingDrop);
+        return;
       } else {
         // Not all pieces selected, cycle up
         uiNotifier.cyclePendingDropCount(piecesInHand);
@@ -1607,15 +1600,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // Check if tapping the next cell in the movement direction
-    if (pos == nextPos && canContinue) {
+    // Only allow continuing for stack moves that still have pieces in hand
+    final isSinglePieceMove = totalPiecesInMove == 1;
+    if (pos == nextPos && canContinue && !isSinglePieceMove && uiState.piecesPickedUp > 0) {
       // Drop current pending at hand position and move to next
       final dropCount = uiState.pendingDropCount;
       uiNotifier.addDrop(dropCount);
-      // Stack moves require explicit confirm button
       return;
     }
 
-    // Tapping elsewhere on the board (not on path, origin, hand, or next cell): cancel completely
+    // Tapping elsewhere on the board (not on path, origin, hand, or valid next cell): cancel completely
     uiNotifier.reset();
   }
 
