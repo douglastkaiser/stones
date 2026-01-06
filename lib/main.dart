@@ -1634,14 +1634,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiState = ref.read(uiStateProvider);
     final pos = uiState.selectedPosition;
     final dir = uiState.selectedDirection;
-    var drops = uiState.drops.toList();
 
     if (pos == null || dir == null) return;
 
-    // If there are pending drops (user selected to drop all remaining), commit them
-    if (uiState.piecesPickedUp > 0 && uiState.pendingDropCount == uiState.piecesPickedUp) {
-      drops.add(uiState.pendingDropCount);
-    }
+    // Build the final drops list, including pending drops if user selected all remaining
+    final drops = [
+      ...uiState.drops,
+      if (uiState.piecesPickedUp > 0 && uiState.pendingDropCount == uiState.piecesPickedUp)
+        uiState.pendingDropCount,
+    ];
 
     if (drops.isEmpty) return;
 

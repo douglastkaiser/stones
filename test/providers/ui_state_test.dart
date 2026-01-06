@@ -11,7 +11,6 @@ void main() {
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
         drops: [1, 1],
-        piecesPickedUp: 0,
       );
 
       final path = state.getDropPath();
@@ -40,7 +39,6 @@ void main() {
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
-        drops: [],
         piecesPickedUp: 2,
       );
 
@@ -54,7 +52,6 @@ void main() {
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
         drops: [2],
-        piecesPickedUp: 0,
       );
 
       expect(state.getCurrentHandPosition(), isNull);
@@ -147,7 +144,6 @@ void main() {
         mode: InteractionMode.droppingPieces,
         drops: [1],
         piecesPickedUp: 1,
-        pendingDropCount: 1,
       );
 
       // Has committed drops -> can confirm
@@ -159,7 +155,6 @@ void main() {
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
-        drops: [], // No committed drops yet
         piecesPickedUp: 3, // 3 pieces in hand
         pendingDropCount: 3, // User selected to drop all 3
       );
@@ -178,9 +173,7 @@ void main() {
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
-        drops: [], // No committed drops
         piecesPickedUp: 3,
-        pendingDropCount: 1, // Only 1 selected, not all
       );
 
       final canConfirm = state.drops.isNotEmpty ||
