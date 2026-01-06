@@ -893,8 +893,8 @@ final _puzzle6CaptureAndWin = GameScenario(
     'Black controls a stack in your road. Capture it to win!',
   ],
   guidedMove: const GuidedMove.stackMove(
-    from: Position(2, 0),
-    direction: Direction.right,
+    from: Position(0, 2),
+    direction: Direction.up,
     drops: [1],
   ),
   completionText:
@@ -904,26 +904,33 @@ final _puzzle6CaptureAndWin = GameScenario(
     currentPlayer: PlayerColor.white,
     turnNumber: 17,
     stacks: const [
-      // White road at row 2, but col 1 has Black-controlled stack
-      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Black-controlled stack in the road
+      // White L-shaped road: (0,2) -> (1,2) -> (2,2) -> (2,3) -> (2,4)
+      // White stack to capture with at start of vertical leg
       PositionedStack(
-        position: Position(2, 1),
+        position: Position(0, 2),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // Black-controlled stack blocking the road at the corner
+      PositionedStack(
+        position: Position(1, 2),
         stack: PieceStack([
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.black),
         ]),
       ),
-      // White stack to capture with - 2 white pieces so moving 1 creates the road
-      PositionedStack(
-        position: Position(2, 0),
-        stack: PieceStack([
-          Piece(type: PieceType.flat, color: PlayerColor.white),
-          Piece(type: PieceType.flat, color: PlayerColor.white),
-        ]),
-      ),
+      // Horizontal leg of the L-road
+      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Black pieces for realistic board state (6 white, 6 black)
+      PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(4, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
   scriptedResponses: const [],
@@ -935,10 +942,10 @@ final _puzzle7TheSpread = GameScenario(
   type: ScenarioType.puzzle,
   puzzleDifficulty: PuzzleDifficulty.hard,
   summary: 'Spread your stack to build a road!',
-  objective: 'Win in 1 move. Spread your stack to build a road!',
+  objective: 'Win in 1 move. Spread your stack over enemy pieces!',
   dialogue: const [
     'White to move.',
-    'Your tall stack holds the key to victory. Spread it wisely!',
+    'Black pieces block your path, but your tall stack can cover them all!',
   ],
   guidedMove: const GuidedMove.stackMove(
     from: Position(2, 0),
@@ -946,7 +953,7 @@ final _puzzle7TheSpread = GameScenario(
     drops: [1, 1, 1],
   ),
   completionText:
-      'Tall stacks are potential roads waiting to be unrolled!',
+      'Spreading over enemy pieces converts them to your road. A powerful technique!',
   buildInitialState: () => _buildScenarioState(
     boardSize: 5,
     currentPlayer: PlayerColor.white,
@@ -963,11 +970,17 @@ final _puzzle7TheSpread = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
       ),
-      // White piece at end of row
+      // Black pieces IN THE WAY - these must be spread over
+      PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // White piece at end of row to complete the road
       PositionedStack(position: Position(2, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Some black pieces
-      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(3, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // Additional black pieces for realistic board state
+      PositionedStack(position: Position(0, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(4, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
   scriptedResponses: const [],
