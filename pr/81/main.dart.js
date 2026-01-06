@@ -99828,7 +99828,8 @@ return}if(r===1)return
 g=i.f
 j=g.r
 i.sa7(g.av3(j>=r?1:j+1))
-return}if(b.j(0,l)&&k&&q!==1&&r>0){i.Kj(e.r)
+return}g=e.r
+if(b.j(0,l)&&k&&q!==1&&r>0&&g!==r){i.Kj(g)
 return}i.sa7(B.aw)},
 agk(a,b){var s=b.a-a.a,r=b.b-a.b,q=s===0
 if(!q&&r!==0)return null
@@ -102904,7 +102905,7 @@ else l=l.Lm(o?B.h:B.c8,B.E,4)
 l=A.a4("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.dw
-s=A.i9(p,A.a4("v1.0.0+288.g1622115.d20260106 (1622115)",p,p,p,A.aO(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.af,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gan_(),p,p,p,p,p,p)
+s=A.i9(p,A.a4("v1.0.0+289.g2ba3454.d20260106 (2ba3454)",p,p,p,A.aO(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.af,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gan_(),p,p,p,p,p,p)
 r=A.A(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -102914,7 +102915,7 @@ r=q}return A.eo(A.bt(A.b([m,B.a6,l,B.bR,s,B.at,A.a4("An abstract strategy game",
 $S:725}
 A.avF.prototype={
 $0(){var s=null
-A.bhz(new A.b7(B.br,A.cM(A.es(s,s,s,new A.Ms(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+288.g1622115.d20260106 (1622115)",this.b)
+A.bhz(new A.b7(B.br,A.cM(A.es(s,s,s,new A.Ms(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+289.g2ba3454.d20260106 (2ba3454)",this.b)
 return s},
 $S:0}
 A.IC.prototype={
@@ -103565,7 +103566,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cH
-return A.aV(o,A.eo(A.bu(A.b([A.a4("v1.0.0+288.g1622115.d20260106 (1622115)",o,o,o,A.aO(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a4("  \u2022  ",o,o,o,A.aO(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.i9(o,A.a4("Privacy",o,o,o,A.aO(o,o,q,o,B.pr,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.af,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gan9(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ah,0),o,o),B.l,o,o,o,o,o,o,B.mF,o,o,o)}}
+return A.aV(o,A.eo(A.bu(A.b([A.a4("v1.0.0+289.g2ba3454.d20260106 (2ba3454)",o,o,o,A.aO(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a4("  \u2022  ",o,o,o,A.aO(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.i9(o,A.a4("Privacy",o,o,o,A.aO(o,o,q,o,B.pr,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.af,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gan9(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ah,0),o,o),B.l,o,o,o,o,o,o,B.mF,o,o,o)}}
 A.vo.prototype={
 J(a){var s,r,q,p,o,n,m,l=null,k=A.A(a).ax.a===B.w,j=this.d
 if(j)s=B.B
