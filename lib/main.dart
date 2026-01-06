@@ -477,26 +477,30 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Record the win and show notifications for any unlocked achievements
     if (playerWon || onlinePlayerWon || localPlayerWon) {
-      _debugLog('  Recording win with aiDifficulty: ${session.aiDifficulty}');
-      final unlockedAchievements = await achievementNotifier.recordWin(
-        isOnline: session.mode == GameMode.online,
-        aiDifficulty: session.mode == GameMode.vsComputer && !isScenarioGame
-            ? session.aiDifficulty
-            : null,
-        byTime: gameState.winReason == WinReason.time,
-        byFlats: gameState.winReason == WinReason.flats,
-      );
+      if (isScenarioGame) {
+        _debugLog('  Skipping win achievements for scenario games');
+      } else {
+        _debugLog('  Recording win with aiDifficulty: ${session.aiDifficulty}');
+        final unlockedAchievements = await achievementNotifier.recordWin(
+          isOnline: session.mode == GameMode.online,
+          aiDifficulty: session.mode == GameMode.vsComputer && !isScenarioGame
+              ? session.aiDifficulty
+              : null,
+          byTime: gameState.winReason == WinReason.time,
+          byFlats: gameState.winReason == WinReason.flats,
+        );
 
-      _debugLog('  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
+        _debugLog('  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
 
-      // Show notification for each unlocked achievement
-      for (final achievementType in unlockedAchievements) {
-        _debugLog('  Showing notification for: $achievementType, mounted: $mounted');
-        if (mounted) {
-          _showAchievementNotification(achievementType);
-          // Wait a bit before showing the next one if there are multiple
-          if (unlockedAchievements.length > 1) {
-            await Future.delayed(const Duration(milliseconds: 500));
+        // Show notification for each unlocked achievement
+        for (final achievementType in unlockedAchievements) {
+          _debugLog('  Showing notification for: $achievementType, mounted: $mounted');
+          if (mounted) {
+            _showAchievementNotification(achievementType);
+            // Wait a bit before showing the next one if there are multiple
+            if (unlockedAchievements.length > 1) {
+              await Future.delayed(const Duration(milliseconds: 500));
+            }
           }
         }
       }
