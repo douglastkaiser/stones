@@ -99839,9 +99839,12 @@ if(s>0&&r===0)return B.jf
 if(q&&r<0)return B.hn
 if(q&&r>0)return B.dC
 return null},
-So(a){var s=$.eb(),r=a.I(s,t.LR),q=r.a,p=r.c,o=r.d
-if(q==null||p==null||o.length===0)return
-this.VF(q,p,o,a)
+So(a){var s=$.eb(),r=a.I(s,t.LR),q=r.a,p=r.c,o=r.d,n=A.b(o.slice(0),A.X(o))
+if(q==null||p==null)return
+o=r.e
+if(o>0&&r.r===o)n.push(r.r)
+if(n.length===0)return
+this.VF(q,p,n,a)
 a.I(s.gZ(),t.Q).sa7(B.ay)},
 VE(a,b,c){var s,r,q,p,o,n,m,l,k,j=$.cO(),i=t.A,h=c.I(j,i),g=c.I($.ea(),t.R),f=$.ju(),e=c.I(f,t.Hu),d=g.c
 if(d==null)d=e.a
@@ -101119,19 +101122,21 @@ p=i.c>0
 o=p?new A.awK(m):l
 n=t.p
 return A.br(A.b([j,B.il,A.bu(A.b([new A.Ah(B.Q,l,h===B.Q,s,r,l),B.fB,new A.Ah(B.a8,"Wall",h===B.a8,s,q,l),B.fB,new A.Ah(B.ai,l,h===B.ai,p,o,l),B.aH,A.id(k,B.IF,B.PL,l,l,m.r,B.aU,l,"Cancel")],n),B.o,B.as,B.q,0)],n),B.o,B.as,B.q)},
-acs(a){var s,r,q=this,p=null,o=A.A(a).ax.a===B.w?B.M:B.bq,n=q.d,m=n.e,l=n.d,k=B.b.f6(l,0,new A.awH(),t.S),j=l.length===0,i=!j
-if(m===0&&i){n=t.p
-return A.br(A.b([A.a3("Move complete! Dropped: "+B.b.aS(l," \u2192 "),p,p,p,A.aM(p,p,o,p,p,p,p,p,p,p,p,13,p,p,B.Z,p,p,!0,p,p,p,p,p,p,p,p),B.aw,p),B.il,A.bu(A.b([A.t0(B.PN,B.ab4,q.f,A.hD(p,p,B.d8,p,p,p,p,p,p,B.h,p,p,B.tB,p,p,p,p,p,p,p)),B.c2,A.qw(B.fc,B.bx,q.r,A.l4(p,p,p,p,p,p,p,p,p,o,p,p,B.eb,p,p,p,p,p,p,p))],n),B.o,B.as,B.q,0)],n),B.o,B.as,B.q)}s=n.r
-if(m+k<=1)return A.br(A.b([A.a3("Tap the highlighted cell to confirm move.",p,p,p,A.aM(p,p,o,p,p,p,p,p,p,p,p,13,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),B.aw,p),B.bR,A.qw(B.fc,B.bx,q.r,A.l4(p,p,p,p,p,p,p,p,p,o,p,p,B.eb,p,p,p,p,p,p,p))],t.p),B.o,B.as,B.q)
-n=""+s
-if(j){k=s>1?"s":""
-r="Dropping "+n+" piece"+k+" here. "+(m-s)+" remaining in hand."}else r="Dropped: "+B.b.aS(l," \u2192 ")+" \xb7 Now dropping "+n+". "+(m-s)+" remaining."
-n=A.a3(r,p,p,p,A.aM(p,p,o,p,p,p,p,p,p,p,p,13,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),B.aw,p)
-k=t.p
-j=A.b([],k)
-if(i)B.b.P(j,A.b([A.t0(B.PF,B.aaJ,q.f,A.hD(p,p,B.d8,p,p,p,p,p,p,B.h,p,p,B.eb,p,p,p,p,p,p,p)),B.aH],k))
-j.push(A.qw(B.fc,B.bx,q.r,A.l4(p,p,p,p,p,p,p,p,p,o,p,p,B.eb,p,p,p,p,p,p,p)))
-return A.br(A.b([n,B.bR,A.bu(j,B.o,B.as,B.q,0)],k),B.o,B.as,B.q)}}
+acs(a){var s,r,q,p,o=this,n=null,m=A.A(a).ax.a===B.w?B.M:B.bq,l=o.d,k=l.e,j=l.d,i=B.b.f6(j,0,new A.awH(),t.S),h=l.r
+l=j.length===0
+s=h===k&&k>0
+r=!l||s
+if(k===0&&r){l=t.p
+return A.br(A.b([A.a3("Move complete! Dropped: "+B.b.aS(j," \u2192 "),n,n,n,A.aM(n,n,m,n,n,n,n,n,n,n,n,13,n,n,B.Z,n,n,!0,n,n,n,n,n,n,n,n),B.aw,n),B.il,A.bu(A.b([A.t0(B.PN,B.ab4,o.f,A.hD(n,n,B.d8,n,n,n,n,n,n,B.h,n,n,B.tB,n,n,n,n,n,n,n)),B.c2,A.qw(B.fc,B.bx,o.r,A.l4(n,n,n,n,n,n,n,n,n,m,n,n,B.eb,n,n,n,n,n,n,n))],l),B.o,B.as,B.q,0)],l),B.o,B.as,B.q)}if(k+i<=1)return A.br(A.b([A.a3("Tap the highlighted cell to confirm move.",n,n,n,A.aM(n,n,m,n,n,n,n,n,n,n,n,13,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),B.aw,n),B.bR,A.qw(B.fc,B.bx,o.r,A.l4(n,n,n,n,n,n,n,n,n,m,n,n,B.eb,n,n,n,n,n,n,n))],t.p),B.o,B.as,B.q)
+i=""+h
+if(l){l=h>1?"s":""
+q="Dropping "+i+" piece"+l+" here. "+(k-h)+" remaining in hand."}else q="Dropped: "+B.b.aS(j," \u2192 ")+" \xb7 Now dropping "+i+". "+(k-h)+" remaining."
+l=A.a3(q,n,n,n,A.aM(n,n,m,n,n,n,n,n,n,n,n,13,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),B.aw,n)
+i=t.p
+p=A.b([],i)
+if(r)B.b.P(p,A.b([A.t0(B.PF,B.aaJ,o.f,A.hD(n,n,B.d8,n,n,n,n,n,n,B.h,n,n,B.eb,n,n,n,n,n,n,n)),B.aH],i))
+p.push(A.qw(B.fc,B.bx,o.r,A.l4(n,n,n,n,n,n,n,n,n,m,n,n,B.eb,n,n,n,n,n,n,n)))
+return A.br(A.b([l,B.bR,A.bu(p,B.o,B.as,B.q,0)],i),B.o,B.as,B.q)}}
 A.awI.prototype={
 $0(){return this.a.e.$1(B.Q)},
 $S:0}
@@ -102853,14 +102858,13 @@ this.sa7(new A.fk(s.a,B.dI,a,B.bZ,s.e,B.Q,1))},
 BI(a){var s=this.f,r=A.W(s.d,t.S)
 r.push(a)
 this.sa7(s.a_m(r,1,this.f.e-a))},
-aEa(a){var s,r,q,p=this,o=p.f
-if(o.b!==B.dI)return!1
-if(a<0||a>=o.d.length)return!1
-s=a+1
-r=B.b.f6(B.b.fM(o.d,s),0,new A.auH(),t.S)
-q=B.b.cz(p.f.d,0,s)
-s=p.f
-p.sa7(s.a_m(q,1,s.e+r))
+aEa(a){var s,r,q=this,p=q.f
+if(p.b!==B.dI)return!1
+if(a<0||a>=p.d.length)return!1
+s=B.b.f6(B.b.fM(p.d,a),0,new A.auH(),t.S)
+r=B.b.cz(q.f.d,0,a)
+p=q.f
+q.sa7(p.a_m(r,1,p.e+s))
 return!0}}
 A.auH.prototype={
 $2(a,b){return a+b},
@@ -102902,7 +102906,7 @@ else l=l.Lm(o?B.h:B.c9,B.E,4)
 l=A.a3("STONES",p,p,p,l,p,p)
 if(o){s=n.rx
 if(s==null)s=n.k3}else s=B.dx
-s=A.i9(p,A.a3("v1.0.0+283.ge352fa7.d20260105 (e352fa7)",p,p,p,A.aM(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.af,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gan_(),p,p,p,p,p,p)
+s=A.i9(p,A.a3("v1.0.0+284.g24567ab.d20260106 (24567ab)",p,p,p,A.aM(p,p,s,p,p,p,p,p,p,p,p,14,p,p,p,p,p,!0,p,p,p,p,p,p,p,p),p,p),B.af,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,this.a.gan_(),p,p,p,p,p,p)
 r=A.A(a).ok.y
 if(r==null)r=p
 else{if(o){q=n.rx
@@ -102912,7 +102916,7 @@ r=q}return A.eo(A.br(A.b([m,B.a6,l,B.bR,s,B.au,A.a3("An abstract strategy game",
 $S:725}
 A.avF.prototype={
 $0(){var s=null
-A.bhz(new A.b7(B.br,A.cM(A.es(s,s,s,new A.Ms(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+283.ge352fa7.d20260105 (e352fa7)",this.b)
+A.bhz(new A.b7(B.br,A.cM(A.es(s,s,s,new A.Ms(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+284.g24567ab.d20260106 (24567ab)",this.b)
 return s},
 $S:0}
 A.IC.prototype={
@@ -103563,7 +103567,7 @@ r=s.ry
 if(r==null){r=s.v
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cH
-return A.aV(o,A.eo(A.bu(A.b([A.a3("v1.0.0+283.ge352fa7.d20260105 (e352fa7)",o,o,o,A.aM(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a3("  \u2022  ",o,o,o,A.aM(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.i9(o,A.a3("Privacy",o,o,o,A.aM(o,o,q,o,B.pr,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.af,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gan9(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ah,0),o,o),B.l,o,o,o,o,o,o,B.mF,o,o,o)}}
+return A.aV(o,A.eo(A.bu(A.b([A.a3("v1.0.0+284.g24567ab.d20260106 (24567ab)",o,o,o,A.aM(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a3("  \u2022  ",o,o,o,A.aM(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.i9(o,A.a3("Privacy",o,o,o,A.aM(o,o,q,o,B.pr,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),B.af,!1,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,this.gan9(),o,o,o,o,o,o)],t.p),B.o,B.p,B.ah,0),o,o),B.l,o,o,o,o,o,o,B.mF,o,o,o)}}
 A.vp.prototype={
 J(a){var s,r,q,p,o,n,m,l=null,k=A.A(a).ax.a===B.w,j=this.d
 if(j)s=B.B
