@@ -178,13 +178,13 @@ void main() {
     });
 
     test('cannot confirm when only some pieces selected', () {
+      // pendingDropCount defaults to 1, so only 1 of 3 pieces is selected
       const state = UIState(
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
         drops: [1], // One drop committed
-        piecesPickedUp: 3, // 3 pieces in hand
-        pendingDropCount: 1, // Only 1 selected
+        piecesPickedUp: 3, // 3 pieces in hand, only 1 selected (default)
       );
 
       expect(canConfirm(state), isFalse,
@@ -193,13 +193,13 @@ void main() {
 
     test('canConfirm for stack move with single piece remaining', () {
       // Single piece remaining from a larger 3-piece stack move
+      // pendingDropCount defaults to 1, which equals remaining (1 piece)
       const state = UIState(
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
         drops: [1, 1], // Two drops committed
-        piecesPickedUp: 1, // 1 piece in hand
-        pendingDropCount: 1, // That 1 piece is selected
+        piecesPickedUp: 1, // 1 piece in hand, 1 selected (default)
       );
 
       final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
