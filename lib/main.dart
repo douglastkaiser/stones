@@ -1634,9 +1634,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiState = ref.read(uiStateProvider);
     final pos = uiState.selectedPosition;
     final dir = uiState.selectedDirection;
-    final drops = uiState.drops;
+    var drops = uiState.drops.toList();
 
-    if (pos == null || dir == null || drops.isEmpty) return;
+    if (pos == null || dir == null) return;
+
+    // If there are pending drops (user selected to drop all remaining), commit them
+    if (uiState.piecesPickedUp > 0 && uiState.pendingDropCount == uiState.piecesPickedUp) {
+      drops.add(uiState.pendingDropCount);
+    }
+
+    if (drops.isEmpty) return;
+
     _performStackMove(pos, dir, drops, ref);
     ref.read(uiStateProvider.notifier).reset();
   }
@@ -4876,9 +4884,14 @@ class _BottomControls extends StatelessWidget {
     // Calculate total pieces in this move to determine if it's a stack move
     final totalPiecesInMove = remaining + drops.fold<int>(0, (a, b) => a + b);
     final isStackMove = totalPiecesInMove > 1;
+    final pendingDrop = uiState.pendingDropCount;
 
-    // Can confirm when at least one drop has been made
-    final canConfirm = drops.isNotEmpty;
+    // Can confirm when:
+    // 1. At least one drop has been committed, OR
+    // 2. User has selected to drop all remaining pieces (pendingDrop == remaining)
+    final hasCommittedDrops = drops.isNotEmpty;
+    final hasSelectedAllRemaining = pendingDrop == remaining && remaining > 0;
+    final canConfirm = hasCommittedDrops || hasSelectedAllRemaining;
     final allPiecesDropped = remaining == 0;
 
     if (allPiecesDropped && canConfirm) {
@@ -4922,7 +4935,7 @@ class _BottomControls extends StatelessWidget {
     }
 
     // Still dropping - show status
-    final pendingDrop = uiState.pendingDropCount;
+    // (pendingDrop already defined above)
 
     // For single-piece moves, show simpler message
     if (!isStackMove) {

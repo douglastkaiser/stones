@@ -405,19 +405,20 @@ class UIStateNotifier extends StateNotifier<UIState> {
     state = state.copyWith(piecesPickedUp: count);
   }
 
-  /// Undo drops back to a specific position in the drop path.
-  /// If pathIndex is 0, goes back to the first drop position (undoes all but first).
+  /// Undo drops FROM a specific position in the drop path.
+  /// Clicking on drop position X means "I want my hand at position X".
+  /// This undoes the drop at pathIndex AND all drops after it.
   /// Returns true if undo was performed.
   bool undoDropsTo(int pathIndex) {
     if (state.mode != InteractionMode.droppingPieces) return false;
     if (pathIndex < 0 || pathIndex >= state.drops.length) return false;
 
-    // Calculate pieces to restore (sum of drops after pathIndex)
-    final dropsToUndo = state.drops.sublist(pathIndex + 1);
+    // Calculate pieces to restore (sum of drops FROM pathIndex onwards)
+    final dropsToUndo = state.drops.sublist(pathIndex);
     final piecesToRestore = dropsToUndo.fold(0, (sum, drop) => sum + drop);
 
-    // Keep only drops up to and including pathIndex
-    final newDrops = state.drops.sublist(0, pathIndex + 1);
+    // Keep only drops BEFORE pathIndex
+    final newDrops = state.drops.sublist(0, pathIndex);
 
     state = state.copyWith(
       drops: newDrops,
