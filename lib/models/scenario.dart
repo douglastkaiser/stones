@@ -334,7 +334,7 @@ final _tutorial2StandingStones = GameScenario(
     ],
   ),
   // Scripted response so tutorial doesn't use AI
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(0, 0), PieceType.flat),
   ],
 );
@@ -452,7 +452,7 @@ final _tutorial4MovingSinglePiece = GameScenario(
     ],
   ),
   // Scripted response so tutorial doesn't use AI
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(2, 2), PieceType.flat),
   ],
 );
@@ -488,7 +488,7 @@ final _tutorial5StacksAndControl = GameScenario(
     ],
   ),
   // Scripted response so tutorial doesn't use AI
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(0, 0), PieceType.flat),
   ],
 );
@@ -548,7 +548,7 @@ final _tutorial6StackMovement = GameScenario(
     ],
   ),
   // Scripted response so tutorial doesn't use AI
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(0, 0), PieceType.flat),
   ],
 );
@@ -575,7 +575,7 @@ final _tutorial7OpeningRule = GameScenario(
     stacks: const [],
   ),
   // Scripted response: Black places White's piece (opening rule)
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(2, 2), PieceType.flat),
   ],
 );
@@ -778,7 +778,7 @@ final _puzzle6CaptureAndWin = GameScenario(
   //   Row 2 needs (2,4), Col 2 needs (3,2)
   // Black blocks row 2 at (2,4)
   // Move 2: White plays (3,2) - completes col 2 - WIN!
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(2, 4), PieceType.standing),
   ],
 );
@@ -840,7 +840,7 @@ final _puzzle7TheSpread = GameScenario(
   //   Creates fork: Row 2 needs (2,4), Col 2 needs (4,2)
   // Black blocks row 2 at (2,4)
   // Move 2: White plays (4,2) - completes col 2 - WIN!
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(2, 4), PieceType.standing),
   ],
 );
@@ -898,7 +898,7 @@ final _puzzle9CapstoneTactics = GameScenario(
   ),
   // After White flattens wall, Black blocks the horizontal threat at (2,0)
   // White then wins by completing vertical road at (3,2)
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(2, 0), PieceType.standing),
   ],
 );
@@ -956,7 +956,7 @@ final _puzzle10GrandCombination = GameScenario(
   // Move 2: White plays (3,3) - threatens BOTH row 3 (needs 3,2) AND col 3 (needs 5,3)
   // Black blocks row 3 at (3,2) with wall
   // Move 3: White plays (5,3) - completes col 3 for the win!
-  scriptedResponses: [
+  scriptedResponses: const [
     AIPlacementMove(Position(2, 5), PieceType.standing),
     AIPlacementMove(Position(3, 2), PieceType.standing),
   ],
