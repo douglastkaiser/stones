@@ -139,38 +139,73 @@ void main() {
   });
 
   group('Confirm button visibility logic', () {
-    test('canConfirm only when all pieces dropped (remaining == 0)', () {
-      // Stack move with all pieces committed
+    // Helper to compute canConfirm matching _buildDroppingPiecesControls logic
+    bool canConfirm(UIState state) {
+      final remaining = state.piecesPickedUp;
+      final drops = state.drops;
+      final totalPieces = remaining + drops.fold<int>(0, (a, b) => a + b);
+      final isStackMove = totalPieces > 1;
+      final pendingDrop = state.pendingDropCount;
+
+      final allPiecesCommitted = remaining == 0 && drops.isNotEmpty;
+      final allPiecesSelected = remaining > 0 && pendingDrop == remaining;
+      return isStackMove && (allPiecesCommitted || allPiecesSelected);
+    }
+
+    test('canConfirm when all pieces committed (remaining == 0)', () {
       const state = UIState(
         mode: InteractionMode.droppingPieces,
         drops: [1, 1],
-        // piecesPickedUp defaults to 0, meaning all pieces committed
+        // piecesPickedUp defaults to 0
       );
 
-      // For stack moves: canConfirm = isStackMove && remaining == 0 && drops.isNotEmpty
-      final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
-      final isStackMove = totalPieces > 1;
-      final canConfirm = isStackMove && state.piecesPickedUp == 0 && state.drops.isNotEmpty;
-
-      expect(canConfirm, isTrue,
+      expect(canConfirm(state), isTrue,
           reason: 'Can confirm when all pieces are committed as drops');
     });
 
-    test('cannot confirm when pieces still in hand', () {
+    test('canConfirm when all remaining pieces selected (pendingDrop == remaining)', () {
       const state = UIState(
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
         drops: [1], // One drop committed
-        piecesPickedUp: 2, // Still 2 pieces in hand
+        piecesPickedUp: 2, // 2 pieces in hand
+        pendingDropCount: 2, // All 2 selected to drop
+      );
+
+      expect(canConfirm(state), isTrue,
+          reason: 'Can confirm when pendingDrop == remaining (all pieces selected)');
+    });
+
+    test('cannot confirm when only some pieces selected', () {
+      const state = UIState(
+        selectedPosition: Position(2, 2),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        drops: [1], // One drop committed
+        piecesPickedUp: 3, // 3 pieces in hand
+        pendingDropCount: 1, // Only 1 selected
+      );
+
+      expect(canConfirm(state), isFalse,
+          reason: 'Cannot confirm when only some pieces selected');
+    });
+
+    test('canConfirm for stack move with single piece remaining', () {
+      // Single piece remaining from a larger 3-piece stack move
+      const state = UIState(
+        selectedPosition: Position(2, 2),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        drops: [1, 1], // Two drops committed
+        piecesPickedUp: 1, // 1 piece in hand
+        pendingDropCount: 1, // That 1 piece is selected
       );
 
       final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
-      final isStackMove = totalPieces > 1;
-      final canConfirm = isStackMove && state.piecesPickedUp == 0 && state.drops.isNotEmpty;
-
-      expect(canConfirm, isFalse,
-          reason: 'Cannot confirm when pieces still in hand');
+      expect(totalPieces, 3, reason: 'Total pieces in move is 3');
+      expect(canConfirm(state), isTrue,
+          reason: 'Even 1 remaining piece from larger stack needs confirm button');
     });
 
     test('cannot confirm single-piece moves via button (they auto-confirm)', () {
@@ -181,11 +216,88 @@ void main() {
       );
 
       final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
-      final isStackMove = totalPieces > 1;
-      final canConfirm = isStackMove && state.piecesPickedUp == 0 && state.drops.isNotEmpty;
-
-      expect(canConfirm, isFalse,
+      expect(totalPieces, 1, reason: 'This is a single-piece move');
+      expect(canConfirm(state), isFalse,
           reason: 'Single-piece moves use tap-to-confirm, not confirm button');
+    });
+
+    test('canConfirm with no drops yet but all pieces selected', () {
+      // 2-piece stack, no drops yet, pendingDrop == 2 (all selected)
+      const state = UIState(
+        selectedPosition: Position(2, 2),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        piecesPickedUp: 2,
+        pendingDropCount: 2, // All pieces selected
+      );
+
+      expect(canConfirm(state), isTrue,
+          reason: 'Can confirm even with no drops if all pieces are selected');
+    });
+  });
+
+  group('Cycling behavior', () {
+    test('cyclePendingDropCount cycles through drop options', () {
+      final notifier = UIStateNotifier();
+      notifier.selectStack(const Position(2, 2), 3);
+      notifier.startMoving(Direction.right);
+
+      // Initially pendingDropCount should be 1
+      expect(notifier.state.pendingDropCount, 1);
+
+      // Cycle: 1 -> 2
+      notifier.cyclePendingDropCount(3);
+      expect(notifier.state.pendingDropCount, 2);
+
+      // Cycle: 2 -> 3
+      notifier.cyclePendingDropCount(3);
+      expect(notifier.state.pendingDropCount, 3);
+
+      // Cycle: 3 -> 1 (wrap around)
+      notifier.cyclePendingDropCount(3);
+      expect(notifier.state.pendingDropCount, 1);
+    });
+
+    test('single piece remaining does not need cycling', () {
+      final notifier = UIStateNotifier();
+      notifier.selectStack(const Position(2, 2), 3);
+      notifier.startMoving(Direction.right);
+
+      // Drop 2, leaving 1 in hand
+      notifier.addDrop(2);
+      expect(notifier.state.piecesPickedUp, 1);
+      expect(notifier.state.pendingDropCount, 1);
+
+      // Cycling with 1 piece just stays at 1
+      notifier.cyclePendingDropCount(1);
+      expect(notifier.state.pendingDropCount, 1,
+          reason: 'With single piece, cycling wraps to 1');
+    });
+  });
+
+  group('addDrop behavior', () {
+    test('addDrop commits pending drop and moves hand', () {
+      final notifier = UIStateNotifier();
+      notifier.selectStack(const Position(2, 2), 3);
+      notifier.startMoving(Direction.right);
+
+      notifier.addDrop(1);
+
+      expect(notifier.state.drops, [1]);
+      expect(notifier.state.piecesPickedUp, 2);
+      expect(notifier.state.pendingDropCount, 1,
+          reason: 'pendingDropCount resets to 1 after drop');
+    });
+
+    test('addDrop with all remaining pieces leaves no pieces in hand', () {
+      final notifier = UIStateNotifier();
+      notifier.selectStack(const Position(2, 2), 2);
+      notifier.startMoving(Direction.right);
+
+      notifier.addDrop(2);
+
+      expect(notifier.state.drops, [2]);
+      expect(notifier.state.piecesPickedUp, 0);
     });
   });
 }

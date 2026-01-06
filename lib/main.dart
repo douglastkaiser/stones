@@ -1576,7 +1576,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (pos == handPos) {
       // Tap current hand position
       final piecesInHand = uiState.piecesPickedUp;
-      final pendingDrop = uiState.pendingDropCount;
       final isSinglePieceMove = totalPiecesInMove == 1;
 
       // For single-piece moves, tapping confirms immediately (no cycling needed)
@@ -1586,17 +1585,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         return;
       }
 
-      // For stack moves (2+ pieces)
-      if (pendingDrop == piecesInHand) {
-        // All pieces selected to drop here - commit the drop
-        // User can then either confirm with button or continue by tapping next cell
-        uiNotifier.addDrop(pendingDrop);
-        return;
-      } else {
-        // Not all pieces selected, cycle up
-        uiNotifier.cyclePendingDropCount(piecesInHand);
+      // For stack moves (2+ total pieces in the move):
+      // - If only 1 piece remaining, do nothing (must use confirm button)
+      // - Otherwise, cycle through drop count options
+      if (piecesInHand == 1) {
+        // Single piece remaining from larger stack - must use confirm button
         return;
       }
+
+      // Multiple pieces in hand - cycle drop count
+      uiNotifier.cyclePendingDropCount(piecesInHand);
+      return;
     }
 
     // Check if tapping the next cell in the movement direction
@@ -1634,9 +1633,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiState = ref.read(uiStateProvider);
     final pos = uiState.selectedPosition;
     final dir = uiState.selectedDirection;
-    final drops = uiState.drops;
+    final remaining = uiState.piecesPickedUp;
 
-    // Confirm button only shows when all pieces are committed, so drops should not be empty
+    // Build final drops list - include any pending pieces still in hand
+    final drops = remaining > 0
+        ? [...uiState.drops, remaining]
+        : uiState.drops;
+
     if (pos == null || dir == null || drops.isEmpty) return;
 
     _performStackMove(pos, dir, drops, ref);
@@ -4880,9 +4883,12 @@ class _BottomControls extends StatelessWidget {
     final isStackMove = totalPiecesInMove > 1;
     final pendingDrop = uiState.pendingDropCount;
 
-    // For stack moves, can only confirm when ALL pieces have been committed as drops
-    // (remaining == 0 means no pieces left in hand)
-    final canConfirm = isStackMove && remaining == 0 && drops.isNotEmpty;
+    // For stack moves, can confirm when:
+    // - All pieces already committed (remaining == 0), OR
+    // - All remaining pieces selected to drop (pendingDrop == remaining)
+    final allPiecesCommitted = remaining == 0 && drops.isNotEmpty;
+    final allPiecesSelected = remaining > 0 && pendingDrop == remaining;
+    final canConfirm = isStackMove && (allPiecesCommitted || allPiecesSelected);
 
     // For single-piece moves, show simpler message (tap to confirm)
     if (!isStackMove) {
@@ -4909,11 +4915,22 @@ class _BottomControls extends StatelessWidget {
     }
 
     // Build status text for stack moves
-    final statusText = remaining == 0
-        ? 'All pieces placed: ${drops.join(' → ')}. Press Confirm to complete move.'
-        : drops.isEmpty
-            ? 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.'
-            : 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
+    final String statusText;
+    if (allPiecesCommitted) {
+      statusText = 'Move planned: ${drops.join(' → ')}. Press Confirm to complete.';
+    } else if (allPiecesSelected) {
+      if (drops.isEmpty) {
+        statusText = 'Dropping all $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. Press Confirm.';
+      } else {
+        statusText = 'Dropped: ${drops.join(' → ')} · Final $pendingDrop here. Press Confirm.';
+      }
+    } else {
+      if (drops.isEmpty) {
+        statusText = 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining.';
+      } else {
+        statusText = 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
+      }
+    }
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
