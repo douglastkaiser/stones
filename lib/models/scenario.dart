@@ -333,7 +333,10 @@ final _tutorial2StandingStones = GameScenario(
       ),
     ],
   ),
-  scriptedResponses: const [],
+  // Scripted response so tutorial doesn't use AI
+  scriptedResponses: [
+    AIPlacementMove(Position(0, 0), PieceType.flat),
+  ],
 );
 
 final _tutorial3Capstone = GameScenario(
@@ -448,7 +451,10 @@ final _tutorial4MovingSinglePiece = GameScenario(
       ),
     ],
   ),
-  scriptedResponses: const [],
+  // Scripted response so tutorial doesn't use AI
+  scriptedResponses: [
+    AIPlacementMove(Position(2, 2), PieceType.flat),
+  ],
 );
 
 final _tutorial5StacksAndControl = GameScenario(
@@ -481,7 +487,10 @@ final _tutorial5StacksAndControl = GameScenario(
       ),
     ],
   ),
-  scriptedResponses: const [],
+  // Scripted response so tutorial doesn't use AI
+  scriptedResponses: [
+    AIPlacementMove(Position(0, 0), PieceType.flat),
+  ],
 );
 
 final _tutorial6StackMovement = GameScenario(
@@ -538,7 +547,10 @@ final _tutorial6StackMovement = GameScenario(
       ),
     ],
   ),
-  scriptedResponses: const [],
+  // Scripted response so tutorial doesn't use AI
+  scriptedResponses: [
+    AIPlacementMove(Position(0, 0), PieceType.flat),
+  ],
 );
 
 final _tutorial7OpeningRule = GameScenario(
@@ -562,7 +574,10 @@ final _tutorial7OpeningRule = GameScenario(
     phase: GamePhase.opening,
     stacks: const [],
   ),
-  scriptedResponses: const [],
+  // Scripted response: Black places White's piece (opening rule)
+  scriptedResponses: [
+    AIPlacementMove(Position(2, 2), PieceType.flat),
+  ],
 );
 
 final _tutorial8FlatCount = GameScenario(
@@ -706,55 +721,66 @@ final _puzzle6CaptureAndWin = GameScenario(
   id: 'puzzle_6',
   title: 'Capture and Win',
   type: ScenarioType.puzzle,
-  puzzleDifficulty: PuzzleDifficulty.medium,
-  summary: 'Take control of a key stack!',
-  objective: 'Win in 1 move. Take control of that stack!',
+  puzzleDifficulty: PuzzleDifficulty.hard,
+  summary: 'Capture a stack to create a fork!',
+  objective: 'Win in 2 moves. Capture the stack to threaten two roads!',
   dialogue: const [
     'White to move.',
-    'Black controls a stack in your road. Capture it to win!',
+    'Black controls a key stack. Capture it to create two road threats!',
+    'Black can only block one — find the winning sequence.',
   ],
   guidedMove: const GuidedMove.stackMove(
-    from: Position(0, 2),
-    direction: Direction.up,
+    from: Position(2, 0),
+    direction: Direction.right,
     drops: [1],
   ),
   completionText:
-      'Capturing the top of a stack gives you control. Turn their pieces into your road!',
+      'Capturing stacks can create devastating forks. Control is everything in Tak!',
   buildInitialState: () => _buildScenarioState(
     boardSize: 5,
     currentPlayer: PlayerColor.white,
-    turnNumber: 17,
+    turnNumber: 19,
     stacks: const [
-      // White L-shaped road: (0,2) -> (1,2) -> (2,2) -> (2,3) -> (2,4)
-      // White stack to capture with at start of vertical leg
+      // White stack at (2,0) to capture with
       PositionedStack(
-        position: Position(0, 2),
+        position: Position(2, 0),
         stack: PieceStack([
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
       ),
-      // Black-controlled stack blocking the road at the corner
+      // Black-controlled stack at (2,1) - capturing creates fork
       PositionedStack(
-        position: Position(1, 2),
+        position: Position(2, 1),
         stack: PieceStack([
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.black),
         ]),
       ),
-      // Horizontal leg of the L-road
+      // Row 2 partial: needs (2,4) after capture
       PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Black pieces for realistic board state (6 white, 6 black)
+      // Col 2 partial: needs (3,2) to complete
+      PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(4, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Black pieces for realistic board state
       PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(3, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(3, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(0, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(4, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(4, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
-  scriptedResponses: const [],
+  // Move 1: Capture stack at (2,1) - creates double threat:
+  //   Row 2 needs (2,4), Col 2 needs (3,2)
+  // Black blocks row 2 at (2,4)
+  // Move 2: White plays (3,2) - completes col 2 - WIN!
+  scriptedResponses: [
+    AIPlacementMove(Position(2, 4), PieceType.standing),
+  ],
 );
 
 final _puzzle7TheSpread = GameScenario(
@@ -762,25 +788,26 @@ final _puzzle7TheSpread = GameScenario(
   title: 'The Spread',
   type: ScenarioType.puzzle,
   puzzleDifficulty: PuzzleDifficulty.hard,
-  summary: 'Spread your stack to build a road!',
-  objective: 'Win in 1 move. Spread your stack over enemy pieces!',
+  summary: 'Spread to create a devastating fork!',
+  objective: 'Win in 2 moves. Spread to threaten two roads at once!',
   dialogue: const [
     'White to move.',
-    'Black pieces block your path, but your tall stack can cover them all!',
+    'Your tall stack can spread to create two road threats simultaneously.',
+    'Black can only block one — find the winning spread!',
   ],
   guidedMove: const GuidedMove.stackMove(
     from: Position(2, 0),
     direction: Direction.right,
-    drops: [1, 1, 1],
+    drops: [1, 1],
   ),
   completionText:
-      'Spreading over enemy pieces converts them to your road. A powerful technique!',
+      'Spreading creates multiple threats at once. A well-timed spread is unstoppable!',
   buildInitialState: () => _buildScenarioState(
     boardSize: 5,
     currentPlayer: PlayerColor.white,
     turnNumber: 21,
     stacks: const [
-      // White tall stack at (2,0) - leave black + 1 white behind, spread 3 whites
+      // White tall stack at (2,0) - spread creates fork
       PositionedStack(
         position: Position(2, 0),
         stack: PieceStack([
@@ -788,23 +815,34 @@ final _puzzle7TheSpread = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
-          Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
       ),
-      // Black pieces IN THE WAY - these must be spread over
+      // Black piece at (2,1) - will be covered
       PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      // White piece at end of row to complete the road
-      PositionedStack(position: Position(2, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // Additional black pieces for realistic board state
-      PositionedStack(position: Position(0, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(1, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // Row 2 partial: after spread needs (2,4)
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Col 2 partial: after spread needs (4,2)
+      PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(3, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Black pieces for realistic board state
+      PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(0, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(1, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
       PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
-      PositionedStack(position: Position(4, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(3, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(4, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(position: Position(4, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
-  scriptedResponses: const [],
+  // Move 1: Spread [1,1] covers (2,1) and places at (2,2)
+  //   Creates fork: Row 2 needs (2,4), Col 2 needs (4,2)
+  // Black blocks row 2 at (2,4)
+  // Move 2: White plays (4,2) - completes col 2 - WIN!
+  scriptedResponses: [
+    AIPlacementMove(Position(2, 4), PieceType.standing),
+  ],
 );
 
 final _puzzle9CapstoneTactics = GameScenario(
