@@ -1599,9 +1599,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // Check if tapping the next cell in the movement direction
-    // Only allow continuing for stack moves that still have pieces in hand
+    // Only allow continuing for stack moves that:
+    // - Still have pieces in hand
+    // - Haven't selected ALL remaining pieces (if all selected, must use confirm button)
     final isSinglePieceMove = totalPiecesInMove == 1;
-    if (pos == nextPos && canContinue && !isSinglePieceMove && uiState.piecesPickedUp > 0) {
+    final allPiecesSelected = uiState.pendingDropCount == uiState.piecesPickedUp;
+    if (pos == nextPos && canContinue && !isSinglePieceMove &&
+        uiState.piecesPickedUp > 0 && !allPiecesSelected) {
       // Drop current pending at hand position and move to next
       final dropCount = uiState.pendingDropCount;
       uiNotifier.addDrop(dropCount);

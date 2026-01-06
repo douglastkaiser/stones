@@ -300,4 +300,65 @@ void main() {
       expect(notifier.state.piecesPickedUp, 0);
     });
   });
+
+  group('Stack move confirmation requirements', () {
+    // Helper to check if continuing to next cell is allowed
+    // This mirrors the logic in _handleDroppingPiecesTap
+    bool canContinueToNextCell(UIState state) {
+      final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
+      final isSinglePieceMove = totalPieces == 1;
+      final allPiecesSelected = state.pendingDropCount == state.piecesPickedUp;
+
+      // Can only continue if:
+      // - Not a single-piece move
+      // - Has pieces in hand
+      // - NOT all pieces selected (must use confirm button for that)
+      return !isSinglePieceMove &&
+          state.piecesPickedUp > 0 &&
+          !allPiecesSelected;
+    }
+
+    test('cannot continue to next cell when all pieces selected', () {
+      // 3-piece stack, no drops yet, pendingDrop cycled to 3 (all selected)
+      const state = UIState(
+        selectedPosition: Position(2, 2),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        piecesPickedUp: 3,
+        pendingDropCount: 3, // All pieces selected
+      );
+
+      expect(canContinueToNextCell(state), isFalse,
+          reason: 'When all pieces selected, must use confirm button, not tap next cell');
+    });
+
+    test('can continue to next cell when only some pieces selected', () {
+      // 3-piece stack, no drops, pendingDrop = 1 (not all selected)
+      const state = UIState(
+        selectedPosition: Position(2, 2),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        piecesPickedUp: 3,
+        // pendingDropCount defaults to 1
+      );
+
+      expect(canContinueToNextCell(state), isTrue,
+          reason: 'Can continue when only some pieces selected');
+    });
+
+    test('cannot continue when single piece remaining from larger stack', () {
+      // Started with 3, dropped 2, 1 remaining with pendingDrop = 1
+      const state = UIState(
+        selectedPosition: Position(2, 2),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        drops: [1, 1],
+        piecesPickedUp: 1,
+        // pendingDropCount defaults to 1, equals remaining
+      );
+
+      expect(canContinueToNextCell(state), isFalse,
+          reason: 'Single piece remaining means all pieces selected, must use confirm');
+    });
+  });
 }
