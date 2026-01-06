@@ -1634,17 +1634,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final uiState = ref.read(uiStateProvider);
     final pos = uiState.selectedPosition;
     final dir = uiState.selectedDirection;
+    final drops = uiState.drops;
 
-    if (pos == null || dir == null) return;
-
-    // Build the final drops list, including pending drops if user selected all remaining
-    final drops = [
-      ...uiState.drops,
-      if (uiState.piecesPickedUp > 0 && uiState.pendingDropCount == uiState.piecesPickedUp)
-        uiState.pendingDropCount,
-    ];
-
-    if (drops.isEmpty) return;
+    // Confirm button only shows when all pieces are committed, so drops should not be empty
+    if (pos == null || dir == null || drops.isEmpty) return;
 
     _performStackMove(pos, dir, drops, ref);
     ref.read(uiStateProvider.notifier).reset();
@@ -4887,58 +4880,11 @@ class _BottomControls extends StatelessWidget {
     final isStackMove = totalPiecesInMove > 1;
     final pendingDrop = uiState.pendingDropCount;
 
-    // Can confirm when:
-    // 1. At least one drop has been committed, OR
-    // 2. User has selected to drop all remaining pieces (pendingDrop == remaining)
-    final hasCommittedDrops = drops.isNotEmpty;
-    final hasSelectedAllRemaining = pendingDrop == remaining && remaining > 0;
-    final canConfirm = hasCommittedDrops || hasSelectedAllRemaining;
-    final allPiecesDropped = remaining == 0;
+    // For stack moves, can only confirm when ALL pieces have been committed as drops
+    // (remaining == 0 means no pieces left in hand)
+    final canConfirm = isStackMove && remaining == 0 && drops.isNotEmpty;
 
-    if (allPiecesDropped && canConfirm) {
-      // All pieces dropped - show confirm (for stack moves) or auto-confirmed (single piece)
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Move complete! Dropped: ${drops.join(' → ')}',
-            style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                onPressed: onConfirmMove,
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('Confirm Move'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: onCancel,
-                icon: const Icon(Icons.close, size: 16),
-                label: const Text('Cancel'),
-                style: TextButton.styleFrom(
-                  foregroundColor: textColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-
-    // Still dropping - show status
-    // (pendingDrop already defined above)
-
-    // For single-piece moves, show simpler message
+    // For single-piece moves, show simpler message (tap to confirm)
     if (!isStackMove) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -4962,10 +4908,12 @@ class _BottomControls extends StatelessWidget {
       );
     }
 
-    // Build status text for stack moves based on drops made
-    final statusText = drops.isEmpty
-        ? 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.'
-        : 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
+    // Build status text for stack moves
+    final statusText = remaining == 0
+        ? 'All pieces placed: ${drops.join(' → ')}. Press Confirm to complete move.'
+        : drops.isEmpty
+            ? 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining in hand.'
+            : 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -4979,7 +4927,7 @@ class _BottomControls extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Show confirm button for stack moves with at least one drop
+            // Show confirm button only when all pieces are committed as drops
             if (canConfirm) ...[
               ElevatedButton.icon(
                 onPressed: onConfirmMove,

@@ -139,48 +139,53 @@ void main() {
   });
 
   group('Confirm button visibility logic', () {
-    test('canConfirm when drops committed', () {
+    test('canConfirm only when all pieces dropped (remaining == 0)', () {
+      // Stack move with all pieces committed
       const state = UIState(
         mode: InteractionMode.droppingPieces,
-        drops: [1],
-        piecesPickedUp: 1,
+        drops: [1, 1],
+        // piecesPickedUp defaults to 0, meaning all pieces committed
       );
 
-      // Has committed drops -> can confirm
-      expect(state.drops.isNotEmpty, isTrue);
-    });
-
-    test('canConfirm when all pieces selected to drop (even without committed drops)', () {
-      const state = UIState(
-        selectedPosition: Position(2, 2),
-        selectedDirection: Direction.right,
-        mode: InteractionMode.droppingPieces,
-        piecesPickedUp: 3, // 3 pieces in hand
-        pendingDropCount: 3, // User selected to drop all 3
-      );
-
-      // User has selected to drop all remaining pieces
-      // This should be confirmable!
-      final canConfirm = state.drops.isNotEmpty ||
-          (state.pendingDropCount == state.piecesPickedUp && state.piecesPickedUp > 0);
+      // For stack moves: canConfirm = isStackMove && remaining == 0 && drops.isNotEmpty
+      final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
+      final isStackMove = totalPieces > 1;
+      final canConfirm = isStackMove && state.piecesPickedUp == 0 && state.drops.isNotEmpty;
 
       expect(canConfirm, isTrue,
-          reason: 'Should be able to confirm when user selected to drop all pieces');
+          reason: 'Can confirm when all pieces are committed as drops');
     });
 
-    test('cannot confirm when pendingDrop < piecesPickedUp and no commits', () {
+    test('cannot confirm when pieces still in hand', () {
       const state = UIState(
         selectedPosition: Position(2, 2),
         selectedDirection: Direction.right,
         mode: InteractionMode.droppingPieces,
-        piecesPickedUp: 3,
+        drops: [1], // One drop committed
+        piecesPickedUp: 2, // Still 2 pieces in hand
       );
 
-      final canConfirm = state.drops.isNotEmpty ||
-          (state.pendingDropCount == state.piecesPickedUp && state.piecesPickedUp > 0);
+      final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
+      final isStackMove = totalPieces > 1;
+      final canConfirm = isStackMove && state.piecesPickedUp == 0 && state.drops.isNotEmpty;
 
       expect(canConfirm, isFalse,
-          reason: 'Cannot confirm when not all pieces selected and no commits');
+          reason: 'Cannot confirm when pieces still in hand');
+    });
+
+    test('cannot confirm single-piece moves via button (they auto-confirm)', () {
+      const state = UIState(
+        mode: InteractionMode.droppingPieces,
+        drops: [1], // Single piece dropped
+        // piecesPickedUp defaults to 0
+      );
+
+      final totalPieces = state.piecesPickedUp + state.drops.fold<int>(0, (a, b) => a + b);
+      final isStackMove = totalPieces > 1;
+      final canConfirm = isStackMove && state.piecesPickedUp == 0 && state.drops.isNotEmpty;
+
+      expect(canConfirm, isFalse,
+          reason: 'Single-piece moves use tap-to-confirm, not confirm button');
     });
   });
 }
