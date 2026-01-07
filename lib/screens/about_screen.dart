@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/achievement.dart';
 import '../providers/providers.dart';
+import '../services/play_games_service.dart';
+import '../services/sound_manager.dart';
 import '../theme/theme.dart';
 import '../version.dart';
 
@@ -18,6 +20,7 @@ class AboutScreen extends ConsumerStatefulWidget {
 
 class _AboutScreenState extends ConsumerState<AboutScreen> {
   int _versionTapCount = 0;
+  int _iconTapCount = 0;
 
   void _onVersionTap() {
     _versionTapCount++;
@@ -39,6 +42,47 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('All cosmetics unlocked!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _onIconTap() {
+    _iconTapCount++;
+    if (_iconTapCount >= 7) {
+      _iconTapCount = 0;
+      _resetLocalState();
+    }
+  }
+
+  Future<void> _resetLocalState() async {
+    await ref.read(achievementProvider.notifier).resetAll();
+    await ref.read(cosmeticsProvider.notifier).resetToDefaults();
+    await ref.read(appSettingsProvider.notifier).resetToDefaults();
+    await ref.read(playGamesServiceProvider.notifier).resetLocalStats();
+
+    ref.read(scenarioStateProvider.notifier).clearScenario();
+    ref.read(gameSessionProvider.notifier).state = const GameSessionConfig();
+    ref.read(aiThinkingProvider.notifier).state = false;
+    ref.read(aiThinkingVisibleProvider.notifier).state = false;
+    ref.read(uiStateProvider.notifier).reset();
+    ref.read(animationStateProvider.notifier).reset();
+    ref.read(moveHistoryProvider.notifier).clear();
+    ref.read(lastMoveProvider.notifier).state = null;
+    ref.read(chessClockProvider.notifier).stop();
+
+    final boardSize = ref.read(appSettingsProvider).boardSize;
+    ref.read(gameStateProvider.notifier).newGame(boardSize);
+
+    final soundManager = ref.read(soundManagerProvider);
+    await soundManager.setMuted(false);
+    ref.read(isMutedProvider.notifier).state = false;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Local data reset.'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -96,8 +140,11 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                     SizedBox(
                       height: 80,
                       width: 80,
-                      child: CustomPaint(
-                        painter: _StonesIconPainter(),
+                      child: GestureDetector(
+                        onTap: _onIconTap,
+                        child: CustomPaint(
+                          painter: _StonesIconPainter(),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
