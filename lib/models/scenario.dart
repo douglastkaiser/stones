@@ -944,7 +944,7 @@ final _puzzle11TheGauntlet = GameScenario(
   type: ScenarioType.puzzle,
   puzzleDifficulty: PuzzleDifficulty.expert,
   summary: 'Break through a wall of defenses to finish your road.',
-  objective: 'Win in 2 moves. Force the only defense, then flatten to finish!',
+  objective: 'Win in 3 moves. Force the only defense, then break through!',
   dialogue: const [
     'White to move.',
     'Black\'s walls and capstone form a tight barrier across the board.',
@@ -961,6 +961,10 @@ final _puzzle11TheGauntlet = GameScenario(
     boardSize: 5,
     currentPlayer: PlayerColor.white,
     turnNumber: 33,
+    whiteFlatStones: 2,
+    whiteCapstones: 0,
+    blackFlatStones: 2,
+    blackCapstones: 0,
     stacks: const [
       // Row 0
       PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
@@ -973,13 +977,6 @@ final _puzzle11TheGauntlet = GameScenario(
         ]),
       ),
       PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
-      PositionedStack(
-        position: Position(0, 3),
-        stack: PieceStack([
-          Piece(type: PieceType.flat, color: PlayerColor.white),
-          Piece(type: PieceType.flat, color: PlayerColor.black),
-        ]),
-      ),
       PositionedStack(position: Position(0, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       // Row 1
       PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
@@ -991,7 +988,6 @@ final _puzzle11TheGauntlet = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.black),
         ]),
       ),
-      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(
         position: Position(1, 3),
         stack: PieceStack([
@@ -1003,8 +999,8 @@ final _puzzle11TheGauntlet = GameScenario(
       // Row 2 (road target)
       PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      // (2,2) empty - forced block goes here.
-      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
+      // (2,3) empty - final winning placement goes here.
       PositionedStack(
         position: Position(2, 4),
         stack: PieceStack([
@@ -1037,8 +1033,6 @@ final _puzzle11TheGauntlet = GameScenario(
       PositionedStack(
         position: Position(4, 2),
         stack: PieceStack([
-          Piece(type: PieceType.flat, color: PlayerColor.white),
-          Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.capstone, color: PlayerColor.white),
         ]),
       ),
@@ -1052,11 +1046,14 @@ final _puzzle11TheGauntlet = GameScenario(
       PositionedStack(position: Position(4, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
-  // Move 1: Capstone from (4,2) to (3,2) flattens the wall, threatening row 2.
-  // Black's only defense is a wall at (2,2).
-  // Move 2: Capstone moves to (2,2), flattening and completing row 2 = WIN.
+  // Move 1: Capstone from (4,2) to (3,2) prepares the break.
+  // Black's only defense is a wall at (1,2).
+  // Move 2: Capstone moves to (2,2), flattening the wall.
+  // Black's only reply is a flat at (0,3).
+  // Move 3: White places at (2,3) to complete row 2 = WIN.
   scriptedResponses: const [
-    AIPlacementMove(Position(2, 2), PieceType.standing),
+    AIPlacementMove(Position(1, 2), PieceType.standing),
+    AIPlacementMove(Position(0, 3), PieceType.flat),
   ],
 );
 
