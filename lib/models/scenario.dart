@@ -714,7 +714,7 @@ final _tutorial9PieceSupply = GameScenario(
 );
 
 // ============================================================================
-// PUZZLES (4 total)
+// PUZZLES (5 total)
 // ============================================================================
 
 final _puzzle6CaptureAndWin = GameScenario(
@@ -938,6 +938,128 @@ final _puzzle10TheFork = GameScenario(
   ],
 );
 
+final _puzzle11TheGauntlet = GameScenario(
+  id: 'puzzle_11',
+  title: 'The Gauntlet',
+  type: ScenarioType.puzzle,
+  puzzleDifficulty: PuzzleDifficulty.expert,
+  summary: 'Break through a wall of defenses to finish your road.',
+  objective: 'Win in 2 moves. Force the only defense, then flatten to finish!',
+  dialogue: const [
+    'White to move.',
+    'Black\'s walls and capstone form a tight barrier across the board.',
+    'You must force a single defensive wall, then crush through it for the win.',
+  ],
+  guidedMove: const GuidedMove.stackMove(
+    from: Position(4, 2),
+    direction: Direction.up,
+    drops: [1],
+  ),
+  completionText:
+      'Late-game wins come from forcing a single reply, then converting the last blocker.',
+  buildInitialState: () => _buildScenarioState(
+    boardSize: 5,
+    currentPlayer: PlayerColor.white,
+    turnNumber: 33,
+    stacks: const [
+      // Row 0
+      PositionedStack(position: Position(0, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(
+        position: Position(0, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(position: Position(0, 2), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
+      PositionedStack(
+        position: Position(0, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      PositionedStack(position: Position(0, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // Row 1
+      PositionedStack(position: Position(1, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(
+        position: Position(1, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      PositionedStack(position: Position(1, 2), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(
+        position: Position(1, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.standing, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(position: Position(1, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      // Row 2 (road target)
+      PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      // (2,2) empty - forced block goes here.
+      PositionedStack(position: Position(2, 3), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(
+        position: Position(2, 4),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // Row 3
+      PositionedStack(position: Position(3, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+      PositionedStack(
+        position: Position(3, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(position: Position(3, 2), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
+      PositionedStack(
+        position: Position(3, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.capstone, color: PlayerColor.black),
+        ]),
+      ),
+      PositionedStack(position: Position(3, 4), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.white)])),
+      // Row 4
+      PositionedStack(position: Position(4, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
+      PositionedStack(position: Position(4, 1), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
+      PositionedStack(
+        position: Position(4, 2),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.capstone, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(4, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(position: Position(4, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
+    ],
+  ),
+  // Move 1: Capstone from (4,2) to (3,2) flattens the wall, threatening row 2.
+  // Black's only defense is a wall at (2,2).
+  // Move 2: Capstone moves to (2,2), flattening and completing row 2 = WIN.
+  scriptedResponses: const [
+    AIPlacementMove(Position(2, 2), PieceType.standing),
+  ],
+);
+
 // ============================================================================
 // LIBRARY EXPORT
 // ============================================================================
@@ -954,9 +1076,10 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
   _tutorial7OpeningRule,
   _tutorial8FlatCount,
   _tutorial9PieceSupply,
-  // Puzzles (4)
+  // Puzzles (5)
   _puzzle6CaptureAndWin,
   _puzzle7TheSpread,
   _puzzle9CapstoneTactics,
   _puzzle10TheFork,
+  _puzzle11TheGauntlet,
 ];
