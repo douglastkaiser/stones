@@ -939,6 +939,235 @@ final _puzzle10TheFork = GameScenario(
 );
 
 // ============================================================================
+// EXPERT PUZZLE: THE CRUCIBLE
+// A complex late-game position requiring precise capstone maneuvering
+// ============================================================================
+
+final _puzzle11TheCrucible = GameScenario(
+  id: 'puzzle_11',
+  title: 'The Crucible',
+  type: ScenarioType.puzzle,
+  puzzleDifficulty: PuzzleDifficulty.expert,
+  summary: 'Navigate the chaos to find the winning line!',
+  objective: 'Win in 2 moves. Use your Capstone to break through!',
+  dialogue: const [
+    'White to move.',
+    'The board is a battlefield of stacks and walls.',
+    'Your Capstone holds the key — find the move that creates an unstoppable fork!',
+  ],
+  guidedMove: const GuidedMove.stackMove(
+    from: Position(2, 0),
+    direction: Direction.right,
+    drops: [1],
+  ),
+  completionText:
+      'Masterful! In the chaos of a crowded board, the Capstone cut through to create an unstoppable fork. True mastery of Tak!',
+  buildInitialState: () => _buildScenarioState(
+    boardSize: 5,
+    currentPlayer: PlayerColor.white,
+    turnNumber: 35,
+    stacks: const [
+      // ================================================================
+      // ROW 0: Black wall, White stacks, Black capstone in corner
+      // ================================================================
+      // (0,0) Black wall - blocks corner
+      PositionedStack(
+        position: Position(0, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (0,1) White stack - part of Column 1 road
+      PositionedStack(
+        position: Position(0, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (0,2) White flat - blocks any Black column 2 plans
+      PositionedStack(
+        position: Position(0, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // (0,3) White stack - realistic board density
+      PositionedStack(
+        position: Position(0, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (0,4) Black capstone - defending corner, can't help block fork
+      PositionedStack(
+        position: Position(0, 4),
+        stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.black)]),
+      ),
+
+      // ================================================================
+      // ROW 1: Mixed stacks and walls
+      // ================================================================
+      // (1,0) Black stack - Black controls left side
+      PositionedStack(
+        position: Position(1, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      // (1,1) White stack - part of Column 1 road
+      PositionedStack(
+        position: Position(1, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (1,2) Black wall - blocks Column 2
+      PositionedStack(
+        position: Position(1, 2),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (1,3) White stack - blocks Black row 1
+      PositionedStack(
+        position: Position(1, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (1,4) Black wall - blocks right column
+      PositionedStack(
+        position: Position(1, 4),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+
+      // ================================================================
+      // ROW 2: THE CRITICAL ROW - Capstone stack, walls, and road pieces
+      // ================================================================
+      // (2,0) White CAPSTONE on tall stack - THE KEY PIECE
+      PositionedStack(
+        position: Position(2, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.capstone, color: PlayerColor.white),
+        ]),
+      ),
+      // (2,1) Black wall - BLOCKING Row 2 road, will be flattened!
+      PositionedStack(
+        position: Position(2, 1),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (2,2) White stack - part of Row 2 road
+      PositionedStack(
+        position: Position(2, 2),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (2,3) EMPTY - Row 2 needs this to complete after flatten
+      // (2,4) White flat - end of Row 2 road
+      PositionedStack(
+        position: Position(2, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+
+      // ================================================================
+      // ROW 3: More walls and stacks
+      // ================================================================
+      // (3,0) Black wall - blocks left column
+      PositionedStack(
+        position: Position(3, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (3,1) White stack - part of Column 1 road
+      PositionedStack(
+        position: Position(3, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (3,2) Black wall - blocks Column 2
+      PositionedStack(
+        position: Position(3, 2),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (3,3) White stack - blocks Black plans
+      PositionedStack(
+        position: Position(3, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (3,4) Black flat - Black presence on right
+      PositionedStack(
+        position: Position(3, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+
+      // ================================================================
+      // ROW 4: Bottom row with walls and stacks
+      // ================================================================
+      // (4,0) Black wall - corner wall
+      PositionedStack(
+        position: Position(4, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (4,1) EMPTY - Column 1 needs this to complete!
+      // (4,2) White stack - blocks Black column 2
+      PositionedStack(
+        position: Position(4, 2),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // (4,3) Black stack - Black controls
+      PositionedStack(
+        position: Position(4, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      // (4,4) Black flat - corner
+      PositionedStack(
+        position: Position(4, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+    ],
+  ),
+  // SOLUTION:
+  // Move 1: Capstone from (2,0) moves right to (2,1), flattening wall
+  //   - Stack at (2,0): [B,B,W,W,W,C] -> picks up just C (1 piece)
+  //   - Drops C at (2,1), flattening the black wall
+  //   - (2,0) now has [B,B,W,W,W] - White still controls (W on top)
+  //   - (2,1) now has [flattened B, C] - White capstone on top
+  //
+  // After Move 1:
+  //   Row 2: W(2,0), C(2,1), W(2,2), empty(2,3), W(2,4) = TAK! (needs 2,3)
+  //   Col 1: W(0,1), W(1,1), C(2,1), W(3,1), empty(4,1) = TAK! (needs 4,1)
+  //   FORK CREATED! Black can only block one.
+  //
+  // Move 2 (Black scripted): Black places wall at (2,3) to block Row 2
+  //
+  // Move 3: White places flat at (4,1), completing Column 1 = WIN!
+  scriptedResponses: const [
+    AIPlacementMove(Position(2, 3), PieceType.standing),
+  ],
+);
+
+// ============================================================================
 // LIBRARY EXPORT
 // ============================================================================
 
@@ -954,9 +1183,10 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
   _tutorial7OpeningRule,
   _tutorial8FlatCount,
   _tutorial9PieceSupply,
-  // Puzzles (4)
+  // Puzzles (5)
   _puzzle6CaptureAndWin,
   _puzzle7TheSpread,
   _puzzle9CapstoneTactics,
   _puzzle10TheFork,
+  _puzzle11TheCrucible,
 ];
