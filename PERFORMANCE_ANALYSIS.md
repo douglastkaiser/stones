@@ -11,11 +11,13 @@
 
 This analysis covers **Web Performance Metrics** (Lighthouse: LCP/CLS/INP) and **Mobile Performance** (frame render times, memory). Identified **10 major performance issues** across AI algorithms, state management, and UI rendering. The most critical issues cause **O(n⁴) complexity** in AI move evaluation and **exponential board state copying**.
 
-**Status Update:** Some improvements have been implemented:
+**Status Update:** Performance optimizations have been implemented:
 - ✅ Board analysis caching added (`lib/services/ai/board_analysis.dart`)
 - ✅ Early termination in threat counting implemented
-- ⚠️ GridView optimization still needed
-- ⚠️ Board state copying still uses O(n²) per call
+- ✅ GridView optimization - pre-computed flags, RepaintBoundary added
+- ✅ Board state copying - copy-on-write O(n) per call
+- ✅ Web: Preconnect hints, deferred Firebase, fade transition
+- ✅ Granular provider selectors in main_menu_screen
 
 Estimated performance improvement after all fixes: **2-10x on Hard AI difficulty**, with noticeable improvements during move evaluation and game rendering.
 
@@ -263,14 +265,16 @@ Board setStack(Position pos, PieceStack stack) {
 
 ## Critical Issues (Fix Immediately)
 
-### 🔴 Issue #1: Exponential Board State Copying
+### 🟢 Issue #1: Exponential Board State Copying
 
-**Severity:** CRITICAL | **Status:** ⚠️ Still Present
+**Severity:** CRITICAL | **Status:** ✅ FIXED - Copy-on-write implemented
 **Impact:** Every move evaluation triggers dozens to hundreds of full board copies
 **Files affected:**
-- `lib/models/board.dart:156-166` - `setStack()` method
+- `lib/models/board.dart:156-172` - `setStack()` now uses copy-on-write
 - `lib/services/ai/move_generator.dart` - Called in simulation loops
 - `lib/services/ai/lookahead_ai.dart:278,296` - Called in `_applyStackMove()`
+
+**Fix implemented:** Copy-on-write semantics - only copies the modified row, shares unchanged rows. Reduces O(n²) to O(n) per modification.
 
 **Problem:**
 ```dart
@@ -397,15 +401,18 @@ final currentTheirThreats = _countThreats(state, state.opponent);    // Call 4
 
 ---
 
-### 🔴 Issue #4: GridView Rebuilding All Cells on Every Animation
+### 🟢 Issue #4: GridView Rebuilding All Cells on Every Animation
 
-**Severity:** HIGH | **Status:** ⚠️ Partially Improved
+**Severity:** HIGH | **Status:** ✅ FIXED - Pre-computed flags + RepaintBoundary
 **Impact:** All 25-64 cells rebuild on any state change
 **Files affected:**
-- `lib/main.dart:3023-3213` - `_GameBoard.build()`
-- `lib/main.dart:3163` - Cell key improved (no timestamp)
+- `lib/main.dart:3046-3067` - Pre-computed animation flags
+- `lib/main.dart:3165` - RepaintBoundary wraps each cell
 
-**Improvement:** Cell keys no longer include timestamps. However, expensive calculations are still computed inside `itemBuilder` (lines 3033-3044).
+**Fix implemented:**
+- Animation state flags pre-computed before itemBuilder (lines 3046-3067)
+- Each cell wrapped in RepaintBoundary to isolate repaints
+- Calculations now O(1) per cell instead of repeated per cell
 
 **Problem:**
 ```dart
