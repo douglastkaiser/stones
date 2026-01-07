@@ -886,9 +886,9 @@ final _puzzle9CapstoneTactics = GameScenario(
   scriptedResponses: const [],
 );
 
-final _puzzle10GrandCombination = GameScenario(
+final _puzzle10TheFork = GameScenario(
   id: 'puzzle_10',
-  title: 'The Grand Combination',
+  title: 'The Fork',
   type: ScenarioType.puzzle,
   puzzleDifficulty: PuzzleDifficulty.expert,
   summary: 'Create a fork Black cannot escape!',
@@ -958,5 +958,5 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
   _puzzle6CaptureAndWin,
   _puzzle7TheSpread,
   _puzzle9CapstoneTactics,
-  _puzzle10GrandCombination,
+  _puzzle10TheFork,
 ];

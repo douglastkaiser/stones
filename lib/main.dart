@@ -706,9 +706,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
+    // For puzzles with scripted responses (multi-move puzzles), only show
+    // completion when game is actually over so user plays through to victory
+    final isPuzzleWithScripts = activeScenario?.type == ScenarioType.puzzle &&
+        activeScenario!.scriptedResponses.isNotEmpty;
+    final shouldShowCompletion = isPuzzleWithScripts
+        ? gameState.isGameOver
+        : (gameState.isGameOver || scenarioState.guidedStepComplete);
+
     if (activeScenario != null &&
         !scenarioState.completionShown &&
-        (gameState.isGameOver || scenarioState.guidedStepComplete)) {
+        shouldShowCompletion) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
 
