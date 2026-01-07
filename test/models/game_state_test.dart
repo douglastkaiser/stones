@@ -170,6 +170,151 @@ void main() {
       board = board.setStack(pos, stack);
       expect(board.stackAt(pos), stack);
     });
+
+    test('setStack is immutable - original board unchanged', () {
+      final original = Board.empty(5);
+      const pos = Position(2, 2);
+      const piece = Piece(type: PieceType.flat, color: PlayerColor.white);
+      final stack = PieceStack.empty.push(piece);
+
+      final modified = original.setStack(pos, stack);
+
+      // Original should be unchanged
+      expect(original.stackAt(pos).isEmpty, true);
+      // Modified should have the new stack
+      expect(modified.stackAt(pos), stack);
+    });
+
+    test('setStack copy-on-write preserves other positions in same row', () {
+      var board = Board.empty(5);
+      const pos1 = Position(2, 1);
+      const pos2 = Position(2, 3); // Same row, different column
+      const piece1 = Piece(type: PieceType.flat, color: PlayerColor.white);
+      const piece2 = Piece(type: PieceType.flat, color: PlayerColor.black);
+
+      // Place first piece
+      board = board.placePiece(pos1, piece1);
+      // Place second piece in same row
+      board = board.placePiece(pos2, piece2);
+
+      // Both pieces should exist
+      expect(board.stackAt(pos1).topPiece, piece1);
+      expect(board.stackAt(pos2).topPiece, piece2);
+    });
+
+    test('setStack copy-on-write preserves other rows', () {
+      var board = Board.empty(5);
+      const pos1 = Position(1, 2);
+      const pos2 = Position(3, 2); // Different row
+      const piece1 = Piece(type: PieceType.flat, color: PlayerColor.white);
+      const piece2 = Piece(type: PieceType.flat, color: PlayerColor.black);
+
+      // Place pieces in different rows
+      board = board.placePiece(pos1, piece1);
+      board = board.placePiece(pos2, piece2);
+
+      // Both pieces should exist
+      expect(board.stackAt(pos1).topPiece, piece1);
+      expect(board.stackAt(pos2).topPiece, piece2);
+    });
+
+    test('setStack returns same board when stack unchanged', () {
+      var board = Board.empty(5);
+      const pos = Position(2, 2);
+      const piece = Piece(type: PieceType.flat, color: PlayerColor.white);
+
+      board = board.placePiece(pos, piece);
+      final stack = board.stackAt(pos);
+
+      // Setting the same stack should return identical board
+      final sameBoard = board.setStack(pos, stack);
+      expect(identical(board, sameBoard), true);
+    });
+
+    test('multiple setStack calls build correct board state', () {
+      var board = Board.empty(5);
+      const whitePiece = Piece(type: PieceType.flat, color: PlayerColor.white);
+      const blackPiece = Piece(type: PieceType.flat, color: PlayerColor.black);
+
+      // Place pieces in a pattern
+      final positions = [
+        const Position(0, 0),
+        const Position(1, 1),
+        const Position(2, 2),
+        const Position(3, 3),
+        const Position(4, 4),
+      ];
+
+      for (var i = 0; i < positions.length; i++) {
+        final piece = i.isEven ? whitePiece : blackPiece;
+        board = board.placePiece(positions[i], piece);
+      }
+
+      // Verify all pieces are correctly placed
+      for (var i = 0; i < positions.length; i++) {
+        final expectedPiece = i.isEven ? whitePiece : blackPiece;
+        expect(board.stackAt(positions[i]).topPiece, expectedPiece);
+      }
+
+      // Verify other positions are still empty
+      expect(board.stackAt(const Position(0, 1)).isEmpty, true);
+      expect(board.stackAt(const Position(2, 3)).isEmpty, true);
+    });
+
+    test('Board equality works with copy-on-write', () {
+      var board1 = Board.empty(5);
+      var board2 = Board.empty(5);
+      const pos = Position(2, 2);
+      const piece = Piece(type: PieceType.flat, color: PlayerColor.white);
+
+      board1 = board1.placePiece(pos, piece);
+      board2 = board2.placePiece(pos, piece);
+
+      // Boards with same state should be equal
+      expect(board1, equals(board2));
+    });
+
+    test('setStack works correctly at board edges', () {
+      var board = Board.empty(5);
+      const piece = Piece(type: PieceType.flat, color: PlayerColor.white);
+
+      // Test corners and edges
+      final edgePositions = [
+        const Position(0, 0), // Top-left
+        const Position(0, 4), // Top-right
+        const Position(4, 0), // Bottom-left
+        const Position(4, 4), // Bottom-right
+        const Position(0, 2), // Top edge
+        const Position(4, 2), // Bottom edge
+        const Position(2, 0), // Left edge
+        const Position(2, 4), // Right edge
+      ];
+
+      for (final pos in edgePositions) {
+        board = board.placePiece(pos, piece);
+      }
+
+      // Verify all edge positions have pieces
+      for (final pos in edgePositions) {
+        expect(board.stackAt(pos).topPiece, piece,
+            reason: 'Position $pos should have piece');
+      }
+    });
+
+    test('setStack handles stack with multiple pieces', () {
+      var board = Board.empty(5);
+      const pos = Position(2, 2);
+      const piece1 = Piece(type: PieceType.flat, color: PlayerColor.white);
+      const piece2 = Piece(type: PieceType.flat, color: PlayerColor.black);
+      const piece3 = Piece(type: PieceType.capstone, color: PlayerColor.white);
+
+      final stack = PieceStack.empty.push(piece1).push(piece2).push(piece3);
+      board = board.setStack(pos, stack);
+
+      expect(board.stackAt(pos).height, 3);
+      expect(board.stackAt(pos).topPiece, piece3);
+      expect(board.stackAt(pos).controller, PlayerColor.white);
+    });
   });
 
   group('GameState', () {

@@ -610,9 +610,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final gameState = ref.watch(gameStateProvider);
-    final hasGameInProgress = !gameState.isGameOver &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+    // Use granular selector to avoid rebuilding on every game state change
+    // Only rebuild when "has game in progress" status actually changes
+    final hasGameInProgress = ref.watch(gameStateProvider.select(
+      (s) => !s.isGameOver && (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
+    ));
     final playGames = ref.watch(playGamesServiceProvider);
 
     return Scaffold(

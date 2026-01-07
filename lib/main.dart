@@ -3043,6 +3043,29 @@ class _GameBoard extends StatelessWidget {
     // Calculate preview stacks for move operations
     final previewStacks = uiState.getPreviewStacks(gameState);
 
+    // Pre-compute animation state flags (optimization: avoid per-cell checks)
+    final lastEvent = animationState.lastEvent;
+    final winningRoad = animationState.winningRoad;
+
+    // Pre-compute which positions have stack drop events
+    final stackDropPositions = lastEvent is StackMovedEvent
+        ? lastEvent.dropPositions
+        : const <Position>{};
+
+    // Pre-compute wall flattened position
+    final wallFlattenedPos = lastEvent is WallFlattenedEvent
+        ? lastEvent.position
+        : null;
+
+    // Pre-compute newly placed position
+    final newlyPlacedPos = lastEvent is PiecePlacedEvent
+        ? lastEvent.position
+        : null;
+
+    // Pre-compute total pieces in move for pending drop display
+    final totalPiecesInMove = uiState.piecesPickedUp +
+        uiState.drops.fold<int>(0, (a, b) => a + b);
+
     // Calculate responsive spacing based on board size
     // Larger boards get smaller spacing to fit well
     final spacing = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
@@ -3109,22 +3132,11 @@ class _GameBoard extends StatelessWidget {
                       final displayStack = preview?.$1 ?? actualStack;
                       final ghostStackPieces = preview?.$2 ?? const <Piece>[];
 
-                      // Check for animation events on this position
-                      final lastEvent = animationState.lastEvent;
-                      final isNewlyPlaced = lastEvent is PiecePlacedEvent && lastEvent.position == pos;
-                      final isInWinningRoad = animationState.winningRoad?.contains(pos) ?? false;
-
-                      // Check if this cell received pieces from a stack move
-                      bool isStackDropTarget = false;
-                      if (lastEvent is StackMovedEvent) {
-                        isStackDropTarget = lastEvent.dropPositions.contains(pos);
-                      }
-
-                      // Check for wall flattening
-                      bool wasWallFlattened = false;
-                      if (lastEvent is WallFlattenedEvent && lastEvent.position == pos) {
-                        wasWallFlattened = true;
-                      }
+                      // Use pre-computed animation flags (optimization)
+                      final isNewlyPlaced = newlyPlacedPos == pos;
+                      final isInWinningRoad = winningRoad?.contains(pos) ?? false;
+                      final isStackDropTarget = stackDropPositions.contains(pos);
+                      final wasWallFlattened = wallFlattenedPos == pos;
 
                       // Check if this is part of the last move
                       final isLastMove = lastMovePositions?.contains(pos) ?? false;
@@ -3145,45 +3157,46 @@ class _GameBoard extends StatelessWidget {
 
                       // Show pending drop count when in droppingPieces mode at hand position
                       // but only for stack moves (2+ pieces), not single-piece moves
-                      final totalPiecesInMove = uiState.piecesPickedUp +
-                          uiState.drops.fold<int>(0, (a, b) => a + b);
                       final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
                           nextDropPos == pos &&
                           totalPiecesInMove > 1;
 
-                      return _CellInteractionLayer(
-                        position: pos,
-                        stack: displayStack,
-                        ghostStackPieces: ghostStackPieces,
-                        onTap: () => onCellTap(pos),
-                        onSwipe: (dir) => onCellSwipe(pos, dir),
-                        onStackViewStart: onLongPressStart,
-                        onStackViewEnd: onLongPressEnd,
-                        child: _BoardCell(
-                          key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
+                      // Wrap in RepaintBoundary to limit repaint scope (optimization)
+                      return RepaintBoundary(
+                        child: _CellInteractionLayer(
+                          position: pos,
                           stack: displayStack,
-                          isSelected: isSelected,
-                          isInDropPath: isInDropPath,
-                          isNextDrop: isNextDrop,
-                          canSelect: !gameState.isGameOver,
-                          boardSize: boardSize,
-                          pieceStyleData: pieceStyleData,
-                          boardThemeData: boardThemeData,
-                          isNewlyPlaced: isNewlyPlaced,
-                          isInWinningRoad: isInWinningRoad,
-                          isStackDropTarget: isStackDropTarget,
-                          wasWallFlattened: wasWallFlattened,
-                          isLastMove: isLastMove,
-                          isLegalMoveHint: isLegalMoveHint,
-                          isScenarioHint: isScenarioHint,
-                          ghostPieceType: ghostPieceType,
-                          ghostPieceColor: ghostPieceColor,
                           ghostStackPieces: ghostStackPieces,
-                          pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
-                          pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
-                          piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
-                          showExploded: isExploded,
-                          explodedStack: stackForExplosion,
+                          onTap: () => onCellTap(pos),
+                          onSwipe: (dir) => onCellSwipe(pos, dir),
+                          onStackViewStart: onLongPressStart,
+                          onStackViewEnd: onLongPressEnd,
+                          child: _BoardCell(
+                            key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
+                            stack: displayStack,
+                            isSelected: isSelected,
+                            isInDropPath: isInDropPath,
+                            isNextDrop: isNextDrop,
+                            canSelect: !gameState.isGameOver,
+                            boardSize: boardSize,
+                            pieceStyleData: pieceStyleData,
+                            boardThemeData: boardThemeData,
+                            isNewlyPlaced: isNewlyPlaced,
+                            isInWinningRoad: isInWinningRoad,
+                            isStackDropTarget: isStackDropTarget,
+                            wasWallFlattened: wasWallFlattened,
+                            isLastMove: isLastMove,
+                            isLegalMoveHint: isLegalMoveHint,
+                            isScenarioHint: isScenarioHint,
+                            ghostPieceType: ghostPieceType,
+                            ghostPieceColor: ghostPieceColor,
+                            ghostStackPieces: ghostStackPieces,
+                            pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
+                            pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
+                            piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
+                            showExploded: isExploded,
+                            explodedStack: stackForExplosion,
+                          ),
                         ),
                       );
                     },

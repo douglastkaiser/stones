@@ -126,7 +126,7 @@ class PieceStack {
   String toString() => 'Stack($pieces)';
 }
 
-/// The game board
+/// The game board with copy-on-write semantics for performance
 class Board {
   final int size;
   final List<List<PieceStack>> cells;
@@ -136,10 +136,9 @@ class Board {
   /// Create an empty board of given size
   factory Board.empty(int size) {
     assert(size >= 3 && size <= 8);
-    final cells = List.generate(
-      size,
-      (_) => List.generate(size, (_) => PieceStack.empty),
-    );
+    // Create a single empty row and reuse it for all rows (structural sharing)
+    final emptyRow = List<PieceStack>.filled(size, PieceStack.empty);
+    final cells = List.generate(size, (_) => emptyRow);
     return Board._(size: size, cells: cells);
   }
 
@@ -153,15 +152,23 @@ class Board {
   bool isValidPosition(Position pos) => pos.isValid(size);
 
   /// Set the stack at a position (returns new board)
+  /// Uses copy-on-write: only copies the modified row, shares unchanged rows
   Board setStack(Position pos, PieceStack stack) {
     assert(pos.isValid(size));
-    final newCells = [
-      for (int r = 0; r < size; r++)
-        [
-          for (int c = 0; c < size; c++)
-            if (r == pos.row && c == pos.col) stack else cells[r][c]
-        ]
-    ];
+
+    // Early return if stack is unchanged
+    if (cells[pos.row][pos.col] == stack) {
+      return this;
+    }
+
+    // Copy-on-write: only copy the row that changed, share other rows
+    // This reduces O(n²) to O(n) per modification
+    final newRow = List<PieceStack>.of(cells[pos.row]);
+    newRow[pos.col] = stack;
+
+    final newCells = List<List<PieceStack>>.of(cells);
+    newCells[pos.row] = newRow;
+
     return Board._(size: size, cells: newCells);
   }
 
