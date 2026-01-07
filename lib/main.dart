@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'services/web_back_button_handler.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
@@ -19,7 +17,6 @@ import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
 import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
-import 'firebase_options.dart';
 
 void _debugLog(String message) {
   developer.log('[GAME] $message', name: 'game');
@@ -27,11 +24,10 @@ void _debugLog(String message) {
   print('[GAME] $message');
 }
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Firebase initialization is deferred to OnlineGameController.initialize()
+  // to reduce initial load time when user only plays offline
   runApp(const ProviderScope(child: StonesApp()));
 }
 
@@ -54,12 +50,31 @@ class _StonesAppState extends ConsumerState<StonesApp> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
 
+    // Use bundled Lora font to eliminate network requests and improve LCP
+    const loraTextTheme = TextTheme(
+      displayLarge: TextStyle(fontFamily: 'Lora'),
+      displayMedium: TextStyle(fontFamily: 'Lora'),
+      displaySmall: TextStyle(fontFamily: 'Lora'),
+      headlineLarge: TextStyle(fontFamily: 'Lora'),
+      headlineMedium: TextStyle(fontFamily: 'Lora'),
+      headlineSmall: TextStyle(fontFamily: 'Lora'),
+      titleLarge: TextStyle(fontFamily: 'Lora'),
+      titleMedium: TextStyle(fontFamily: 'Lora'),
+      titleSmall: TextStyle(fontFamily: 'Lora'),
+      bodyLarge: TextStyle(fontFamily: 'Lora'),
+      bodyMedium: TextStyle(fontFamily: 'Lora'),
+      bodySmall: TextStyle(fontFamily: 'Lora'),
+      labelLarge: TextStyle(fontFamily: 'Lora'),
+      labelMedium: TextStyle(fontFamily: 'Lora'),
+      labelSmall: TextStyle(fontFamily: 'Lora'),
+    );
+
     return MaterialApp(
       title: 'Stones',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
         useMaterial3: true,
-        textTheme: GoogleFonts.loraTextTheme(),
+        textTheme: loraTextTheme,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -67,9 +82,7 @@ class _StonesAppState extends ConsumerState<StonesApp> {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        textTheme: GoogleFonts.loraTextTheme(
-          ThemeData(brightness: Brightness.dark).textTheme,
-        ),
+        textTheme: loraTextTheme,
       ),
       themeMode: settings.themeMode,
       home: const MainMenuScreen(),

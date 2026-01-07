@@ -38,6 +38,16 @@ android {
         versionName = flutter.versionName
     }
 
+    // Split APKs by ABI to reduce download size per device
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            universalApk true  // Also build a universal APK for fallback
+        }
+    }
+
     signingConfigs {
         release {
             if (androidUploadStoreFile) {
@@ -55,6 +65,10 @@ android {
         }
         release {
             signingConfig signingConfigs.release
+            // Enable code shrinking and resource optimization for smaller APK
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
