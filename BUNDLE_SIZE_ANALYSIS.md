@@ -17,11 +17,12 @@ This analysis identifies bundle size optimization opportunities for both web (JS
 | Audio files (WAV → OGG) | 149KB | 49KB | 100KB (67%) |
 | Web icons (resize + compress) | 42KB | 9KB | 33KB (78%) |
 | Firebase loading | Eager | Deferred | Faster startup |
-| Google Fonts | Network | Bundled | Eliminates LCP blocking |
 | APK ABI splitting | Disabled | Enabled | ~30-40% per device |
 | ProGuard/R8 minification | Disabled | Enabled | Code shrinking |
 
 **Total Asset Savings: ~133KB (from 205KB to ~72KB)**
+
+**Note:** Google Fonts bundling was reverted - the downloaded font files were invalid.
 
 ### Remaining Opportunities
 
