@@ -5,15 +5,28 @@ import 'board_analysis.dart';
 /// Shared lookahead AI that powers every difficulty level.
 /// The only difference between modes is the search depth used here.
 class LookaheadStonesAI extends StonesAI {
-  LookaheadStonesAI(super.random, {required this.searchDepth});
+  LookaheadStonesAI(
+    super.random, {
+    required this.searchDepth,
+    this.maxBranchingLimit = _defaultMaxBranchingLimit,
+    this.midBranchingLimit = _defaultMidBranchingLimit,
+    this.deepBranchingLimit = _defaultDeepBranchingLimit,
+    this.evaluationJitter = _defaultEvaluationJitter,
+  });
 
   /// Number of plies to search (our move + opponent responses, etc.).
   final int searchDepth;
 
+  final int maxBranchingLimit;
+  final int midBranchingLimit;
+  final int deepBranchingLimit;
+  final double evaluationJitter;
+
   static const double _winScore = 10000;
-  static const int _maxBranchingLimit = 20;
-  static const int _midBranchingLimit = 14;
-  static const int _deepBranchingLimit = 10;
+  static const int _defaultMaxBranchingLimit = 20;
+  static const int _defaultMidBranchingLimit = 14;
+  static const int _defaultDeepBranchingLimit = 10;
+  static const double _defaultEvaluationJitter = 0.01;
 
   final AIMoveGenerator _generator = const AIMoveGenerator();
 
@@ -143,7 +156,7 @@ class LookaheadStonesAI extends StonesAI {
     return threatCount * 12 - opponentThreats * 11 +
         chainPotential * 1.6 - opponentChainPotential * 1.3 +
         flatAdvantage * 3 + reserveAdvantage + controlSwing +
-        random.nextDouble() * 0.01;
+        random.nextDouble() * evaluationJitter;
   }
 
   List<(AIMove, double)> _orderMoves(
@@ -218,9 +231,9 @@ class LookaheadStonesAI extends StonesAI {
   }
 
   int _branchLimitForDepth(int depth) {
-    if (depth >= 3) return _deepBranchingLimit;
-    if (depth == 2) return _midBranchingLimit;
-    return _maxBranchingLimit;
+    if (depth >= 3) return deepBranchingLimit;
+    if (depth == 2) return midBranchingLimit;
+    return maxBranchingLimit;
   }
 
   GameState _switchPlayer(GameState state) {

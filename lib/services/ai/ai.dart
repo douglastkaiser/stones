@@ -20,10 +20,36 @@ abstract class StonesAI {
   factory StonesAI.forDifficulty(AIDifficulty difficulty, {Random? random}) {
     final rng = random ?? Random();
     return switch (difficulty) {
-      AIDifficulty.easy => LookaheadStonesAI(rng, searchDepth: 1),
-      AIDifficulty.medium => LookaheadStonesAI(rng, searchDepth: 2),
-      AIDifficulty.hard => LookaheadStonesAI(rng, searchDepth: 3),
-      AIDifficulty.expert => LookaheadStonesAI(rng, searchDepth: 4),
+      AIDifficulty.easy => LookaheadStonesAI(
+          rng,
+          searchDepth: 2,
+          maxBranchingLimit: 10,
+          midBranchingLimit: 8,
+          evaluationJitter: 0.08,
+        ),
+      AIDifficulty.medium => LookaheadStonesAI(
+          rng,
+          searchDepth: 2,
+          maxBranchingLimit: 16,
+          midBranchingLimit: 12,
+          evaluationJitter: 0.05,
+        ),
+      AIDifficulty.hard => LookaheadStonesAI(
+          rng,
+          searchDepth: 3,
+          maxBranchingLimit: 14,
+          midBranchingLimit: 10,
+          deepBranchingLimit: 8,
+          evaluationJitter: 0.03,
+        ),
+      AIDifficulty.expert => LookaheadStonesAI(
+          rng,
+          searchDepth: 4,
+          maxBranchingLimit: 12,
+          midBranchingLimit: 9,
+          deepBranchingLimit: 6,
+          evaluationJitter: 0.015,
+        ),
     };
   }
 }
