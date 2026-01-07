@@ -83,6 +83,14 @@ class CosmeticsNotifier extends StateNotifier<CosmeticsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(CosmeticsKeys.pieceStyle, style.index);
   }
+
+  /// Reset cosmetics to defaults
+  Future<void> resetToDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(CosmeticsKeys.boardTheme);
+    await prefs.remove(CosmeticsKeys.pieceStyle);
+    state = const CosmeticsState();
+  }
 }
 
 /// Provider for cosmetics state

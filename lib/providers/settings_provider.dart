@@ -136,6 +136,17 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     await prefs.setString(SettingsKeys.chessClockDefaults, _encodeChessClockDefaults(updated));
   }
 
+  /// Reset settings to defaults
+  Future<void> resetToDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(SettingsKeys.boardSize);
+    await prefs.remove(SettingsKeys.soundMuted);
+    await prefs.remove(SettingsKeys.themeMode);
+    await prefs.remove(SettingsKeys.chessClockEnabled);
+    await prefs.remove(SettingsKeys.chessClockDefaults);
+    state = const AppSettings();
+  }
+
   Map<int, int> _parseChessClockDefaults(String? raw) {
     final defaults = Map<int, int>.from(ChessClockDefaults.baseTimes);
     if (raw == null || raw.isEmpty) {

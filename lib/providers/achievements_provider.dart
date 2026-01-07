@@ -259,6 +259,23 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
 
     return newUnlocks;
   }
+
+  /// Reset all achievements and stats
+  Future<void> resetAll() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    for (final type in AchievementType.values) {
+      final key = '${AchievementKeys.prefix}${type.name}';
+      await prefs.remove(key);
+    }
+
+    await prefs.remove(AchievementKeys.totalWins);
+    await prefs.remove(AchievementKeys.onlineWins);
+    await prefs.remove(AchievementKeys.completedTutorials);
+    await prefs.remove(AchievementKeys.completedPuzzles);
+
+    state = const AchievementState();
+  }
 }
 
 /// Provider for achievement state

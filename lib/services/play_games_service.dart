@@ -334,6 +334,17 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
     await prefs.setInt(_PrefsKeys.currentStreak, 0);
   }
 
+  Future<void> resetLocalStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_PrefsKeys.totalWins);
+    await prefs.remove(_PrefsKeys.currentStreak);
+    await prefs.remove(_PrefsKeys.longestStreak);
+    await prefs.remove(_PrefsKeys.roadWins);
+    await prefs.remove(_PrefsKeys.flatWins);
+    await prefs.remove(_PrefsKeys.lastMoveCount);
+    state = state.copyWith(resumedMoveCount: 0);
+  }
+
   Future<void> _saveCloudGame(
     GameState gameState, {
     required int moveCount,
