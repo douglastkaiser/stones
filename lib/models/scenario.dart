@@ -1056,13 +1056,14 @@ final _puzzle11TheCrucible = GameScenario(
       ),
       // (2,2) THE DECOY - Massive 7-piece stack that looks powerful!
       // Players will be tempted to use this, but it can't flatten walls!
+      // Stack composition: 2 Black + 5 White = 7 pieces, White controls
       PositionedStack(
         position: Position(2, 2),
         stack: PieceStack([
           Piece(type: PieceType.flat, color: PlayerColor.black),
           Piece(type: PieceType.flat, color: PlayerColor.black),
-          Piece(type: PieceType.flat, color: PlayerColor.black),
-          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
           Piece(type: PieceType.flat, color: PlayerColor.white),
