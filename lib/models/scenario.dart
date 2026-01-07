@@ -943,8 +943,8 @@ final _puzzle11TheGauntlet = GameScenario(
   title: 'The Gauntlet',
   type: ScenarioType.puzzle,
   puzzleDifficulty: PuzzleDifficulty.expert,
-  summary: 'Break through a wall of defenses to finish your road.',
-  objective: 'Win in 3 moves. Force the only defense, then break through!',
+  summary: 'Break through layered defenses to finish your road.',
+  objective: 'Win in 3 moves. Force the only defense, then convert the final blocker!',
   dialogue: const [
     'White to move.',
     'Black\'s walls and capstone form a tight barrier across the board.',
@@ -999,7 +999,7 @@ final _puzzle11TheGauntlet = GameScenario(
       // Row 2 (road target)
       PositionedStack(position: Position(2, 0), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
       PositionedStack(position: Position(2, 1), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)])),
-      PositionedStack(position: Position(2, 2), stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)])),
+      // (2,2) empty - forced block goes here.
       // (2,3) empty - final winning placement goes here.
       PositionedStack(
         position: Position(2, 4),
@@ -1046,13 +1046,13 @@ final _puzzle11TheGauntlet = GameScenario(
       PositionedStack(position: Position(4, 4), stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)])),
     ],
   ),
-  // Move 1: Capstone from (4,2) to (3,2) prepares the break.
-  // Black's only defense is a wall at (1,2).
+  // Move 1: Capstone from (4,2) to (3,2) flattens the wall and threatens row 2.
+  // Black's only defense is a wall at (2,2).
   // Move 2: Capstone moves to (2,2), flattening the wall.
   // Black's only reply is a flat at (0,3).
-  // Move 3: White places at (2,3) to complete row 2 = WIN.
+  // Move 3: White covers (2,3) to complete row 2 = WIN.
   scriptedResponses: const [
-    AIPlacementMove(Position(1, 2), PieceType.standing),
+    AIPlacementMove(Position(2, 2), PieceType.standing),
     AIPlacementMove(Position(0, 3), PieceType.flat),
   ],
 );
