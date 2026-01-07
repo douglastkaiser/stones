@@ -12,6 +12,7 @@ dependencies:
   web: ^1.0.0
   flutter_riverpod: ^2.4.9
   riverpod_annotation: ^2.3.3
+  google_fonts: ^6.1.0
   url_launcher: ^6.2.1
   audioplayers: ^6.0.0
   shared_preferences: ^2.2.2
@@ -38,14 +39,6 @@ flutter:
     - assets/icon/
     - assets/splash/
     - assets/sounds/
-  fonts:
-    - family: Lora
-      fonts:
-        - asset: fonts/Lora-Regular.ttf
-        - asset: fonts/Lora-Bold.ttf
-          weight: 700
-        - asset: fonts/Lora-Italic.ttf
-          style: italic
 
 flutter_launcher_icons:
   android: true

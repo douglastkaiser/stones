@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'services/web_back_button_handler.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
@@ -50,31 +51,12 @@ class _StonesAppState extends ConsumerState<StonesApp> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
 
-    // Use bundled Lora font to eliminate network requests and improve LCP
-    const loraTextTheme = TextTheme(
-      displayLarge: TextStyle(fontFamily: 'Lora'),
-      displayMedium: TextStyle(fontFamily: 'Lora'),
-      displaySmall: TextStyle(fontFamily: 'Lora'),
-      headlineLarge: TextStyle(fontFamily: 'Lora'),
-      headlineMedium: TextStyle(fontFamily: 'Lora'),
-      headlineSmall: TextStyle(fontFamily: 'Lora'),
-      titleLarge: TextStyle(fontFamily: 'Lora'),
-      titleMedium: TextStyle(fontFamily: 'Lora'),
-      titleSmall: TextStyle(fontFamily: 'Lora'),
-      bodyLarge: TextStyle(fontFamily: 'Lora'),
-      bodyMedium: TextStyle(fontFamily: 'Lora'),
-      bodySmall: TextStyle(fontFamily: 'Lora'),
-      labelLarge: TextStyle(fontFamily: 'Lora'),
-      labelMedium: TextStyle(fontFamily: 'Lora'),
-      labelSmall: TextStyle(fontFamily: 'Lora'),
-    );
-
     return MaterialApp(
       title: 'Stones',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
         useMaterial3: true,
-        textTheme: loraTextTheme,
+        textTheme: GoogleFonts.loraTextTheme(),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -82,7 +64,9 @@ class _StonesAppState extends ConsumerState<StonesApp> {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        textTheme: loraTextTheme,
+        textTheme: GoogleFonts.loraTextTheme(
+          ThemeData(brightness: Brightness.dark).textTheme,
+        ),
       ),
       themeMode: settings.themeMode,
       home: const MainMenuScreen(),
