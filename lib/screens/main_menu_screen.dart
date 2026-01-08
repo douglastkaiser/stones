@@ -857,11 +857,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     return Column(
       children: [
         // Stack of styled stones as logo
-        SizedBox(
-          height: 80,
-          width: 120,
-          child: CustomPaint(
-            painter: _LogoPainter(),
+        Semantics(
+          label: 'Stones game logo showing stacked game pieces',
+          image: true,
+          child: SizedBox(
+            height: 80,
+            width: 120,
+            child: CustomPaint(
+              painter: _LogoPainter(),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -1121,12 +1125,13 @@ class _VersionFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Improved contrast: use shade600 instead of shade500 for WCAG AA compliance
     final textColor = isDark
         ? Theme.of(context).colorScheme.onSurfaceVariant
-        : Colors.grey.shade500;
+        : Colors.grey.shade600;
     final separatorColor = isDark
         ? Theme.of(context).colorScheme.outline
-        : Colors.grey.shade400;
+        : Colors.grey.shade500;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1148,15 +1153,24 @@ class _VersionFooter extends StatelessWidget {
                 color: separatorColor,
               ),
             ),
-            GestureDetector(
+            // Use InkWell for better accessibility (focus support, larger touch target)
+            InkWell(
               onTap: _openPrivacyPolicy,
-              child: Text(
-                'Privacy',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: textColor,
-                  decoration: TextDecoration.underline,
-                  decorationColor: textColor,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Semantics(
+                  label: 'Privacy policy',
+                  link: true,
+                  child: Text(
+                    'Privacy',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: textColor,
+                      decoration: TextDecoration.underline,
+                      decorationColor: textColor,
+                    ),
+                  ),
                 ),
               ),
             ),
