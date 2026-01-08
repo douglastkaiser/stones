@@ -939,6 +939,225 @@ final _puzzle10TheFork = GameScenario(
 );
 
 // ============================================================================
+// EXPERT PUZZLE: THE CRUCIBLE
+// A complex 3-move puzzle with a deceptive trap and forced winning sequence
+// Moving the capstone first is tempting but WRONG - setup is required!
+// ============================================================================
+
+final _puzzle11TheCrucible = GameScenario(
+  id: 'puzzle_11',
+  title: 'The Crucible',
+  type: ScenarioType.puzzle,
+  puzzleDifficulty: PuzzleDifficulty.expert,
+  summary: 'A three-move forced win — if you find the right sequence!',
+  objective: 'Win in 3 moves. Every move must be precise!',
+  dialogue: const [
+    'White to move.',
+    'Your Capstone looks ready to strike, but patience is key.',
+    'Set up your attack first — rushing the Capstone leads to defeat!',
+  ],
+  guidedMove: const GuidedMove.placement(
+    target: Position(2, 3),
+    pieceType: PieceType.flat,
+  ),
+  completionText:
+      'Three precise moves! The setup placement was crucial — moving the Capstone first would have failed. Patience and planning win in Tak.',
+  hintText: 'Don\'t move the Capstone yet. Create a threat on Column 3 first...',
+  hintDelay: const Duration(seconds: 30),
+  buildInitialState: () => _buildScenarioState(
+    boardSize: 5,
+    currentPlayer: PlayerColor.white,
+    turnNumber: 37,
+    stacks: const [
+      // ================================================================
+      // ROW 0: Corner walls and road stacks
+      // ================================================================
+      PositionedStack(
+        position: Position(0, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (0,1) White stack - Column 1 road
+      PositionedStack(
+        position: Position(0, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(0, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // (0,3) White stack - Column 3 road
+      PositionedStack(
+        position: Position(0, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // Black capstone in corner
+      PositionedStack(
+        position: Position(0, 4),
+        stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.black)]),
+      ),
+
+      // ================================================================
+      // ROW 1: Mixed control stacks
+      // ================================================================
+      // Black-controlled stack (captured white piece)
+      PositionedStack(
+        position: Position(1, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      // Column 1 road
+      PositionedStack(
+        position: Position(1, 1),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // Critical wall blocking Column 2
+      PositionedStack(
+        position: Position(1, 2),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // White-controlled stack - Column 3 road
+      PositionedStack(
+        position: Position(1, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      // Black-controlled stack
+      PositionedStack(
+        position: Position(1, 4),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+
+      // ================================================================
+      // ROW 2: THE CRITICAL ROW - Capstone and key wall
+      // ================================================================
+      // (2,0) White CAPSTONE - THE KEY PIECE (but don't move it first!)
+      PositionedStack(
+        position: Position(2, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.capstone, color: PlayerColor.white),
+        ]),
+      ),
+      // (2,1) THE WALL that will be flattened in Move 2
+      PositionedStack(
+        position: Position(2, 1),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (2,2) EMPTY - Will be blocked by Black in response to the fork
+      // (2,3) EMPTY - Move 1 target! Creates Column 3 TAK
+      // (2,4) Row 2 road piece
+      PositionedStack(
+        position: Position(2, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+
+      // ================================================================
+      // ROW 3: More road pieces and blocking wall
+      // ================================================================
+      // Black-controlled stack
+      PositionedStack(
+        position: Position(3, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      // Column 1 road
+      PositionedStack(
+        position: Position(3, 1),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // Wall blocking Column 2
+      PositionedStack(
+        position: Position(3, 2),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // White-controlled stack - Column 3 road
+      PositionedStack(
+        position: Position(3, 3),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(3, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+
+      // ================================================================
+      // ROW 4: Bottom row
+      // ================================================================
+      PositionedStack(
+        position: Position(4, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      // (4,1) EMPTY - Move 3 wins here by completing Column 1!
+      PositionedStack(
+        position: Position(4, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      // (4,3) EMPTY - Black blocks here after Move 1
+      PositionedStack(
+        position: Position(4, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+    ],
+  ),
+  // ============================================================
+  // SOLUTION ANALYSIS - 3 MOVE FORCED WIN:
+  //
+  // WHY MOVING CAPSTONE FIRST FAILS:
+  // - If White moves capstone from (2,0) to (2,1) first:
+  //   - Creates Col 1 TAK (needs 4,1)
+  //   - Black blocks (4,1) with wall
+  //   - Now White can create Row 2 TAK by placing (2,2)
+  //   - Black blocks (2,3) with wall
+  //   - White has NO winning path! Col 3 is blocked!
+  //
+  // THE CORRECT SEQUENCE:
+  //
+  // Move 1 (guided): Place flat at (2,3)
+  //   - Creates Col 3 TAK: W(0,3), W(1,3), W(2,3), W(3,3), empty(4,3)
+  //   - Black MUST block or lose!
+  //
+  // Black response 1: Places wall at (4,3) to block Col 3
+  //
+  // Move 2: Capstone from (2,0) moves right to (2,1), flattening wall
+  //   - (2,0) keeps [B, W] - White still controls
+  //   - Creates FORK:
+  //     - Row 2: W(2,0), C(2,1), empty(2,2), W(2,3), W(2,4) = TAK!
+  //     - Col 1: W(0,1), W(1,1), C(2,1), W(3,1), empty(4,1) = TAK!
+  //   - Black can only block ONE!
+  //
+  // Black response 2: Places wall at (2,2) to block Row 2
+  //
+  // Move 3: Place flat at (4,1)
+  //   - Col 1: W, W, C, W, W = COMPLETE ROAD = WIN!
+  // ============================================================
+  scriptedResponses: const [
+    AIPlacementMove(Position(4, 3), PieceType.standing),
+    AIPlacementMove(Position(2, 2), PieceType.standing),
+  ],
+);
+
+// ============================================================================
 // LIBRARY EXPORT
 // ============================================================================
 
@@ -954,9 +1173,10 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
   _tutorial7OpeningRule,
   _tutorial8FlatCount,
   _tutorial9PieceSupply,
-  // Puzzles (4)
+  // Puzzles (5)
   _puzzle6CaptureAndWin,
   _puzzle7TheSpread,
   _puzzle9CapstoneTactics,
   _puzzle10TheFork,
+  _puzzle11TheCrucible,
 ];
