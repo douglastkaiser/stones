@@ -122,7 +122,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   OnlineGameController(this._ref) : super(const OnlineGameState());
 
   final Ref _ref;
-  final _firestore = FirebaseFirestore.instance;
+  // Lazy access to Firestore - only accessed after Firebase is initialized
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
 
   Future<void> initialize() async {

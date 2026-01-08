@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +18,6 @@ import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
 import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
-import 'firebase_options.dart';
 
 void _debugLog(String message) {
   developer.log('[GAME] $message', name: 'game');
@@ -27,11 +25,10 @@ void _debugLog(String message) {
   print('[GAME] $message');
 }
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Firebase initialization is deferred to OnlineGameController.initialize()
+  // to reduce initial load time when user only plays offline
   runApp(const ProviderScope(child: StonesApp()));
 }
 

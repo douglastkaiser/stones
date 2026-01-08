@@ -59,39 +59,39 @@ class SoundManager {
   String _getAssetPath(GameSound sound) {
     switch (sound) {
       case GameSound.piecePlace:
-        return 'sounds/piece_place.wav';
+        return 'sounds/piece_place.ogg';
       case GameSound.stackMove:
-        return 'sounds/stack_move.wav';
+        return 'sounds/stack_move.ogg';
       case GameSound.wallFlatten:
-        return 'sounds/wall_flatten.wav';
+        return 'sounds/wall_flatten.ogg';
       case GameSound.win:
-        return 'sounds/win.wav';
+        return 'sounds/win.ogg';
       case GameSound.illegalMove:
-        return 'sounds/illegal_move.wav';
+        return 'sounds/illegal_move.ogg';
       case GameSound.achievementUnlock:
-        return 'sounds/achievement_unlock.wav';
-      // Board theme placement sounds - fallback to piece_place.wav for now
+        return 'sounds/achievement_unlock.ogg';
+      // Board theme placement sounds - fallback to piece_place.ogg for now
       case GameSound.piecePlaceWood:
-        return 'sounds/piece_place.wav';
+        return 'sounds/piece_place.ogg';
       case GameSound.piecePlaceStone:
-        return 'sounds/piece_place_stone.wav';
+        return 'sounds/piece_place_stone.ogg';
       case GameSound.piecePlaceMarble:
-        return 'sounds/piece_place_marble.wav';
+        return 'sounds/piece_place_marble.ogg';
       case GameSound.piecePlaceMinimal:
-        return 'sounds/piece_place_minimal.wav';
+        return 'sounds/piece_place_minimal.ogg';
       case GameSound.piecePlacePixel:
-        return 'sounds/piece_place_pixel.wav';
-      // Piece style stack move sounds - fallback to stack_move.wav for now
+        return 'sounds/piece_place_pixel.ogg';
+      // Piece style stack move sounds - fallback to stack_move.ogg for now
       case GameSound.stackMoveWood:
-        return 'sounds/stack_move.wav';
+        return 'sounds/stack_move.ogg';
       case GameSound.stackMoveStone:
-        return 'sounds/piece_place_stone.wav'; // Use stone placement sound
+        return 'sounds/piece_place_stone.ogg'; // Use stone placement sound
       case GameSound.stackMoveMarble:
-        return 'sounds/stack_move_marble.wav';
+        return 'sounds/stack_move_marble.ogg';
       case GameSound.stackMoveMinimal:
-        return 'sounds/piece_place_minimal.wav'; // Use minimal sound
+        return 'sounds/piece_place_minimal.ogg'; // Use minimal sound
       case GameSound.stackMovePixel:
-        return 'sounds/piece_place_pixel.wav'; // Use pixel sound
+        return 'sounds/piece_place_pixel.ogg'; // Use pixel sound
     }
   }
 
