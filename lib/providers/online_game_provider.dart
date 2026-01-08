@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -134,6 +135,18 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
+        // Activate Firebase App Check for rate limiting and abuse prevention
+        await FirebaseAppCheck.instance.activate(
+          // Use debug provider in debug mode for testing
+          androidProvider: kDebugMode
+              ? AndroidProvider.debug
+              : AndroidProvider.playIntegrity,
+          appleProvider: kDebugMode
+              ? AppleProvider.debug
+              : AppleProvider.appAttest,
+          webProvider: ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
+        );
+        _debugLog('Firebase App Check activated');
       }
       await _ensureAuth();
     } finally {
@@ -495,9 +508,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     try {
       await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
       return await auth.signInWithProvider(GoogleAuthProvider()).then((c) => c.user);
-    } catch (_) {
-      // Fallback to anonymous auth to allow Firestore access until Play Games is configured.
-      return (await auth.signInAnonymously()).user;
+    } catch (e) {
+      // Security: Require proper authentication for online play - no anonymous fallback
+      // This ensures user accountability and prevents abuse
+      _debugLog('Authentication failed: $e');
+      throw Exception('Please sign in with Google to play online.');
     }
   }
 
