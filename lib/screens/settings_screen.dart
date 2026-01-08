@@ -427,8 +427,8 @@ class _ThemeSelector extends StatelessWidget {
   }
 }
 
-/// Individual theme option button
-class _ThemeOption extends StatelessWidget {
+/// Individual theme option button with accessibility support
+class _ThemeOption extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
@@ -442,47 +442,74 @@ class _ThemeOption extends StatelessWidget {
   });
 
   @override
+  State<_ThemeOption> createState() => _ThemeOptionState();
+}
+
+class _ThemeOptionState extends State<_ThemeOption> {
+  bool _isFocused = false;
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? colorScheme.primaryContainer
-                : colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected
-                  ? colorScheme.primary
-                  : colorScheme.outline.withValues(alpha: 0.3),
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: isSelected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurfaceVariant,
+      child: Semantics(
+        label: '${widget.label} theme',
+        selected: widget.isSelected,
+        button: true,
+        child: Focus(
+          onFocusChange: (focused) => setState(() => _isFocused = focused),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? colorScheme.primaryContainer
+                    : colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _isFocused
+                      ? colorScheme.primary
+                      : widget.isSelected
+                          ? colorScheme.primary
+                          : colorScheme.outline.withValues(alpha: 0.3),
+                  width: _isFocused ? 3 : (widget.isSelected ? 2 : 1),
                 ),
+                // Focus ring glow effect
+                boxShadow: _isFocused
+                    ? [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
-            ],
+              child: Column(
+                children: [
+                  Icon(
+                    widget.icon,
+                    color: widget.isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: widget.isSelected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -626,8 +653,8 @@ class _PieceStyleSelector extends ConsumerWidget {
   }
 }
 
-/// Generic cosmetic option widget (for board themes and piece styles)
-class _CosmeticOption extends StatelessWidget {
+/// Generic cosmetic option widget (for board themes and piece styles) with accessibility
+class _CosmeticOption extends StatefulWidget {
   final String name;
   final String description;
   final bool isSelected;
@@ -647,85 +674,113 @@ class _CosmeticOption extends StatelessWidget {
   });
 
   @override
+  State<_CosmeticOption> createState() => _CosmeticOptionState();
+}
+
+class _CosmeticOptionState extends State<_CosmeticOption> {
+  bool _isFocused = false;
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Tooltip(
-      message: isUnlocked ? description : (unlockRequirement ?? ''),
+      message: widget.isUnlocked ? widget.description : (widget.unlockRequirement ?? ''),
       waitDuration: const Duration(milliseconds: 500),
-      child: GestureDetector(
-        onTap: isUnlocked ? onTap : null,
-        onLongPress: isUnlocked
-            ? null
-            : () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(unlockRequirement ?? 'Locked'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 100,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? colorScheme.primaryContainer
-                : isUnlocked
-                    ? (isDark ? colorScheme.surface : Colors.grey.shade100)
-                    : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected
-                  ? colorScheme.primary
-                  : isUnlocked
-                      ? colorScheme.outline.withValues(alpha: 0.3)
-                      : Colors.grey.shade400,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              // Color preview
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isUnlocked ? previewColor : Colors.grey,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isUnlocked ? previewColor.withValues(alpha: 0.5) : Colors.grey,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
+      child: Semantics(
+        label: '${widget.name} style${widget.isUnlocked ? '' : ', locked'}${widget.isSelected ? ', selected' : ''}',
+        selected: widget.isSelected,
+        enabled: widget.isUnlocked,
+        button: true,
+        child: Focus(
+          onFocusChange: (focused) => setState(() => _isFocused = focused),
+          child: GestureDetector(
+            onTap: widget.isUnlocked ? widget.onTap : null,
+            onLongPress: widget.isUnlocked
+                ? null
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(widget.unlockRequirement ?? 'Locked'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 100,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? colorScheme.primaryContainer
+                    : widget.isUnlocked
+                        ? (isDark ? colorScheme.surface : Colors.grey.shade100)
+                        : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _isFocused
+                      ? colorScheme.primary
+                      : widget.isSelected
+                          ? colorScheme.primary
+                          : widget.isUnlocked
+                              ? colorScheme.outline.withValues(alpha: 0.3)
+                              : Colors.grey.shade400,
+                  width: _isFocused ? 3 : (widget.isSelected ? 2 : 1),
+                ),
+                // Focus ring glow effect
+                boxShadow: _isFocused
+                    ? [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                children: [
+                  // Color preview
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: widget.isUnlocked ? widget.previewColor : Colors.grey,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: widget.isUnlocked ? widget.previewColor.withValues(alpha: 0.5) : Colors.grey,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: isUnlocked
-                    ? null
-                    : const Icon(Icons.lock, size: 20, color: Colors.white70),
+                    child: widget.isUnlocked
+                        ? null
+                        : const Icon(Icons.lock, size: 20, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.name,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: widget.isUnlocked
+                          ? (widget.isSelected
+                              ? colorScheme.onPrimaryContainer
+                              : colorScheme.onSurface)
+                          : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isUnlocked
-                      ? (isSelected
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.onSurface)
-                      : Colors.grey.shade600,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

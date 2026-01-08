@@ -160,8 +160,8 @@ class GameColors {
   /// Title text color
   static const Color titleColor = Color(0xFF4E342E);
 
-  /// Subtitle text color
-  static const Color subtitleColor = Color(0xFF6D4C41);
+  /// Subtitle text color (improved contrast for WCAG AA compliance)
+  static const Color subtitleColor = Color(0xFF5D4037);
 
   // ==========================================================================
   // Helper Methods

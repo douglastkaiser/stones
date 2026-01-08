@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'services/web_back_button_handler.dart';
@@ -2970,8 +2971,8 @@ class _WinBanner extends StatelessWidget {
   }
 }
 
-/// The game board grid with wooden inset styling
-class _GameBoard extends StatelessWidget {
+/// The game board grid with wooden inset styling and keyboard navigation
+class _GameBoard extends StatefulWidget {
   final GameState gameState;
   final UIState uiState;
   final AnimationState animationState;
@@ -3004,45 +3005,141 @@ class _GameBoard extends StatelessWidget {
     this.lastMovePositions,
   });
 
+  @override
+  State<_GameBoard> createState() => _GameBoardState();
+}
+
+class _GameBoardState extends State<_GameBoard> {
+  final FocusNode _boardFocusNode = FocusNode();
+  Position? _focusedPosition;
+
+  @override
+  void dispose() {
+    _boardFocusNode.dispose();
+    super.dispose();
+  }
+
+  /// Handle keyboard navigation events
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final boardSize = widget.gameState.boardSize;
+    final current = _focusedPosition ?? Position(0, 0);
+    Position? newPos;
+
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowUp:
+        if (current.row > 0) {
+          newPos = Position(current.row - 1, current.col);
+        }
+      case LogicalKeyboardKey.arrowDown:
+        if (current.row < boardSize - 1) {
+          newPos = Position(current.row + 1, current.col);
+        }
+      case LogicalKeyboardKey.arrowLeft:
+        if (current.col > 0) {
+          newPos = Position(current.row, current.col - 1);
+        }
+      case LogicalKeyboardKey.arrowRight:
+        if (current.col < boardSize - 1) {
+          newPos = Position(current.row, current.col + 1);
+        }
+      case LogicalKeyboardKey.enter:
+      case LogicalKeyboardKey.space:
+        widget.onCellTap(current);
+        return KeyEventResult.handled;
+      default:
+        return KeyEventResult.ignored;
+    }
+
+    if (newPos != null) {
+      setState(() => _focusedPosition = newPos);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   /// Get ghost piece info for a position (for placement mode)
   (PieceType?, PlayerColor?) _getGhostPieceInfo(Position pos) {
-    if (uiState.mode != InteractionMode.placingPiece) return (null, null);
-    if (uiState.selectedPosition != pos) return (null, null);
+    if (widget.uiState.mode != InteractionMode.placingPiece) return (null, null);
+    if (widget.uiState.selectedPosition != pos) return (null, null);
 
     // During opening phase, ghost is opponent's color
-    final color = gameState.isOpeningPhase
-        ? gameState.opponent
-        : gameState.currentPlayer;
+    final color = widget.gameState.isOpeningPhase
+        ? widget.gameState.opponent
+        : widget.gameState.currentPlayer;
 
-    return (uiState.ghostPieceType, color);
+    return (widget.uiState.ghostPieceType, color);
+  }
+
+  /// Build semantic label for a board cell (for screen reader accessibility)
+  String _buildCellSemanticLabel(Position pos, PieceStack stack, {
+    bool isSelected = false,
+    bool isLegalMoveHint = false,
+    bool isFocused = false,
+  }) {
+    // Convert position to chess-like notation (a1, b2, etc.)
+    final file = String.fromCharCode('a'.codeUnitAt(0) + pos.col);
+    final rank = widget.gameState.boardSize - pos.row;
+    final posLabel = '$file$rank';
+
+    final parts = <String>[posLabel];
+
+    if (stack.isEmpty) {
+      parts.add('empty');
+    } else {
+      final topPiece = stack.topPiece!;
+      final pieceType = switch (topPiece.type) {
+        PieceType.flat => 'flat stone',
+        PieceType.standing => 'wall',
+        PieceType.capstone => 'capstone',
+      };
+      final color = topPiece.color == PlayerColor.white ? 'white' : 'black';
+      parts.add('$color $pieceType');
+      if (stack.height > 1) {
+        parts.add('stack of ${stack.height}');
+      }
+    }
+
+    if (isSelected) {
+      parts.add('selected');
+    }
+    if (isLegalMoveHint) {
+      parts.add('valid move');
+    }
+    if (isFocused) {
+      parts.add('focused');
+    }
+
+    return parts.join(', ');
   }
 
   @override
   Widget build(BuildContext context) {
     // Debug logging for board state
-    final occupiedCount = gameState.board.occupiedPositions.length;
-    _debugLog('BOARD BUILD: currentTurn=${gameState.currentPlayer}, '
-        'turnNumber=${gameState.turnNumber}, '
-        'phase=${gameState.phase}, '
+    final occupiedCount = widget.gameState.board.occupiedPositions.length;
+    _debugLog('BOARD BUILD: currentTurn=${widget.gameState.currentPlayer}, '
+        'turnNumber=${widget.gameState.turnNumber}, '
+        'phase=${widget.gameState.phase}, '
         'occupiedCells=$occupiedCount, '
-        'isGameOver=${gameState.isGameOver}');
+        'isGameOver=${widget.gameState.isGameOver}');
 
-    final dropPath = uiState.getDropPath();
-    final nextDropPos = uiState.getCurrentHandPosition();
+    final dropPath = widget.uiState.getDropPath();
+    final nextDropPos = widget.uiState.getCurrentHandPosition();
     // Get valid destinations for both movingStack and droppingPieces modes
-    final validMoveDestinations = uiState.mode == InteractionMode.movingStack
-        ? uiState.getValidMoveDestinations(gameState)
-        : uiState.mode == InteractionMode.droppingPieces
-            ? uiState.getValidDropDestinations(gameState)
+    final validMoveDestinations = widget.uiState.mode == InteractionMode.movingStack
+        ? widget.uiState.getValidMoveDestinations(widget.gameState)
+        : widget.uiState.mode == InteractionMode.droppingPieces
+            ? widget.uiState.getValidDropDestinations(widget.gameState)
             : <Position>{};
-    final boardSize = gameState.boardSize;
+    final boardSize = widget.gameState.boardSize;
 
     // Calculate preview stacks for move operations
-    final previewStacks = uiState.getPreviewStacks(gameState);
+    final previewStacks = widget.uiState.getPreviewStacks(widget.gameState);
 
     // Pre-compute animation state flags (optimization: avoid per-cell checks)
-    final lastEvent = animationState.lastEvent;
-    final winningRoad = animationState.winningRoad;
+    final lastEvent = widget.animationState.lastEvent;
+    final winningRoad = widget.animationState.winningRoad;
 
     // Pre-compute which positions have stack drop events
     final stackDropPositions = lastEvent is StackMovedEvent
@@ -3060,24 +3157,32 @@ class _GameBoard extends StatelessWidget {
         : null;
 
     // Pre-compute total pieces in move for pending drop display
-    final totalPiecesInMove = uiState.piecesPickedUp +
-        uiState.drops.fold<int>(0, (a, b) => a + b);
+    final totalPiecesInMove = widget.uiState.piecesPickedUp +
+        widget.uiState.drops.fold<int>(0, (a, b) => a + b);
 
     // Calculate responsive spacing based on board size
     // Larger boards get smaller spacing to fit well
     final spacing = boardSize <= 4 ? 6.0 : (boardSize <= 6 ? 5.0 : 4.0);
     final padding = boardSize <= 4 ? 10.0 : (boardSize <= 6 ? 8.0 : 6.0);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate cell size for decoration painter
-        final availableWidth = constraints.maxWidth - padding * 2 - spacing * 2;
-        final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
+    // Wrap in Focus for keyboard navigation support
+    return Focus(
+      focusNode: _boardFocusNode,
+      onKeyEvent: _handleKeyEvent,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate cell size for decoration painter
+          final availableWidth = constraints.maxWidth - padding * 2 - spacing * 2;
+          final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
 
-        return GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: onBoardFrameTap,
-          child: Container(
+          return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              // Focus the board when tapped for keyboard navigation
+              _boardFocusNode.requestFocus();
+              widget.onBoardFrameTap?.call();
+            },
+            child: Container(
             // Inner board area with inset shadow effect
             margin: EdgeInsets.all(padding),
             decoration: BoxDecoration(
@@ -3119,10 +3224,11 @@ class _GameBoard extends StatelessWidget {
                       final row = index ~/ boardSize;
                       final col = index % boardSize;
                       final pos = Position(row, col);
-                      final actualStack = gameState.board.stackAt(pos);
-                      final isSelected = uiState.selectedPosition == pos;
+                      final actualStack = widget.gameState.board.stackAt(pos);
+                      final isSelected = widget.uiState.selectedPosition == pos;
                       final isInDropPath = dropPath.contains(pos);
                       final isNextDrop = nextDropPos == pos;
+                      final isFocused = _focusedPosition == pos && _boardFocusNode.hasFocus;
 
                       // Get preview stack and ghost pieces for this position
                       final preview = previewStacks?[pos];
@@ -3136,48 +3242,59 @@ class _GameBoard extends StatelessWidget {
                       final wasWallFlattened = wallFlattenedPos == pos;
 
                       // Check if this is part of the last move
-                      final isLastMove = lastMovePositions?.contains(pos) ?? false;
+                      final isLastMove = widget.lastMovePositions?.contains(pos) ?? false;
 
-                      final isExploded = explodedPosition == pos && explodedStack != null;
-                      final stackForExplosion = isExploded ? explodedStack : null;
+                      final isExploded = widget.explodedPosition == pos && widget.explodedStack != null;
+                      final stackForExplosion = isExploded ? widget.explodedStack : null;
 
                       // Check if this is a valid move destination (legal move hint)
                       final isLegalMoveHint = validMoveDestinations.contains(pos);
-                      final isScenarioHint = highlightedPositions.contains(pos);
+                      final isScenarioHint = widget.highlightedPositions.contains(pos);
 
                       // Ghost piece info for placement mode
                       final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
 
                       // For stack movement mode, show pieces being picked up count
-                      final showPickupCount = uiState.mode == InteractionMode.movingStack &&
-                          uiState.selectedPosition == pos;
+                      final showPickupCount = widget.uiState.mode == InteractionMode.movingStack &&
+                          widget.uiState.selectedPosition == pos;
 
                       // Show pending drop count when in droppingPieces mode at hand position
                       // but only for stack moves (2+ pieces), not single-piece moves
-                      final showPendingDrop = uiState.mode == InteractionMode.droppingPieces &&
+                      final showPendingDrop = widget.uiState.mode == InteractionMode.droppingPieces &&
                           nextDropPos == pos &&
                           totalPiecesInMove > 1;
 
                       // Wrap in RepaintBoundary to limit repaint scope (optimization)
                       return RepaintBoundary(
-                        child: _CellInteractionLayer(
-                          position: pos,
-                          stack: displayStack,
-                          ghostStackPieces: ghostStackPieces,
-                          onTap: () => onCellTap(pos),
-                          onSwipe: (dir) => onCellSwipe(pos, dir),
-                          onStackViewStart: onLongPressStart,
-                          onStackViewEnd: onLongPressEnd,
-                          child: _BoardCell(
-                            key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_$isInDropPath'),
+                        child: Semantics(
+                          label: _buildCellSemanticLabel(
+                            pos,
+                            displayStack,
+                            isSelected: isSelected,
+                            isLegalMoveHint: isLegalMoveHint,
+                            isFocused: isFocused,
+                          ),
+                          button: true,
+                          focused: isFocused,
+                          onTap: () => widget.onCellTap(pos),
+                          child: _CellInteractionLayer(
+                            position: pos,
+                            stack: displayStack,
+                            ghostStackPieces: ghostStackPieces,
+                            onTap: () => widget.onCellTap(pos),
+                            onSwipe: (dir) => widget.onCellSwipe(pos, dir),
+                            onStackViewStart: widget.onLongPressStart,
+                            onStackViewEnd: widget.onLongPressEnd,
+                            child: _BoardCell(
+                            key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_${isInDropPath}_$isFocused'),
                             stack: displayStack,
                             isSelected: isSelected,
                             isInDropPath: isInDropPath,
                             isNextDrop: isNextDrop,
-                            canSelect: !gameState.isGameOver,
+                            canSelect: !widget.gameState.isGameOver,
                             boardSize: boardSize,
-                            pieceStyleData: pieceStyleData,
-                            boardThemeData: boardThemeData,
+                            pieceStyleData: widget.pieceStyleData,
+                            boardThemeData: widget.boardThemeData,
                             isNewlyPlaced: isNewlyPlaced,
                             isInWinningRoad: isInWinningRoad,
                             isStackDropTarget: isStackDropTarget,
@@ -3185,31 +3302,36 @@ class _GameBoard extends StatelessWidget {
                             isLastMove: isLastMove,
                             isLegalMoveHint: isLegalMoveHint,
                             isScenarioHint: isScenarioHint,
+                            isFocused: isFocused,
                             ghostPieceType: ghostPieceType,
                             ghostPieceColor: ghostPieceColor,
                             ghostStackPieces: ghostStackPieces,
-                            pickupCount: showPickupCount ? uiState.piecesPickedUp : null,
-                            pendingDropCount: showPendingDrop ? uiState.pendingDropCount : null,
-                            piecesInHand: showPendingDrop ? uiState.piecesPickedUp : null,
+                            pickupCount: showPickupCount ? widget.uiState.piecesPickedUp : null,
+                            pendingDropCount: showPendingDrop ? widget.uiState.pendingDropCount : null,
+                            piecesInHand: showPendingDrop ? widget.uiState.piecesPickedUp : null,
                             showExploded: isExploded,
                             explodedStack: stackForExplosion,
                           ),
+                        ),
                         ),
                       );
                     },
                   ),
                 ),
                 // Overlay decorations - filigree on top of grid lines (visible above cells)
+                // ExcludeSemantics: purely decorative, not relevant for accessibility
                 Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: BoardDecorationPainter(
-                        boardSize: boardSize,
-                        spacing: spacing,
-                        padding: spacing,
-                        cellSize: cellSize,
-                        theme: boardThemeData.theme,
-                        decorColor: boardThemeData.gridLineHighlight,
+                  child: ExcludeSemantics(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: BoardDecorationPainter(
+                          boardSize: boardSize,
+                          spacing: spacing,
+                          padding: spacing,
+                          cellSize: cellSize,
+                          theme: widget.boardThemeData.theme,
+                          decorColor: widget.boardThemeData.gridLineHighlight,
+                        ),
                       ),
                     ),
                   ),
@@ -3218,7 +3340,8 @@ class _GameBoard extends StatelessWidget {
             ),
           ),
         );
-      },
+        },
+      ),
     );
   }
 }
@@ -3372,6 +3495,7 @@ class _BoardCell extends StatefulWidget {
   final bool isLastMove;
   final bool isLegalMoveHint;
   final bool isScenarioHint;
+  final bool isFocused;
   final bool showExploded;
   final PieceStack? explodedStack;
   final PieceStyleData pieceStyleData;
@@ -3417,6 +3541,7 @@ class _BoardCell extends StatefulWidget {
     this.isLastMove = false,
     this.isLegalMoveHint = false,
     this.isScenarioHint = false,
+    this.isFocused = false,
     this.showExploded = false,
     this.explodedStack,
   });
@@ -3771,7 +3896,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     // Add last move highlighting (subtle outline)
     // Only show if not already highlighted by another state
-    if (widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad) {
+    if (widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad && !widget.isFocused) {
       cellContent = Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -3783,6 +3908,28 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             BoxShadow(
               color: GameColors.lastMoveGlow.withValues(alpha: 0.3),
               blurRadius: 4,
+            ),
+          ],
+        ),
+        child: cellContent,
+      );
+    }
+
+    // Add keyboard focus indicator (high visibility cyan outline)
+    // Shows when cell is focused via keyboard navigation
+    if (widget.isFocused) {
+      cellContent = Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: Colors.cyan,
+            width: borderWidth * 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.cyan.withValues(alpha: 0.5),
+              blurRadius: 8,
+              spreadRadius: 2,
             ),
           ],
         ),
