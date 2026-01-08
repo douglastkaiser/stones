@@ -4,7 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'services/web_back_button_handler.dart';
@@ -3024,7 +3024,7 @@ class _GameBoardState extends State<_GameBoard> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     final boardSize = widget.gameState.boardSize;
-    final current = _focusedPosition ?? Position(0, 0);
+    final current = _focusedPosition ?? const Position(0, 0);
     Position? newPos;
 
     switch (event.logicalKey) {
