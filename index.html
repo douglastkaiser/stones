@@ -49,9 +49,15 @@
   <!-- Prevent phone number detection -->
   <meta name="format-detection" content="telephone=no">
 
+  <!-- Preconnect hints for faster resource loading (LCP optimization) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin="">
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin="">
+
   <script>
     // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = "1898091968";
+    const serviceWorkerVersion = "2651761369";
   </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer=""></script>
@@ -83,9 +89,13 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    /* Hide loading once app is ready */
+    /* Hide loading once app is ready (CLS optimization: fade instead of abrupt hide) */
+    .loading-container {
+      transition: opacity 0.3s ease-out;
+    }
     body.loaded .loading-container {
-      display: none;
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
   <style id="splash-screen-style">
@@ -201,26 +211,34 @@
     });
   </script>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (deferred for INP optimization) -->
   <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+    // Defer Firebase initialization to avoid blocking initial paint
+    const initFirebase = async () => {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js");
+      const { getAnalytics } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js");
 
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyDU8twgc4E0ZR-pcIBHwIqMx0Wdty1_LwM",
-      authDomain: "stones-9a6a0.firebaseapp.com",
-      projectId: "stones-9a6a0",
-      storageBucket: "stones-9a6a0.firebasestorage.app",
-      messagingSenderId: "984712752792",
-      appId: "1:984712752792:web:eda06c6c598e3971e96aed",
-      measurementId: "G-8BM3W3Q70J"
+      const firebaseConfig = {
+        apiKey: "AIzaSyDU8twgc4E0ZR-pcIBHwIqMx0Wdty1_LwM",
+        authDomain: "stones-9a6a0.firebaseapp.com",
+        projectId: "stones-9a6a0",
+        storageBucket: "stones-9a6a0.firebasestorage.app",
+        messagingSenderId: "984712752792",
+        appId: "1:984712752792:web:eda06c6c598e3971e96aed",
+        measurementId: "G-8BM3W3Q70J"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      getAnalytics(app);
     };
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    // Use requestIdleCallback to defer non-critical analytics
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => initFirebase(), { timeout: 3000 });
+    } else {
+      // Fallback for Safari
+      setTimeout(initFirebase, 2000);
+    }
   </script>
 
 
