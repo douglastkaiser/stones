@@ -505,13 +505,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<User?> _ensureAuth({bool force = false}) async {
     final auth = FirebaseAuth.instance;
     if (auth.currentUser != null && !force) return auth.currentUser;
+
+    // Try Play Games sign-in first (optional, for display name on mobile)
+    // This will fail on web - that's expected and OK
+    if (!kIsWeb) {
+      try {
+        await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
+      } catch (e) {
+        _debugLog('Play Games sign-in failed (optional): $e');
+        // Continue to Firebase Auth - Play Games is just for display name
+      }
+    }
+
+    // Firebase Auth is required for online play
     try {
-      await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
       return await auth.signInWithProvider(GoogleAuthProvider()).then((c) => c.user);
     } catch (e) {
       // Security: Require proper authentication for online play - no anonymous fallback
       // This ensures user accountability and prevents abuse
-      _debugLog('Authentication failed: $e');
+      _debugLog('Firebase authentication failed: $e');
       throw Exception('Please sign in with Google to play online.');
     }
   }
