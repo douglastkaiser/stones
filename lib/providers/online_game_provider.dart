@@ -510,31 +510,31 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     final auth = FirebaseAuth.instance;
     if (auth.currentUser != null && !force) return auth.currentUser;
 
-    // Try Play Games sign-in first (optional, for display name on mobile)
-    // This will fail on web - that's expected and OK
-    if (!kIsWeb) {
+    // On web, use anonymous authentication - no sign-in required
+    if (kIsWeb) {
       try {
-        await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
+        final credential = await auth.signInAnonymously();
+        _debugLog('Signed in anonymously for web');
+        return credential.user;
       } catch (e) {
-        _debugLog('Play Games sign-in failed (optional): $e');
-        // Continue to Firebase Auth - Play Games is just for display name
+        _debugLog('Anonymous authentication failed: $e');
+        throw Exception('Unable to connect. Please try again.');
       }
     }
 
-    // Firebase Auth is required for online play
+    // On mobile, try Play Games sign-in first (optional, for display name)
     try {
-      UserCredential credential;
-      if (kIsWeb) {
-        // On web, use signInWithPopup for better compatibility
-        credential = await auth.signInWithPopup(GoogleAuthProvider());
-      } else {
-        // On mobile, use signInWithProvider
-        credential = await auth.signInWithProvider(GoogleAuthProvider());
-      }
+      await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
+    } catch (e) {
+      _debugLog('Play Games sign-in failed (optional): $e');
+      // Continue to Firebase Auth - Play Games is just for display name
+    }
+
+    // Firebase Auth with Google for mobile
+    try {
+      final credential = await auth.signInWithProvider(GoogleAuthProvider());
       return credential.user;
     } catch (e) {
-      // Security: Require proper authentication for online play - no anonymous fallback
-      // This ensures user accountability and prevents abuse
       _debugLog('Firebase authentication failed: $e');
       throw Exception('Please sign in with Google to play online.');
     }
