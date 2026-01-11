@@ -144,7 +144,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           appleProvider: kDebugMode
               ? AppleProvider.debug
               : AppleProvider.appAttest,
-          webProvider: ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
+          webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
         );
         _debugLog('Firebase App Check activated');
       }
