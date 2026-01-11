@@ -65,29 +65,35 @@ Firebase API keys are intentionally public (documented in `lib/firebase_options.
 - API keys only identify the project, they do not grant data access
 - Reference: https://firebase.google.com/docs/projects/api-keys
 
+## Implemented Security Measures
+
+### 7. Firebase App Check (Rate Limiting)
+Firebase App Check is activated to prevent abuse and enable rate limiting:
+- Android: Uses Play Integrity in production, debug provider in development
+- iOS: Uses App Attest in production, debug provider in development
+- Web: Uses reCAPTCHA v3
+- See: `lib/providers/online_game_provider.dart:initialize()`
+
+### 8. Authentication Required for Online Play
+Anonymous authentication fallback has been removed:
+- Users must sign in with Google to play online
+- Ensures user accountability and prevents abuse
+- Clear error message when authentication fails
+- See: `lib/providers/online_game_provider.dart:_ensureAuth()`
+
+### 9. Secure Storage Available
+The `flutter_secure_storage` package is available for future sensitive data:
+- Currently, only non-sensitive preferences are stored (board size, theme, statistics)
+- Ready to use for any future sensitive data requirements
+
 ## Remaining Security Considerations
 
-### 1. Rate Limiting
-Currently, there is no rate limiting on:
-- Game creation
-- Room join attempts
-- Move submissions
-
-**Recommendation**: Implement Firebase App Check or Cloud Functions-based rate limiting.
-
-### 2. Data Storage
+### 1. Data Storage
 User data stored in `SharedPreferences` is not encrypted:
 - Game statistics
 - User preferences
 
-**Recommendation**: For sensitive data, consider using `flutter_secure_storage` package.
-
-### 3. Anonymous Authentication
-The app falls back to anonymous authentication if Google Sign-In fails:
-- Anonymous users are harder to track and ban
-- Less accountability for user actions
-
-**Recommendation**: Consider requiring authenticated users for online play.
+**Note**: Current data is non-sensitive. Use `flutter_secure_storage` if adding tokens or credentials.
 
 ## Reporting Security Issues
 
