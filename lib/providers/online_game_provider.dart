@@ -166,7 +166,14 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }) async {
     _debugLog('createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
     await initialize();
-    state = state.copyWith(creating: true, clearError: true);
+
+    // Check if initialize() failed
+    if (state.errorMessage != null) {
+      _debugLog('createGame: initialize() failed, aborting');
+      return;
+    }
+
+    state = state.copyWith(creating: true);
     try {
       final user = FirebaseAuth.instance.currentUser ??
           (await _ensureAuth(force: true));
@@ -215,7 +222,14 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> joinGame(String roomCode) async {
     _debugLog('joinGame() called with roomCode=$roomCode');
     await initialize();
-    state = state.copyWith(joining: true, clearError: true);
+
+    // Check if initialize() failed
+    if (state.errorMessage != null) {
+      _debugLog('joinGame: initialize() failed, aborting');
+      return;
+    }
+
+    state = state.copyWith(joining: true);
     final code = roomCode.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
 
     // Validate room code format
