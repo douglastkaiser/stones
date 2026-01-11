@@ -148,7 +148,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         );
         _debugLog('Firebase App Check activated');
       }
-      await _ensureAuth();
+      // Don't auto-authenticate here - let user explicitly create/join game
+      // Authentication happens in createGame() and joinGame() when needed
+    } catch (e) {
+      _debugLog('Firebase initialization failed: $e');
+      state = state.copyWith(errorMessage: 'Failed to initialize. Please refresh the page.');
     } finally {
       state = state.copyWith(initializing: false);
     }
@@ -519,7 +523,15 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     // Firebase Auth is required for online play
     try {
-      return await auth.signInWithProvider(GoogleAuthProvider()).then((c) => c.user);
+      UserCredential credential;
+      if (kIsWeb) {
+        // On web, use signInWithPopup for better compatibility
+        credential = await auth.signInWithPopup(GoogleAuthProvider());
+      } else {
+        // On mobile, use signInWithProvider
+        credential = await auth.signInWithProvider(GoogleAuthProvider());
+      }
+      return credential.user;
     } catch (e) {
       // Security: Require proper authentication for online play - no anonymous fallback
       // This ensures user accountability and prevents abuse
