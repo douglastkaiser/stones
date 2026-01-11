@@ -34,10 +34,21 @@ String _sanitizeErrorMessage(Object error) {
   if (errorStr.startsWith('Exception: ')) {
     final message = errorStr.replaceFirst('Exception: ', '');
     // Only return the message if it doesn't contain internal details
-    if (!message.contains('StackTrace') && !message.contains('firebase') &&
-        !message.contains('Firestore') && message.length < 200) {
+    if (!message.contains('StackTrace') && message.length < 200) {
       return message;
     }
+  }
+
+  // Handle common Firebase Auth errors with user-friendly messages
+  if (errorStr.contains('anonymous-auth-disabled') ||
+      errorStr.contains('operation-not-allowed')) {
+    return 'Anonymous sign-in is not enabled. Please contact support.';
+  }
+  if (errorStr.contains('network-request-failed')) {
+    return 'Network error. Please check your connection.';
+  }
+  if (errorStr.contains('too-many-requests')) {
+    return 'Too many requests. Please try again later.';
   }
 
   // For other errors, log the details but return a generic message
