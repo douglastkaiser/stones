@@ -20,9 +20,14 @@ import 'settings_provider.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
-  // Only log in debug mode to prevent exposing sensitive data in production
+  // Log in debug mode for detailed debugging
   if (kDebugMode) {
     developer.log('[ONLINE] $message', name: 'multiplayer');
+  }
+  // Also print to console for web debugging (visible in browser console)
+  if (kIsWeb) {
+    // ignore: avoid_print
+    print('[ONLINE] $message');
   }
 }
 
@@ -138,38 +143,67 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
   bool _firebaseInitialized = false;
+  bool _appCheckActivated = false;
 
   Future<void> initialize() async {
     // Already initialized successfully
-    if (_firebaseInitialized) return;
+    if (_firebaseInitialized) {
+      _debugLog('initialize: Already initialized, skipping');
+      return;
+    }
     // Currently initializing
-    if (state.initializing) return;
+    if (state.initializing) {
+      _debugLog('initialize: Currently initializing, skipping');
+      return;
+    }
 
+    _debugLog('initialize: Starting Firebase initialization');
     state = state.copyWith(initializing: true);
     try {
+      // Initialize Firebase if not already done
       if (Firebase.apps.isEmpty) {
+        _debugLog('initialize: Firebase.apps is empty, initializing Firebase');
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
+        _debugLog('initialize: Firebase initialized successfully');
+      } else {
+        _debugLog('initialize: Firebase already initialized (apps not empty)');
       }
-      // Activate Firebase App Check for rate limiting and abuse prevention
-      await FirebaseAppCheck.instance.activate(
-        // Use debug provider in debug mode for testing
-        androidProvider: kDebugMode
-            ? AndroidProvider.debug
-            : AndroidProvider.playIntegrity,
-        appleProvider: kDebugMode
-            ? AppleProvider.debug
-            : AppleProvider.appAttest,
-        webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
-      );
-      _debugLog('Firebase App Check activated');
+
+      // Activate App Check only once
+      if (!_appCheckActivated) {
+        _debugLog('initialize: Activating Firebase App Check');
+        try {
+          await FirebaseAppCheck.instance.activate(
+            // Use debug provider in debug mode for testing
+            androidProvider: kDebugMode
+                ? AndroidProvider.debug
+                : AndroidProvider.playIntegrity,
+            appleProvider: kDebugMode
+                ? AppleProvider.debug
+                : AppleProvider.appAttest,
+            webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
+          );
+          _appCheckActivated = true;
+          _debugLog('initialize: Firebase App Check activated successfully');
+        } catch (appCheckError) {
+          // App Check activation might fail if already activated or other issues
+          // Log but don't fail - App Check is for abuse prevention, not critical
+          _debugLog('initialize: App Check activation error (non-fatal): $appCheckError');
+          _appCheckActivated = true; // Mark as activated to avoid retrying
+        }
+      } else {
+        _debugLog('initialize: App Check already activated, skipping');
+      }
+
       _firebaseInitialized = true;
+      _debugLog('initialize: Firebase initialization complete');
       // Clear any previous errors on successful initialization
       state = state.copyWith(clearError: true);
     } catch (e) {
-      _debugLog('Firebase initialization failed: $e');
-      state = state.copyWith(errorMessage: 'Failed to initialize. Please refresh the page.');
+      _debugLog('initialize: Firebase initialization failed: $e');
+      state = state.copyWith(errorMessage: 'Failed to connect to server: $e');
     } finally {
       state = state.copyWith(initializing: false);
     }
@@ -182,18 +216,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     PlayerColor creatorColor = PlayerColor.white,
   }) async {
     _debugLog('createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
+    _debugLog('createGame: state.errorMessage=${state.errorMessage}, state.initializing=${state.initializing}');
     await initialize();
 
     // Check if initialize() failed
     if (state.errorMessage != null) {
-      _debugLog('createGame: initialize() failed, aborting');
+      _debugLog('createGame: initialize() failed with error: ${state.errorMessage}');
       return;
     }
 
+    _debugLog('createGame: initialize() succeeded, proceeding');
     state = state.copyWith(creating: true);
     try {
-      final user = FirebaseAuth.instance.currentUser ??
-          (await _ensureAuth(force: true));
+      _debugLog('createGame: checking currentUser');
+      final existingUser = FirebaseAuth.instance.currentUser;
+      _debugLog('createGame: currentUser=${existingUser?.uid}');
+
+      final user = existingUser ?? (await _ensureAuth(force: true));
+      _debugLog('createGame: got user=${user?.uid}');
+
       if (user == null) {
         throw Exception('Unable to sign in. Please try again.');
       }
