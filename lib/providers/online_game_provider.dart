@@ -137,30 +137,36 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   // Lazy access to Firestore - only accessed after Firebase is initialized
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
+  bool _firebaseInitialized = false;
 
   Future<void> initialize() async {
+    // Already initialized successfully
+    if (_firebaseInitialized) return;
+    // Currently initializing
     if (state.initializing) return;
-    state = state.copyWith(initializing: true, clearError: true);
+
+    state = state.copyWith(initializing: true);
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
-        // Activate Firebase App Check for rate limiting and abuse prevention
-        await FirebaseAppCheck.instance.activate(
-          // Use debug provider in debug mode for testing
-          androidProvider: kDebugMode
-              ? AndroidProvider.debug
-              : AndroidProvider.playIntegrity,
-          appleProvider: kDebugMode
-              ? AppleProvider.debug
-              : AppleProvider.appAttest,
-          webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
-        );
-        _debugLog('Firebase App Check activated');
       }
-      // Don't auto-authenticate here - let user explicitly create/join game
-      // Authentication happens in createGame() and joinGame() when needed
+      // Activate Firebase App Check for rate limiting and abuse prevention
+      await FirebaseAppCheck.instance.activate(
+        // Use debug provider in debug mode for testing
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode
+            ? AppleProvider.debug
+            : AppleProvider.appAttest,
+        webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
+      );
+      _debugLog('Firebase App Check activated');
+      _firebaseInitialized = true;
+      // Clear any previous errors on successful initialization
+      state = state.copyWith(clearError: true);
     } catch (e) {
       _debugLog('Firebase initialization failed: $e');
       state = state.copyWith(errorMessage: 'Failed to initialize. Please refresh the page.');
