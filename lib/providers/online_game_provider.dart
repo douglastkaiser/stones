@@ -20,9 +20,14 @@ import 'settings_provider.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
-  // Only log in debug mode to prevent exposing sensitive data in production
+  // Log in debug mode for detailed debugging
   if (kDebugMode) {
     developer.log('[ONLINE] $message', name: 'multiplayer');
+  }
+  // Also print to console for web debugging (visible in browser console)
+  if (kIsWeb) {
+    // ignore: avoid_print
+    print('[ONLINE] $message');
   }
 }
 
@@ -34,10 +39,21 @@ String _sanitizeErrorMessage(Object error) {
   if (errorStr.startsWith('Exception: ')) {
     final message = errorStr.replaceFirst('Exception: ', '');
     // Only return the message if it doesn't contain internal details
-    if (!message.contains('StackTrace') && !message.contains('firebase') &&
-        !message.contains('Firestore') && message.length < 200) {
+    if (!message.contains('StackTrace') && message.length < 200) {
       return message;
     }
+  }
+
+  // Handle common Firebase Auth errors with user-friendly messages
+  if (errorStr.contains('anonymous-auth-disabled') ||
+      errorStr.contains('operation-not-allowed')) {
+    return 'Anonymous sign-in is not enabled. Please contact support.';
+  }
+  if (errorStr.contains('network-request-failed')) {
+    return 'Network error. Please check your connection.';
+  }
+  if (errorStr.contains('too-many-requests')) {
+    return 'Too many requests. Please try again later.';
   }
 
   // For other errors, log the details but return a generic message
@@ -126,29 +142,75 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   // Lazy access to Firestore - only accessed after Firebase is initialized
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
+  bool _firebaseInitialized = false;
+  bool _appCheckActivated = false;
 
   Future<void> initialize() async {
-    if (state.initializing) return;
-    state = state.copyWith(initializing: true, clearError: true);
+    // Already initialized successfully
+    if (_firebaseInitialized) {
+      _debugLog('initialize: Already initialized, skipping');
+      return;
+    }
+    // Currently initializing
+    if (state.initializing) {
+      _debugLog('initialize: Currently initializing, skipping');
+      return;
+    }
+
+    _debugLog('initialize: Starting Firebase initialization');
+    state = state.copyWith(initializing: true);
     try {
-      if (Firebase.apps.isEmpty) {
+      // Initialize Firebase - always try, catch if already initialized
+      _debugLog('initialize: Calling Firebase.initializeApp');
+      try {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
-        // Activate Firebase App Check for rate limiting and abuse prevention
-        await FirebaseAppCheck.instance.activate(
-          // Use debug provider in debug mode for testing
-          androidProvider: kDebugMode
-              ? AndroidProvider.debug
-              : AndroidProvider.playIntegrity,
-          appleProvider: kDebugMode
-              ? AppleProvider.debug
-              : AppleProvider.appAttest,
-          webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
-        );
-        _debugLog('Firebase App Check activated');
+        _debugLog('initialize: Firebase initialized successfully');
+      } catch (e) {
+        // Firebase might already be initialized - check if that's the case
+        if (e.toString().contains('already been initialized') ||
+            e.toString().contains('duplicate-app')) {
+          _debugLog('initialize: Firebase was already initialized, continuing');
+        } else {
+          _debugLog('initialize: Firebase.initializeApp error: $e');
+          rethrow;
+        }
       }
-      await _ensureAuth();
+
+      // Activate App Check only once
+      if (!_appCheckActivated) {
+        _debugLog('initialize: Activating Firebase App Check');
+        try {
+          await FirebaseAppCheck.instance.activate(
+            // Use debug provider in debug mode for testing
+            androidProvider: kDebugMode
+                ? AndroidProvider.debug
+                : AndroidProvider.playIntegrity,
+            appleProvider: kDebugMode
+                ? AppleProvider.debug
+                : AppleProvider.appAttest,
+            webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
+          );
+          _appCheckActivated = true;
+          _debugLog('initialize: Firebase App Check activated successfully');
+        } catch (appCheckError) {
+          // App Check activation might fail if already activated or other issues
+          // Log but don't fail - App Check is for abuse prevention, not critical
+          _debugLog('initialize: App Check activation error (non-fatal): $appCheckError');
+          _appCheckActivated = true; // Mark as activated to avoid retrying
+        }
+      } else {
+        _debugLog('initialize: App Check already activated, skipping');
+      }
+
+      _firebaseInitialized = true;
+      _debugLog('initialize: Firebase initialization complete');
+      // Clear any previous errors on successful initialization
+      state = state.copyWith(clearError: true);
+    } catch (e) {
+      _debugLog('initialize: Firebase initialization failed: $e');
+      state = state.copyWith(errorMessage: 'Failed to connect to server: $e');
     } finally {
       state = state.copyWith(initializing: false);
     }
@@ -161,11 +223,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     PlayerColor creatorColor = PlayerColor.white,
   }) async {
     _debugLog('createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
+    _debugLog('createGame: state.errorMessage=${state.errorMessage}, state.initializing=${state.initializing}');
     await initialize();
-    state = state.copyWith(creating: true, clearError: true);
+
+    // Check if initialize() failed
+    if (state.errorMessage != null) {
+      _debugLog('createGame: initialize() failed with error: ${state.errorMessage}');
+      return;
+    }
+
+    _debugLog('createGame: initialize() succeeded, proceeding');
+    state = state.copyWith(creating: true);
     try {
-      final user = FirebaseAuth.instance.currentUser ??
-          (await _ensureAuth(force: true));
+      _debugLog('createGame: checking currentUser');
+      final existingUser = FirebaseAuth.instance.currentUser;
+      _debugLog('createGame: currentUser=${existingUser?.uid}');
+
+      final user = existingUser ?? (await _ensureAuth(force: true));
+      _debugLog('createGame: got user=${user?.uid}');
+
       if (user == null) {
         throw Exception('Unable to sign in. Please try again.');
       }
@@ -211,7 +287,14 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> joinGame(String roomCode) async {
     _debugLog('joinGame() called with roomCode=$roomCode');
     await initialize();
-    state = state.copyWith(joining: true, clearError: true);
+
+    // Check if initialize() failed
+    if (state.errorMessage != null) {
+      _debugLog('joinGame: initialize() failed, aborting');
+      return;
+    }
+
+    state = state.copyWith(joining: true);
     final code = roomCode.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
 
     // Validate room code format
@@ -505,13 +588,33 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<User?> _ensureAuth({bool force = false}) async {
     final auth = FirebaseAuth.instance;
     if (auth.currentUser != null && !force) return auth.currentUser;
+
+    // On web, use anonymous authentication - no sign-in required
+    if (kIsWeb) {
+      try {
+        final credential = await auth.signInAnonymously();
+        _debugLog('Signed in anonymously for web');
+        return credential.user;
+      } catch (e) {
+        _debugLog('Anonymous authentication failed: $e');
+        throw Exception('Unable to connect. Please try again.');
+      }
+    }
+
+    // On mobile, try Play Games sign-in first (optional, for display name)
     try {
       await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
-      return await auth.signInWithProvider(GoogleAuthProvider()).then((c) => c.user);
     } catch (e) {
-      // Security: Require proper authentication for online play - no anonymous fallback
-      // This ensures user accountability and prevents abuse
-      _debugLog('Authentication failed: $e');
+      _debugLog('Play Games sign-in failed (optional): $e');
+      // Continue to Firebase Auth - Play Games is just for display name
+    }
+
+    // Firebase Auth with Google for mobile
+    try {
+      final credential = await auth.signInWithProvider(GoogleAuthProvider());
+      return credential.user;
+    } catch (e) {
+      _debugLog('Firebase authentication failed: $e');
       throw Exception('Please sign in with Google to play online.');
     }
   }

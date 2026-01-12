@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:games_services/games_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,7 +45,10 @@ class PlayGamesState {
 
 class PlayGamesService extends StateNotifier<PlayGamesState> {
   PlayGamesService(this._ref) : super(const PlayGamesState()) {
-    _listenToPlayer();
+    // Play Games Services is not available on web
+    if (!kIsWeb) {
+      _listenToPlayer();
+    }
   }
 
   final Ref _ref;
@@ -52,6 +56,8 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
   static const _saveGameName = 'stones_current_game';
 
   Future<void> initialize() async {
+    // Play Games Services is not available on web
+    if (kIsWeb) return;
     if (state.isSigningIn || state.isSignedIn || state.attemptedSilentSignIn) {
       return;
     }
@@ -65,6 +71,8 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
   }
 
   Future<void> silentSignIn() async {
+    // Play Games Services is not available on web
+    if (kIsWeb) return;
     state = state.copyWith(isSigningIn: true, attemptedSilentSignIn: true);
     try {
       await GameAuth.signIn();
@@ -74,6 +82,8 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
   }
 
   Future<void> manualSignIn() async {
+    // Play Games Services is not available on web
+    if (kIsWeb) return;
     state = state.copyWith(isSigningIn: true);
     try {
       await GameAuth.signIn();
