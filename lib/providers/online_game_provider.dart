@@ -160,15 +160,22 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _debugLog('initialize: Starting Firebase initialization');
     state = state.copyWith(initializing: true);
     try {
-      // Initialize Firebase if not already done
-      if (Firebase.apps.isEmpty) {
-        _debugLog('initialize: Firebase.apps is empty, initializing Firebase');
+      // Initialize Firebase - always try, catch if already initialized
+      _debugLog('initialize: Calling Firebase.initializeApp');
+      try {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
         _debugLog('initialize: Firebase initialized successfully');
-      } else {
-        _debugLog('initialize: Firebase already initialized (apps not empty)');
+      } catch (e) {
+        // Firebase might already be initialized - check if that's the case
+        if (e.toString().contains('already been initialized') ||
+            e.toString().contains('duplicate-app')) {
+          _debugLog('initialize: Firebase was already initialized, continuing');
+        } else {
+          _debugLog('initialize: Firebase.initializeApp error: $e');
+          rethrow;
+        }
       }
 
       // Activate App Check only once
