@@ -20,14 +20,14 @@ import 'settings_provider.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
-  // Log in debug mode for detailed debugging
+  // Only log in debug mode to avoid noise in production
   if (kDebugMode) {
     developer.log('[ONLINE] $message', name: 'multiplayer');
-  }
-  // Also print to console for web debugging (visible in browser console)
-  if (kIsWeb) {
-    // ignore: avoid_print
-    print('[ONLINE] $message');
+    // Also print to console in debug mode for web debugging
+    if (kIsWeb) {
+      // ignore: avoid_print
+      print('[ONLINE] $message');
+    }
   }
 }
 
@@ -210,7 +210,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       state = state.copyWith(clearError: true);
     } catch (e) {
       _debugLog('initialize: Firebase initialization failed: $e');
-      state = state.copyWith(errorMessage: 'Failed to connect to server: $e');
+      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
     } finally {
       state = state.copyWith(initializing: false);
     }
@@ -223,25 +223,18 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     PlayerColor creatorColor = PlayerColor.white,
   }) async {
     _debugLog('createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
-    _debugLog('createGame: state.errorMessage=${state.errorMessage}, state.initializing=${state.initializing}');
     await initialize();
 
     // Check if initialize() failed
     if (state.errorMessage != null) {
-      _debugLog('createGame: initialize() failed with error: ${state.errorMessage}');
+      _debugLog('createGame: initialize() failed, aborting');
       return;
     }
 
-    _debugLog('createGame: initialize() succeeded, proceeding');
     state = state.copyWith(creating: true);
     try {
-      _debugLog('createGame: checking currentUser');
-      final existingUser = FirebaseAuth.instance.currentUser;
-      _debugLog('createGame: currentUser=${existingUser?.uid}');
-
-      final user = existingUser ?? (await _ensureAuth(force: true));
-      _debugLog('createGame: got user=${user?.uid}');
-
+      final user = FirebaseAuth.instance.currentUser ??
+          (await _ensureAuth(force: true));
       if (user == null) {
         throw Exception('Unable to sign in. Please try again.');
       }
