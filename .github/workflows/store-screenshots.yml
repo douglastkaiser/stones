@@ -1,0 +1,83 @@
+name: Generate Store Screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: 'URL of the deployed app to screenshot'
+        required: false
+        default: 'https://douglastkaiser.github.io/stones/'
+
+jobs:
+  capture-screenshots:
+    name: Capture App Screenshots
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Playwright
+        run: |
+          pip install playwright pillow
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Capture screenshots
+        run: python scripts/capture_screenshots.py
+        env:
+          APP_URL: ${{ github.event.inputs.app_url }}
+
+      - name: Upload phone screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-phone
+          path: store_assets/screenshots/phone/
+          retention-days: 90
+
+      - name: Upload 7-inch tablet screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-tablet-7inch
+          path: store_assets/screenshots/tablet_7/
+          retention-days: 90
+
+      - name: Upload 10-inch tablet screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-tablet-10inch
+          path: store_assets/screenshots/tablet_10/
+          retention-days: 90
+
+      - name: Upload feature graphic
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-graphic
+          path: store_assets/feature_graphic.png
+          retention-days: 90
+
+      - name: Upload app icon
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-icon-512
+          path: store_assets/app_icon_512.png
+          retention-days: 90
+
+      - name: Create combined asset bundle
+        run: |
+          mkdir -p store_assets_bundle
+          cp -r store_assets/* store_assets_bundle/
+          cd store_assets_bundle
+          zip -r ../store-assets-all.zip .
+
+      - name: Upload combined asset bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-assets-all
+          path: store-assets-all.zip
+          retention-days: 90
