@@ -39,9 +39,13 @@ android {
     }
 
     // Split APKs by ABI to reduce download size per device
+    // Note: Must disable splits when building App Bundles due to AGP 8.9.0 bug
+    // See: https://issuetracker.google.com/issues/402800800
     splits {
         abi {
-            enable true
+            // Disable ABI splits when building App Bundles (they handle this automatically)
+            def isBuildingBundle = gradle.startParameter.taskNames.any { it.toLowerCase().contains("bundle") }
+            enable !isBuildingBundle
             reset()
             include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
             universalApk true  // Also build a universal APK for fallback

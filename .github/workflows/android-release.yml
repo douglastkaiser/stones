@@ -31,6 +31,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Sanitize branch name for artifact naming
+        run: echo "SANITIZED_REF=${GITHUB_REF_NAME//\//-}" >> $GITHUB_ENV
+
       - name: Generate version info
         run: ./scripts/generate_version.sh
 
@@ -72,7 +75,7 @@ jobs:
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: stones-release-apk-${{ github.ref_name }}
+          name: stones-release-apk-${{ env.SANITIZED_REF }}
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Build Android App Bundle (release)
@@ -83,5 +86,5 @@ jobs:
         if: inputs.include_appbundle == true
         uses: actions/upload-artifact@v4
         with:
-          name: stones-release-aab-${{ inputs.ref }}
+          name: stones-release-aab-${{ env.SANITIZED_REF }}
           path: build/app/outputs/bundle/release/app-release.aab
