@@ -1,4 +1,4 @@
-package com.example.stones
+package com.douglastkaiser.stones
 
 import io.flutter.embedding.android.FlutterActivity
 

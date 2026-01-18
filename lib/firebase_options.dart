@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '984712752792',
     projectId: 'stones-9a6a0',
     storageBucket: 'stones-9a6a0.firebasestorage.app',
-    iosBundleId: 'com.example.stones',
+    iosBundleId: 'com.douglastkaiser.stones',
   );
 
   // TODO: Add your macOS Firebase configuration
@@ -70,7 +70,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '984712752792',
     projectId: 'stones-9a6a0',
     storageBucket: 'stones-9a6a0.firebasestorage.app',
-    iosBundleId: 'com.example.stones',
+    iosBundleId: 'com.douglastkaiser.stones',
   );
 
   // TODO: Add your Windows Firebase configuration
