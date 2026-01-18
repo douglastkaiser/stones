@@ -24,7 +24,7 @@ jobs:
 
       - name: Install Playwright
         run: |
-          pip install playwright pillow
+          pip install playwright
           playwright install chromium
           playwright install-deps chromium
 
@@ -33,51 +33,24 @@ jobs:
         env:
           APP_URL: ${{ github.event.inputs.app_url }}
 
-      - name: Upload phone screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-phone
-          path: store_assets/screenshots/phone/
-          retention-days: 90
-
-      - name: Upload 7-inch tablet screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-tablet-7inch
-          path: store_assets/screenshots/tablet_7/
-          retention-days: 90
-
-      - name: Upload 10-inch tablet screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-tablet-10inch
-          path: store_assets/screenshots/tablet_10/
-          retention-days: 90
-
-      - name: Upload feature graphic
-        uses: actions/upload-artifact@v4
-        with:
-          name: feature-graphic
-          path: store_assets/feature_graphic.png
-          retention-days: 90
-
-      - name: Upload app icon
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-icon-512
-          path: store_assets/app_icon_512.png
-          retention-days: 90
-
-      - name: Create combined asset bundle
+      - name: Create store assets bundle
         run: |
-          mkdir -p store_assets_bundle
-          cp -r store_assets/* store_assets_bundle/
-          cd store_assets_bundle
-          zip -r ../store-assets-all.zip .
+          mkdir -p store_assets_bundle/screenshots
 
-      - name: Upload combined asset bundle
+          # Copy static assets
+          cp store_assets/app_icon_512.png store_assets_bundle/
+          cp store_assets/feature_graphic.png store_assets_bundle/
+
+          # Copy screenshots (organized by device)
+          cp -r store_assets/screenshots/* store_assets_bundle/screenshots/
+
+          # Create ZIP
+          cd store_assets_bundle
+          zip -r ../store-assets.zip .
+
+      - name: Upload store assets
         uses: actions/upload-artifact@v4
         with:
-          name: store-assets-all
-          path: store-assets-all.zip
+          name: store-assets
+          path: store-assets.zip
           retention-days: 90
