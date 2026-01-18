@@ -17,7 +17,7 @@ if (isReleaseTaskRequested && (!androidUploadStoreFile || !androidUploadStorePas
 }
 
 android {
-    namespace = "com.example.stones"
+    namespace = "com.douglastkaiser.stones"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -31,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.stones"
+        applicationId = "com.douglastkaiser.stones"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
