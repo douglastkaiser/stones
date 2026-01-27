@@ -15,6 +15,7 @@ class PlayGamesState {
   final PlayerData? player;
   final String? iconImage;
   final int resumedMoveCount;
+  final String? errorMessage;
 
   const PlayGamesState({
     this.isSigningIn = false,
@@ -22,6 +23,7 @@ class PlayGamesState {
     this.player,
     this.iconImage,
     this.resumedMoveCount = 0,
+    this.errorMessage,
   });
 
   bool get isSignedIn => player != null;
@@ -32,6 +34,8 @@ class PlayGamesState {
     PlayerData? player,
     String? iconImage,
     int? resumedMoveCount,
+    String? errorMessage,
+    bool clearError = false,
   }) {
     return PlayGamesState(
       isSigningIn: isSigningIn ?? this.isSigningIn,
@@ -39,6 +43,7 @@ class PlayGamesState {
       player: player ?? this.player,
       iconImage: iconImage ?? this.iconImage,
       resumedMoveCount: resumedMoveCount ?? this.resumedMoveCount,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
@@ -76,6 +81,12 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
     state = state.copyWith(isSigningIn: true, attemptedSilentSignIn: true);
     try {
       await GameAuth.signIn();
+      // Clear any previous error on successful sign-in
+      state = state.copyWith(clearError: true);
+    } catch (e) {
+      // Silent sign-in failure is expected if user hasn't signed in before
+      // Don't show error for silent sign-in, but log it
+      // User can manually sign in later if needed
     } finally {
       state = state.copyWith(isSigningIn: false);
     }
@@ -84,9 +95,16 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
   Future<void> manualSignIn() async {
     // Play Games Services is not available on web
     if (kIsWeb) return;
-    state = state.copyWith(isSigningIn: true);
+    state = state.copyWith(isSigningIn: true, clearError: true);
     try {
       await GameAuth.signIn();
+      // Clear any previous error on successful sign-in
+      state = state.copyWith(clearError: true);
+    } catch (e) {
+      // Store the error message for the UI to display
+      state = state.copyWith(
+        errorMessage: 'Failed to sign in with Google Play Games. Error: $e',
+      );
     } finally {
       state = state.copyWith(isSigningIn: false);
     }

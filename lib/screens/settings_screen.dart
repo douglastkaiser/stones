@@ -77,8 +77,28 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           _PlayGamesSection(
             playGames: playGames,
-            onManualSignIn: () =>
-                ref.read(playGamesServiceProvider.notifier).manualSignIn(),
+            onManualSignIn: () async {
+              await ref.read(playGamesServiceProvider.notifier).manualSignIn();
+              // Check if there was an error
+              final updatedState = ref.read(playGamesServiceProvider);
+              if (updatedState.errorMessage != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(updatedState.errorMessage!),
+                    backgroundColor: Colors.red.shade700,
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              } else if (updatedState.isSignedIn && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Successfully signed in as ${updatedState.player?.displayName ?? 'User'}'),
+                    backgroundColor: Colors.green.shade700,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),
@@ -156,7 +176,7 @@ class _SettingsTile extends StatelessWidget {
 
 class _PlayGamesSection extends StatelessWidget {
   final PlayGamesState playGames;
-  final VoidCallback onManualSignIn;
+  final Future<void> Function() onManualSignIn;
 
   const _PlayGamesSection({
     required this.playGames,

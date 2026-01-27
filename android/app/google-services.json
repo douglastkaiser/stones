@@ -7,12 +7,33 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:984712752792:android:9473fc91365ae8c3e96aed",
+        "mobilesdk_app_id": "1:984712752792:android:8bd2385282defdb3e96aed",
         "android_client_info": {
           "package_name": "com.douglastkaiser.stones"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "984712752792-0hea2nfn2l6go61or3d0bd1b1qo11hiu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.douglastkaiser.stones",
+            "certificate_hash": "231aa5012d38051861bfaec65c46b27e925c44b9"
+          }
+        },
+        {
+          "client_id": "984712752792-l4a3kobsea9efrn6ee21mc8j35dtp8uv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.douglastkaiser.stones",
+            "certificate_hash": "fa63fb8fbb9b27f690541be7bc1162ac903a30cb"
+          }
+        },
+        {
+          "client_id": "984712752792-vkav9i6gvdeniibns9046fq6l1neag38.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyABTcneFEI7SBi3Vymbgqw2x51iwislTzc"
@@ -20,7 +41,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "984712752792-vkav9i6gvdeniibns9046fq6l1neag38.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
