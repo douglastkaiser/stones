@@ -65,3 +65,10 @@ class AppVersion {
 EOF
 
 echo "Generated lib/version.dart"
+
+# Export version code for CI builds (GitHub Actions)
+if [ -n "$GITHUB_ENV" ]; then
+  echo "VERSION_CODE=$COMMIT_COUNT" >> "$GITHUB_ENV"
+  echo "VERSION_NAME=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
+  echo "Exported VERSION_CODE=$COMMIT_COUNT and VERSION_NAME=$PUBSPEC_VERSION to GITHUB_ENV"
+fi
