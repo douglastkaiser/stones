@@ -37,6 +37,11 @@ jobs:
       - name: Generate version info
         run: ./scripts/generate_version.sh
 
+      - name: Display version info
+        run: |
+          echo "Version Name: ${{ env.VERSION_NAME }}"
+          echo "Version Code: ${{ env.VERSION_CODE }}"
+
       - name: Decode Android upload keystore
         run: |
           mkdir -p android/app
@@ -70,7 +75,7 @@ jobs:
         run: flutter test
 
       - name: Build Android APK (release)
-        run: flutter build apk --release
+        run: flutter build apk --release --build-number=${{ env.VERSION_CODE }} --build-name=${{ env.VERSION_NAME }}
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
@@ -80,7 +85,7 @@ jobs:
 
       - name: Build Android App Bundle (release)
         if: inputs.include_appbundle == true
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --build-number=${{ env.VERSION_CODE }} --build-name=${{ env.VERSION_NAME }}
 
       - name: Upload AAB artifact
         if: inputs.include_appbundle == true
