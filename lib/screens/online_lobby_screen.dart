@@ -895,6 +895,28 @@ class _PlayerInfoCard extends StatelessWidget {
               ],
             ),
           ),
+          if (player?.rating != null && !waiting)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.amber.shade900.withValues(alpha: 0.5)
+                    : Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.amber.shade700 : Colors.amber.shade300,
+                ),
+              ),
+              child: Text(
+                'ELO ${player!.rating}',
+                style: TextStyle(
+                  color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           if (isActive)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

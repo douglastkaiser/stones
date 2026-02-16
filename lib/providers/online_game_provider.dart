@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../firebase_options.dart';
 import '../models/models.dart';
 import 'chess_clock_provider.dart';
+import 'elo_provider.dart';
 import 'game_provider.dart';
 import 'game_session_provider.dart';
 import '../services/services.dart';
@@ -634,7 +635,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
     // Sanitize display name for security
     displayName = OnlineGamePlayer.sanitize(displayName);
-    return OnlineGamePlayer(id: user.uid, displayName: displayName);
+    // Include ELO rating if available
+    final eloState = _ref.read(eloProvider);
+    final rating = eloState.localPlayerRating?.rating;
+    return OnlineGamePlayer(id: user.uid, displayName: displayName, rating: rating);
   }
 
   String _generateRoomCode() {
