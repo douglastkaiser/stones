@@ -107867,7 +107867,7 @@ else l=l.My(p?B.h:B.ca,B.A,4)
 l=A.a7("STONES",q,q,q,l,q,q)
 if(p){s=o.rx
 if(s==null)s=o.k3}else s=B.cu
-n=A.js(q,A.a7("v1.0.0+356.g779580d.d20260216 (779580d)",q,q,q,A.aO(q,q,s,q,q,q,q,q,q,q,q,14,q,q,q,q,q,!0,q,q,q,q,q,q,q,q),q,q),B.aj,!1,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,n.gap5(),q,q,q,q,q,q)
+n=A.js(q,A.a7("v1.0.0+357.g5a3f9a3.d20260216 (5a3f9a3)",q,q,q,A.aO(q,q,s,q,q,q,q,q,q,q,q,14,q,q,q,q,q,!0,q,q,q,q,q,q,q,q),q,q),B.aj,!1,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,n.gap5(),q,q,q,q,q,q)
 s=A.A(a).ok.y
 if(s==null)s=q
 else{if(p){r=o.rx
@@ -107877,7 +107877,7 @@ s=r}return A.eu(A.bq(A.b([m,B.a5,l,B.bV,n,B.at,A.a7("An abstract strategy game",
 $S:751}
 A.azM.prototype={
 $0(){var s=null
-A.bmg(new A.bd(B.bb,A.cU(A.ei(s,s,s,new A.O4(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+356.g779580d.d20260216 (779580d)",this.b)
+A.bmg(new A.bd(B.bb,A.cU(A.ei(s,s,s,new A.O4(s),B.C),64,64),s),"\xa9 2024 Stones Contributors","Stones","v1.0.0+357.g5a3f9a3.d20260216 (5a3f9a3)",this.b)
 return s},
 $S:0}
 A.K9.prototype={
@@ -108606,7 +108606,7 @@ r=s.ry
 if(r==null){r=s.u
 s=r==null?s.k3:r
 p=s}else p=r}else p=B.cu
-return A.aV(o,A.eu(A.bE(A.b([A.a7("v1.0.0+356.g779580d.d20260216 (779580d)",o,o,o,A.aO(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a7("  \u2022  ",o,o,o,A.aO(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.ln(!1,A.aN(4),!0,new A.bd(B.hD,A.bP(o,o,A.a7("Privacy",o,o,o,A.aO(o,o,q,o,B.lh,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),!1,o,o,!1,o,o,o,o,o,o,o,"Privacy policy",!0,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o),o),o,!0,o,o,o,o,o,o,o,o,this.gaph(),o,o,o,o,o,o,o)],t.p),B.o,B.p,B.ai,0),o,o),B.k,o,o,o,o,o,o,B.uc,o,o,o)}}
+return A.aV(o,A.eu(A.bE(A.b([A.a7("v1.0.0+357.g5a3f9a3.d20260216 (5a3f9a3)",o,o,o,A.aO(o,o,q,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.a7("  \u2022  ",o,o,o,A.aO(o,o,p,o,o,o,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),A.ln(!1,A.aN(4),!0,new A.bd(B.hD,A.bP(o,o,A.a7("Privacy",o,o,o,A.aO(o,o,q,o,B.lh,q,o,o,o,o,o,11,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),!1,o,o,!1,o,o,o,o,o,o,o,"Privacy policy",!0,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o),o),o,!0,o,o,o,o,o,o,o,o,this.gaph(),o,o,o,o,o,o,o)],t.p),B.o,B.p,B.ai,0),o,o),B.k,o,o,o,o,o,o,B.uc,o,o,o)}}
 A.a17.prototype={
 J(a){var s,r,q,p,o,n,m,l,k=this,j=null,i=A.A(a).ax.a===B.w,h=k.e
 if(h)s=B.y
