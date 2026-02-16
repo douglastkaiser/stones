@@ -200,7 +200,6 @@ class EloController extends StateNotifier<EloState> {
     final newRating = EloRating(
       id: userId,
       displayName: displayName,
-      rating: EloCalculator.defaultRating,
       lastUpdated: DateTime.now(),
     );
     await _firestore.collection('ratings').doc(userId).set(newRating.toMap());

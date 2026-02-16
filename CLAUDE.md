@@ -67,8 +67,9 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
    - Check for any widgets/methods that were replaced and can be deleted
    - **Check for cascading deletions** - if you deleted a class, search for helper classes/methods that were only used by it
    - Add `const` to constructors where all arguments are constant
+   - **Check for redundant argument values** - verify that every named argument you pass differs from the parameter's default value (check the constructor/function signature). This includes constants whose resolved value matches the default.
 
-9. **Avoid redundant argument values** - Don't pass arguments that match the default value. The analyzer flags this as `avoid_redundant_argument_values`:
+9. **Avoid redundant argument values** - Don't pass arguments that match the default value. The analyzer flags this as `avoid_redundant_argument_values`. This includes passing a named constant or variable whose value happens to equal the default — the analyzer resolves the actual value at compile time:
    ```dart
    // BAD - clockwise: true is the default for arcToPoint
    path.arcToPoint(
@@ -82,6 +83,13 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
      Offset(x, y),
      radius: Radius.circular(r),
    );
+
+   // BAD - passing a constant that equals the default (e.g., default is 1200)
+   static const int defaultRating = 1200;
+   final r = EloRating(id: id, displayName: name, rating: defaultRating);
+
+   // GOOD - omit when the constant matches the default parameter value
+   final r = EloRating(id: id, displayName: name);
    ```
 
 10. **Avoid deprecated Flutter APIs** - The analyzer flags deprecated APIs as info-level issues, which fail with `--fatal-infos`. Common deprecations to avoid:
