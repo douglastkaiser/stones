@@ -104,6 +104,7 @@ class EloController extends StateNotifier<EloState> {
     // Try to sync with Firebase
     try {
       await _ensureFirebase();
+      await _ensureAiRatingsExist();
       await _syncLocalRating();
       _listenToAiRatings();
     } catch (e) {
