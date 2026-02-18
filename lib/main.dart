@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'services/web_back_button_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -506,6 +507,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       _debugLog('  No win detected, skipping achievement check');
     }
 
+    // Update ELO ratings (skip for scenario/local games)
+    if (!isScenarioGame && session.mode != GameMode.local) {
+      await _updateEloRatings(gameState, session, onlineState);
+    }
+
     // Check for scenario completion
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
     if (activeScenario != null && (gameState.isGameOver || scenarioState.guidedStepComplete)) {
@@ -522,6 +528,87 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           _showAchievementNotification(achievementType);
         }
       }
+    }
+  }
+
+  Future<void> _updateEloRatings(
+    GameState gameState,
+    GameSessionConfig session,
+    OnlineGameState onlineState,
+  ) async {
+    final eloController = ref.read(eloProvider.notifier);
+    final isWhiteWin = gameState.result == GameResult.whiteWins;
+    final isBlackWin = gameState.result == GameResult.blackWins;
+    final isDraw = gameState.result == GameResult.draw;
+
+    if (session.mode == GameMode.vsComputer) {
+      // VS Computer: update human player and AI ratings
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final playerColor = session.vsComputerPlayerColor;
+      final aiDocId = 'ai_${session.aiDifficulty.name}';
+      final aiName = '${session.aiDifficulty.name[0].toUpperCase()}${session.aiDifficulty.name.substring(1)} AI';
+
+      // Determine player's display name
+      final playGames = ref.read(playGamesServiceProvider);
+      final displayName = playGames.player?.displayName ?? user.displayName ?? 'Player';
+
+      double scoreA; // score for the human player
+      if (isDraw) {
+        scoreA = 0.5;
+      } else if ((playerColor == PlayerColor.white && isWhiteWin) ||
+          (playerColor == PlayerColor.black && isBlackWin)) {
+        scoreA = 1.0;
+      } else {
+        scoreA = 0.0;
+      }
+
+      await eloController.recordGameResult(
+        playerAId: user.uid,
+        playerAName: displayName,
+        playerBId: aiDocId,
+        playerBName: aiName,
+        scoreA: scoreA,
+        playerBIsAi: true,
+      );
+    } else if (session.mode == GameMode.online) {
+      // Online: update both players' ratings
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final localColor = onlineState.localColor;
+      if (localColor == null) return;
+
+      final onlineSession = onlineState.session;
+      if (onlineSession == null) return;
+
+      final opponent = localColor == PlayerColor.white
+          ? onlineSession.black
+          : onlineSession.white;
+      if (opponent == null) return;
+
+      final playGames = ref.read(playGamesServiceProvider);
+      final displayName = playGames.player?.displayName ?? user.displayName ?? 'Player';
+
+      double scoreA; // score for local player
+      if (isDraw) {
+        scoreA = 0.5;
+      } else if ((localColor == PlayerColor.white && isWhiteWin) ||
+          (localColor == PlayerColor.black && isBlackWin)) {
+        scoreA = 1.0;
+      } else {
+        scoreA = 0.0;
+      }
+
+      await eloController.recordGameResult(
+        playerAId: user.uid,
+        playerAName: displayName,
+        playerBId: opponent.id,
+        playerBName: opponent.displayName,
+        scoreA: scoreA,
+        playerBIsAi: false,
+      );
     }
   }
 

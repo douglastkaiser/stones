@@ -12,6 +12,7 @@ import '../theme/theme.dart';
 import '../version.dart';
 import '../widgets/chess_clock_setup.dart';
 import 'achievements_screen.dart';
+import 'leaderboard_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
 import 'game_screen.dart';
@@ -53,6 +54,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
     // Attempt silent sign-in for Google Play Games
     await ref.read(playGamesServiceProvider.notifier).initialize();
+
+    // Initialize ELO rating system
+    await ref.read(eloProvider.notifier).initialize();
   }
 
   void _startNewGame(
@@ -545,29 +549,22 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   },
                 ),
                 const SizedBox(height: 8),
-                _DifficultyOption(
-                  title: 'Easy',
-                  isSelected: selectedDifficulty == AIDifficulty.easy,
-                  dense: true,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.easy),
-                ),
-                _DifficultyOption(
-                  title: 'Medium',
-                  isSelected: selectedDifficulty == AIDifficulty.medium,
-                  dense: true,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.medium),
-                ),
-                _DifficultyOption(
-                  title: 'Hard',
-                  isSelected: selectedDifficulty == AIDifficulty.hard,
-                  dense: true,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.hard),
-                ),
-                _DifficultyOption(
-                  title: 'Expert',
-                  isSelected: selectedDifficulty == AIDifficulty.expert,
-                  dense: true,
-                  onTap: () => setState(() => selectedDifficulty = AIDifficulty.expert),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final eloState = ref.watch(eloProvider);
+                    return Column(
+                      children: [
+                        for (final diff in AIDifficulty.values)
+                          _DifficultyOption(
+                            title: diff.name[0].toUpperCase() + diff.name.substring(1),
+                            subtitle: 'ELO: ${eloState.aiRatingFor(diff)}',
+                            isSelected: selectedDifficulty == diff,
+                            dense: true,
+                            onTap: () => setState(() => selectedDifficulty = diff),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -643,14 +640,34 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     ),
                   ),
                   if (playGames.player != null)
-                    _PlayerChip(
-                      displayName: playGames.player!.displayName,
-                      iconImage: playGames.iconImage,
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final eloState = ref.watch(eloProvider);
+                        return _PlayerChip(
+                          displayName: playGames.player!.displayName,
+                          iconImage: playGames.iconImage,
+                          rating: eloState.localPlayerRating?.rating,
+                        );
+                      },
                     ),
                   // Right side icons
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Leaderboard button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.leaderboard,
+                          color: GameColors.subtitleColor,
+                        ),
+                        tooltip: 'Leaderboard',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+                          );
+                        },
+                      ),
                       // Achievements button
                       IconButton(
                         icon: const Icon(
@@ -1055,10 +1072,12 @@ class _ScenarioListTile extends StatelessWidget {
 class _PlayerChip extends StatelessWidget {
   final String displayName;
   final String? iconImage;
+  final int? rating;
 
   const _PlayerChip({
     required this.displayName,
     this.iconImage,
+    this.rating,
   });
 
   @override
@@ -1087,6 +1106,7 @@ class _PlayerChip extends StatelessWidget {
         ],
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
             radius: 16,
@@ -1099,10 +1119,26 @@ class _PlayerChip extends StatelessWidget {
                 : null,
           ),
           const SizedBox(width: 8),
-          Text(
-            displayName,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                displayName,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              if (rating != null)
+                Text(
+                  'ELO: $rating',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
+                  ),
+                ),
+            ],
           ),
+          const SizedBox(width: 4),
         ],
       ),
     );
@@ -1184,6 +1220,7 @@ class _VersionFooter extends StatelessWidget {
 /// Difficulty option for AI picker
 class _DifficultyOption extends StatelessWidget {
   final String title;
+  final String? subtitle;
   final bool isSelected;
   final VoidCallback onTap;
   final bool dense;
@@ -1192,6 +1229,7 @@ class _DifficultyOption extends StatelessWidget {
     required this.title,
     required this.isSelected,
     required this.onTap,
+    this.subtitle,
     this.dense = false,
   });
 
@@ -1223,17 +1261,34 @@ class _DifficultyOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: dense ? 13 : 14,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? GameColors.boardFrameInner
-                      : isDark
-                          ? Colors.white
-                          : null,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: dense ? 13 : 14,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? GameColors.boardFrameInner
+                          : isDark
+                              ? Colors.white
+                              : null,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isSelected
+                            ? GameColors.boardFrameInner.withValues(alpha: 0.7)
+                            : isDark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade600,
+                      ),
+                    ),
+                ],
               ),
             ),
             if (isSelected)

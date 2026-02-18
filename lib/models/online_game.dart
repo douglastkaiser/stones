@@ -31,8 +31,9 @@ enum OnlineWinner { white, black, draw }
 class OnlineGamePlayer {
   final String id;
   final String displayName;
+  final int? rating;
 
-  const OnlineGamePlayer({required this.id, required this.displayName});
+  const OnlineGamePlayer({required this.id, required this.displayName, this.rating});
 
   /// Sanitize display name for security (public API)
   static String sanitize(String name) => _sanitizeDisplayName(name);
@@ -40,12 +41,14 @@ class OnlineGamePlayer {
   Map<String, dynamic> toMap() => {
         'id': id,
         'displayName': displayName,
+        if (rating != null) 'rating': rating,
       };
 
   factory OnlineGamePlayer.fromMap(Map<String, dynamic> map) {
     return OnlineGamePlayer(
       id: map['id'] as String? ?? '',
       displayName: _sanitizeDisplayName(map['displayName'] as String? ?? 'Player'),
+      rating: (map['rating'] as num?)?.toInt(),
     );
   }
 }

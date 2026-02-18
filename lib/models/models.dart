@@ -4,6 +4,7 @@ library;
 export 'achievement.dart';
 export 'board.dart';
 export 'cosmetics.dart';
+export 'elo_rating.dart';
 export 'game_state.dart';
 export 'piece.dart';
 export 'player.dart';
