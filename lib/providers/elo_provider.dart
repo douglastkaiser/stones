@@ -337,9 +337,12 @@ class EloController extends StateNotifier<EloState> {
     }
   }
 
-  /// Fetch leaderboard (top players + AI, ordered by rating)
+  /// Fetch leaderboard (top players + AI, ordered by rating).
+  /// Always includes AI entries even if Firebase is unavailable.
   Future<void> fetchLeaderboard() async {
     state = state.copyWith(loading: true);
+
+    List<EloRating> leaderboard = [];
     try {
       await _ensureFirebase();
       await _ensureAiRatingsExist();
@@ -350,15 +353,41 @@ class EloController extends StateNotifier<EloState> {
           .limit(50)
           .get();
 
-      final leaderboard = snapshot.docs
+      leaderboard = snapshot.docs
           .map((doc) => EloRating.fromMap(doc.id, doc.data()))
           .toList();
-
-      state = state.copyWith(leaderboard: leaderboard, loading: false);
     } catch (e) {
       _debugLog('Error fetching leaderboard: $e');
-      state = state.copyWith(loading: false, errorMessage: 'Failed to load leaderboard');
     }
+
+    // Ensure all AI difficulties appear on the leaderboard even if
+    // Firebase docs were not created or the query failed.
+    final existingIds = leaderboard.map((r) => r.id).toSet();
+    for (final difficulty in AIDifficulty.values) {
+      final docId = 'ai_${difficulty.name}';
+      if (!existingIds.contains(docId)) {
+        final defaultRating =
+            EloCalculator.aiDefaultRatings[difficulty.name] ?? 1200;
+        final displayName =
+            '${difficulty.name[0].toUpperCase()}${difficulty.name.substring(1)} AI';
+        leaderboard.add(EloRating(
+          id: docId,
+          displayName: displayName,
+          rating: defaultRating,
+          isAi: true,
+          aiDifficulty: difficulty.name,
+        ));
+      }
+    }
+
+    // Re-sort after adding any missing AI entries
+    leaderboard.sort((a, b) => b.rating.compareTo(a.rating));
+
+    state = state.copyWith(
+      leaderboard: leaderboard,
+      loading: false,
+      clearError: true,
+    );
   }
 
   /// Get a specific player's rating from Firebase
