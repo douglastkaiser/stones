@@ -75,6 +75,39 @@ class EloRating {
   }
 }
 
+/// A single point in a player's rating history
+class EloHistoryEntry {
+  final int rating;
+  final DateTime timestamp;
+  final String? opponentName;
+  final double? score;
+
+  const EloHistoryEntry({
+    required this.rating,
+    required this.timestamp,
+    this.opponentName,
+    this.score,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'rating': rating,
+        'timestamp': timestamp.millisecondsSinceEpoch,
+        if (opponentName != null) 'opponentName': opponentName,
+        if (score != null) 'score': score,
+      };
+
+  factory EloHistoryEntry.fromMap(Map<String, dynamic> map) {
+    return EloHistoryEntry(
+      rating: (map['rating'] as num?)?.toInt() ?? 1200,
+      timestamp: map['timestamp'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(map['timestamp'] as int)
+          : DateTime.now(),
+      opponentName: map['opponentName'] as String?,
+      score: (map['score'] as num?)?.toDouble(),
+    );
+  }
+}
+
 /// Standard ELO rating calculation
 class EloCalculator {
   const EloCalculator();

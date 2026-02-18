@@ -299,6 +299,27 @@ class EloController extends StateNotifier<EloState> {
 
       await batch.commit();
 
+      // Record history entries for both players
+      final now = DateTime.now();
+      await _recordHistoryEntry(
+        playerAId,
+        EloHistoryEntry(
+          rating: newRatingA,
+          timestamp: now,
+          opponentName: playerBName,
+          score: scoreA,
+        ),
+      );
+      await _recordHistoryEntry(
+        playerBId,
+        EloHistoryEntry(
+          rating: newRatingB,
+          timestamp: now,
+          opponentName: playerAName,
+          score: 1.0 - scoreA,
+        ),
+      );
+
       // Update local state
       final updatedLocalRating = ratingA.copyWith(
         displayName: playerAName,
@@ -352,6 +373,40 @@ class EloController extends StateNotifier<EloState> {
       _debugLog('Error fetching player rating: $e');
     }
     return null;
+  }
+
+  /// Record a history entry for a player's rating over time
+  Future<void> _recordHistoryEntry(String playerId, EloHistoryEntry entry) async {
+    try {
+      await _firestore
+          .collection('ratings')
+          .doc(playerId)
+          .collection('history')
+          .add(entry.toMap());
+    } catch (e) {
+      _debugLog('Error recording history for $playerId: $e');
+    }
+  }
+
+  /// Fetch rating history for a player, ordered by time
+  Future<List<EloHistoryEntry>> fetchRatingHistory(String playerId) async {
+    try {
+      await _ensureFirebase();
+      final snapshot = await _firestore
+          .collection('ratings')
+          .doc(playerId)
+          .collection('history')
+          .orderBy('timestamp')
+          .limit(200)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => EloHistoryEntry.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      _debugLog('Error fetching rating history for $playerId: $e');
+      return [];
+    }
   }
 
   /// Cache local rating to SharedPreferences for offline access

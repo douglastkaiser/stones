@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/elo_rating.dart';
 import '../providers/elo_provider.dart';
 import '../theme/game_colors.dart';
+import 'player_detail_screen.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -101,6 +102,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               rating: eloState.leaderboard[i],
               isCurrentUser: localRating != null &&
                   eloState.leaderboard[i].id == localRating.id,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PlayerDetailScreen(
+                      player: eloState.leaderboard[i],
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -211,11 +222,13 @@ class _LeaderboardEntry extends StatelessWidget {
   final int rank;
   final EloRating rating;
   final bool isCurrentUser;
+  final VoidCallback? onTap;
 
   const _LeaderboardEntry({
     required this.rank,
     required this.rating,
     this.isCurrentUser = false,
+    this.onTap,
   });
 
   @override
@@ -238,15 +251,18 @@ class _LeaderboardEntry extends StatelessWidget {
         ? (isDark ? Colors.amber.shade700 : Colors.amber.shade300)
         : Colors.transparent;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
         children: [
           // Rank
           SizedBox(
@@ -349,6 +365,7 @@ class _LeaderboardEntry extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
