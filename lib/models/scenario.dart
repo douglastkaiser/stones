@@ -1157,6 +1157,168 @@ final _puzzle11TheCrucible = GameScenario(
   ],
 );
 
+final _puzzle12IronCauseway = GameScenario(
+  id: 'puzzle_12',
+  title: 'Iron Causeway',
+  type: ScenarioType.puzzle,
+  puzzleDifficulty: PuzzleDifficulty.expert,
+  summary: 'Break a fortified defense with a precise three-move sequence.',
+  objective: 'Win in 3 moves. Every response is forced.',
+  dialogue: const [
+    'White to move.',
+    'The center is locked down with walls, heavy stacks, and both Capstones in play.',
+    'Build the threat, force two exact replies, then crack the final wall.',
+  ],
+  guidedMove: const GuidedMove.placement(
+    target: Position(2, 3),
+    pieceType: PieceType.flat,
+  ),
+  completionText:
+      'Perfect execution. You forced both replies, then used the Capstone break to finish the only winning road.',
+  hintText:
+      'Start with the quiet placement at (2,3). The winning break comes only after Black\'s forced wall responses.',
+  hintDelay: const Duration(seconds: 35),
+  buildInitialState: () => _buildScenarioState(
+    boardSize: 5,
+    currentPlayer: PlayerColor.white,
+    turnNumber: 43,
+    stacks: const [
+      // Row 0
+      PositionedStack(
+        position: Position(0, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(0, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(0, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(0, 3),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      PositionedStack(
+        position: Position(0, 4),
+        stack: PieceStack([Piece(type: PieceType.capstone, color: PlayerColor.black)]),
+      ),
+
+      // Row 1
+      PositionedStack(
+        position: Position(1, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(1, 1),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(1, 2),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(1, 3),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      PositionedStack(
+        position: Position(1, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+
+      // Row 2 - tactical core
+      PositionedStack(
+        position: Position(2, 0),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.capstone, color: PlayerColor.white),
+        ]),
+      ),
+      // (2,1) intentionally empty for move 2
+      // (2,2) intentionally empty, Black's forced second block
+      // (2,3) intentionally empty for move 1
+      PositionedStack(
+        position: Position(2, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+
+      // Row 3
+      PositionedStack(
+        position: Position(3, 0),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(3, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(3, 2),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(3, 3),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+      ),
+      PositionedStack(
+        position: Position(3, 4),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+
+      // Row 4
+      PositionedStack(
+        position: Position(4, 0),
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
+      ),
+      PositionedStack(
+        position: Position(4, 1),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+        ]),
+      ),
+      PositionedStack(
+        position: Position(4, 2),
+        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
+      ),
+      // (4,3) empty, Black's forced first block
+      PositionedStack(
+        position: Position(4, 4),
+        stack: PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          Piece(type: PieceType.flat, color: PlayerColor.white),
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+        ]),
+      ),
+    ],
+  ),
+  // Forced line:
+  // 1. White: place flat at (2,3) -> threatens Column 3 road (only block: 4,3 wall)
+  // ... Black: 4,3 standing
+  // 2. White: place flat at (2,1) -> threatens Row 2 road (only block: 2,2 wall)
+  // ... Black: 2,2 standing
+  // 3. White: move stack from (2,0) right with drops [1,1];
+  //    Capstone lands on (2,2), flattens wall, and completes Row 2.
+  scriptedResponses: const [
+    AIPlacementMove(Position(4, 3), PieceType.standing),
+    AIPlacementMove(Position(2, 2), PieceType.standing),
+  ],
+);
+
 // ============================================================================
 // LIBRARY EXPORT
 // ============================================================================
@@ -1173,10 +1335,11 @@ final List<GameScenario> tutorialAndPuzzleLibrary = [
   _tutorial7OpeningRule,
   _tutorial8FlatCount,
   _tutorial9PieceSupply,
-  // Puzzles (5)
+  // Puzzles (6)
   _puzzle6CaptureAndWin,
   _puzzle7TheSpread,
   _puzzle9CapstoneTactics,
   _puzzle10TheFork,
   _puzzle11TheCrucible,
+  _puzzle12IronCauseway,
 ];
