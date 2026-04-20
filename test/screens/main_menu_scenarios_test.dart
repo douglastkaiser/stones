@@ -17,7 +17,7 @@ void main() {
       expect(container.read(scenarioStateProvider).activeScenario, isNull);
 
       await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(find.text('Tutorials & Puzzles'), findsOneWidget);
       expect(find.text('Building a Road'), findsOneWidget);
@@ -42,22 +42,22 @@ void main() {
 
       // First attempt: cancel replacement.
       await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       await tester.tap(find.text('Building a Road'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(find.text('Replace current game?'), findsOneWidget);
       expect(find.widgetWithText(ElevatedButton, 'Start Scenario'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(container.read(scenarioStateProvider).activeScenario, isNull);
       expect(container.read(gameStateProvider), initialGame);
 
       // Second attempt: confirm replacement.
       await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       await tester.tap(find.text('Building a Road'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Start Scenario'));
       await tester.pump();
 
@@ -70,7 +70,7 @@ void main() {
       // Without tutorial_9 completion, first puzzle should be locked.
       await _pumpMainMenu(tester);
       await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final lockedPuzzleTile = _scenarioTileForTitle('Capture and Win');
       expect(
@@ -88,7 +88,7 @@ void main() {
         achievementState: const AchievementState(completedTutorials: {'tutorial_9'}),
       );
       await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final unlockedPuzzleTile = _scenarioTileForTitle('Capture and Win');
       expect(
@@ -143,7 +143,7 @@ Future<ProviderContainer> _pumpMainMenu(
       child: const MaterialApp(home: MainMenuScreen()),
     ),
   );
-  await tester.pumpAndSettle();
+  await tester.pump();
   return container;
 }
 
