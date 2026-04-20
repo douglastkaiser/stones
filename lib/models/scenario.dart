@@ -7,6 +7,13 @@ import '../services/ai/ai.dart';
 /// Type of structured experience shown in the tutorial hub.
 enum ScenarioType { tutorial, puzzle }
 
+/// Chapters used to guide players through a progressive learning path.
+enum ScenarioChapter {
+  fundamentals,
+  puzzleBasics,
+  puzzleAdvanced,
+}
+
 /// Difficulty level for puzzles.
 enum PuzzleDifficulty { easy, medium, hard, expert }
 
@@ -15,6 +22,9 @@ class GameScenario {
   final String id;
   final String title;
   final ScenarioType type;
+  final ScenarioChapter chapter;
+  final int orderInChapter;
+  final List<String> prerequisiteScenarioIds;
   final String summary;
   final String objective;
   final List<String> dialogue;
@@ -31,6 +41,9 @@ class GameScenario {
     required this.id,
     required this.title,
     required this.type,
+    required this.chapter,
+    required this.orderInChapter,
+    this.prerequisiteScenarioIds = const [],
     required this.summary,
     required this.objective,
     required this.dialogue,
@@ -43,6 +56,46 @@ class GameScenario {
     this.hintText,
     this.hintDelay,
   });
+}
+
+/// Grouped chapter data for building scenario selectors.
+class ScenarioChapterGroup {
+  final ScenarioChapter chapter;
+  final List<GameScenario> scenarios;
+
+  const ScenarioChapterGroup({
+    required this.chapter,
+    required this.scenarios,
+  });
+}
+
+/// Derives chapter groups from the single source-of-truth scenario list.
+List<ScenarioChapterGroup> buildScenarioChapterGroups() {
+  final grouped = <ScenarioChapter, List<GameScenario>>{};
+  for (final scenario in tutorialAndPuzzleLibrary) {
+    grouped.putIfAbsent(scenario.chapter, () => <GameScenario>[]).add(scenario);
+  }
+
+  return grouped.entries
+      .map(
+        (entry) => ScenarioChapterGroup(
+          chapter: entry.key,
+          scenarios: [...entry.value]
+            ..sort((a, b) => a.orderInChapter.compareTo(b.orderInChapter)),
+        ),
+      )
+      .toList()
+    ..sort((a, b) => a.chapter.index.compareTo(b.chapter.index));
+}
+
+extension ScenarioChapterPresentation on ScenarioChapter {
+  String get title {
+    return switch (this) {
+      ScenarioChapter.fundamentals => 'Chapter 1 · Fundamentals',
+      ScenarioChapter.puzzleBasics => 'Chapter 2 · Puzzle Basics',
+      ScenarioChapter.puzzleAdvanced => 'Chapter 3 · Advanced Puzzles',
+    };
+  }
 }
 
 /// Type of action the user is being guided toward.
@@ -235,6 +288,9 @@ final _tutorial1BuildingRoad = GameScenario(
   id: 'tutorial_1',
   title: 'Building a Road',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 1,
   summary: 'Complete a road from top to bottom.',
   objective: 'Place a stone to complete the road.',
   dialogue: const [
@@ -287,6 +343,10 @@ final _tutorial2StandingStones = GameScenario(
   id: 'tutorial_2',
   title: 'Standing Stones (Walls)',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 2,
+  prerequisiteScenarioIds: ['tutorial_1'],
   summary: 'Use a wall to block an opponent\'s road.',
   objective: 'Select the wall piece type, then place it to block Black.',
   dialogue: const [
@@ -343,6 +403,10 @@ final _tutorial3Capstone = GameScenario(
   id: 'tutorial_3',
   title: 'The Capstone',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 3,
+  prerequisiteScenarioIds: ['tutorial_2'],
   summary: 'Use the Capstone to flatten a wall.',
   objective: 'Move the Capstone onto the wall to flatten it.',
   dialogue: const [
@@ -416,6 +480,10 @@ final _tutorial4MovingSinglePiece = GameScenario(
   id: 'tutorial_4',
   title: 'Moving a Single Piece',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 4,
+  prerequisiteScenarioIds: ['tutorial_3'],
   summary: 'Learn to move pieces on the board.',
   objective: 'Move your stone onto the adjacent black piece.',
   dialogue: const [
@@ -461,6 +529,10 @@ final _tutorial5StacksAndControl = GameScenario(
   id: 'tutorial_5',
   title: 'Stacks and Control',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 5,
+  prerequisiteScenarioIds: ['tutorial_4'],
   summary: 'Understand stack control.',
   objective: 'Move the stack to demonstrate control.',
   dialogue: const [
@@ -497,6 +569,10 @@ final _tutorial6StackMovement = GameScenario(
   id: 'tutorial_6',
   title: 'Stack Movement & Carry Limit',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 6,
+  prerequisiteScenarioIds: ['tutorial_5'],
   summary: 'Learn about carry limits and dropping pieces.',
   objective: 'Spread the stack across the board.',
   dialogue: const [
@@ -557,6 +633,10 @@ final _tutorial7OpeningRule = GameScenario(
   id: 'tutorial_7',
   title: 'The Opening Rule',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 7,
+  prerequisiteScenarioIds: ['tutorial_6'],
   summary: 'Learn the special first-turn rule.',
   objective: 'Place a Black flat stone (your opponent\'s color).',
   dialogue: const [
@@ -584,6 +664,10 @@ final _tutorial8FlatCount = GameScenario(
   id: 'tutorial_8',
   title: 'Winning by Flat Count',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 8,
+  prerequisiteScenarioIds: ['tutorial_7'],
   summary: 'Learn the alternative win condition.',
   objective: 'Place your last stone to fill the board and win!',
   dialogue: const [
@@ -641,6 +725,10 @@ final _tutorial9PieceSupply = GameScenario(
   id: 'tutorial_9',
   title: 'Running Out of Pieces',
   type: ScenarioType.tutorial,
+
+  chapter: ScenarioChapter.fundamentals,
+  orderInChapter: 9,
+  prerequisiteScenarioIds: ['tutorial_8'],
   summary: 'Manage your limited piece supply.',
   objective: 'Place your last piece to end the game.',
   dialogue: const [
@@ -721,6 +809,10 @@ final _puzzle6CaptureAndWin = GameScenario(
   id: 'puzzle_6',
   title: 'Capture and Win',
   type: ScenarioType.puzzle,
+
+  chapter: ScenarioChapter.puzzleBasics,
+  orderInChapter: 1,
+  prerequisiteScenarioIds: ['tutorial_9'],
   puzzleDifficulty: PuzzleDifficulty.hard,
   summary: 'Capture a stack to complete your road!',
   objective: 'Win in 1 move. Capture the enemy stack to complete your road!',
@@ -779,6 +871,10 @@ final _puzzle7TheSpread = GameScenario(
   id: 'puzzle_7',
   title: 'The Spread',
   type: ScenarioType.puzzle,
+
+  chapter: ScenarioChapter.puzzleBasics,
+  orderInChapter: 2,
+  prerequisiteScenarioIds: ['puzzle_6'],
   puzzleDifficulty: PuzzleDifficulty.hard,
   summary: 'Spread your stack to complete your road!',
   objective: 'Win in 1 move. Spread over the enemy pieces to complete your road!',
@@ -836,6 +932,10 @@ final _puzzle9CapstoneTactics = GameScenario(
   id: 'puzzle_9',
   title: 'Capstone Tactics',
   type: ScenarioType.puzzle,
+
+  chapter: ScenarioChapter.puzzleBasics,
+  orderInChapter: 3,
+  prerequisiteScenarioIds: ['puzzle_7'],
   puzzleDifficulty: PuzzleDifficulty.hard,
   summary: 'Use your Capstone to flatten and win!',
   objective: 'Win in 1 move. Flatten the wall to complete your road!',
@@ -890,6 +990,10 @@ final _puzzle10TheFork = GameScenario(
   id: 'puzzle_10',
   title: 'The Fork',
   type: ScenarioType.puzzle,
+
+  chapter: ScenarioChapter.puzzleAdvanced,
+  orderInChapter: 1,
+  prerequisiteScenarioIds: ['puzzle_9'],
   puzzleDifficulty: PuzzleDifficulty.expert,
   summary: 'Create a fork Black cannot escape!',
   objective: 'Win in 2 moves. Create a double threat!',
@@ -948,6 +1052,10 @@ final _puzzle11TheCrucible = GameScenario(
   id: 'puzzle_11',
   title: 'The Crucible',
   type: ScenarioType.puzzle,
+
+  chapter: ScenarioChapter.puzzleAdvanced,
+  orderInChapter: 2,
+  prerequisiteScenarioIds: ['puzzle_10'],
   puzzleDifficulty: PuzzleDifficulty.expert,
   summary: 'A three-move forced win — if you find the right sequence!',
   objective: 'Win in 3 moves. Every move must be precise!',
@@ -1161,6 +1269,10 @@ final _puzzle12IronCauseway = GameScenario(
   id: 'puzzle_12',
   title: 'Iron Causeway',
   type: ScenarioType.puzzle,
+
+  chapter: ScenarioChapter.puzzleAdvanced,
+  orderInChapter: 3,
+  prerequisiteScenarioIds: ['puzzle_11'],
   puzzleDifficulty: PuzzleDifficulty.expert,
   summary: 'Break a fortified defense with a precise three-move sequence.',
   objective: 'Win in 3 moves. Every response is forced.',
