@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stones/models/models.dart';
-import 'package:stones/providers/achievements_provider.dart';
-import 'package:stones/providers/cosmetics_provider.dart';
-import 'package:stones/providers/elo_provider.dart';
 import 'package:stones/providers/providers.dart';
-import 'package:stones/providers/scenario_provider.dart';
-import 'package:stones/providers/settings_provider.dart';
 import 'package:stones/screens/main_menu_screen.dart';
 import 'package:stones/services/play_games_service.dart';
 import 'package:stones/services/sound_manager.dart';
@@ -183,12 +178,14 @@ Future<ProviderContainer> _pumpMainMenu(
 }) async {
   final container = ProviderContainer(
     overrides: [
-      achievementProvider.overrideWith(() => _TestAchievementNotifier(achievementState)),
-      gameStateProvider.overrideWith(() => _TestGameStateNotifier(gameState ?? GameState.initial(5))),
-      scenarioStateProvider.overrideWith(() => _TestScenarioStateNotifier(scenarioState)),
-      appSettingsProvider.overrideWith(() => _TestAppSettingsNotifier()),
-      cosmeticsProvider.overrideWith(() => _TestCosmeticsNotifier()),
-      eloProvider.overrideWith(() => _TestEloController()),
+      achievementProvider.overrideWith((ref) => _TestAchievementNotifier(achievementState)),
+      gameStateProvider.overrideWith(
+        (ref) => _TestGameStateNotifier(gameState ?? GameState.initial(5)),
+      ),
+      scenarioStateProvider.overrideWith((ref) => _TestScenarioStateNotifier(scenarioState)),
+      appSettingsProvider.overrideWith((ref) => _TestAppSettingsNotifier()),
+      cosmeticsProvider.overrideWith((ref) => _TestCosmeticsNotifier()),
+      eloProvider.overrideWith((ref) => _TestEloController()),
       playGamesServiceProvider.overrideWith((ref) => _TestPlayGamesService(ref)),
       soundManagerProvider.overrideWithValue(_TestSoundManager()),
     ],
@@ -240,12 +237,7 @@ class _TestScenarioStateNotifier extends ScenarioStateNotifier {
 
 class _TestAppSettingsNotifier extends AppSettingsNotifier {
   _TestAppSettingsNotifier() : super() {
-    state = const AppSettings(
-      boardSize: 5,
-      isSoundMuted: false,
-      chessClockEnabled: false,
-      chessClockDefaults: ChessClockDefaults.baseTimes,
-    );
+    state = const AppSettings();
   }
 
   @override
