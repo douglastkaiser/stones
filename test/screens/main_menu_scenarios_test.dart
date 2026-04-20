@@ -204,9 +204,8 @@ class _TestEloController extends EloController {
 }
 
 class _TestPlayGamesService extends PlayGamesService {
-  _TestPlayGamesService(Ref ref)
+  _TestPlayGamesService(super.ref)
       : super(
-          ref,
           enablePlayerListener: false,
         );
 
