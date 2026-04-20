@@ -375,6 +375,19 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   void _openScenarioSelector(BuildContext context) {
     final achievements = ref.read(achievementProvider);
+    final completedScenarioIds = <String>{
+      ...achievements.completedTutorials,
+      ...achievements.completedPuzzles,
+    };
+    final chapterGroups = buildScenarioChapterGroups();
+
+    bool isScenarioUnlocked(GameScenario scenario) {
+      // Progression model: each scenario can declare prerequisite IDs that must
+      // be completed before the next lesson/puzzle is available. This lets us
+      // gate advanced content while preserving legacy scenario IDs/progress.
+      return scenario.prerequisiteScenarioIds
+          .every((id) => completedScenarioIds.contains(id));
+    }
 
     showDialog(
       context: context,
@@ -386,17 +399,32 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (final scenario in tutorialAndPuzzleLibrary)
-                  _ScenarioListTile(
-                    scenario: scenario,
-                    completed: scenario.type == ScenarioType.tutorial
-                        ? achievements.completedTutorials.contains(scenario.id)
-                        : achievements.completedPuzzles.contains(scenario.id),
-                    onTap: () {
-                      Navigator.pop(dialogContext);
-                      _startScenarioFlow(context, scenario);
-                    },
+                for (final group in chapterGroups) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        group.chapter.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                   ),
+                  for (final scenario in group.scenarios)
+                    _ScenarioListTile(
+                      scenario: scenario,
+                      completed: scenario.type == ScenarioType.tutorial
+                          ? achievements.completedTutorials.contains(scenario.id)
+                          : achievements.completedPuzzles.contains(scenario.id),
+                      locked: !isScenarioUnlocked(scenario),
+                      onTap: () {
+                        Navigator.pop(dialogContext);
+                        _startScenarioFlow(context, scenario);
+                      },
+                    ),
+                ],
               ],
             ),
           ),
@@ -966,11 +994,13 @@ class _LogoPainter extends CustomPainter {
 class _ScenarioListTile extends StatelessWidget {
   final GameScenario scenario;
   final bool completed;
+  final bool locked;
   final VoidCallback onTap;
 
   const _ScenarioListTile({
     required this.scenario,
     required this.completed,
+    required this.locked,
     required this.onTap,
   });
 
@@ -991,7 +1021,9 @@ class _ScenarioListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPuzzle = scenario.type == ScenarioType.puzzle;
-    final accent = isPuzzle ? Colors.deepPurple : GameColors.boardFrameInner;
+    final accent = locked
+        ? Theme.of(context).colorScheme.outline
+        : (isPuzzle ? Colors.deepPurple : GameColors.boardFrameInner);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -1011,23 +1043,27 @@ class _ScenarioListTile extends StatelessWidget {
         ],
       ),
       child: ListTile(
-        onTap: onTap,
+        onTap: locked ? null : onTap,
         leading: CircleAvatar(
           backgroundColor: accent.withValues(alpha: 0.12),
           foregroundColor: accent,
-          child: Icon(isPuzzle ? Icons.extension : Icons.menu_book),
+          child: Icon(locked ? Icons.lock_outline : (isPuzzle ? Icons.extension : Icons.menu_book)),
         ),
         title: Text(
           scenario.title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : null,
+            color: locked
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : (isDark ? Colors.white : null),
           ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            scenario.summary,
+            locked
+                ? 'Complete previous scenarios to unlock.'
+                : scenario.summary,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1037,7 +1073,7 @@ class _ScenarioListTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Chip(
-              label: Text(_getScenarioLabel()),
+              label: Text(locked ? 'Locked' : _getScenarioLabel()),
               backgroundColor: accent.withValues(alpha: 0.15),
               labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
             ),
