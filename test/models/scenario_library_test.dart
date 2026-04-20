@@ -103,6 +103,7 @@ void main() {
             expect(guidedMove.from, isNull);
             expect(guidedMove.direction, isNull);
             expect(guidedMove.drops, isNull);
+            break;
 
           case GuidedMoveType.stackMove:
             expect(guidedMove.from, isNotNull,
@@ -118,6 +119,7 @@ void main() {
               isTrue,
               reason: 'Stack move in ${scenario.id} must have positive drops only.',
             );
+            break;
 
           case GuidedMoveType.anyPlacement:
             expect(guidedMove.target, isNull);
@@ -125,6 +127,7 @@ void main() {
             expect(guidedMove.from, isNull);
             expect(guidedMove.direction, isNull);
             expect(guidedMove.drops, isNull);
+            break;
 
           case GuidedMoveType.anyStackMove:
             expect(guidedMove.from, isNotNull,
@@ -133,6 +136,7 @@ void main() {
             expect(guidedMove.direction, isNull);
             expect(guidedMove.drops, isNull);
             expect(guidedMove.allowedTargets, isNull);
+            break;
         }
 
         for (final position in guidedMove.highlightedCells(state.boardSize)) {
@@ -159,6 +163,7 @@ void main() {
                 reason:
                     'Scenario ${scenario.id} has scripted placement out of bounds: ${response.position}',
               );
+              break;
 
             case AIStackMove():
               expect(
@@ -189,6 +194,7 @@ void main() {
                       'Scenario ${scenario.id} scripted path exits board at step ${i + 1}: $current',
                 );
               }
+              break;
           }
         }
       }
