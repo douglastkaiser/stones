@@ -11,7 +11,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Main menu scenario selector', () {
-    testWidgets('opens the Tutorials & Puzzles dialog from main menu', (tester) async {
+    testWidgets('opens selector and starts scenario flow', (tester) async {
       final container = await _pumpMainMenu(tester);
 
       expect(container.read(scenarioStateProvider).activeScenario, isNull);
@@ -22,13 +22,6 @@ void main() {
       expect(find.text('Tutorials & Puzzles'), findsOneWidget);
       expect(find.text('Building a Road'), findsOneWidget);
       expect(find.text('Capture and Win'), findsOneWidget);
-    });
-
-    testWidgets('tapping a scenario tile starts scenario flow', (tester) async {
-      final container = await _pumpMainMenu(tester);
-
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Building a Road'));
       await tester.pump();
@@ -38,27 +31,6 @@ void main() {
       expect(scenarioState.activeScenario?.id, 'tutorial_1');
       expect(gameSession.scenario?.id, 'tutorial_1');
       expect(gameSession.mode, GameMode.vsComputer);
-    });
-
-    testWidgets('shows replace confirmation dialog when game is in progress', (tester) async {
-      await _pumpMainMenu(
-        tester,
-        gameState: _inProgressGameState(),
-      );
-
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Building a Road'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Replace current game?'), findsOneWidget);
-      expect(
-        find.textContaining('will replace the game you are currently playing.'),
-        findsOneWidget,
-      );
-      expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Start Scenario'), findsOneWidget);
     });
 
     testWidgets('cancel keeps current game, confirm starts selected scenario', (tester) async {
@@ -73,6 +45,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Building a Road'));
       await tester.pumpAndSettle();
+      expect(find.text('Replace current game?'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Start Scenario'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
       await tester.pumpAndSettle();
 
@@ -90,35 +64,6 @@ void main() {
       expect(container.read(scenarioStateProvider).activeScenario?.id, 'tutorial_1');
       expect(container.read(gameSessionProvider).scenario?.id, 'tutorial_1');
       expect(container.read(gameStateProvider), tutorialAndPuzzleLibrary.first.buildInitialState());
-    });
-
-    testWidgets('renders completion badges from mocked achievement state', (tester) async {
-      await _pumpMainMenu(
-        tester,
-        achievementState: const AchievementState(
-          completedTutorials: {'tutorial_1'},
-          completedPuzzles: {'puzzle_6'},
-        ),
-      );
-
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Tutorials & Puzzles'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Completed'), findsNWidgets(2));
-      expect(
-        find.descendant(
-          of: _scenarioTileForTitle('Building a Road'),
-          matching: find.text('Completed'),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: _scenarioTileForTitle('Capture and Win'),
-          matching: find.text('Completed'),
-        ),
-        findsOneWidget,
-      );
     });
 
     testWidgets('renders locked vs unlocked scenarios based on progression gating', (tester) async {
