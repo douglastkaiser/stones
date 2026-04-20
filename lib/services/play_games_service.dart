@@ -49,9 +49,12 @@ class PlayGamesState {
 }
 
 class PlayGamesService extends StateNotifier<PlayGamesState> {
-  PlayGamesService(this._ref) : super(const PlayGamesState()) {
+  PlayGamesService(
+    this._ref, {
+    bool enablePlayerListener = true,
+  }) : super(const PlayGamesState()) {
     // Play Games Services is not available on web
-    if (!kIsWeb) {
+    if (!kIsWeb && enablePlayerListener) {
       _listenToPlayer();
     }
   }
