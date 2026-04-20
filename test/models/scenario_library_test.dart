@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stones/models/models.dart';
+import 'package:stones/services/ai/ai.dart';
 
 void main() {
   group('tutorialAndPuzzleLibrary', () {
