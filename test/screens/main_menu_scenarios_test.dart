@@ -204,7 +204,11 @@ class _TestEloController extends EloController {
 }
 
 class _TestPlayGamesService extends PlayGamesService {
-  _TestPlayGamesService(super.ref);
+  _TestPlayGamesService(Ref ref)
+      : super(
+          ref,
+          enablePlayerListener: false,
+        );
 
   @override
   Future<void> initialize() async {
