@@ -173,7 +173,7 @@ void main() {
       final states = <OnlineGameState>[];
       controller.addListener(states.add, fireImmediately: true);
 
-      await controller.createGame(boardSize: 5, creatorColor: PlayerColor.white);
+      await controller.createGame(boardSize: 5);
 
       expect(states.any((s) => s.creating), isTrue);
       expect(controller.state.creating, isFalse);
@@ -184,7 +184,7 @@ void main() {
     });
 
     test('join game toggles joining and assigns opposite color', () async {
-      await controller.createGame(boardSize: 5, creatorColor: PlayerColor.white);
+      await controller.createGame(boardSize: 5);
       final code = controller.state.roomCode!;
 
       final joinerContainer = ProviderContainer(
@@ -211,14 +211,14 @@ void main() {
   });
 
   test('recordLocalMove only records on local turn', () async {
-    await controller.createGame(boardSize: 5, creatorColor: PlayerColor.white);
+    await controller.createGame(boardSize: 5);
     final stateBefore = container.read(gameStateProvider);
 
     final move = MoveRecord(
       notation: 'a1',
       player: PlayerColor.white,
       turnNumber: 1,
-      affectedPositions: const {Position(4, 0)},
+      affectedPositions: {const Position(4, 0)},
       stateBefore: stateBefore,
     );
 
@@ -249,11 +249,10 @@ void main() {
   });
 
   test('stream updates disconnected and reconnecting flags', () async {
-    await controller.createGame(boardSize: 5, creatorColor: PlayerColor.white);
+    await controller.createGame(boardSize: 5);
     final code = controller.state.roomCode!;
 
     final stale = controller.state.session!.copyWith(
-      roomCode: code,
       status: OnlineStatus.playing,
       black: const OnlineGamePlayer(id: 'u2', displayName: 'Opponent'),
       lastMoveAt: DateTime.now().subtract(const Duration(seconds: 130)),
