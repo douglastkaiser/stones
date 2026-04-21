@@ -32,8 +32,8 @@ void _debugLog(String message) {
   }
 }
 
-/// Sanitize error messages for user display to prevent information disclosure
-String _sanitizeErrorMessage(Object error) {
+/// Sanitize error messages for user display to prevent information disclosure.
+String sanitizeOnlineErrorMessage(Object error) {
   final errorStr = error.toString();
 
   // If it's an Exception with a message, extract it
@@ -136,13 +136,257 @@ class OnlineGameState {
   }
 }
 
+class OnlineAuthUser {
+  final String uid;
+  final String? displayName;
+
+  const OnlineAuthUser({required this.uid, this.displayName});
+}
+
+class JoinRoomResult {
+  final OnlineGameSession session;
+  final PlayerColor localColor;
+
+  const JoinRoomResult({
+    required this.session,
+    required this.localColor,
+  });
+}
+
+abstract class OnlineAuthAdapter {
+  Future<void> initializeFirebase();
+  Future<void> activateAppCheck();
+  OnlineAuthUser? get currentUser;
+  Future<OnlineAuthUser?> ensureAuth(Ref ref, {bool force = false});
+}
+
+abstract class OnlineFirestoreAdapter {
+  Future<void> createRoom(String code, Map<String, dynamic> data);
+  Future<JoinRoomResult> joinRoom({
+    required String code,
+    required OnlineGamePlayer joiner,
+  });
+  Stream<Map<String, dynamic>?> watchRoom(String code);
+  Future<void> recordLocalMove({
+    required String roomCode,
+    required PlayerColor localColor,
+    required MoveRecord move,
+    required GameState latestState,
+  });
+  Future<void> updateRoom(String roomCode, Map<String, dynamic> data);
+}
+
+class FirebaseOnlineAuthAdapter implements OnlineAuthAdapter {
+  @override
+  Future<void> initializeFirebase() {
+    return Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
+  @override
+  Future<void> activateAppCheck() {
+    return FirebaseAppCheck.instance.activate(
+      androidProvider: kDebugMode
+          ? AndroidProvider.debug
+          : AndroidProvider.playIntegrity,
+      appleProvider: kDebugMode
+          ? AppleProvider.debug
+          : AppleProvider.appAttest,
+      webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
+    );
+  }
+
+  @override
+  OnlineAuthUser? get currentUser {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    return OnlineAuthUser(uid: user.uid, displayName: user.displayName);
+  }
+
+  @override
+  Future<OnlineAuthUser?> ensureAuth(Ref ref, {bool force = false}) async {
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser != null && !force) {
+      final user = auth.currentUser!;
+      return OnlineAuthUser(uid: user.uid, displayName: user.displayName);
+    }
+
+    if (kIsWeb) {
+      try {
+        final credential = await auth.signInAnonymously();
+        final user = credential.user;
+        return user == null
+            ? null
+            : OnlineAuthUser(uid: user.uid, displayName: user.displayName);
+      } catch (_) {
+        throw Exception('Unable to connect. Please try again.');
+      }
+    }
+
+    try {
+      await ref.read(playGamesServiceProvider.notifier).manualSignIn();
+    } catch (_) {
+      // Ignore Play Games sign in failures; Firebase auth is the source of truth.
+    }
+
+    try {
+      final credential = await auth.signInWithProvider(GoogleAuthProvider());
+      final user = credential.user;
+      return user == null
+          ? null
+          : OnlineAuthUser(uid: user.uid, displayName: user.displayName);
+    } catch (_) {
+      throw Exception('Please sign in with Google to play online.');
+    }
+  }
+}
+
+class FirebaseOnlineFirestoreAdapter implements OnlineFirestoreAdapter {
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+
+  @override
+  Future<void> createRoom(String code, Map<String, dynamic> data) {
+    return _firestore.collection('games').doc(code).set(data);
+  }
+
+  @override
+  Future<JoinRoomResult> joinRoom({
+    required String code,
+    required OnlineGamePlayer joiner,
+  }) async {
+    final docRef = _firestore.collection('games').doc(code);
+    OnlineGameSession? joinedSession;
+    PlayerColor? joinerColor;
+
+    await _firestore.runTransaction((txn) async {
+      final snapshot = await txn.get(docRef);
+      if (!snapshot.exists) {
+        throw Exception('Game not found. Check the code and try again.');
+      }
+      final data = snapshot.data();
+      if (data == null) throw Exception('Game data missing.');
+      final existing = OnlineGameSession.fromSnapshot(code, data);
+
+      if (existing.status == OnlineStatus.finished) {
+        throw Exception('This game has already ended.');
+      }
+
+      joinerColor = existing.creatorColor == PlayerColor.white
+          ? PlayerColor.black
+          : PlayerColor.white;
+
+      if (joinerColor == PlayerColor.white) {
+        if (existing.white != null && existing.white!.id != joiner.id) {
+          throw Exception('Game already has two players.');
+        }
+        joinedSession = existing.copyWith(
+          white: joiner,
+          status: OnlineStatus.playing,
+        );
+        txn.update(docRef, {
+          'white': joiner.toMap(),
+          'status': OnlineStatus.playing.name,
+          'lastMoveAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        if (existing.black != null && existing.black!.id != joiner.id) {
+          throw Exception('Game already has two players.');
+        }
+        joinedSession = existing.copyWith(
+          black: joiner,
+          status: OnlineStatus.playing,
+        );
+        txn.update(docRef, {
+          'black': joiner.toMap(),
+          'status': OnlineStatus.playing.name,
+          'lastMoveAt': FieldValue.serverTimestamp(),
+        });
+      }
+    });
+
+    if (joinedSession == null || joinerColor == null) {
+      throw Exception('Failed to join game.');
+    }
+
+    return JoinRoomResult(session: joinedSession!, localColor: joinerColor!);
+  }
+
+  @override
+  Stream<Map<String, dynamic>?> watchRoom(String code) {
+    return _firestore.collection('games').doc(code).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return null;
+      return Map<String, dynamic>.from(data);
+    });
+  }
+
+  @override
+  Future<void> recordLocalMove({
+    required String roomCode,
+    required PlayerColor localColor,
+    required MoveRecord move,
+    required GameState latestState,
+  }) async {
+    final docRef = _firestore.collection('games').doc(roomCode);
+    final nextStatus = latestState.isGameOver
+        ? OnlineStatus.finished.name
+        : OnlineStatus.playing.name;
+    final winner = latestState.result == null
+        ? null
+        : latestState.result == GameResult.draw
+            ? OnlineWinner.draw.name
+            : latestState.result == GameResult.whiteWins
+                ? OnlineWinner.white.name
+                : OnlineWinner.black.name;
+
+    await _firestore.runTransaction((txn) async {
+      final snapshot = await txn.get(docRef);
+      if (!snapshot.exists) return;
+      final data = snapshot.data();
+      if (data == null) return;
+      final rawMoves = data['moves'] as List? ?? [];
+      final moves = rawMoves.map((m) {
+        if (m is Map<String, dynamic>) return m;
+        if (m is Map) return Map<String, dynamic>.from(m);
+        return <String, dynamic>{};
+      }).toList();
+
+      final newMoveMap = OnlineGameMove(
+        notation: move.notation,
+        player: localColor,
+      ).toMap();
+      moves.add(newMoveMap);
+
+      txn.update(docRef, {
+        'moves': moves,
+        'currentTurn': latestState.currentPlayer.name,
+        'status': nextStatus,
+        'winner': winner,
+        'lastMoveAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  @override
+  Future<void> updateRoom(String roomCode, Map<String, dynamic> data) {
+    return _firestore.collection('games').doc(roomCode).update(data);
+  }
+}
+
 class OnlineGameController extends StateNotifier<OnlineGameState> {
-  OnlineGameController(this._ref) : super(const OnlineGameState());
+  OnlineGameController(
+    this._ref, {
+    OnlineAuthAdapter? authAdapter,
+    OnlineFirestoreAdapter? firestoreAdapter,
+  })  : _authAdapter = authAdapter ?? FirebaseOnlineAuthAdapter(),
+        _firestoreAdapter = firestoreAdapter ?? FirebaseOnlineFirestoreAdapter(),
+        super(const OnlineGameState());
 
   final Ref _ref;
-  // Lazy access to Firestore - only accessed after Firebase is initialized
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
+  final OnlineAuthAdapter _authAdapter;
+  final OnlineFirestoreAdapter _firestoreAdapter;
+  StreamSubscription<Map<String, dynamic>?>? _subscription;
   bool _firebaseInitialized = false;
   bool _appCheckActivated = false;
 
@@ -162,11 +406,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     state = state.copyWith(initializing: true);
     try {
       // Initialize Firebase - always try, catch if already initialized
-      _debugLog('initialize: Calling Firebase.initializeApp');
+      _debugLog('initialize: Calling auth adapter initializeFirebase');
       try {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
+        await _authAdapter.initializeFirebase();
         _debugLog('initialize: Firebase initialized successfully');
       } catch (e) {
         // Firebase might already be initialized - check if that's the case
@@ -183,16 +425,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       if (!_appCheckActivated) {
         _debugLog('initialize: Activating Firebase App Check');
         try {
-          await FirebaseAppCheck.instance.activate(
-            // Use debug provider in debug mode for testing
-            androidProvider: kDebugMode
-                ? AndroidProvider.debug
-                : AndroidProvider.playIntegrity,
-            appleProvider: kDebugMode
-                ? AppleProvider.debug
-                : AppleProvider.appAttest,
-            webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
-          );
+          await _authAdapter.activateAppCheck();
           _appCheckActivated = true;
           _debugLog('initialize: Firebase App Check activated successfully');
         } catch (appCheckError) {
@@ -237,10 +470,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     state = state.copyWith(creating: true);
     try {
       _debugLog('createGame: checking currentUser');
-      final existingUser = FirebaseAuth.instance.currentUser;
+      final existingUser = _authAdapter.currentUser;
       _debugLog('createGame: currentUser=${existingUser?.uid}');
 
-      final user = existingUser ?? (await _ensureAuth(force: true));
+      final user = existingUser ?? (await _authAdapter.ensureAuth(_ref, force: true));
       _debugLog('createGame: got user=${user?.uid}');
 
       if (user == null) {
@@ -262,11 +495,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       // Create with both createdAt and lastMoveAt fields
       final data = session.toMap();
-      data['createdAt'] = FieldValue.serverTimestamp();
-      data['lastMoveAt'] = FieldValue.serverTimestamp();
+      data['createdAt'] = DateTime.now();
+      data['lastMoveAt'] = DateTime.now();
 
       _debugLog('Creating game in Firestore with code=$code');
-      await _firestore.collection('games').doc(code).set(data);
+      await _firestoreAdapter.createRoom(code, data);
       _debugLog('Game created, setting up listener as $creatorColor');
       await _listenToRoom(code, localColor: creatorColor);
       state = state.copyWith(
@@ -279,7 +512,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _beginLocalGame(boardSize, session: session);
     } catch (e) {
       _debugLog('createGame error: $e');
-      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
+      state = state.copyWith(errorMessage: sanitizeOnlineErrorMessage(e));
     } finally {
       state = state.copyWith(creating: false);
     }
@@ -308,74 +541,22 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
 
     try {
-      final user = FirebaseAuth.instance.currentUser ??
-          (await _ensureAuth(force: true));
+      final user = _authAdapter.currentUser ??
+          (await _authAdapter.ensureAuth(_ref, force: true));
       if (user == null) {
         throw Exception('Unable to sign in. Please try again.');
       }
 
-      final docRef = _firestore.collection('games').doc(code);
-      OnlineGameSession? joinedSession;
-      PlayerColor? joinerColor;
-      _debugLog('Starting Firestore transaction to join game');
-      await _firestore.runTransaction((txn) async {
-        final snapshot = await txn.get(docRef);
-        if (!snapshot.exists) {
-          throw Exception('Game not found. Check the code and try again.');
-        }
-        final data = snapshot.data();
-        if (data == null) throw Exception('Game data missing.');
-        final existing = OnlineGameSession.fromSnapshot(code, data);
-        _debugLog('Found game: boardSize=${existing.boardSize}, moves=${existing.moves.length}, currentTurn=${existing.currentTurn}, creatorColor=${existing.creatorColor}');
-
-        if (existing.status == OnlineStatus.finished) {
-          throw Exception('This game has already ended.');
-        }
-
-        // Determine joiner's color (opposite of creator's color)
-        joinerColor = existing.creatorColor == PlayerColor.white
-            ? PlayerColor.black
-            : PlayerColor.white;
-
-        // Check if the slot for joiner's color is available
-        final joinerPlayer = _playerFor(user);
-        if (joinerColor == PlayerColor.white) {
-          if (existing.white != null && existing.white!.id != user.uid) {
-            throw Exception('Game already has two players.');
-          }
-          joinedSession = existing.copyWith(
-            white: joinerPlayer,
-            status: OnlineStatus.playing,
-          );
-          txn.update(docRef, {
-            'white': joinerPlayer.toMap(),
-            'status': OnlineStatus.playing.name,
-            'lastMoveAt': FieldValue.serverTimestamp(),
-          });
-        } else {
-          if (existing.black != null && existing.black!.id != user.uid) {
-            throw Exception('Game already has two players.');
-          }
-          joinedSession = existing.copyWith(
-            black: joinerPlayer,
-            status: OnlineStatus.playing,
-          );
-          txn.update(docRef, {
-            'black': joinerPlayer.toMap(),
-            'status': OnlineStatus.playing.name,
-            'lastMoveAt': FieldValue.serverTimestamp(),
-          });
-        }
-        _debugLog('Updating game status to playing, joiner is $joinerColor');
-      });
-
-      if (joinedSession == null || joinerColor == null) {
-        throw Exception('Failed to join game.');
-      }
+      final joinResult = await _firestoreAdapter.joinRoom(
+        code: code,
+        joiner: _playerFor(user),
+      );
+      final joinedSession = joinResult.session;
+      final joinerColor = joinResult.localColor;
 
       _debugLog('Transaction complete, setting up listener as $joinerColor');
       _debugLog('>>> JOINER: About to call _listenToRoom <<<');
-      await _listenToRoom(code, localColor: joinerColor!);
+      await _listenToRoom(code, localColor: joinerColor);
 
       // IMPORTANT: Set session immediately so isLocalTurn works correctly
       _debugLog('>>> JOINER: Setting state with session <<<');
@@ -386,11 +567,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         appliedMoveCount: 0, // Will be updated by _syncMovesWithLocalGame
       );
       _debugLog('>>> JOINER: State set: localColor=$joinerColor, roomCode=$code <<<');
-      _debugLog('>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
+      _debugLog('>>> JOINER: session.moves=${joinedSession.moves.length}, session.currentTurn=${joinedSession.currentTurn} <<<');
 
       _debugLog('>>> JOINER: About to call _beginLocalGame <<<');
-      _beginLocalGame(joinedSession!.boardSize, session: joinedSession);
-      _debugLog('>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
+      _beginLocalGame(joinedSession.boardSize, session: joinedSession);
+      _debugLog('>>> JOINER: Local game initialized with boardSize=${joinedSession.boardSize} <<<');
 
       // Log the final state after joining
       final finalLocalState = _ref.read(gameStateProvider);
@@ -400,7 +581,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('onlineGameState: session.moves=${state.session?.moves.length}, appliedMoveCount=${state.appliedMoveCount}');
     } catch (e) {
       _debugLog('joinGame error: $e');
-      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
+      state = state.copyWith(errorMessage: sanitizeOnlineErrorMessage(e));
     } finally {
       state = state.copyWith(joining: false);
     }
@@ -420,54 +601,17 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('recordLocalMove: ABORT - session=${activeSession != null}, localColor=${state.localColor}');
       return;
     }
+    if (!state.isLocalTurn) {
+      _debugLog('recordLocalMove: ABORT - not local turn');
+      return;
+    }
 
-    final docRef = _firestore.collection('games').doc(activeSession.roomCode);
-    final nextStatus = latestState.isGameOver
-        ? OnlineStatus.finished.name
-        : OnlineStatus.playing.name;
-    final winner = latestState.result == null
-        ? null
-        : latestState.result == GameResult.draw
-            ? OnlineWinner.draw.name
-            : latestState.result == GameResult.whiteWins
-                ? OnlineWinner.white.name
-                : OnlineWinner.black.name;
-
-    _debugLog('recordLocalMove: Writing to Firestore - nextTurn=${latestState.currentPlayer.name}, status=$nextStatus');
-    await _firestore.runTransaction((txn) async {
-      final snapshot = await txn.get(docRef);
-      if (!snapshot.exists) return;
-      final data = snapshot.data();
-      if (data == null) return;
-
-      // Convert existing moves to properly typed maps (Firestore web returns Map<Object?, Object?>)
-      final rawMoves = data['moves'] as List? ?? [];
-      final moves = rawMoves.map((m) {
-        if (m is Map<String, dynamic>) return m;
-        if (m is Map) return Map<String, dynamic>.from(m);
-        return <String, dynamic>{};
-      }).toList();
-
-      // Add the new move as a properly serialized map
-      final newMoveMap = OnlineGameMove(
-        notation: move.notation,
-        player: state.localColor!,
-      ).toMap();
-      moves.add(newMoveMap);
-
-      final updateData = {
-        'moves': moves,
-        'currentTurn': latestState.currentPlayer.name,
-        'status': nextStatus,
-        'winner': winner,
-        'lastMoveAt': FieldValue.serverTimestamp(),
-      };
-
-      _debugLog('recordLocalMove: Firestore update data: moves=${moves.length}, currentTurn=${updateData['currentTurn']}, status=${updateData['status']}');
-      _debugLog('recordLocalMove: New move: $newMoveMap');
-
-      txn.update(docRef, updateData);
-    });
+    await _firestoreAdapter.recordLocalMove(
+      roomCode: activeSession.roomCode,
+      localColor: state.localColor!,
+      move: move,
+      latestState: latestState,
+    );
 
     final newCount = state.appliedMoveCount + 1;
     _debugLog('recordLocalMove: Transaction complete, appliedMoveCount: ${state.appliedMoveCount} -> $newCount');
@@ -477,27 +621,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   Future<void> resign() async {
     final activeSession = state.session;
     if (activeSession == null || state.localColor == null) return;
-    final docRef = _firestore.collection('games').doc(activeSession.roomCode);
     final winner = state.localColor == PlayerColor.white
         ? OnlineWinner.black.name
         : OnlineWinner.white.name;
-    await docRef.update({
+    await _firestoreAdapter.updateRoom(activeSession.roomCode, {
       'status': OnlineStatus.finished.name,
       'winner': winner,
-      'lastMoveAt': FieldValue.serverTimestamp(),
+      'lastMoveAt': DateTime.now(),
     });
   }
 
   Future<void> requestRematch() async {
     final activeSession = state.session;
     if (activeSession == null) return;
-    final docRef = _firestore.collection('games').doc(activeSession.roomCode);
-    await docRef.update({
+    await _firestoreAdapter.updateRoom(activeSession.roomCode, {
       'moves': <Map<String, dynamic>>[],
       'status': OnlineStatus.waiting.name,
       'winner': null,
       'currentTurn': PlayerColor.white.name,
-      'lastMoveAt': FieldValue.serverTimestamp(),
+      'lastMoveAt': DateTime.now(),
     });
     state = state.copyWith(appliedMoveCount: 0);
     _beginLocalGame(activeSession.boardSize, session: activeSession);
@@ -507,14 +649,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _debugLog('_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
     await _subscription?.cancel();
 
-    final docRef = _firestore.collection('games').doc(roomCode);
-    _debugLog('>>> Subscribing to document path: ${docRef.path} <<<');
-
-    _subscription = docRef.snapshots().listen((snapshot) {
+    _subscription = _firestoreAdapter.watchRoom(roomCode).listen((data) {
       _debugLog('>>> FIRESTORE SNAPSHOT RECEIVED <<<');
-      _debugLog('>>> connectionState: exists=${snapshot.exists}, metadata.isFromCache=${snapshot.metadata.isFromCache}, metadata.hasPendingWrites=${snapshot.metadata.hasPendingWrites} <<<');
-
-      final data = snapshot.data();
       if (data == null) {
         _debugLog('Snapshot data is null, ignoring');
         return;
@@ -571,6 +707,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         localColor: localColor,
         opponentInactive: opponentInactive,
         opponentDisconnected: opponentDisconnected,
+        reconnecting: opponentDisconnected,
         opponentJustJoined: opponentJustJoined,
         opponentJustMoved: opponentJustMoved,
         clearError: true,
@@ -586,41 +723,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _debugLog('Firestore listener setup complete');
   }
 
-  Future<User?> _ensureAuth({bool force = false}) async {
-    final auth = FirebaseAuth.instance;
-    if (auth.currentUser != null && !force) return auth.currentUser;
-
-    // On web, use anonymous authentication - no sign-in required
-    if (kIsWeb) {
-      try {
-        final credential = await auth.signInAnonymously();
-        _debugLog('Signed in anonymously for web');
-        return credential.user;
-      } catch (e) {
-        _debugLog('Anonymous authentication failed: $e');
-        throw Exception('Unable to connect. Please try again.');
-      }
-    }
-
-    // On mobile, try Play Games sign-in first (optional, for display name)
-    try {
-      await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
-    } catch (e) {
-      _debugLog('Play Games sign-in failed (optional): $e');
-      // Continue to Firebase Auth - Play Games is just for display name
-    }
-
-    // Firebase Auth with Google for mobile
-    try {
-      final credential = await auth.signInWithProvider(GoogleAuthProvider());
-      return credential.user;
-    } catch (e) {
-      _debugLog('Firebase authentication failed: $e');
-      throw Exception('Please sign in with Google to play online.');
-    }
-  }
-
-  OnlineGamePlayer _playerFor(User user) {
+  OnlineGamePlayer _playerFor(OnlineAuthUser user) {
     final playGames = _ref.read(playGamesServiceProvider);
     String displayName;
     if (playGames.player?.displayName != null) {
