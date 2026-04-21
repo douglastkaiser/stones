@@ -71,16 +71,16 @@ ProviderContainer _makeContainer({
   return ProviderContainer(
     overrides: [
       achievementProvider.overrideWith(
-        () => _TestAchievementNotifier(achievementState),
+        (ref) => _TestAchievementNotifier(achievementState),
       ),
       gameStateProvider.overrideWith(
-        () => _TestGameStateNotifier(gameState ?? GameState.initial(5)),
+        (ref) => _TestGameStateNotifier(gameState ?? GameState.initial(5)),
       ),
       scenarioStateProvider.overrideWith(
-        () => _TestScenarioStateNotifier(scenarioState),
+        (ref) => _TestScenarioStateNotifier(scenarioState),
       ),
       soundManagerProvider.overrideWithValue(_TestSoundManager()),
-      eloProvider.overrideWith(() => _TestEloController()),
+      eloProvider.overrideWith((ref) => _TestEloController()),
       // Keep this deterministic so scenario flow writes a stable value.
       gameSessionProvider.overrideWith((ref) => const GameSessionConfig()),
       // Keep Play Games inert in tests.
@@ -96,7 +96,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  Future<void> _openScenarioDialog(WidgetTester tester) async {
+  Future<void> openScenarioDialog(WidgetTester tester) async {
     await tester.tap(find.text('Tutorials & Puzzles'));
     await tester.pumpAndSettle();
   }
@@ -109,7 +109,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(container: container));
       await tester.pumpAndSettle();
 
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
 
       expect(find.text('Tutorials & Puzzles'), findsOneWidget);
       expect(find.text('Building a Road'), findsOneWidget);
@@ -122,7 +122,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(container: container));
       await tester.pumpAndSettle();
 
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
       await tester.tap(find.text('Building a Road'));
       await tester.pumpAndSettle();
 
@@ -144,7 +144,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(container: container));
       await tester.pumpAndSettle();
 
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
       await tester.tap(find.text('Building a Road'));
       await tester.pumpAndSettle();
 
@@ -166,7 +166,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(container: container));
       await tester.pumpAndSettle();
 
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
       await tester.tap(find.text('Building a Road'));
       await tester.pumpAndSettle();
 
@@ -177,7 +177,7 @@ void main() {
       expect(container.read(gameStateProvider).boardSize, 5);
       expect(container.read(gameStateProvider).turnNumber, 2);
 
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
       await tester.tap(find.text('Building a Road'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Start Scenario'));
@@ -199,7 +199,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(container: container));
       await tester.pumpAndSettle();
 
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
 
       final tutorial1Tile = find.ancestor(
         of: find.text('Building a Road'),
@@ -218,7 +218,7 @@ void main() {
 
       await tester.pumpWidget(_buildTestApp(container: lockedContainer));
       await tester.pumpAndSettle();
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
 
       final tutorial2TileLocked = find.ancestor(
         of: find.text('Standing Stones (Walls)'),
@@ -248,7 +248,7 @@ void main() {
 
       await tester.pumpWidget(_buildTestApp(container: unlockedContainer));
       await tester.pumpAndSettle();
-      await _openScenarioDialog(tester);
+      await openScenarioDialog(tester);
 
       final tutorial2TileUnlocked = find.ancestor(
         of: find.text('Standing Stones (Walls)'),
