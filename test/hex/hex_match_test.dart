@@ -40,6 +40,8 @@ class MemoryRooms implements HexRoomStore {
   }
 
   @override
+  Future<HexRoom> read(String code) async => room!;
+  @override
   Stream<HexRoom> watch(String code) => Stream.multi((controller) {
         controller.add(room!);
         final subscription = updates.stream.listen(controller.add);

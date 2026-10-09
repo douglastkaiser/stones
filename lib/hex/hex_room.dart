@@ -1,4 +1,5 @@
 import 'hex_game.dart';
+import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 import '../models/cosmetics.dart';
 
 enum HexSeatKind { localHuman, remoteHuman, ai }
@@ -67,8 +68,36 @@ class HexRoom {
           (kinds[game.current.index] == HexSeatKind.ai && host == uid));
 
   HexGame replay() {
-    var game = HexGame.initial(radius: radius, starter: starter);
-    for (final record in moves) {
+    return _replayFrom(HexGame.initial(radius: radius, starter: starter), 0);
+  }
+
+  /// Check every immutable prefix record but only simulate newly appended
+  /// moves. Metadata-only snapshots do not rebuild the complete board.
+  HexGame replayAfter(HexRoom previous, HexGame game) {
+    if (code != previous.code ||
+        host != previous.host ||
+        radius != previous.radius ||
+        starter != previous.starter ||
+        boardTheme != previous.boardTheme ||
+        !listEquals(kinds, previous.kinds) ||
+        game.ply != previous.moves.length) {
+      throw const FormatException('Hex room identity changed');
+    }
+    if (moves.length < previous.moves.length) return game;
+    for (var i = 0; i < previous.moves.length; i++) {
+      final old = previous.moves[i];
+      final current = moves[i];
+      if (!listEquals(old['drops'] as List, current['drops'] as List) ||
+          !mapEquals(
+              {...old}..remove('drops'), {...current}..remove('drops'))) {
+        throw const FormatException('Hex move history changed');
+      }
+    }
+    return _replayFrom(game, previous.moves.length);
+  }
+
+  HexGame _replayFrom(HexGame game, int start) {
+    for (final record in moves.skip(start)) {
       if (record['seat'] != game.current.index) {
         throw const FormatException('Hex log has a move out of turn');
       }

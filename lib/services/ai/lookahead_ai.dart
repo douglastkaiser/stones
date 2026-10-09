@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../models/models.dart';
 import 'ai.dart';
 import 'board_analysis.dart';
+import 'search_budget.dart';
 
 /// Shared lookahead AI that powers every difficulty level.
 /// The only difference between modes is the search depth used here.
@@ -12,7 +15,13 @@ class LookaheadStonesAI extends StonesAI {
     this.midBranchingLimit = _defaultMidBranchingLimit,
     this.deepBranchingLimit = _defaultDeepBranchingLimit,
     this.evaluationJitter = _defaultEvaluationJitter,
-  });
+    bool yieldDuringSearch = kIsWeb,
+    Duration? thinkingLimit,
+  }) : _budget = SearchBudget(
+            enabled: yieldDuringSearch, thinkingLimit: thinkingLimit);
+
+  final SearchBudget _budget;
+  Duration? get thinkingLimit => _budget.thinkingLimit;
 
   /// Number of plies to search (our move + opponent responses, etc.).
   final int searchDepth;
@@ -31,7 +40,18 @@ class LookaheadStonesAI extends StonesAI {
   final AIMoveGenerator _generator = const AIMoveGenerator();
 
   @override
-  Future<AIMove?> selectMove(GameState state) async {
+  Future<AIMove?> selectMove(GameState state,
+      {bool Function()? cancelled}) async {
+    _budget.cancelled = cancelled;
+    _budget.restart();
+    try {
+      return await _selectMove(state);
+    } on SearchCancelled {
+      return null;
+    }
+  }
+
+  Future<AIMove?> _selectMove(GameState state) async {
     if (state.isGameOver ||
         _terminalScore(state, state.currentPlayer, searchDepth) != null) {
       return null;
@@ -39,57 +59,54 @@ class LookaheadStonesAI extends StonesAI {
     final moves = _generator.generateMoves(state);
     if (moves.isEmpty) return null;
 
-    // Fast path: take an immediate win if available.
-    final immediateWin = _findImmediateWinningMove(state, moves);
-    if (immediateWin != null) {
-      return immediateWin;
-    }
-
-    // Block any opponent winning threats before deeper search.
-    final blockingMoves = _findThreatBlockingMoves(state, moves);
-    if (blockingMoves.isNotEmpty) {
-      final orderedBlocks =
-          _orderMoves(state, blockingMoves, state.currentPlayer);
-      return orderedBlocks.first.$1;
-    }
-
-    final orderedMoves = _orderMoves(state, moves, state.currentPlayer);
-
-    AIMove? bestMove;
-    var bestScore = double.negativeInfinity;
-
-    for (final entry in orderedMoves.take(_branchLimitForDepth(searchDepth))) {
-      // Flutter web has no isolate-backed compute: let input and paint run.
-      await Future<void>.delayed(Duration.zero);
-      final move = entry.$1;
-      final applied = _applyMove(state, move);
-      if (applied == null) continue;
-
-      final nextState = _advanceTurn(applied);
-      final score = _search(
-        nextState,
-        searchDepth - 1,
-        double.negativeInfinity,
-        double.infinity,
-        state.currentPlayer,
-      );
-
-      if (bestMove == null || score > bestScore) {
-        bestScore = score;
-        bestMove = move;
+    // Retain a legal fallback even if preparation uses the entire budget.
+    var bestMove = moves.first;
+    try {
+      final immediateWin = await _findImmediateWinningMove(state, moves);
+      if (immediateWin != null) return immediateWin;
+      final blockingMoves = await _findThreatBlockingMoves(state, moves);
+      if (blockingMoves.isNotEmpty) {
+        return (await _orderMoves(state, blockingMoves, state.currentPlayer))
+            .first
+            .$1;
       }
+      final orderedMoves = await _orderMoves(state, moves, state.currentPlayer);
+      bestMove = orderedMoves.first.$1;
+      // Finish all root candidates at a depth before adopting that result.
+      // A time limit cannot select a half-searched, root-order-biased result.
+      for (var depth = 1; depth <= searchDepth; depth++) {
+        AIMove? iterationMove;
+        var iterationScore = double.negativeInfinity;
+        for (final entry
+            in orderedMoves.take(_branchLimitForDepth(searchDepth))) {
+          final pause = _budget.pauseIfNeeded();
+          if (pause != null) await pause;
+          final applied = _applyMove(state, entry.$1);
+          if (applied == null) continue;
+          final score = await _search(_advanceTurn(applied), depth - 1,
+              double.negativeInfinity, double.infinity, state.currentPlayer);
+          if (iterationMove == null || score > iterationScore) {
+            iterationScore = score;
+            iterationMove = entry.$1;
+          }
+        }
+        if (iterationMove != null) bestMove = iterationMove;
+      }
+    } on SearchTimedOut {
+      // Keep the most recent complete iteration.
     }
-
-    return bestMove ?? orderedMoves.first.$1;
+    return bestMove;
   }
 
-  double _search(
+  Future<double> _search(
     GameState state,
     int depth,
     double alpha,
     double beta,
     PlayerColor perspective,
-  ) {
+  ) async {
+    final pause = _budget.pauseIfNeeded();
+    if (pause != null) await pause;
     final terminal = _terminalScore(state, perspective, depth);
     if (terminal != null) return terminal;
 
@@ -102,7 +119,7 @@ class LookaheadStonesAI extends StonesAI {
       return _evaluateState(state, perspective);
     }
 
-    final orderedMoves = _orderMoves(state, moves, state.currentPlayer);
+    final orderedMoves = await _orderMoves(state, moves, state.currentPlayer);
     final maximizing = state.currentPlayer == perspective;
     var best = maximizing ? double.negativeInfinity : double.infinity;
 
@@ -112,7 +129,8 @@ class LookaheadStonesAI extends StonesAI {
       if (applied == null) continue;
 
       final nextState = _advanceTurn(applied);
-      final score = _search(nextState, depth - 1, alpha, beta, perspective);
+      final score =
+          await _search(nextState, depth - 1, alpha, beta, perspective);
 
       if (maximizing) {
         if (score > best) best = score;
@@ -186,14 +204,16 @@ class LookaheadStonesAI extends StonesAI {
         random.nextDouble() * evaluationJitter;
   }
 
-  List<(AIMove, double)> _orderMoves(
+  Future<List<(AIMove, double)>> _orderMoves(
     GameState state,
     List<AIMove> moves,
     PlayerColor perspective,
-  ) {
+  ) async {
     final scored = <(AIMove, double)>[];
 
     for (final move in moves) {
+      final pause = _budget.pauseIfNeeded();
+      if (pause != null) await pause;
       final applied = _applyMove(state, move);
       if (applied == null) continue;
 
@@ -217,8 +237,11 @@ class LookaheadStonesAI extends StonesAI {
     return scored;
   }
 
-  AIMove? _findImmediateWinningMove(GameState state, List<AIMove> moves) {
+  Future<AIMove?> _findImmediateWinningMove(
+      GameState state, List<AIMove> moves) async {
     for (final move in moves) {
+      final pause = _budget.pauseIfNeeded();
+      if (pause != null) await pause;
       final applied = _applyMove(state, move);
       if (applied != null &&
           BoardAnalysis.getRoadWinner(
@@ -232,12 +255,15 @@ class LookaheadStonesAI extends StonesAI {
     return null;
   }
 
-  List<AIMove> _findThreatBlockingMoves(GameState state, List<AIMove> moves) {
+  Future<List<AIMove>> _findThreatBlockingMoves(
+      GameState state, List<AIMove> moves) async {
     final opponentState = _switchPlayer(state);
     final opponentMoves = _generator.generateMoves(opponentState);
     final threatenedPositions = <Position>{};
 
     for (final oppMove in opponentMoves) {
+      final pause = _budget.pauseIfNeeded();
+      if (pause != null) await pause;
       final afterOpp = _applyMove(opponentState, oppMove);
       if (afterOpp != null && BoardAnalysis.hasRoad(afterOpp, state.opponent)) {
         threatenedPositions.addAll(_getAffectedPositions(oppMove));

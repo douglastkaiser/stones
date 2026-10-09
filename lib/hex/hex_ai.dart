@@ -3,6 +3,7 @@ import 'dart:math';
 import '../models/piece.dart' show PieceType;
 
 import 'hex_game.dart';
+import '../services/ai/search_budget.dart';
 
 /// Three-player MaxN: each seat maximizes its own score vector, rather than
 /// treating the other two independent players as a single minimax opponent.
@@ -23,17 +24,55 @@ class HexAI {
   /// painting, navigation and cancellation can run during the search.
   static Future<HexMove?> chooseResponsive(HexGame game,
       {bool Function()? cancelled}) async {
+    if (game.finished) return null;
+    final budget = SearchBudget(enabled: true, cancelled: cancelled);
     HexMove? best;
     var bestScore = double.negativeInfinity;
-    for (final (move, score) in _options(game)) {
-      if (cancelled?.call() ?? false) return null;
-      if (score > bestScore) {
-        bestScore = score;
-        best = move;
+    try {
+      for (final (move, next, _)
+          in (await _rankedResponsive(game, budget)).take(4)) {
+        if (next.finished && next.winner == game.current) return move;
+        final score =
+            (await _searchResponsive(next, 2, budget))[game.current.index];
+        if (score > bestScore) {
+          bestScore = score;
+          best = move;
+        }
       }
-      await Future<void>.delayed(Duration.zero);
+    } on SearchCancelled {
+      return null;
     }
     return best;
+  }
+
+  static Future<List<(HexMove, HexGame, double)>> _rankedResponsive(
+      HexGame game, SearchBudget budget) async {
+    final moves = <(HexMove, HexGame, double)>[];
+    for (final move in HexRules.legalMoves(game)) {
+      final pause = budget.pauseIfNeeded();
+      if (pause != null) await pause;
+      final next = HexRules.play(game, move)!;
+      moves.add((move, next, _evaluate(next)[game.current.index]));
+    }
+    moves.sort((a, b) => b.$3.compareTo(a.$3));
+    return moves;
+  }
+
+  static Future<List<double>> _searchResponsive(
+      HexGame game, int depth, SearchBudget budget) async {
+    final pause = budget.pauseIfNeeded();
+    if (pause != null) await pause;
+    if (game.finished || depth == 0) return _evaluate(game);
+    List<double>? best;
+    for (final (_, next, _)
+        in (await _rankedResponsive(game, budget)).take(4)) {
+      final scores = await _searchResponsive(next, depth - 1, budget);
+      if (best == null ||
+          scores[game.current.index] > best[game.current.index]) {
+        best = scores;
+      }
+    }
+    return best ?? _evaluate(game);
   }
 
   static Iterable<(HexMove, double)> _options(HexGame game) sync* {

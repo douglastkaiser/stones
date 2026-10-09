@@ -65,11 +65,15 @@ class OnlineGameMove {
   final String notation;
   final PlayerColor player;
   final DateTime? timestamp;
+  final int? whiteSeconds;
+  final int? blackSeconds;
 
   const OnlineGameMove({
     required this.notation,
     required this.player,
     this.timestamp,
+    this.whiteSeconds,
+    this.blackSeconds,
   });
 
   /// Validate move notation format for security
@@ -93,11 +97,22 @@ class OnlineGameMove {
         'notation': notation,
         'player': player.name,
         'timestamp': Timestamp.now(),
+        if (whiteSeconds != null) 'whiteSeconds': whiteSeconds,
+        if (blackSeconds != null) 'blackSeconds': blackSeconds,
       };
 
   factory OnlineGameMove.fromMap(Map<String, dynamic> map) {
     final timestamp = map['timestamp'];
     final notation = map['notation'] as String? ?? '';
+    if (!['white', 'black'].contains(map['player'])) {
+      throw const FormatException('Invalid recorded player');
+    }
+    for (final key in ['whiteSeconds', 'blackSeconds']) {
+      final value = map[key];
+      if (value != null && (value is! int || value < 0 || value > 86400)) {
+        throw const FormatException('Invalid saved clock balance');
+      }
+    }
 
     // Validate notation format for security
     if (!isValidNotation(notation)) {
@@ -108,6 +123,8 @@ class OnlineGameMove {
       notation: notation,
       player: _colorFromString(map['player'] as String?),
       timestamp: timestamp is Timestamp ? timestamp.toDate() : null,
+      whiteSeconds: map['whiteSeconds'] as int?,
+      blackSeconds: map['blackSeconds'] as int?,
     );
   }
 }
@@ -168,6 +185,13 @@ class OnlineGameSession {
 
   factory OnlineGameSession.fromSnapshot(
       String code, Map<String, dynamic> data) {
+    final rawMoves = data['moves'];
+    if (rawMoves is! List || rawMoves.any((move) => move is! Map) ||
+        !['white', 'black'].contains(data['currentTurn']) ||
+        !OnlineStatus.values.any((status) => status.name == data['status']) ||
+        (data['boardSize'] is! int || (data['boardSize'] as int) < 3 || (data['boardSize'] as int) > 8)) {
+      throw const FormatException('Invalid saved square room');
+    }
     // Helper to safely convert Firestore maps (which can be Map<Object?, Object?> on web)
     // to Map<String, dynamic>
     Map<String, dynamic> toStringDynamicMap(dynamic map) {

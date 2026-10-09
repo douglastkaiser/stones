@@ -116,3 +116,14 @@ provides in-match inspection without awarding cosmetics. Square cell rendering
 uses an owner-color lookup for all stone/ghost/inspection paths; Hex receives
 the room's seat styles explicitly, leaving its learning sandbox independent.
 See THEMES.md for the wire compatibility and backend deployment requirements.
+
+## Speed and room recovery iteration
+
+Read [performance and recovery](PERFORMANCE_AND_RECOVERY.md) for the resume
+contract, timing measurements and remaining online boundaries. Local room
+shortcuts use `saved_rooms_provider.dart`; Firebase remains authoritative.
+`online_replay.dart` validates recorded square moves before applying shared
+GameRules. Square mode changes detach online subscriptions. Hex retains
+independent replay/seat authority and now applies only appended moves on updates.
+AI browser work cooperatively yields during ranking and recursive search; square
+AI uses completed iterative-deepening results with difficulty-specific budgets.

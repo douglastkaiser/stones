@@ -11,6 +11,7 @@ abstract class HexRoomStore {
   Future<HexRoom> create(
       String uid, int radius, List<HexSeatKind> kinds, HexSeat starter);
   Future<HexRoom> join(String code, String uid);
+  Future<HexRoom> read(String code);
   Stream<HexRoom> watch(String code);
   Future<void> submit(String code, String uid, int expectedPly, HexMove move);
 }
@@ -18,7 +19,9 @@ abstract class HexRoomStore {
 class FirestoreHexRoomStore implements HexRoomStore {
   FirestoreHexRoomStore(this.firestore,
       {this.pieceStyle = PieceStyle.standard,
+      this.onAllocated,
       this.boardTheme = BoardTheme.classicWood});
+  final Future<void> Function(HexRoom room, String uid)? onAllocated;
   final BoardTheme boardTheme;
   final PieceStyle pieceStyle;
   final FirebaseFirestore firestore;
@@ -47,6 +50,7 @@ class FirestoreHexRoomStore implements HexRoomStore {
           owners: kinds
               .map((kind) => kind == HexSeatKind.localHuman ? uid : null)
               .toList());
+      await onAllocated?.call(room, uid);
       final created = await firestore.runTransaction<bool>((transaction) async {
         final doc = _room(code);
         if ((await transaction.get(doc)).exists) return false;
@@ -71,6 +75,7 @@ class FirestoreHexRoomStore implements HexRoomStore {
           ownersBefore = room.owners;
           room.replay();
           final joined = room.join(uid, pieceStyle: pieceStyle);
+          await onAllocated?.call(joined, uid);
           if (!identical(joined, room)) {
             transaction.update(doc, {
               'owners': joined.toMap()['owners'],
@@ -96,6 +101,14 @@ class FirestoreHexRoomStore implements HexRoomStore {
       }
     }
     throw StateError('Room changed while joining. Try again.');
+  }
+
+  @override
+  Future<HexRoom> read(String code) async {
+    final snapshot =
+        await _room(code).get(const GetOptions(source: Source.server));
+    if (!snapshot.exists) throw StateError('Hex room no longer exists');
+    return HexRoom.fromMap(snapshot.data()!);
   }
 
   @override

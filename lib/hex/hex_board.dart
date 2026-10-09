@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/piece.dart';
@@ -77,19 +78,20 @@ class HexBoard extends ConsumerWidget {
           label:
               'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${(turnSeat ?? game.current).label} to play.'}',
           child: Stack(children: [
-            CustomPaint(
-                size: size,
-                painter: _HexPainter(
-                    game,
-                    geometry,
-                    selected,
-                    destinations,
-                    road,
-                    boardTheme == null
-                        ? ref.watch(currentBoardThemeProvider)
-                        : BoardThemeData.forTheme(boardTheme!),
-                    ref.watch(currentPieceStyleProvider),
-                    pieceStyles)),
+            RepaintBoundary(
+                child: CustomPaint(
+                    size: size,
+                    painter: _HexPainter(
+                        game,
+                        geometry,
+                        selected,
+                        destinations,
+                        road,
+                        boardTheme == null
+                            ? ref.watch(currentBoardThemeProvider)
+                            : BoardThemeData.forTheme(boardTheme!),
+                        ref.watch(currentPieceStyleProvider),
+                        pieceStyles))),
             for (final cell in game.cells)
               Positioned(
                 left: geometry.center(cell).dx - geometry.unit,
@@ -127,7 +129,9 @@ class _CellClipper extends CustomClipper<Path> {
       .shift(-geometry.center(cell) + Offset(geometry.unit, geometry.unit));
   @override
   bool shouldReclip(_CellClipper oldClipper) =>
-      oldClipper.geometry != geometry || oldClipper.cell != cell;
+      oldClipper.geometry.size != geometry.size ||
+      oldClipper.geometry.radius != geometry.radius ||
+      oldClipper.cell != cell;
 }
 
 class _HexPainter extends CustomPainter {
@@ -249,9 +253,9 @@ class _HexPainter extends CustomPainter {
       game != old.game ||
       geometry.size != old.geometry.size ||
       selected != old.selected ||
-      destinations != old.destinations ||
-      road != old.road ||
+      !setEquals(destinations, old.destinations) ||
+      !setEquals(road, old.road) ||
       theme != old.theme ||
       pieces != old.pieces ||
-      pieceStyles != old.pieceStyles;
+      !listEquals(pieceStyles, old.pieceStyles);
 }

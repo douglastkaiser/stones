@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +24,7 @@ import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
 
 void _debugLog(String message) {
+  if (!kDebugMode) return;
   developer.log('[GAME] $message', name: 'game');
   // ignore: avoid_print
   print('[GAME] $message');
@@ -761,7 +762,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // This prevents race condition where creator can play multiple moves before
     // Firestore listener updates session.currentTurn
     final isMyTurnLocally = isOnline &&
-        onlineState.localColor != null &&
+        onlineState.isLocalTurn &&
         gameState.currentPlayer == onlineState.localColor;
     final isRemoteTurn = isOnline && !isMyTurnLocally;
     final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
@@ -774,9 +775,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (next.isExpired &&
           next.expiredPlayer != null &&
           !gameState.isGameOver) {
-        ref
-            .read(gameStateProvider.notifier)
-            .setTimeExpired(next.expiredPlayer!);
+        if (session.mode == GameMode.online) {
+          unawaited(ref.read(onlineGameProvider.notifier).finishOnTimeout(next.expiredPlayer!));
+        } else {
+          ref.read(gameStateProvider.notifier).setTimeExpired(next.expiredPlayer!);
+        }
       }
     });
 
@@ -1398,6 +1401,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           ),
 
                         // Online status banners
+                        if (session.mode == GameMode.online && onlineState.errorMessage != null)
+                          _OnlineStatusBanner(message: onlineState.errorMessage!, icon: Icons.error_outline, color: Colors.red),
+                        if (session.mode == GameMode.online && onlineState.reconnecting && onlineState.errorMessage == null)
+                          const _OnlineStatusBanner(message: 'Confirming saved state… Input resumes when the server responds.', icon: Icons.sync),
                         if (session.mode == GameMode.online &&
                             waitingForOpponent)
                           _OnlineStatusBanner(
@@ -1406,19 +1413,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             icon: Icons.hourglass_empty,
                           ),
                         if (session.mode == GameMode.online &&
-                            onlineState.opponentDisconnected &&
-                            !onlineState.opponentInactive)
+                            onlineState.opponentDisconnected && onlineState.errorMessage == null && !onlineState.reconnecting &&
+                            !onlineState.opponentInactive && onlineState.errorMessage == null && !onlineState.reconnecting)
                           const _OnlineStatusBanner(
                             message:
-                                'Opponent may have disconnected (no activity for 60s)',
+                                'No moves for a minute. Your opponent may be thinking.',
                             icon: Icons.wifi_off,
                             color: Colors.orange,
                           ),
                         if (session.mode == GameMode.online &&
-                            onlineState.opponentInactive)
+                            onlineState.opponentInactive && onlineState.errorMessage == null && !onlineState.reconnecting)
                           const _OnlineStatusBanner(
                             message:
-                                'Opponent disconnected (no activity for 2+ minutes)',
+                                'No recent moves. The room stays saved if either player leaves.',
                             icon: Icons.error_outline,
                             color: Colors.red,
                           ),
@@ -1451,7 +1458,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Online turn check
     if (session.mode == GameMode.online) {
       final onlineState = ref.read(onlineGameProvider);
-      final isMyTurnLocally = onlineState.localColor != null &&
+      final isMyTurnLocally = onlineState.isLocalTurn &&
           gameState.currentPlayer == onlineState.localColor;
       _debugLog(
           '_handleCellTap: ONLINE check - localColor=${onlineState.localColor}, '
@@ -1504,7 +1511,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Online turn check
     if (session.mode == GameMode.online) {
       final onlineState = ref.read(onlineGameProvider);
-      final isMyTurnLocally = onlineState.localColor != null &&
+      final isMyTurnLocally = onlineState.isLocalTurn &&
           gameState.currentPlayer == onlineState.localColor;
       if (!isMyTurnLocally || onlineState.waitingForOpponent) {
         return;
@@ -1891,6 +1898,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   bool _performPlacementMove(Position pos, PieceType type, WidgetRef ref) {
+    if (ref.read(gameSessionProvider).mode == GameMode.online && !ref.read(onlineGameProvider).isLocalTurn) return false;
     final gameState = ref.read(gameStateProvider);
     final session = ref.read(gameSessionProvider);
     final scenarioState = ref.read(scenarioStateProvider);
@@ -1973,6 +1981,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     List<int> drops,
     WidgetRef ref,
   ) {
+    if (ref.read(gameSessionProvider).mode == GameMode.online && !ref.read(onlineGameProvider).isLocalTurn) return false;
     final dropPositions = _calculateDropPositions(from, dir, drops.length);
 
     final gameState = ref.read(gameStateProvider);
@@ -2128,7 +2137,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
       searchedState = latestState;
       final move =
-          await selectStonesMove(latestState, latestSession.aiDifficulty);
+          await selectStonesMove(latestState, latestSession.aiDifficulty,
+              cancelled: () => !mounted || !identical(ref.read(gameStateProvider), latestState) || !identical(ref.read(gameSessionProvider), latestSession));
       if (!mounted ||
           !identical(ref.read(gameStateProvider), latestState) ||
           !identical(ref.read(gameSessionProvider), latestSession)) {

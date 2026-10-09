@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/online_game_provider.dart';
 import '../providers/cosmetics_provider.dart';
+import '../providers/saved_rooms_provider.dart';
 import 'hex_ai.dart';
 import 'hex_game.dart';
 import 'hex_room.dart';
@@ -43,16 +44,20 @@ class HexMatchController extends StateNotifier<HexMatchState> {
   HexMatchController(
       {required this.authenticate,
       required this.store,
+      this.remember,
       this.botDelay = const Duration(milliseconds: 450)})
       : super(const HexMatchState());
   final Future<String> Function() authenticate;
   final HexRoomStore Function() store;
   final Duration botDelay;
+  final Future<void> Function(HexRoom room, String uid)? remember;
   StreamSubscription<HexRoom>? _subscription;
   Timer? _botTimer;
   String? _uid;
   int _epoch = 0;
   int? _awaitingPly;
+  int? _searchingPly;
+  int? _searchingEpoch;
 
   void startLocal(int radius, List<HexSeatKind> kinds, HexSeat starter) {
     if (kinds.length != 3 || kinds.contains(HexSeatKind.remoteHuman)) {
@@ -80,6 +85,7 @@ class HexMatchController extends StateNotifier<HexMatchState> {
       _uid = uid;
       _accept(room);
       _subscribe(room.code);
+      await remember?.call(room, uid);
     } catch (error) {
       if (mounted && epoch == _epoch) {
         _publish(busy: false, error: _message(error));
@@ -87,7 +93,7 @@ class HexMatchController extends StateNotifier<HexMatchState> {
     }
   }
 
-  Future<void> join(String code) async {
+  Future<void> join(String code, {String? expectedUid}) async {
     leave();
     final epoch = _epoch;
     _publish(busy: true);
@@ -98,11 +104,21 @@ class HexMatchController extends StateNotifier<HexMatchState> {
             'Enter the seven-letter hex room code beginning with H');
       }
       final uid = await authenticate();
-      final room = await store().join(normalized, uid);
+      if (expectedUid != null && uid != expectedUid) {
+        throw StateError(
+            'Use the original browser profile or account to resume this room.');
+      }
+      final room = expectedUid == null
+          ? await store().join(normalized, uid)
+          : await store().read(normalized);
+      if (room.host != uid && !room.owners.contains(uid)) {
+        throw StateError('Your identity does not own a seat in this room.');
+      }
       if (!mounted || epoch != _epoch) return;
       _uid = uid;
       _accept(room);
       _subscribe(room.code);
+      await remember?.call(room, uid);
     } catch (error) {
       if (mounted && epoch == _epoch) {
         _publish(busy: false, error: _message(error));
@@ -129,7 +145,11 @@ class HexMatchController extends StateNotifier<HexMatchState> {
   void _accept(HexRoom room) {
     // Replay every record, including terminal results. Never advance past a bad
     // record, silently skip moves, or accept an unsupported rules version.
-    final game = room.replay();
+    final previous = state.room;
+    if (previous != null && room.moves.length < previous.moves.length) return;
+    final game = previous == null
+        ? room.replay()
+        : room.replayAfter(previous, state.game!);
     if (state.room?.code == room.code && game.ply < state.game!.ply) return;
     if (_awaitingPly != null && game.ply >= _awaitingPly!) _awaitingPly = null;
     state = HexMatchState(
@@ -137,7 +157,8 @@ class HexMatchController extends StateNotifier<HexMatchState> {
         room: room,
         kinds: room.kinds,
         controls: room.controlledBy(_uid!),
-        busy: _awaitingPly != null,
+        busy: _awaitingPly != null ||
+            (_searchingPly == game.ply && _searchingEpoch == _epoch),
         paused: state.paused);
     _scheduleBot();
   }
@@ -207,6 +228,8 @@ class HexMatchController extends StateNotifier<HexMatchState> {
     final game = state.game!;
     final epoch = _epoch;
     _botTimer = Timer(botDelay, () async {
+      _searchingPly = game.ply;
+      _searchingEpoch = epoch;
       _publish(busy: true);
       try {
         final move = kIsWeb
@@ -223,6 +246,8 @@ class HexMatchController extends StateNotifier<HexMatchState> {
             state.paused) {
           return;
         }
+        _searchingPly = null;
+        _searchingEpoch = null;
         _publish(busy: false);
         if (move != null) {
           await play(move, bot: true);
@@ -232,6 +257,11 @@ class HexMatchController extends StateNotifier<HexMatchState> {
       } catch (error) {
         if (mounted && epoch == _epoch) {
           _publish(busy: false, error: _message(error));
+        }
+      } finally {
+        if (_searchingEpoch == epoch && _searchingPly == game.ply) {
+          _searchingPly = null;
+          _searchingEpoch = null;
         }
       }
     });
@@ -283,6 +313,8 @@ class HexMatchController extends StateNotifier<HexMatchState> {
     _subscription = null;
     _uid = null;
     _awaitingPly = null;
+    _searchingPly = null;
+    _searchingEpoch = null;
     if (!mounted) return;
     if (notify) {
       state = const HexMatchState();
@@ -318,6 +350,12 @@ final hexMatchProvider =
         return user.uid;
       },
       store: () => FirestoreHexRoomStore(FirebaseFirestore.instance,
+          onAllocated: (room, uid) => ref
+              .read(savedRoomsProvider.notifier)
+              .remember(SavedRoom(code: room.code, uid: uid, hex: true)),
           pieceStyle: ref.read(shareablePieceStyleProvider),
-          boardTheme: ref.read(shareableBoardThemeProvider)));
+          boardTheme: ref.read(shareableBoardThemeProvider)),
+      remember: (room, uid) => ref
+          .read(savedRoomsProvider.notifier)
+          .remember(SavedRoom(code: room.code, uid: uid, hex: true)));
 });

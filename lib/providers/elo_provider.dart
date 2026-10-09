@@ -16,7 +16,7 @@ void _debugLog(String message) {
   if (kDebugMode) {
     developer.log('[ELO] $message', name: 'elo');
   }
-  if (kIsWeb) {
+  if (kDebugMode && kIsWeb) {
     // ignore: avoid_print
     print('[ELO] $message');
   }
@@ -71,10 +71,14 @@ class EloController extends StateNotifier<EloState> {
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _aiRatingsSubscription;
   bool _initialized = false;
+  bool _onlineInitialized = false;
 
   /// Initialize: load cached rating, then sync with Firebase
-  Future<void> initialize() async {
-    if (_initialized) return;
+  Future<void> initialize({bool syncOnline = true}) async {
+    if (_initialized) {
+      if (syncOnline) await _initializeOnline();
+      return;
+    }
     _initialized = true;
 
     state = state.copyWith(loading: true);
@@ -101,17 +105,22 @@ class EloController extends StateNotifier<EloState> {
       _debugLog('Error loading cached rating: $e');
     }
 
-    // Try to sync with Firebase
+    state = state.copyWith(loading: false);
+    if (syncOnline) await _initializeOnline();
+  }
+
+  Future<void> _initializeOnline() async {
+    if (_onlineInitialized) return;
+    _onlineInitialized = true;
     try {
       await _ensureFirebase();
       await _ensureAiRatingsExist();
       await _syncLocalRating();
       _listenToAiRatings();
     } catch (e) {
+      _onlineInitialized = false;
       _debugLog('Error syncing with Firebase: $e');
     }
-
-    state = state.copyWith(loading: false);
   }
 
   Future<void> _ensureFirebase() async {

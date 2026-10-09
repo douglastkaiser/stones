@@ -14,15 +14,15 @@ extension AIDifficultyPresentation on AIDifficulty {
   String get description => switch (this) {
         AIDifficulty.easy => 'A gentle first opponent',
         AIDifficulty.medium => 'More options, fewer mistakes',
-        AIDifficulty.hard => 'Looks three turns ahead',
-        AIDifficulty.expert => 'Deepest search; may take longer',
+        AIDifficulty.hard => 'Up to three turns ahead',
+        AIDifficulty.expert => 'Up to four turns ahead',
       };
 }
 
 /// Keep native search off the UI thread. Web search yields between candidates.
-Future<AIMove?> selectStonesMove(GameState state, AIDifficulty difficulty) =>
+Future<AIMove?> selectStonesMove(GameState state, AIDifficulty difficulty, {bool Function()? cancelled}) =>
     kIsWeb
-        ? StonesAI.forDifficulty(difficulty).selectMove(state)
+        ? StonesAI.forDifficulty(difficulty).selectMove(state, cancelled: cancelled)
         : compute(_selectStonesMove, (state, difficulty));
 
 Future<AIMove?> _selectStonesMove((GameState, AIDifficulty) request) =>
@@ -35,7 +35,7 @@ abstract class StonesAI {
   final Random random;
 
   /// Choose the next move for the given game state
-  Future<AIMove?> selectMove(GameState state);
+  Future<AIMove?> selectMove(GameState state, {bool Function()? cancelled});
 
   /// Factory to create an AI for the chosen difficulty
   factory StonesAI.forDifficulty(AIDifficulty difficulty, {Random? random}) {
@@ -47,6 +47,7 @@ abstract class StonesAI {
           maxBranchingLimit: 10,
           midBranchingLimit: 8,
           evaluationJitter: 0.08,
+          thinkingLimit: const Duration(milliseconds: 350),
         ),
       AIDifficulty.medium => LookaheadStonesAI(
           rng,
@@ -54,6 +55,7 @@ abstract class StonesAI {
           maxBranchingLimit: 16,
           midBranchingLimit: 12,
           evaluationJitter: 0.05,
+          thinkingLimit: const Duration(milliseconds: 600),
         ),
       AIDifficulty.hard => LookaheadStonesAI(
           rng,
@@ -62,6 +64,7 @@ abstract class StonesAI {
           midBranchingLimit: 10,
           deepBranchingLimit: 8,
           evaluationJitter: 0.03,
+          thinkingLimit: const Duration(milliseconds: 1000),
         ),
       AIDifficulty.expert => LookaheadStonesAI(
           rng,
@@ -70,6 +73,7 @@ abstract class StonesAI {
           midBranchingLimit: 9,
           deepBranchingLimit: 6,
           evaluationJitter: 0.015,
+          thinkingLimit: const Duration(milliseconds: 1500),
         ),
     };
   }

@@ -57,16 +57,6 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
 
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = null;
-  </script>
-  <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
-
-  <!-- reCAPTCHA v3 for Firebase App Check -->
-  <script src="https://www.google.com/recaptcha/api.js?render=6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC"></script>
-
   <style>
     /* Loading indicator styles */
     .loading-container {
@@ -111,22 +101,6 @@
   </div>
 
   <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-            // Hide loading indicator once app starts
-            document.body.classList.add('loaded');
-          });
-        }
-      });
-    });
-
     // Handle PWA install prompt
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -140,6 +114,8 @@
       console.log('Stones PWA was installed');
     });
   </script>
+
+  <script src="flutter_bootstrap.js" async></script>
 
   <!-- Firebase SDK (deferred for INP optimization) -->
   <script type="module">
@@ -164,10 +140,10 @@
 
     // Use requestIdleCallback to defer non-critical analytics
     if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => initFirebase(), { timeout: 3000 });
+      requestIdleCallback(() => initFirebase().catch(() => {}), { timeout: 3000 });
     } else {
       // Fallback for Safari
-      setTimeout(initFirebase, 2000);
+      setTimeout(() => initFirebase().catch(() => {}), 2000);
     }
   </script>
 </body>

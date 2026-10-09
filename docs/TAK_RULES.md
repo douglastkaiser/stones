@@ -116,22 +116,25 @@ The following are code-inspection findings requiring follow-up work.
 
 `lib/providers/online_game_provider.dart` and `lib/main.dart`:
 
-1. `_applyNotation` does not validate the recorded player against the current
-   turn or the notation pickup prefix against the sum of drops. Shared rules
-   reject illegal geometry, but replay needs its own record-integrity checks.
-2. `_syncMovesWithLocalGame` advances its applied count to the entire remote log
-   even after a failed replay. It should retain the last successfully applied
-   prefix and report the failure. Test malformed moves followed by valid moves.
+1. The recovery iteration validates the recorded player and pickup/drop sum
+   through `applyOnlineMove`, retaining the last successful replay prefix and
+   locking a corrupt room. Regression tests cover fresh square reconstruction.
+2. Hosts and guests have persisted room shortcuts and identity-checked resume.
+   Square recovery initializes before subscribing, replaying the complete saved
+   log immediately; finished rooms remain available to existing players.
 3. Online undo is offered before an opponent replies, but the screen's undo
    path changes local state without updating the remote log. Implement a
    coordinated takeback protocol or remove that action from online play.
-4. Remote resignation/result status is not projected into the local game result
-   by move replay. Check input locking and result display on both clients.
+4. Recorded resignation/result status now projects into the reconstructed
+   local result, covered by controller recovery tests. Live two-client
+   propagation still needs Firebase playtesting.
 5. Rematch resets to waiting while retaining occupied seats. Check both clients'
    restart transitions and alternate the starting person across rematches.
-6. Clocks use local timers, and timeout/result propagation needs a server-backed
-   reconciliation design. Verify delayed clients, reconnects, and simultaneous
-   timeout/move delivery.
+6. Online moves now checkpoint clock balances and reconcile elapsed time with
+   the server's last-move timestamp; timeout results are written to the room.
+   Legacy timestamps are approximate. Clock-skew protection and adversarial
+   server-backed adjudication remain unresolved. See the recovery audit.
+
 
 Use a Firebase emulator or an isolated test project and two clients. Do not
 declare these resolved based on the local model tests.

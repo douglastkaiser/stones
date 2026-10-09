@@ -17,7 +17,11 @@ import 'elo_provider.dart';
 import 'game_provider.dart';
 import 'game_session_provider.dart';
 import '../services/services.dart';
+import '../services/online_replay.dart';
+import '../models/online_clock.dart';
+import 'saved_rooms_provider.dart';
 import 'settings_provider.dart';
+import 'scenario_provider.dart';
 import 'ui_state_provider.dart';
 
 void _debugLog(String message) {
@@ -26,7 +30,7 @@ void _debugLog(String message) {
     developer.log('[ONLINE] $message', name: 'multiplayer');
   }
   // Also print to console for web debugging (visible in browser console)
-  if (kIsWeb) {
+  if (kDebugMode && kIsWeb) {
     // ignore: avoid_print
     print('[ONLINE] $message');
   }
@@ -95,6 +99,9 @@ class OnlineGameState {
 
   bool get isLocalTurn {
     final result = session != null &&
+        session!.status == OnlineStatus.playing &&
+        !reconnecting &&
+        errorMessage == null &&
         localColor != null &&
         session!.currentTurn == localColor;
     _debugLog(
@@ -147,9 +154,28 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
   bool _firebaseInitialized = false;
+  Future<void>? _initialization;
   bool _appCheckActivated = false;
+  int _roomEpoch = 0;
+  bool _submitting = false;
+  bool _endingOnTime = false;
 
   Future<void> initialize() async {
+    if (_firebaseInitialized) return;
+    if (_initialization != null) {
+      await _initialization;
+      return;
+    }
+    final work = _initialize();
+    _initialization = work;
+    try {
+      await work;
+    } finally {
+      _initialization = null;
+    }
+  }
+
+  Future<void> _initialize() async {
     // Already initialized successfully
     if (_firebaseInitialized) {
       _debugLog('initialize: Already initialized, skipping');
@@ -210,6 +236,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       }
 
       _firebaseInitialized = true;
+      // Wait for restored authentication before considering anonymous sign-in.
+      // The SDK persists web identities locally and native identities on device.
+      await FirebaseAuth.instance.authStateChanges().first;
       _debugLog('initialize: Firebase initialization complete');
       // Clear any previous errors on successful initialization
       state = state.copyWith(clearError: true);
@@ -231,6 +260,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         'createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
     _debugLog(
         'createGame: state.errorMessage=${state.errorMessage}, state.initializing=${state.initializing}');
+    state = state.copyWith(clearError: true);
     await initialize();
 
     // Check if initialize() failed
@@ -241,6 +271,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
 
     _debugLog('createGame: initialize() succeeded, proceeding');
+    await leaveRoom();
+    final operation = _roomEpoch;
     state = state.copyWith(creating: true);
     try {
       _debugLog('createGame: checking currentUser');
@@ -274,9 +306,13 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       data['lastMoveAt'] = FieldValue.serverTimestamp();
 
       _debugLog('Creating game in Firestore with code=$code');
+      // Save the pointer before sending the create request. A tab closed while
+      // awaiting acknowledgement can still find a room the server committed.
+      await _rememberRoom(code, user.uid);
+      if (!mounted || operation != _roomEpoch) return;
       await _firestore.collection('games').doc(code).set(data);
+      if (!mounted || operation != _roomEpoch) return;
       _debugLog('Game created, setting up listener as $creatorColor');
-      await _listenToRoom(code, localColor: creatorColor);
       state = state.copyWith(
         session: session,
         roomCode: code,
@@ -285,16 +321,22 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       );
       _debugLog('State updated: localColor=$creatorColor, appliedMoveCount=0');
       _beginLocalGame(boardSize, session: session);
+      await _listenToRoom(code, localColor: creatorColor);
     } catch (e) {
       _debugLog('createGame error: $e');
-      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
+      if (mounted && operation == _roomEpoch) {
+        state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
+      }
     } finally {
-      state = state.copyWith(creating: false);
+      if (mounted && operation == _roomEpoch) {
+        state = state.copyWith(creating: false);
+      }
     }
   }
 
-  Future<void> joinGame(String roomCode) async {
+  Future<void> joinGame(String roomCode, {String? expectedUid}) async {
     _debugLog('joinGame() called with roomCode=$roomCode');
+    state = state.copyWith(clearError: true);
     await initialize();
 
     // Check if initialize() failed
@@ -303,6 +345,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       return;
     }
 
+    await leaveRoom();
+    final operation = _roomEpoch;
     state = state.copyWith(joining: true);
     final code = roomCode.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
 
@@ -316,6 +360,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
 
     try {
+      if (expectedUid != null &&
+          FirebaseAuth.instance.currentUser?.uid != expectedUid) {
+        throw Exception(
+            'This room belongs to a different identity. Use the original browser profile or sign in with the original account.');
+      }
       final user =
           FirebaseAuth.instance.currentUser ?? (await _ensureAuth(force: true));
       if (user == null) {
@@ -337,17 +386,22 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         _debugLog(
             'Found game: boardSize=${existing.boardSize}, moves=${existing.moves.length}, currentTurn=${existing.currentTurn}, creatorColor=${existing.creatorColor}');
 
-        if (existing.status == OnlineStatus.finished) {
-          throw Exception('This game has already ended.');
-        }
-
         // Reconnect without rewriting either participant's match cosmetics.
         if (existing.white?.id == user.uid || existing.black?.id == user.uid) {
           joinerColor = existing.white?.id == user.uid
               ? PlayerColor.white
               : PlayerColor.black;
           joinedSession = existing;
+          await _rememberRoom(code, user.uid);
           return;
+        }
+
+        if (expectedUid != null) {
+          throw Exception(
+              'Your saved identity no longer owns a seat in this room.');
+        }
+        if (existing.status == OnlineStatus.finished) {
+          throw Exception('This game has already ended.');
         }
 
         // Determine joiner's color (opposite of creator's color)
@@ -368,6 +422,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             white: joinerPlayer,
             status: OnlineStatus.playing,
           );
+          await _rememberRoom(code, user.uid);
           txn.update(docRef, {
             'white': joinerPlayer.toMap(),
             'status': OnlineStatus.playing.name,
@@ -381,6 +436,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             black: joinerPlayer,
             status: OnlineStatus.playing,
           );
+          await _rememberRoom(code, user.uid);
           txn.update(docRef, {
             'black': joinerPlayer.toMap(),
             'status': OnlineStatus.playing.name,
@@ -390,13 +446,13 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         _debugLog('Updating game status to playing, joiner is $joinerColor');
       });
 
+      if (!mounted || operation != _roomEpoch) return;
       if (joinedSession == null || joinerColor == null) {
         throw Exception('Failed to join game.');
       }
 
       _debugLog('Transaction complete, setting up listener as $joinerColor');
       _debugLog('>>> JOINER: About to call _listenToRoom <<<');
-      await _listenToRoom(code, localColor: joinerColor!);
 
       // IMPORTANT: Set session immediately so isLocalTurn works correctly
       _debugLog('>>> JOINER: Setting state with session <<<');
@@ -412,7 +468,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           '>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
 
       _debugLog('>>> JOINER: About to call _beginLocalGame <<<');
-      _beginLocalGame(joinedSession!.boardSize, session: joinedSession);
+      rebuildFromSession(joinedSession!, joinerColor!);
+      await _rememberRoom(code, user.uid);
+      await _listenToRoom(code, localColor: joinerColor!);
       _debugLog(
           '>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
 
@@ -427,17 +485,46 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           'onlineGameState: session.moves=${state.session?.moves.length}, appliedMoveCount=${state.appliedMoveCount}');
     } catch (e) {
       _debugLog('joinGame error: $e');
-      state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
+      if (mounted && operation == _roomEpoch) {
+        state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
+      }
     } finally {
-      state = state.copyWith(joining: false);
+      if (mounted && operation == _roomEpoch) {
+        state = state.copyWith(joining: false);
+      }
     }
   }
 
   Future<void> leaveRoom() async {
-    await _subscription?.cancel();
+    _roomEpoch++;
+    _submitting = false;
+    _endingOnTime = false;
+    final subscription = _subscription;
     _subscription = null;
     _ref.read(chessClockProvider.notifier).stop();
     state = const OnlineGameState();
+    await subscription?.cancel();
+  }
+
+  Future<void> _rememberRoom(String code, String uid) async {
+    try {
+      await _ref
+          .read(savedRoomsProvider.notifier)
+          .remember(SavedRoom(code: code, uid: uid, hex: false));
+    } catch (_) {
+      state = state.copyWith(
+          errorMessage:
+              'Room is online, but this device could not save its shortcut. Keep code $code to return.');
+    }
+  }
+
+  /// Rebuild from an authoritative room document without depending on previous
+  /// widget state. Used by recovery and reconciliation, including final results.
+  void rebuildFromSession(OnlineGameSession session, PlayerColor color) {
+    state = OnlineGameState(
+        session: session, roomCode: session.roomCode, localColor: color);
+    _beginLocalGame(session.boardSize, session: session);
+    _syncMovesWithLocalGame(session);
   }
 
   Future<void> recordLocalMove(MoveRecord move, GameState latestState) async {
@@ -462,48 +549,83 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
                 ? OnlineWinner.white.name
                 : OnlineWinner.black.name;
 
-    _debugLog(
-        'recordLocalMove: Writing to Firestore - nextTurn=${latestState.currentPlayer.name}, status=$nextStatus');
-    await _firestore.runTransaction((txn) async {
-      final snapshot = await txn.get(docRef);
-      if (!snapshot.exists) return;
-      final data = snapshot.data();
-      if (data == null) return;
+    final expectedCount = state.appliedMoveCount;
+    final color = state.localColor!;
+    final epoch = _roomEpoch;
+    if (_submitting || move.player != color) return;
+    _submitting = true;
+    // The UI already applied this move. Reserve its log index before snapshots
+    // arrive, and lock input until the transaction has acknowledged it.
+    state =
+        state.copyWith(appliedMoveCount: expectedCount + 1, reconnecting: true);
+    try {
+      await _firestore.runTransaction((txn) async {
+        final snapshot = await txn.get(docRef);
+        if (!snapshot.exists) throw StateError('Room no longer exists');
+        final remote = OnlineGameSession.fromSnapshot(
+            activeSession.roomCode, snapshot.data()!);
+        if (remote.status != OnlineStatus.playing ||
+            remote.currentTurn != color ||
+            remote.moves.length != expectedCount ||
+            !_samePrefix(remote.moves, activeSession.moves, expectedCount)) {
+          throw StateError(
+              'The room changed. Reconnect to load the latest board.');
+        }
+        final moves = (snapshot.data()!['moves'] as List).toList();
+        final clock = OnlineClockBalance.at(remote, DateTime.now());
+        if (remote.chessClockEnabled &&
+            (color == PlayerColor.white ? clock.white : clock.black) <= 0) {
+          throw StateError('The move arrived after the clock expired.');
+        }
+        moves.add(OnlineGameMove(
+                notation: move.notation,
+                player: color,
+                whiteSeconds: remote.chessClockEnabled ? clock.white : null,
+                blackSeconds: remote.chessClockEnabled ? clock.black : null)
+            .toMap());
+        txn.update(docRef, {
+          'moves': moves,
+          'currentTurn': latestState.currentPlayer.name,
+          'status': nextStatus,
+          'winner': winner,
+          'lastMoveAt': FieldValue.serverTimestamp(),
+        });
+      });
+      if (mounted && epoch == _roomEpoch) {
+        state = state.copyWith(reconnecting: false);
+      }
+    } catch (_) {
+      if (mounted && epoch == _roomEpoch) {
+        // A failed/unacknowledged move is never treated as a durable save.
+        // Rebuild from the server if reachable; otherwise keep input locked.
+        try {
+          final snapshot =
+              await docRef.get(const GetOptions(source: Source.server));
+          if (!mounted || epoch != _roomEpoch) return;
+          final remote = OnlineGameSession.fromSnapshot(
+              activeSession.roomCode, snapshot.data()!);
+          rebuildFromSession(remote, color);
+        } catch (_) {
+          if (!mounted || epoch != _roomEpoch) return;
+          state = state.copyWith(reconnecting: true);
+        }
+        state = state.copyWith(
+            errorMessage:
+                'Move could not be confirmed. Return to the menu and resume this room to load its saved state.');
+      }
+    } finally {
+      if (epoch == _roomEpoch) _submitting = false;
+    }
+  }
 
-      // Convert existing moves to properly typed maps (Firestore web returns Map<Object?, Object?>)
-      final rawMoves = data['moves'] as List? ?? [];
-      final moves = rawMoves.map((m) {
-        if (m is Map<String, dynamic>) return m;
-        if (m is Map) return Map<String, dynamic>.from(m);
-        return <String, dynamic>{};
-      }).toList();
-
-      // Add the new move as a properly serialized map
-      final newMoveMap = OnlineGameMove(
-        notation: move.notation,
-        player: state.localColor!,
-      ).toMap();
-      moves.add(newMoveMap);
-
-      final updateData = {
-        'moves': moves,
-        'currentTurn': latestState.currentPlayer.name,
-        'status': nextStatus,
-        'winner': winner,
-        'lastMoveAt': FieldValue.serverTimestamp(),
-      };
-
-      _debugLog(
-          'recordLocalMove: Firestore update data: moves=${moves.length}, currentTurn=${updateData['currentTurn']}, status=${updateData['status']}');
-      _debugLog('recordLocalMove: New move: $newMoveMap');
-
-      txn.update(docRef, updateData);
-    });
-
-    final newCount = state.appliedMoveCount + 1;
-    _debugLog(
-        'recordLocalMove: Transaction complete, appliedMoveCount: ${state.appliedMoveCount} -> $newCount');
-    state = state.copyWith(appliedMoveCount: newCount);
+  bool _samePrefix(List<OnlineGameMove> a, List<OnlineGameMove> b, int count) {
+    if (a.length < count || b.length < count) return false;
+    for (var i = 0; i < count; i++) {
+      if (a[i].notation != b[i].notation || a[i].player != b[i].player) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> resign() async {
@@ -537,21 +659,27 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   Future<void> _listenToRoom(String roomCode,
       {required PlayerColor localColor}) async {
+    // Ratings sync belongs to authenticated online play, not offline startup.
+    unawaited(_ref.read(eloProvider.notifier).initialize());
     _debugLog(
         '_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
     await _subscription?.cancel();
+    final epoch = _roomEpoch;
 
     final docRef = _firestore.collection('games').doc(roomCode);
     _debugLog('>>> Subscribing to document path: ${docRef.path} <<<');
 
-    _subscription = docRef.snapshots().listen((snapshot) {
+    _subscription =
+        docRef.snapshots(includeMetadataChanges: true).listen((snapshot) {
+      if (!mounted || epoch != _roomEpoch) return;
       _debugLog('>>> FIRESTORE SNAPSHOT RECEIVED <<<');
       _debugLog(
           '>>> connectionState: exists=${snapshot.exists}, metadata.isFromCache=${snapshot.metadata.isFromCache}, metadata.hasPendingWrites=${snapshot.metadata.hasPendingWrites} <<<');
 
       final data = snapshot.data();
       if (data == null) {
-        _debugLog('Snapshot data is null, ignoring');
+        state = state.copyWith(
+            errorMessage: 'This room no longer exists.', reconnecting: true);
         return;
       }
 
@@ -574,10 +702,23 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         _debugLog('!!! DESERIALIZATION ERROR !!!');
         _debugLog('Error: $e');
         _debugLog('Stack trace: $stackTrace');
-        _debugLog('Raw data that failed: $data');
+        state = state.copyWith(
+            errorMessage: 'Saved room data is invalid.', reconnecting: true);
         return;
       }
       final previousSession = state.session;
+      if (previousSession != null &&
+          !_samePrefix(
+              session.moves,
+              previousSession.moves,
+              session.moves.length < previousSession.moves.length
+                  ? session.moves.length
+                  : previousSession.moves.length)) {
+        state = state.copyWith(
+            errorMessage: 'The saved move history changed unexpectedly.',
+            reconnecting: true);
+        return;
+      }
 
       _debugLog(
           'Snapshot data: moves=${session.moves.length}, currentTurn=${session.currentTurn}, '
@@ -612,15 +753,18 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         opponentDisconnected: opponentDisconnected,
         opponentJustJoined: opponentJustJoined,
         opponentJustMoved: opponentJustMoved,
+        reconnecting: _submitting || snapshot.metadata.isFromCache,
         clearError: true,
       );
       _debugLog('State updated, now calling _syncMovesWithLocalGame');
       _syncMovesWithLocalGame(session);
     }, onError: (error, stackTrace) {
+      if (!mounted || epoch != _roomEpoch) return;
       _debugLog('!!! FIRESTORE LISTENER ERROR !!!');
       _debugLog('Error: $error');
       _debugLog('Stack trace: $stackTrace');
       state = state.copyWith(
+          reconnecting: true,
           errorMessage:
               'Connection error. Please check your internet connection.');
     });
@@ -696,6 +840,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _debugLog(
         '_beginLocalGame: Starting new local game with boardSize=$boardSize');
     final currentSession = _ref.read(gameSessionProvider);
+    _ref.read(scenarioStateProvider.notifier).clearScenario();
 
     // Use chess clock settings from the online session if available (synced from creator)
     final useChessClock = session?.chessClockEnabled ?? false;
@@ -703,6 +848,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     _ref.read(gameSessionProvider.notifier).state = currentSession.copyWith(
       mode: GameMode.online,
+      clearScenario: true,
       chessClockSecondsOverride: clockSeconds,
     );
     _ref.read(gameStateProvider.notifier).newGame(boardSize);
@@ -728,128 +874,91 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   void _syncMovesWithLocalGame(OnlineGameSession session) {
-    final applied = state.appliedMoveCount;
-    _debugLog('>>> _syncMovesWithLocalGame START <<<');
-    _debugLog(
-        'session.moves.length=${session.moves.length}, appliedMoveCount=$applied');
-
-    // Log the LOCAL game state BEFORE sync
-    final localStateBefore = _ref.read(gameStateProvider);
-    _debugLog(
-        'LOCAL STATE BEFORE SYNC: currentPlayer=${localStateBefore.currentPlayer}, '
-        'turnNumber=${localStateBefore.turnNumber}, '
-        'occupiedCells=${localStateBefore.board.occupiedPositions.length}');
-
-    if (session.moves.length < applied) {
-      _debugLog(
-          '_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
+    if (session.moves.length < state.appliedMoveCount) {
       _beginLocalGame(session.boardSize, session: session);
       state = state.copyWith(appliedMoveCount: 0);
     }
-
-    if (session.moves.length == state.appliedMoveCount) {
-      _debugLog(
-          '_syncMovesWithLocalGame: No new moves to apply (${session.moves.length} == ${state.appliedMoveCount})');
-      _debugLog('>>> _syncMovesWithLocalGame END (no changes) <<<');
+    for (var i = state.appliedMoveCount; i < session.moves.length; i++) {
+      if (!applyOnlineMove(_ref.read(gameStateProvider.notifier),
+          _ref.read(gameStateProvider), session.moves[i])) {
+        state = state.copyWith(
+            errorMessage:
+                'Saved move ${i + 1} is invalid. This room cannot continue safely.');
+        return;
+      }
+      _consumeLastMove();
+      state = state.copyWith(appliedMoveCount: i + 1);
+    }
+    final game = _ref.read(gameStateProvider);
+    if (game.currentPlayer != session.currentTurn) {
+      state = state.copyWith(
+          errorMessage:
+              'The saved turn does not match the board. Reconnect to this room.');
       return;
     }
-
-    _debugLog(
-        '>>> APPLYING ${session.moves.length - state.appliedMoveCount} NEW MOVES <<<');
-    for (var i = state.appliedMoveCount; i < session.moves.length; i++) {
-      final move = session.moves[i];
-      _debugLog(
-          'Applying move $i: notation="${move.notation}", player=${move.player}');
-      final success = _applyNotation(move);
-      if (!success) {
-        _debugLog('!!! FAILED to apply move ${move.notation} !!!');
-        state = state.copyWith(
-          errorMessage: 'Failed to apply move ${move.notation}',
-        );
-        break;
+    if (session.status == OnlineStatus.finished && !game.isGameOver) {
+      final result = switch (session.winner) {
+        OnlineWinner.white => GameResult.whiteWins,
+        OnlineWinner.black => GameResult.blackWins,
+        OnlineWinner.draw => GameResult.draw,
+        null => null,
+      };
+      if (result == null) {
+        state = state.copyWith(errorMessage: 'The saved result is missing.');
+        return;
       }
-      _debugLog('Move $i applied successfully');
+      _ref
+          .read(gameStateProvider.notifier)
+          .loadState(game.copyWith(phase: GamePhase.finished, result: result));
+      _ref.read(chessClockProvider.notifier).stop();
     }
-
-    // Log the LOCAL game state AFTER sync
-    final localStateAfter = _ref.read(gameStateProvider);
-    _debugLog(
-        'LOCAL STATE AFTER SYNC: currentPlayer=${localStateAfter.currentPlayer}, '
-        'turnNumber=${localStateAfter.turnNumber}, '
-        'occupiedCells=${localStateAfter.board.occupiedPositions.length}');
-
-    _debugLog('Updating appliedMoveCount: $applied -> ${session.moves.length}');
-    state = state.copyWith(appliedMoveCount: session.moves.length);
-    _debugLog('>>> _syncMovesWithLocalGame END <<<');
+    if (session.chessClockEnabled &&
+        !game.isGameOver &&
+        session.status == OnlineStatus.playing) {
+      final balance = OnlineClockBalance.at(session, DateTime.now());
+      _ref.read(chessClockProvider.notifier).restore(
+          balance.white, balance.black,
+          active: session.moves.isEmpty ? null : session.currentTurn);
+    }
   }
 
-  bool _applyNotation(OnlineGameMove move) {
-    final notation = move.notation;
-
-    // Validate move notation for security
-    if (!OnlineGameMove.isValidNotation(notation)) {
-      _debugLog('_applyNotation: Invalid notation format: $notation');
-      return false;
-    }
-
-    final boardSize = _ref.read(gameStateProvider).boardSize;
-    final gameNotifier = _ref.read(gameStateProvider.notifier);
-    final currentGameState = _ref.read(gameStateProvider);
-
-    _debugLog(
-        '_applyNotation: notation=$notation, currentPlayer=${currentGameState.currentPlayer}, '
-        'turnNumber=${currentGameState.turnNumber}, phase=${currentGameState.phase}');
-
-    final placement = RegExp(r'^(S|C)?([a-z])(\d+)$');
-    final stack = RegExp(r'^(\d+)?([a-z])(\d+)([<>+-])(\d+)?$');
-
-    if (placement.hasMatch(notation)) {
-      final match = placement.firstMatch(notation)!;
-      final typePrefix = match.group(1);
-      final col = match.group(2)!;
-      final row = int.parse(match.group(3)!);
-      final pos = _positionFromNotation(col, row, boardSize);
-      final type = switch (typePrefix) {
-        'S' => PieceType.standing,
-        'C' => PieceType.capstone,
-        _ => PieceType.flat,
-      };
-      _debugLog('_applyNotation: Placing $type at $pos');
-      final success = gameNotifier.placePiece(pos, type);
-      _debugLog('_applyNotation: placePiece result=$success');
-      if (success) {
-        _consumeLastMove();
+  Future<void> finishOnTimeout(PlayerColor expired) async {
+    final room = state.session;
+    if (_endingOnTime || room == null || !room.chessClockEnabled) return;
+    final epoch = _roomEpoch;
+    _endingOnTime = true;
+    try {
+      await _firestore.runTransaction((txn) async {
+        final doc = _firestore.collection('games').doc(room.roomCode);
+        final snapshot = await txn.get(doc);
+        if (!snapshot.exists) return;
+        final remote =
+            OnlineGameSession.fromSnapshot(room.roomCode, snapshot.data()!);
+        final balance = OnlineClockBalance.at(remote, DateTime.now());
+        if (remote.status != OnlineStatus.playing ||
+            remote.currentTurn != expired ||
+            (expired == PlayerColor.white ? balance.white : balance.black) >
+                0) {
+          return;
+        }
+        txn.update(doc, {
+          'status': OnlineStatus.finished.name,
+          'winner': expired == PlayerColor.white
+              ? OnlineWinner.black.name
+              : OnlineWinner.white.name,
+          'lastMoveAt': FieldValue.serverTimestamp(),
+        });
+      });
+    } catch (_) {
+      if (mounted && epoch == _roomEpoch) {
+        state = state.copyWith(
+            errorMessage:
+                'Clock result could not be confirmed. Reconnect to this room.',
+            reconnecting: true);
       }
-      return success;
+    } finally {
+      if (epoch == _roomEpoch) _endingOnTime = false;
     }
-
-    if (stack.hasMatch(notation)) {
-      final match = stack.firstMatch(notation)!;
-      final countPrefix = match.group(1);
-      final col = match.group(2)!;
-      final row = int.parse(match.group(3)!);
-      final dirSymbol = match.group(4)!;
-      final dropDigits = match.group(5);
-
-      final totalPicked = countPrefix == null ? 1 : int.parse(countPrefix);
-      final drops = dropDigits == null
-          ? <int>[totalPicked]
-          : dropDigits.split('').map(int.parse).toList();
-
-      final from = _positionFromNotation(col, row, boardSize);
-      final direction = _directionFromSymbol(dirSymbol);
-      _debugLog(
-          '_applyNotation: Moving stack from $from, direction=$direction, drops=$drops');
-      final success = gameNotifier.moveStack(from, direction, drops);
-      _debugLog('_applyNotation: moveStack result=$success');
-      if (success) {
-        _consumeLastMove();
-      }
-      return success;
-    }
-
-    _debugLog('_applyNotation: No regex match for notation=$notation');
-    return false;
   }
 
   void _consumeLastMove() {
@@ -870,19 +979,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _ref.read(chessClockProvider.notifier).start(gameState.currentPlayer);
   }
 
-  Position _positionFromNotation(String col, int rowNumber, int boardSize) {
-    final colIndex = col.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final rowIndex = boardSize - rowNumber;
-    return Position(rowIndex, colIndex);
-  }
-
-  Direction _directionFromSymbol(String symbol) {
-    return switch (symbol) {
-      '+' => Direction.up,
-      '-' => Direction.down,
-      '<' => Direction.left,
-      _ => Direction.right,
-    };
+  @override
+  void dispose() {
+    _roomEpoch++;
+    unawaited(_subscription?.cancel());
+    super.dispose();
   }
 
   /// Returns (opponentInactive, opponentDisconnected)
@@ -907,5 +1008,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
 final onlineGameProvider =
     StateNotifierProvider<OnlineGameController, OnlineGameState>((ref) {
-  return OnlineGameController(ref);
+  final controller = OnlineGameController(ref);
+  ref.listen<GameSessionConfig>(gameSessionProvider, (previous, next) {
+    if (next.mode != GameMode.online) unawaited(controller.leaveRoom());
+  });
+  return controller;
 });

@@ -80,3 +80,25 @@ anonymous identities; two ordinary tabs can share the same identity.
 
 Flutter rendering, model and responsive checks passed. Live two-device behavior
 and backend authorization remain to be verified after deploying merged rules.
+
+## Recovery and interruption playtest
+
+After the recovery iteration, validate with the same browser profile/account:
+
+1. Create a room, close the tab while waiting, reopen and use Resume online game.
+2. Join from an independent identity, make moves, then close both clients.
+   Reopen each and verify board, reserves, turn, themes and history match.
+3. Close the Hex host on an AI turn. The room stays saved; reopening that host
+   should resume its bot turn while preserving every human seat.
+4. Interrupt the network while committing a square move. Input must lock or
+   report an unconfirmed save; recovery must show the server-confirmed log.
+5. For a timed square room, wait with the tab closed and verify time was consumed
+   rather than reset. Verify expiration reaches both clients. New moves carry
+   clock balances; legacy logs have approximate recovery. Server clock authority
+   and clock-skew protection are still separate work.
+6. Remove a saved shortcut and rejoin by code to confirm removal does not delete
+   the room. Try a different identity; it must not take an occupied seat.
+
+No additional Firebase collection/index is introduced by recovery. See
+[performance and recovery](PERFORMANCE_AND_RECOVERY.md) for the contract and
+verification boundaries.

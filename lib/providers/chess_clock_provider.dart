@@ -63,10 +63,13 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
 
   final Ref _ref;
   Timer? _timer;
+  DateTime? _startedAt;
+  int _startingSeconds = 0;
 
   /// Initialize the clock with time based on board size (fully resets state)
   void initialize(int boardSize, {int? secondsOverride}) {
     _timer?.cancel();
+    _startedAt = null;
     final settings = _ref.read(appSettingsProvider);
     final time = secondsOverride ?? settings.chessClockSecondsForSize(boardSize);
     // Create fresh state with all defaults (isRunning=false, isExpired=false, etc.)
@@ -79,6 +82,7 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
 
   /// Start the clock for a player
   void start(PlayerColor player) {
+    _tick();
     if (state.isExpired) return;
 
     _timer?.cancel();
@@ -86,6 +90,8 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
       activePlayer: player,
       isRunning: true,
     );
+    _startedAt = DateTime.now();
+    _startingSeconds = player == PlayerColor.white ? state.whiteTimeRemaining : state.blackTimeRemaining;
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _tick();
@@ -94,6 +100,7 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
 
   /// Pause the clock
   void pause() {
+    _tick();
     _timer?.cancel();
     state = state.copyWith(isRunning: false);
   }
@@ -116,14 +123,24 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
         ? PlayerColor.black
         : PlayerColor.white;
 
-    state = state.copyWith(activePlayer: newPlayer);
+    _tick();
+    start(newPlayer);
+  }
+
+  void restore(int white, int black, {PlayerColor? active}) {
+    _timer?.cancel();
+    state = ChessClockState(whiteTimeRemaining: white, blackTimeRemaining: black);
+    if (active != null) {
+      start(active);
+      _tick();
+    }
   }
 
   void _tick() {
     if (!state.isRunning || state.activePlayer == null) return;
 
     if (state.activePlayer == PlayerColor.white) {
-      final newTime = state.whiteTimeRemaining - 1;
+      final newTime = _startingSeconds - DateTime.now().difference(_startedAt!).inSeconds;
       if (newTime <= 0) {
         _timer?.cancel();
         state = state.copyWith(
@@ -136,7 +153,7 @@ class ChessClockNotifier extends StateNotifier<ChessClockState> {
         state = state.copyWith(whiteTimeRemaining: newTime);
       }
     } else {
-      final newTime = state.blackTimeRemaining - 1;
+      final newTime = _startingSeconds - DateTime.now().difference(_startedAt!).inSeconds;
       if (newTime <= 0) {
         _timer?.cancel();
         state = state.copyWith(

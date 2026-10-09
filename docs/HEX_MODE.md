@@ -233,3 +233,13 @@ board renders each top stone using its owning seat's style, including previews,
 while every viewer uses the host's board material. Theme labels show samples
 and unlock requirements without granting rewards. Deploy the updated Firestore
 rules before production clients create/join rooms with this metadata.
+
+## Return after closing the app
+
+Hosts and guests save local room shortcuts and return through the menu's Resume
+online game list, or their existing room code. Returning to a saved room checks
+the original Firebase identity and uses a read-only server fetch before restoring
+seat control and bot scheduling. The complete saved log is replayed on recovery;
+subsequent snapshots validate the prefix and simulate only appended moves.
+The room survives host absence, while AI waits for that host to return.
+See PERFORMANCE_AND_RECOVERY.md for guest identity and verification limits.

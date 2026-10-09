@@ -14,6 +14,7 @@ import '../hex/hex_screen.dart';
 import '../hex/hex_learning_screen.dart';
 import '../widgets/chess_clock_setup.dart';
 import '../widgets/play_mode_card.dart';
+import '../widgets/saved_online_games.dart';
 import 'achievements_screen.dart';
 import 'leaderboard_screen.dart';
 import 'settings_screen.dart';
@@ -59,7 +60,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     await ref.read(playGamesServiceProvider.notifier).initialize();
 
     // Initialize ELO rating system
-    await ref.read(eloProvider.notifier).initialize();
+    await ref.read(eloProvider.notifier).initialize(syncOnline: false);
   }
 
   void _startNewGame(
@@ -693,7 +694,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   Widget build(BuildContext context) {
     // Use granular selector to avoid rebuilding on every game state change
     // Only rebuild when "has game in progress" status actually changes
-    final hasGameInProgress = ref.watch(gameStateProvider.select(
+    final hasGameInProgress = ref.watch(gameSessionProvider.select((session) => session.mode != GameMode.online)) && ref.watch(gameStateProvider.select(
       (s) =>
           !s.isGameOver &&
           (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
@@ -803,6 +804,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     const SizedBox(height: 8),
                     const Text('Connect opposite edges. Build your road.'),
                     const SizedBox(height: 24),
+                    const SavedOnlineGames(),
                     if (hasGameInProgress) ...[
                       PlayModeCard(
                           title: 'Continue Game',
