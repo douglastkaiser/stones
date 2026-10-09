@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/achievement.dart';
 import '../providers/achievements_provider.dart';
 import '../theme/game_colors.dart';
+import 'settings_screen.dart';
 
 /// Achievements screen showing all achievements and their unlock status
 class AchievementsScreen extends ConsumerWidget {
@@ -24,93 +25,131 @@ class AchievementsScreen extends ConsumerWidget {
         title: const Text('Achievements'),
         backgroundColor: GameColors.boardFrameInner,
         foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Progress summary
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  GameColors.boardFrameInner,
-                  GameColors.boardFrameInner.withValues(alpha: 0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(
-                  '$unlockedCount / $totalCount',
-                  style: const TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Achievements Unlocked',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: totalCount > 0 ? unlockedCount / totalCount : 0,
-                    minHeight: 12,
-                    backgroundColor: Colors.white.withValues(alpha: 0.3),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Stats section
-          _StatsSection(achievementState: achievementState, isDark: isDark),
-          const SizedBox(height: 24),
-
-          // Achievement list
-          Text(
-            'All Achievements',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Achievement cards
-          ...achievements.map((achievement) {
-            final isUnlocked = achievementState.isUnlocked(achievement.type);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _AchievementCard(
-                achievement: achievement,
-                isUnlocked: isUnlocked,
-                isDark: isDark,
-                colorScheme: colorScheme,
-              ),
-            );
-          }),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
+              child: const Text('Use rewards',
+                  style: TextStyle(color: Colors.white)))
         ],
       ),
+      body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  const Text(
+                      'Square-game achievements save on this device without signing in. Hex matches do not count. Choose unlocked cosmetics in Settings.'),
+                  const SizedBox(height: 16),
+                  // Progress summary
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          GameColors.boardFrameInner,
+                          GameColors.boardFrameInner.withValues(alpha: 0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$unlockedCount / $totalCount',
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Achievements Unlocked',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Progress bar
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value:
+                                totalCount > 0 ? unlockedCount / totalCount : 0,
+                            minHeight: 12,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.3),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.amber),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Stats section
+                  _StatsSection(
+                      achievementState: achievementState, isDark: isDark),
+                  const SizedBox(height: 24),
+
+                  // Achievement list
+                  Text(
+                    'All Achievements',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Achievement cards
+                  ...achievements.map((achievement) {
+                    final isUnlocked =
+                        achievementState.isUnlocked(achievement.type);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _AchievementCard(
+                        achievement: achievement,
+                        isUnlocked: isUnlocked,
+                        isDark: isDark,
+                        colorScheme: colorScheme,
+                        progress: switch (achievement.type) {
+                          AchievementType.student =>
+                            '${achievementState.completedTutorials.intersection(AchievementState.allTutorialIds).length}/${AchievementState.allTutorialIds.length} tutorials',
+                          AchievementType.puzzleSolver =>
+                            '${achievementState.completedPuzzles.intersection(AchievementState.allPuzzleIds).length}/${AchievementState.allPuzzleIds.length} puzzles',
+                          AchievementType.dedicated =>
+                            '${achievementState.totalWins.clamp(0, 10)}/10 wins',
+                          AchievementType.veteran =>
+                            '${achievementState.totalWins.clamp(0, 50)}/50 wins',
+                          AchievementType.connected =>
+                            '${achievementState.onlineWins.clamp(0, 1)}/1 online win',
+                          AchievementType.firstSteps ||
+                          AchievementType.competitor ||
+                          AchievementType.strategist ||
+                          AchievementType.grandmaster ||
+                          AchievementType.clockManager ||
+                          AchievementType.domination =>
+                            null,
+                        },
+                      ),
+                    );
+                  }),
+                ],
+              ))),
     );
   }
 }
@@ -148,8 +187,8 @@ class _StatsSection extends StatelessWidget {
           Text(
             'Statistics',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -166,7 +205,8 @@ class _StatsSection extends StatelessWidget {
                 child: _StatItem(
                   icon: Icons.school,
                   label: 'Tutorials',
-                  value: '${achievementState.completedTutorials.length}/${AchievementState.allTutorialIds.length}',
+                  value:
+                      '${achievementState.completedTutorials.length}/${AchievementState.allTutorialIds.length}',
                   color: Colors.green,
                 ),
               ),
@@ -179,11 +219,17 @@ class _StatsSection extends StatelessWidget {
                 child: _StatItem(
                   icon: Icons.extension,
                   label: 'Puzzles',
-                  value: '${achievementState.completedPuzzles.length}/${AchievementState.allPuzzleIds.length}',
+                  value:
+                      '${achievementState.completedPuzzles.length}/${AchievementState.allPuzzleIds.length}',
                   color: Colors.purple,
                 ),
               ),
-              const Expanded(child: SizedBox()),
+              Expanded(
+                  child: _StatItem(
+                      icon: Icons.emoji_events,
+                      label: 'Total Wins',
+                      value: '${achievementState.totalWins}',
+                      color: Colors.amber)),
             ],
           ),
         ],
@@ -219,23 +265,24 @@ class _StatItem extends StatelessWidget {
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 12),
-        Column(
+        Expanded(
+            child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
-        ),
+        )),
       ],
     );
   }
@@ -247,12 +294,14 @@ class _AchievementCard extends StatelessWidget {
   final bool isUnlocked;
   final bool isDark;
   final ColorScheme colorScheme;
+  final String? progress;
 
   const _AchievementCard({
     required this.achievement,
     required this.isUnlocked,
     required this.isDark,
     required this.colorScheme,
+    this.progress,
   });
 
   IconData get _achievementIcon {
@@ -278,9 +327,7 @@ class _AchievementCard extends StatelessWidget {
         : (isDark ? colorScheme.surfaceContainerHighest : Colors.grey.shade100);
 
     final iconColor = isUnlocked ? Colors.amber : Colors.grey;
-    final textColor = isUnlocked
-        ? colorScheme.onSurface
-        : colorScheme.onSurface.withValues(alpha: 0.5);
+    final textColor = colorScheme.onSurface;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -330,10 +377,11 @@ class _AchievementCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         achievement.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
                       ),
                     ),
                     if (isUnlocked)
@@ -345,11 +393,14 @@ class _AchievementCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
+                Text(isUnlocked ? 'Unlocked' : 'Locked',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                if (progress != null) Text(progress!),
                 Text(
                   achievement.description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: textColor.withValues(alpha: 0.8),
-                  ),
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                 ),
                 if (achievement.unlocksReward != null) ...[
                   const SizedBox(height: 8),
@@ -373,15 +424,17 @@ class _AchievementCard extends StatelessWidget {
                           color: isUnlocked ? Colors.green : Colors.grey,
                         ),
                         const SizedBox(width: 4),
-                        Text(
+                        Flexible(
+                            child: Text(
                           isUnlocked
                               ? 'Unlocked: ${achievement.unlocksReward}'
                               : 'Unlocks: ${achievement.unlocksReward}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isUnlocked ? Colors.green : Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                        )),
                       ],
                     ),
                   ),

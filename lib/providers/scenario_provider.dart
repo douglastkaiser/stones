@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/scenario.dart';
+import '../models/game_state.dart';
+import '../models/piece.dart';
 import '../services/ai/ai.dart';
 
 class ScenarioState {
@@ -27,7 +29,8 @@ class ScenarioState {
     bool clearScenario = false,
   }) {
     return ScenarioState(
-      activeScenario: clearScenario ? null : (activeScenario ?? this.activeScenario),
+      activeScenario:
+          clearScenario ? null : (activeScenario ?? this.activeScenario),
       scriptedMoveIndex: scriptedMoveIndex ?? this.scriptedMoveIndex,
       introShown: introShown ?? this.introShown,
       completionShown: completionShown ?? this.completionShown,
@@ -37,9 +40,30 @@ class ScenarioState {
 
   bool get hasScenario => activeScenario != null;
 
+  /// Finishing a puzzle is success only when its learner wins. A scripted
+  /// puzzle must reach that result; its first guided step is not completion.
+  bool isSuccessful(GameState game) {
+    final scenario = activeScenario;
+    if (scenario == null) return false;
+    final learner = scenario.buildInitialState().currentPlayer;
+    final won = game.result ==
+        (learner == PlayerColor.white
+            ? GameResult.whiteWins
+            : GameResult.blackWins);
+    if (scenario.type == ScenarioType.puzzle) {
+      return won ||
+          (!game.isGameOver &&
+              guidedStepComplete &&
+              scenario.scriptedResponses.isEmpty);
+    }
+    return guidedStepComplete || won;
+  }
+
   AIMove? get nextScriptedMove {
     if (activeScenario == null) return null;
-    if (scriptedMoveIndex >= activeScenario!.scriptedResponses.length) return null;
+    if (scriptedMoveIndex >= activeScenario!.scriptedResponses.length) {
+      return null;
+    }
     return activeScenario!.scriptedResponses[scriptedMoveIndex];
   }
 }

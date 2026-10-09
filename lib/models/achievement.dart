@@ -80,12 +80,12 @@ const List<GameAchievement> achievements = [
   GameAchievement(
     type: AchievementType.dedicated,
     name: 'Dedicated',
-    description: 'Win 10 games (any mode)',
+    description: 'Win 10 square games',
   ),
   GameAchievement(
     type: AchievementType.veteran,
     name: 'Veteran',
-    description: 'Win 50 games (any mode)',
+    description: 'Win 50 square games',
     unlocksReward: 'Pixel Art board theme',
   ),
   GameAchievement(

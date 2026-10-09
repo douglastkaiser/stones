@@ -24,7 +24,7 @@ Check roads after the entire move. If multiple colors gain roads, the mover wins
 
 Without a road, a full board or any exhausted total reserve ends the match. Most exposed flats wins; a tie for most is a draw. Walls, caps and buried pieces do not score.
 
-This is an experimental variant. Rotate the starting seat between matches. Three independent players can cooperate or compete; there are no teams or elimination. Clocks, ratings and square-game tutorials do not apply here.''';
+This is an experimental variant. Rotate the starting seat between matches. Three independent players can cooperate or compete; there are no teams or elimination. Clocks, ratings, achievements and square-game tutorials do not apply here.''';
 
 void _showRules(BuildContext context) {
   showDialog<void>(
@@ -94,7 +94,7 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           const Text(
-              'Experimental hex variant. Each player connects their own matching edges. Choose any mix of human and AI seats.'),
+              'Experimental hex variant. Each player connects their own matching edges. Choose any mix of human and AI seats. Matches do not award square-game achievements or ratings.'),
           const SizedBox(height: 24),
           const Text('Board size'),
           Wrap(spacing: 8, children: [
@@ -292,156 +292,191 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
             icon: const Icon(Icons.help_outline),
             tooltip: 'Hex rules'),
       ]),
-      body: SafeArea(
-          child: Column(children: [
-        if (match.room != null)
-          TextButton.icon(
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: match.room!.code));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Room code copied')));
-                }
-              },
-              icon: const Icon(Icons.copy, size: 16),
-              label: Text('Room ${match.room!.code}')),
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 4,
-              children: HexSeat.values
-                  .map((seat) => Chip(
-                        avatar: CircleAvatar(
-                            backgroundColor: _seatColors[seat.index],
-                            child: Text(_symbols[seat.index],
-                                style: const TextStyle(
-                                    color: Colors.black, fontSize: 11))),
-                        label: Text(
-                            '${seat.label}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
-                        side: BorderSide(
-                            color: seat == game.current
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.transparent,
-                            width: 2),
-                      ))
-                  .toList(),
-            )),
-        Text(status,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium),
-        if (match.paused) const Text('AI paused'),
-        if (match.error != null)
-          Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(match.error!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error))),
-        Expanded(
-            child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: HexBoard(
-                    game: preview ?? game,
-                    selected: _source,
-                    destinations: spreads.map(_destination).toSet(),
-                    road: road,
-                    onCell: match.canPlay
-                        ? (cell) => _tap(cell, game, spreads)
-                        : null))),
-        ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 220),
-            child: SingleChildScrollView(
-                child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (!match.ready)
-                  const Text(
-                      'Share the room code. Each joining device fills one open human seat.'),
-                if (match.canPlay && !game.opening && _source == null)
-                  Wrap(
-                      spacing: 8,
-                      children: PieceType.values
-                          .map((type) => ChoiceChip(
-                                label: Text(switch (type) {
-                                  PieceType.flat => 'Flat',
-                                  PieceType.standing => 'Wall',
-                                  PieceType.capstone => 'Capstone'
-                                }),
-                                selected: _type == type,
-                                onSelected:
-                                    game.reserves[game.current.index].has(type)
-                                        ? (_) => setState(() {
-                                              _type = type;
-                                              _planned = null;
-                                            })
-                                        : null,
-                              ))
-                          .toList()),
-                if (match.canPlay && _source != null)
-                  Row(children: [
-                    Text('Carry $_pickup'),
-                    Expanded(
-                        child: Slider(
-                            value: _pickup.toDouble(),
-                            min: 1,
-                            max: math
-                                .max(
-                                    2,
-                                    math.min(game.carryLimit,
-                                        game.stackAt(_source!).length))
-                                .toDouble(),
-                            divisions: math.max(
-                                1,
-                                math.min(game.carryLimit,
-                                        game.stackAt(_source!).length) -
-                                    1),
-                            onChanged: game.stackAt(_source!).length <= 1
-                                ? null
-                                : (value) => setState(() {
-                                      _pickup = value.round();
-                                      _planned = null;
-                                      _choices = [];
-                                    }))),
-                  ]),
-                if (_choices.isNotEmpty)
-                  Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: _choices
-                          .map((move) => ChoiceChip(
-                                label: Text(move.drops.join(' → ')),
-                                selected: identical(move, _planned),
-                                onSelected: (_) =>
-                                    setState(() => _planned = move),
-                              ))
-                          .toList()),
-                if (match.canPlay)
-                  Text(_planned != null
-                      ? 'Preview — confirm to finish your move'
-                      : _source != null
-                          ? 'Tap a highlighted destination; choose how many pieces to drop on each cell.'
-                          : 'Tap an empty cell to place, or your stack to spread.'),
-                if (_planned != null || _source != null)
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    TextButton(
-                        onPressed: () => setState(_clear),
-                        child: const Text('Cancel')),
-                    if (_planned != null)
-                      FilledButton(
-                          onPressed: match.canPlay
-                              ? () async {
-                                  final move = _planned!;
-                                  if (await _controller.play(move) && mounted) {
-                                    setState(_clear);
-                                  }
-                                }
-                              : null,
-                          child: const Text('Confirm')),
-                  ]),
-              ]),
-            ))),
-      ])),
+      body: SafeArea(child: LayoutBuilder(builder: (context, constraints) {
+        final textScale =
+            MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+        return SingleChildScrollView(
+            child: SizedBox(
+                height: math.max(constraints.maxHeight, 520 * textScale),
+                child: Column(children: [
+                  if (match.room != null)
+                    TextButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(
+                              ClipboardData(text: match.room!.code));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Room code copied')));
+                          }
+                        },
+                        icon: const Icon(Icons.copy, size: 16),
+                        label: Text('Room ${match.room!.code}')),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: HexSeat.values
+                            .map((seat) => Chip(
+                                  avatar: CircleAvatar(
+                                      backgroundColor: _seatColors[seat.index],
+                                      child: Text(_symbols[seat.index],
+                                          style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 11))),
+                                  label: Text(
+                                      '${seat.label}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
+                                  side: BorderSide(
+                                      color: seat == game.current
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : Colors.transparent,
+                                      width: 2),
+                                ))
+                            .toList(),
+                      )),
+                  Text(status,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  if (game.finished) ...[
+                    Text(
+                        'Exposed flats: ${HexSeat.values.map((seat) => '${seat.label} ${HexRules.flatCounts(game)[seat.index]}').join(' · ')}',
+                        textAlign: TextAlign.center),
+                    TextButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Set up another match')),
+                  ],
+                  if (match.paused) const Text('AI paused'),
+                  if (match.error != null)
+                    Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(match.error!,
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.error))),
+                  Expanded(
+                      child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: HexBoard(
+                              game: preview ?? game,
+                              selected: _source,
+                              destinations: spreads.map(_destination).toSet(),
+                              road: road,
+                              onCell: match.canPlay
+                                  ? (cell) => _tap(cell, game, spreads)
+                                  : null))),
+                  ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                          child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          if (!match.ready)
+                            const Text(
+                                'Share the room code. Each joining device fills one open human seat.'),
+                          if (match.canPlay && !game.opening && _source == null)
+                            Wrap(
+                                spacing: 8,
+                                children: PieceType.values
+                                    .map((type) => ChoiceChip(
+                                          label: Text(switch (type) {
+                                            PieceType.flat => 'Flat',
+                                            PieceType.standing => 'Wall',
+                                            PieceType.capstone => 'Capstone'
+                                          }),
+                                          selected: _type == type,
+                                          onSelected: game
+                                                  .reserves[game.current.index]
+                                                  .has(type)
+                                              ? (_) => setState(() {
+                                                    _type = type;
+                                                    _planned = null;
+                                                  })
+                                              : null,
+                                        ))
+                                    .toList()),
+                          if (match.canPlay && _source != null)
+                            Row(children: [
+                              Text('Carry $_pickup'),
+                              Expanded(
+                                  child: Slider(
+                                      value: _pickup.toDouble(),
+                                      min: 1,
+                                      max: math
+                                          .max(
+                                              2,
+                                              math.min(
+                                                  game.carryLimit,
+                                                  game
+                                                      .stackAt(_source!)
+                                                      .length))
+                                          .toDouble(),
+                                      divisions: math.max(
+                                          1,
+                                          math.min(
+                                                  game.carryLimit,
+                                                  game
+                                                      .stackAt(_source!)
+                                                      .length) -
+                                              1),
+                                      onChanged:
+                                          game.stackAt(_source!).length <= 1
+                                              ? null
+                                              : (value) => setState(() {
+                                                    _pickup = value.round();
+                                                    _planned = null;
+                                                    _choices = [];
+                                                  }))),
+                            ]),
+                          if (_choices.isNotEmpty)
+                            Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: _choices
+                                    .map((move) => ChoiceChip(
+                                          label: Text(move.drops.join(' → ')),
+                                          selected: identical(move, _planned),
+                                          onSelected: (_) =>
+                                              setState(() => _planned = move),
+                                        ))
+                                    .toList()),
+                          if (match.canPlay)
+                            Text(_planned != null
+                                ? 'Preview — confirm to finish your move'
+                                : _source != null
+                                    ? 'Tap a highlighted destination; choose how many pieces to drop on each cell.'
+                                    : 'Tap an empty cell to place, or your stack to spread.'),
+                          if (_planned != null || _source != null)
+                            Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 8,
+                                children: [
+                                  TextButton(
+                                      onPressed: () => setState(_clear),
+                                      child: const Text('Cancel')),
+                                  if (_planned != null)
+                                    FilledButton(
+                                        onPressed: match.canPlay
+                                            ? () async {
+                                                final move = _planned!;
+                                                if (await _controller
+                                                        .play(move) &&
+                                                    mounted) {
+                                                  setState(_clear);
+                                                }
+                                              }
+                                            : null,
+                                        child: const Text('Confirm')),
+                                ]),
+                        ]),
+                      ))),
+                ])));
+      })),
     );
   }
 
@@ -510,20 +545,49 @@ class HexBoard extends StatelessWidget {
         return Semantics(
           label:
               'Hex board, ${game.cells.length} cells. ${game.current.label} to play.',
-          child: GestureDetector(
-              onTapUp: onCell == null
-                  ? null
-                  : (details) {
-                      final cell =
-                          geometry.hit(details.localPosition, game.cells);
-                      if (cell != null) onCell!(cell);
-                    },
-              child: CustomPaint(
-                  size: size,
-                  painter: _HexPainter(
-                      game, geometry, selected, destinations, road))),
+          child: Stack(children: [
+            CustomPaint(
+                size: size,
+                painter:
+                    _HexPainter(game, geometry, selected, destinations, road)),
+            for (final cell in game.cells)
+              Positioned(
+                left: geometry.center(cell).dx - geometry.unit,
+                top: geometry.center(cell).dy - geometry.unit,
+                width: geometry.unit * 2,
+                height: geometry.unit * 2,
+                child: ClipPath(
+                  clipper: _CellClipper(geometry, cell),
+                  child: Semantics(
+                    label:
+                        'Cell ${cell.q}, ${cell.r}, ${game.stackAt(cell).isEmpty ? 'empty' : '${game.stackAt(cell).last.seat.label} ${game.stackAt(cell).last.type.name}, ${game.stackAt(cell).length} pieces'}',
+                    button: true,
+                    enabled: onCell != null,
+                    selected: selected == cell,
+                    child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                            onTap: onCell == null ? null : () => onCell!(cell),
+                            child: const SizedBox.expand())),
+                  ),
+                ),
+              ),
+          ]),
         );
       });
+}
+
+class _CellClipper extends CustomClipper<Path> {
+  const _CellClipper(this.geometry, this.cell);
+  final HexBoardGeometry geometry;
+  final HexCell cell;
+  @override
+  Path getClip(Size size) => geometry
+      .polygon(cell)
+      .shift(-geometry.center(cell) + Offset(geometry.unit, geometry.unit));
+  @override
+  bool shouldReclip(_CellClipper oldClipper) =>
+      oldClipper.geometry != geometry || oldClipper.cell != cell;
 }
 
 class _HexPainter extends CustomPainter {

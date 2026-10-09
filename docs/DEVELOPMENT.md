@@ -1,6 +1,6 @@
 # Development map
 
-Updated 2026-10-08. Read [the Tak rules audit](TAK_RULES.md) before changing game
+Updated 2026-10-09. Read [the Tak rules audit](TAK_RULES.md) before changing game
 mechanics; it includes the prioritized follow-up findings.
 
 ## Repository and local state
@@ -12,6 +12,9 @@ discarded at the user's request before pushing the rules audit commit.
 
 The opt-in three-player variant is isolated under `lib/hex/`; read
 [its rules and protocol contract](HEX_MODE.md) before changing it.
+
+The [playability audit](PLAYABILITY_AUDIT.md) records player-journey questions,
+UX improvements, browser trials, automated evidence and remaining product work.
 
 ## Code map
 
@@ -84,8 +87,9 @@ avoid accidentally including that unrelated generated edit in a rules change.
 
 ### Audit verification
 
-The complete test suite passed all 88 tests, and `flutter analyze --fatal-infos`
-reported no issues using the temporary SDK listed above.
+The latest playability audit passed all 176 tests, and `flutter analyze --fatal-infos`
+reported no issues using the temporary SDK listed above. Four additional
+targeted Hex/isolate tests also passed, bringing current coverage to 180 tests.
 Two widget regressions exercise actual flings/taps (swipes require velocity),
 including safe screen disposal. Model fixtures cover published spreads and reject
 invalid moves without state/history changes. Online multi-client, deployment,

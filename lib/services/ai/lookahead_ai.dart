@@ -48,7 +48,8 @@ class LookaheadStonesAI extends StonesAI {
     // Block any opponent winning threats before deeper search.
     final blockingMoves = _findThreatBlockingMoves(state, moves);
     if (blockingMoves.isNotEmpty) {
-      final orderedBlocks = _orderMoves(state, blockingMoves, state.currentPlayer);
+      final orderedBlocks =
+          _orderMoves(state, blockingMoves, state.currentPlayer);
       return orderedBlocks.first.$1;
     }
 
@@ -58,12 +59,14 @@ class LookaheadStonesAI extends StonesAI {
     var bestScore = double.negativeInfinity;
 
     for (final entry in orderedMoves.take(_branchLimitForDepth(searchDepth))) {
+      // Flutter web has no isolate-backed compute: let input and paint run.
+      await Future<void>.delayed(Duration.zero);
       final move = entry.$1;
       final applied = _applyMove(state, move);
       if (applied == null) continue;
 
       final nextState = _advanceTurn(applied);
-      final score = -_search(
+      final score = _search(
         nextState,
         searchDepth - 1,
         double.negativeInfinity,
@@ -99,7 +102,9 @@ class LookaheadStonesAI extends StonesAI {
       return _evaluateState(state, perspective);
     }
 
-    final orderedMoves = _orderMoves(state, moves, perspective);
+    final orderedMoves = _orderMoves(state, moves, state.currentPlayer);
+    final maximizing = state.currentPlayer == perspective;
+    var best = maximizing ? double.negativeInfinity : double.infinity;
 
     for (final entry in orderedMoves.take(_branchLimitForDepth(depth))) {
       final move = entry.$1;
@@ -107,17 +112,21 @@ class LookaheadStonesAI extends StonesAI {
       if (applied == null) continue;
 
       final nextState = _advanceTurn(applied);
-      final score = -_search(nextState, depth - 1, -beta, -alpha, perspective);
+      final score = _search(nextState, depth - 1, alpha, beta, perspective);
 
-      if (score > alpha) {
-        alpha = score;
+      if (maximizing) {
+        if (score > best) best = score;
+        if (best > alpha) alpha = best;
+      } else {
+        if (score < best) best = score;
+        if (best < beta) beta = best;
       }
       if (alpha >= beta) {
         break;
       }
     }
 
-    return alpha;
+    return best.isFinite ? best : _evaluateState(state, perspective);
   }
 
   double? _terminalScore(GameState state, PlayerColor perspective, int depth) {
@@ -126,9 +135,7 @@ class LookaheadStonesAI extends StonesAI {
       lastMover: state.opponent,
     );
     if (roadWinner != null) {
-      return roadWinner == perspective
-          ? _winScore + depth
-          : -_winScore - depth;
+      return roadWinner == perspective ? _winScore + depth : -_winScore - depth;
     }
 
     final flatResult = _flatResult(state);
@@ -155,21 +162,27 @@ class LookaheadStonesAI extends StonesAI {
       return roadWinner == perspective ? _winScore : -_winScore;
     }
 
-    final threatCount = BoardAnalysis.countThreats(state, perspective, maxCount: 3);
+    final threatCount =
+        BoardAnalysis.countThreats(state, perspective, maxCount: 3);
     final opponentThreats =
         BoardAnalysis.countThreats(state, opponent, maxCount: 3);
 
     final chainPotential = _chainPotential(state, perspective);
     final opponentChainPotential = _chainPotential(state, opponent);
 
-    final flatAdvantage = _flatCount(state, perspective) - _flatCount(state, opponent);
+    final flatAdvantage =
+        _flatCount(state, perspective) - _flatCount(state, opponent);
     final reserveAdvantage = _reserveAdvantage(state, perspective, opponent);
     final controlSwing =
         _controlScore(state, perspective) - _controlScore(state, opponent);
 
-    return threatCount * 12 - opponentThreats * 11 +
-        chainPotential * 1.6 - opponentChainPotential * 1.3 +
-        flatAdvantage * 3 + reserveAdvantage + controlSwing +
+    return threatCount * 12 -
+        opponentThreats * 11 +
+        chainPotential * 1.6 -
+        opponentChainPotential * 1.3 +
+        flatAdvantage * 3 +
+        reserveAdvantage +
+        controlSwing +
         random.nextDouble() * evaluationJitter;
   }
 
@@ -195,7 +208,8 @@ class LookaheadStonesAI extends StonesAI {
           state.currentPlayer;
       final immediateBlock = BoardAnalysis.hasRoad(applied, state.opponent);
 
-      final adjustedScore = score + (immediateWin ? 500 : 0) + (immediateBlock ? 100 : 0);
+      final adjustedScore =
+          score + (immediateWin ? 500 : 0) + (immediateBlock ? 100 : 0);
       scored.add((move, adjustedScore));
     }
 
@@ -311,7 +325,8 @@ class LookaheadStonesAI extends StonesAI {
     return count;
   }
 
-  double _reserveAdvantage(GameState state, PlayerColor perspective, PlayerColor opponent) {
+  double _reserveAdvantage(
+      GameState state, PlayerColor perspective, PlayerColor opponent) {
     final ourPieces = state.piecesFor(perspective);
     final oppPieces = state.piecesFor(opponent);
 

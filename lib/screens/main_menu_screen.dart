@@ -12,6 +12,7 @@ import '../theme/theme.dart';
 import '../version.dart';
 import '../hex/hex_screen.dart';
 import '../widgets/chess_clock_setup.dart';
+import '../widgets/play_mode_card.dart';
 import 'achievements_screen.dart';
 import 'leaderboard_screen.dart';
 import 'settings_screen.dart';
@@ -67,9 +68,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }) {
     final gameState = ref.read(gameStateProvider);
     final isGameInProgress = !gameState.isGameOver &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+        (gameState.turnNumber > 1 ||
+            gameState.board.occupiedPositions.isNotEmpty);
 
-    void showBoardSizePicker() => _showBoardSizePickerDialog(context, mode, difficulty);
+    void showBoardSizePicker() =>
+        _showBoardSizePickerDialog(context, mode, difficulty);
 
     if (isGameInProgress) {
       showDialog(
@@ -122,6 +125,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Select Board Size'),
+          scrollable: true,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -155,12 +159,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       onSelected: (_) => setState(() {
                         selectedSize = size;
                         if (!chessClockOverridden) {
-                          chessClockSeconds = settings.chessClockSecondsForSize(size);
+                          chessClockSeconds =
+                              settings.chessClockSecondsForSize(size);
                           clockMinutesController.text =
                               (chessClockSeconds ~/ 60).toString();
                         }
                       }),
-                      selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                      selectedColor:
+                          GameColors.boardFrameInner.withValues(alpha: 0.2),
                       checkmarkColor: GameColors.boardFrameInner,
                     ),
                 ],
@@ -183,9 +189,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               // Chess clock toggle
               ChessClockSetup(
                 enabled: chessClockEnabled,
-                onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                onEnabledChanged: (value) =>
+                    setState(() => chessClockEnabled = value),
                 minutesController: clockMinutesController,
                 onMinutesChanged: (value) {
+                  setState(() {});
                   chessClockOverridden = true;
                   final minutes = int.tryParse(value);
                   if (minutes != null && minutes > 0) {
@@ -201,19 +209,26 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                // Save chess clock preference
-                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
-                Navigator.pop(dialogContext);
-                _doStartNewGame(
-                  context,
-                  selectedSize,
-                  mode,
-                  difficulty,
-                  chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
-                  ref.read(gameSessionProvider).vsComputerPlayerColor,
-                );
-              },
+              onPressed: chessClockEnabled &&
+                      (int.tryParse(clockMinutesController.text) ?? 0) <= 0
+                  ? null
+                  : () {
+                      // Save chess clock preference
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .setChessClockEnabled(chessClockEnabled);
+                      Navigator.pop(dialogContext);
+                      _doStartNewGame(
+                        context,
+                        selectedSize,
+                        mode,
+                        difficulty,
+                        chessClockEnabled && chessClockOverridden
+                            ? chessClockSeconds
+                            : null,
+                        ref.read(gameSessionProvider).vsComputerPlayerColor,
+                      );
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
                 foregroundColor: Colors.white,
@@ -228,7 +243,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   String _getBoardSizeDescription(int size) {
     final counts = PieceCounts.forBoardSize(size);
-    return '${counts.flatStones} flat stones, ${counts.capstones} capstone${counts.capstones == 1 ? '' : 's'} per player';
+    return '${counts.flatStones} stones (flat or wall), ${counts.capstones} capstone${counts.capstones == 1 ? '' : 's'} per player';
   }
 
   void _doStartNewGame(
@@ -239,14 +254,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     int? chessClockSecondsOverride,
     PlayerColor vsComputerPlayerColor,
   ) {
+    ref.read(appSettingsProvider.notifier).setBoardSize(size);
     ref.read(scenarioStateProvider.notifier).clearScenario();
-    ref.read(gameSessionProvider.notifier).state =
-        GameSessionConfig(
-          mode: mode,
-          aiDifficulty: difficulty,
-          chessClockSecondsOverride: chessClockSecondsOverride,
-          vsComputerPlayerColor: vsComputerPlayerColor,
-        );
+    ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+      mode: mode,
+      aiDifficulty: difficulty,
+      chessClockSecondsOverride: chessClockSecondsOverride,
+      vsComputerPlayerColor: vsComputerPlayerColor,
+    );
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -276,7 +291,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   void _startVsComputer(BuildContext context) {
     final gameState = ref.read(gameStateProvider);
     final isGameInProgress = !gameState.isGameOver &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+        (gameState.turnNumber > 1 ||
+            gameState.board.occupiedPositions.isNotEmpty);
 
     void showPickers() => _showVsComputerPickerDialog(context);
 
@@ -317,10 +333,12 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final scenarioState = ref.read(scenarioStateProvider);
 
     // Don't prompt for replace if: game is over, tutorial/puzzle is complete, or no game in progress
-    final isScenarioComplete = scenarioState.guidedStepComplete || scenarioState.completionShown;
+    final isScenarioComplete =
+        scenarioState.guidedStepComplete || scenarioState.completionShown;
     final isGameInProgress = !gameState.isGameOver &&
         !isScenarioComplete &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+        (gameState.turnNumber > 1 ||
+            gameState.board.occupiedPositions.isNotEmpty);
 
     void startScenario() {
       ref.read(scenarioStateProvider.notifier).startScenario(scenario);
@@ -329,7 +347,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
         aiDifficulty: scenario.aiDifficulty,
         scenario: scenario,
       );
-      ref.read(gameStateProvider.notifier).loadState(scenario.buildInitialState());
+      ref
+          .read(gameStateProvider.notifier)
+          .loadState(scenario.buildInitialState());
       ref.read(uiStateProvider.notifier).reset();
       ref.read(animationStateProvider.notifier).reset();
       ref.read(moveHistoryProvider.notifier).clear();
@@ -408,8 +428,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       child: Text(
                         group.chapter.title,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
                     ),
                   ),
@@ -417,7 +437,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     _ScenarioListTile(
                       scenario: scenario,
                       completed: scenario.type == ScenarioType.tutorial
-                          ? achievements.completedTutorials.contains(scenario.id)
+                          ? achievements.completedTutorials
+                              .contains(scenario.id)
                           : achievements.completedPuzzles.contains(scenario.id),
                       locked: !isScenarioUnlocked(scenario),
                       onTap: () {
@@ -443,9 +464,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   void _showVsComputerPickerDialog(BuildContext context) {
     final settings = ref.read(appSettingsProvider);
     int selectedSize = settings.boardSize;
-    AIDifficulty selectedDifficulty = AIDifficulty.easy;
+    AIDifficulty selectedDifficulty =
+        ref.read(gameSessionProvider).aiDifficulty;
     bool chessClockEnabled = settings.chessClockEnabled;
-    PlayerColor selectedPlayerColor = ref.read(gameSessionProvider).vsComputerPlayerColor;
+    PlayerColor selectedPlayerColor =
+        ref.read(gameSessionProvider).vsComputerPlayerColor;
     int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
     bool chessClockOverridden = false;
     final clockMinutesController = TextEditingController(
@@ -465,7 +488,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 // Board Size Section
                 Builder(
                   builder: (context) {
-                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
                     return Text(
                       'Board Size',
                       style: TextStyle(
@@ -480,19 +504,21 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                  for (int size = 3; size <= 8; size++)
+                    for (int size = 3; size <= 8; size++)
                       ChoiceChip(
                         label: Text('$size×$size'),
                         selected: selectedSize == size,
                         onSelected: (_) => setState(() {
                           selectedSize = size;
                           if (!chessClockOverridden) {
-                            chessClockSeconds = settings.chessClockSecondsForSize(size);
+                            chessClockSeconds =
+                                settings.chessClockSecondsForSize(size);
                             clockMinutesController.text =
                                 (chessClockSeconds ~/ 60).toString();
                           }
                         }),
-                        selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                        selectedColor:
+                            GameColors.boardFrameInner.withValues(alpha: 0.2),
                         checkmarkColor: GameColors.boardFrameInner,
                       ),
                   ],
@@ -513,9 +539,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 const SizedBox(height: 16),
                 ChessClockSetup(
                   enabled: chessClockEnabled,
-                  onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                  onEnabledChanged: (value) =>
+                      setState(() => chessClockEnabled = value),
                   minutesController: clockMinutesController,
                   onMinutesChanged: (value) {
+                    setState(() {});
                     chessClockOverridden = true;
                     final minutes = int.tryParse(value);
                     if (minutes != null && minutes > 0) {
@@ -528,7 +556,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 // Color Section
                 Builder(
                   builder: (context) {
-                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
                     return Text(
                       'Your Color',
                       style: TextStyle(
@@ -546,8 +575,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         title: 'White',
                         color: PlayerColor.white,
                         isSelected: selectedPlayerColor == PlayerColor.white,
-                        onTap: () =>
-                            setState(() => selectedPlayerColor = PlayerColor.white),
+                        onTap: () => setState(
+                            () => selectedPlayerColor = PlayerColor.white),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -556,8 +585,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         title: 'Black',
                         color: PlayerColor.black,
                         isSelected: selectedPlayerColor == PlayerColor.black,
-                        onTap: () =>
-                            setState(() => selectedPlayerColor = PlayerColor.black),
+                        onTap: () => setState(
+                            () => selectedPlayerColor = PlayerColor.black),
                       ),
                     ),
                   ],
@@ -567,7 +596,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                 // Difficulty Section
                 Builder(
                   builder: (context) {
-                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
                     return Text(
                       'Difficulty',
                       style: TextStyle(
@@ -585,11 +615,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       children: [
                         for (final diff in AIDifficulty.values)
                           _DifficultyOption(
-                            title: diff.name[0].toUpperCase() + diff.name.substring(1),
-                            subtitle: 'ELO: ${eloState.aiRatingFor(diff)}',
+                            title: diff.name[0].toUpperCase() +
+                                diff.name.substring(1),
+                            subtitle:
+                                '${diff.description} · Rating ${eloState.aiRatingFor(diff)}',
                             isSelected: selectedDifficulty == diff,
                             dense: true,
-                            onTap: () => setState(() => selectedDifficulty = diff),
+                            onTap: () =>
+                                setState(() => selectedDifficulty = diff),
                           ),
                       ],
                     );
@@ -604,18 +637,25 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
-                Navigator.pop(dialogContext);
-                _doStartNewGame(
-                  context,
-                  selectedSize,
-                  GameMode.vsComputer,
-                  selectedDifficulty,
-                  chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
-                  selectedPlayerColor,
-                );
-              },
+              onPressed: chessClockEnabled &&
+                      (int.tryParse(clockMinutesController.text) ?? 0) <= 0
+                  ? null
+                  : () {
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .setChessClockEnabled(chessClockEnabled);
+                      Navigator.pop(dialogContext);
+                      _doStartNewGame(
+                        context,
+                        selectedSize,
+                        GameMode.vsComputer,
+                        selectedDifficulty,
+                        chessClockEnabled && chessClockOverridden
+                            ? chessClockSeconds
+                            : null,
+                        selectedPlayerColor,
+                      );
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
                 foregroundColor: Colors.white,
@@ -639,10 +679,13 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     // Use granular selector to avoid rebuilding on every game state change
     // Only rebuild when "has game in progress" status actually changes
     final hasGameInProgress = ref.watch(gameStateProvider.select(
-      (s) => !s.isGameOver && (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
+      (s) =>
+          !s.isGameOver &&
+          (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
     ));
     final playGames = ref.watch(playGamesServiceProvider);
-    final hexEnabled = ref.watch(appSettingsProvider.select((settings) => settings.hexModeEnabled));
+    final hexEnabled = ref.watch(
+        appSettingsProvider.select((settings) => settings.hexModeEnabled));
 
     return Scaffold(
       body: SafeArea(
@@ -650,7 +693,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           children: [
             // Top bar with settings and about
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -662,10 +706,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         MaterialPageRoute(builder: (_) => const AboutScreen()),
                       );
                     },
-                    child: const Text(
+                    child: Text(
                       'About',
                       style: TextStyle(
-                        color: GameColors.subtitleColor,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -686,43 +730,46 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     children: [
                       // Leaderboard button
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.leaderboard,
-                          color: GameColors.subtitleColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         tooltip: 'Leaderboard',
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const LeaderboardScreen()),
                           );
                         },
                       ),
                       // Achievements button
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.emoji_events,
-                          color: GameColors.subtitleColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         tooltip: 'Achievements',
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const AchievementsScreen()),
                           );
                         },
                       ),
                       // Settings gear
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.settings,
-                          color: GameColors.subtitleColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         tooltip: 'Settings',
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const SettingsScreen()),
                           );
                         },
                       ),
@@ -732,174 +779,74 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               ),
             ),
 
-            // Main content
             Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: SingleChildScrollView(child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo/Title
-                      _buildLogo(context),
-                      const SizedBox(height: 8),
-                      Builder(
-                        builder: (context) {
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
-                          return Text(
-                            'A game of roads and flats',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: isDark
-                                      ? Theme.of(context).colorScheme.onSurfaceVariant
-                                      : GameColors.subtitleColor,
-                                ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 64),
-
-                      // Game mode buttons
-                      SizedBox(
-                        width: 220,
-                        height: 56,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _startNewGame(context, GameMode.local),
-                          icon: const Icon(Icons.group, size: 24),
-                          label: const Text(
-                            'Local Game',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: GameColors.boardFrameInner,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: Center(
+                    child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 620),
+                  child: Column(children: [
+                    _buildLogo(context),
+                    const SizedBox(height: 8),
+                    const Text('Connect opposite edges. Build your road.'),
+                    const SizedBox(height: 24),
+                    if (hasGameInProgress) ...[
+                      PlayModeCard(
+                          title: 'Continue Game',
+                          description: 'Resume your match from this session.',
+                          icon: Icons.play_arrow,
+                          featured: true,
+                          onTap: () => _continueGame(context)),
                       const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: 220,
-                        height: 56,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
+                    ],
+                    PlayModeCard(
+                        title: 'Tutorials & Puzzles',
+                        description:
+                            'New to Tak? Learn by playing, then solve challenges.',
+                        icon: Icons.school_outlined,
+                        featured: !hasGameInProgress,
+                        onTap: () => _openScenarioSelector(context)),
+                    const SizedBox(height: 12),
+                    PlayModeCard(
+                        title: 'Vs Computer',
+                        description:
+                            'One player · four AI difficulties · no connection needed.',
+                        icon: Icons.smart_toy_outlined,
+                        onTap: () => _startVsComputer(context)),
+                    const SizedBox(height: 12),
+                    PlayModeCard(
+                        title: 'Local Game',
+                        description: 'Two players sharing this device.',
+                        icon: Icons.group_outlined,
+                        onTap: () => _startNewGame(context, GameMode.local)),
+                    const SizedBox(height: 12),
+                    PlayModeCard(
+                        title: 'Online Game',
+                        description:
+                            'Two players on separate devices · share a room code.',
+                        icon: Icons.wifi,
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const OnlineLobbyScreen()))),
+                    if (hexEnabled) ...[
+                      const SizedBox(height: 12),
+                      PlayModeCard(
+                          title: 'Three-player Hex',
+                          description:
+                              'Experimental · any mix of three humans and AI.',
+                          icon: Icons.hexagon_outlined,
+                          onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const OnlineLobbyScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.wifi, size: 22),
-                          label: const Text(
-                            'Online Game',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: GameColors.boardFrameOuter,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: 220,
-                        height: 56,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _startVsComputer(context),
-                          icon: const Icon(Icons.smart_toy_outlined, size: 22),
-                          label: const Text(
-                            'Vs Computer',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: GameColors.boardFrameInner,
-                            side: const BorderSide(color: GameColors.boardFrameInner, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      if (hexEnabled) ...[
-                        SizedBox(
-                          width: 220,
-                          height: 48,
-                          child: OutlinedButton.icon(
-                            onPressed: () => Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const HexSetupScreen())),
-                            icon: const Icon(Icons.hexagon_outlined),
-                            label: const Text('Three-player Hex'),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      // Tutorial and puzzle hub
-                      Builder(
-                        builder: (context) {
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
-                          final colorScheme = Theme.of(context).colorScheme;
-                          // In dark mode, use primary color for better contrast
-                          final buttonColor = isDark
-                              ? colorScheme.primary
-                              : GameColors.boardFrameInner;
-                          return SizedBox(
-                            width: 220,
-                            height: 56,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _openScenarioSelector(context),
-                              icon: Icon(Icons.school, size: 22, color: buttonColor),
-                              label: Text(
-                                'Tutorials & Puzzles',
-                                style: TextStyle(fontSize: 17, color: buttonColor),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: buttonColor,
-                                side: BorderSide(color: buttonColor, width: 2),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Continue game button (if game in progress)
-                      if (hasGameInProgress) ...[
-                        SizedBox(
-                          width: 200,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _continueGame(context),
-                            icon: const Icon(Icons.replay, size: 20),
-                            label: const Text('Continue Game'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                              foregroundColor: GameColors.subtitleColor,
-                              side: const BorderSide(color: GameColors.subtitleColor),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                                  builder: (_) => const HexSetupScreen()))),
                     ],
-                  )),
-                ),
+                    const SizedBox(height: 16),
+                    const Text(
+                        'Offline matches resume in this session. Achievements and settings are saved on this device.',
+                        textAlign: TextAlign.center),
+                  ]),
+                )),
               ),
             ),
 
@@ -950,15 +897,20 @@ class _LogoPainter extends CustomPainter {
     final baseY = size.height * 0.85;
 
     // Draw three stacked flat stones
-    _drawFlatStone(canvas, centerX, baseY, 50, GameColors.darkPiece, GameColors.darkPieceBorder);
-    _drawFlatStone(canvas, centerX, baseY - 12, 50, GameColors.lightPiece, GameColors.lightPieceBorder);
-    _drawFlatStone(canvas, centerX, baseY - 24, 50, GameColors.darkPiece, GameColors.darkPieceBorder);
+    _drawFlatStone(canvas, centerX, baseY, 50, GameColors.darkPiece,
+        GameColors.darkPieceBorder);
+    _drawFlatStone(canvas, centerX, baseY - 12, 50, GameColors.lightPiece,
+        GameColors.lightPieceBorder);
+    _drawFlatStone(canvas, centerX, baseY - 24, 50, GameColors.darkPiece,
+        GameColors.darkPieceBorder);
 
     // Draw a capstone on top
-    _drawCapstone(canvas, centerX, baseY - 50, 16, GameColors.lightPiece, GameColors.lightPieceBorder);
+    _drawCapstone(canvas, centerX, baseY - 50, 16, GameColors.lightPiece,
+        GameColors.lightPieceBorder);
   }
 
-  void _drawFlatStone(Canvas canvas, double x, double y, double width, Color fill, Color border) {
+  void _drawFlatStone(Canvas canvas, double x, double y, double width,
+      Color fill, Color border) {
     const height = 10.0;
     final rect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(x, y), width: width, height: height),
@@ -983,7 +935,8 @@ class _LogoPainter extends CustomPainter {
     canvas.drawRRect(rect, borderPaint);
   }
 
-  void _drawCapstone(Canvas canvas, double x, double y, double radius, Color fill, Color border) {
+  void _drawCapstone(Canvas canvas, double x, double y, double radius,
+      Color fill, Color border) {
     // Shadow
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.25)
@@ -1048,7 +1001,8 @@ class _ScenarioListTile extends StatelessWidget {
             ? Theme.of(context).colorScheme.surfaceContainerHighest
             : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withValues(alpha: isDark ? 0.55 : 0.35)),
+        border:
+            Border.all(color: accent.withValues(alpha: isDark ? 0.55 : 0.35)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
@@ -1062,7 +1016,9 @@ class _ScenarioListTile extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: accent.withValues(alpha: 0.12),
           foregroundColor: accent,
-          child: Icon(locked ? Icons.lock_outline : (isPuzzle ? Icons.extension : Icons.menu_book)),
+          child: Icon(locked
+              ? Icons.lock_outline
+              : (isPuzzle ? Icons.extension : Icons.menu_book)),
         ),
         title: Text(
           scenario.title,
@@ -1077,9 +1033,9 @@ class _ScenarioListTile extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             locked
-                ? 'Complete previous scenarios to unlock.'
+                ? 'Complete: ${scenario.prerequisiteScenarioIds.map((id) => tutorialAndPuzzleLibrary.firstWhere((s) => s.id == id).title).join(', ')}'
                 : scenario.summary,
-            maxLines: 1,
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -1176,7 +1132,8 @@ class _PlayerChip extends StatelessWidget {
             children: [
               Text(
                 displayName,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
               if (rating != null)
                 Text(
@@ -1184,7 +1141,8 @@ class _PlayerChip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
+                    color:
+                        isDark ? Colors.amber.shade300 : Colors.amber.shade800,
                   ),
                 ),
             ],
@@ -1216,9 +1174,8 @@ class _VersionFooter extends StatelessWidget {
     final textColor = isDark
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : Colors.grey.shade600;
-    final separatorColor = isDark
-        ? Theme.of(context).colorScheme.outline
-        : Colors.grey.shade500;
+    final separatorColor =
+        isDark ? Theme.of(context).colorScheme.outline : Colors.grey.shade500;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1293,65 +1250,71 @@ class _DifficultyOption extends StatelessWidget {
             ? Colors.grey.shade600
             : Colors.grey.shade300;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 8 : 12),
-        margin: EdgeInsets.only(bottom: dense ? 2 : 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
-              : null,
+    return Semantics(
+        selected: isSelected,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: borderColor,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: dense ? 13 : 14,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected
-                          ? GameColors.boardFrameInner
-                          : isDark
-                              ? Colors.white
-                              : null,
-                    ),
-                  ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isSelected
-                            ? GameColors.boardFrameInner.withValues(alpha: 0.7)
-                            : isDark
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade600,
-                      ),
-                    ),
-                ],
+          child: Container(
+            padding:
+                EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 8 : 12),
+            margin: EdgeInsets.only(bottom: dense ? 2 : 4),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? GameColors.boardFrameInner
+                      .withValues(alpha: isDark ? 0.2 : 0.1)
+                  : null,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: borderColor,
+                width: isSelected ? 2 : 1,
               ),
             ),
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: GameColors.boardFrameInner,
-                size: 20,
-              ),
-          ],
-        ),
-      ),
-    );
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: dense ? 13 : 14,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? GameColors.boardFrameInner
+                              : isDark
+                                  ? Colors.white
+                                  : null,
+                        ),
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isSelected
+                                ? GameColors.boardFrameInner
+                                    .withValues(alpha: 0.7)
+                                : isDark
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(
+                    Icons.check_circle,
+                    color: GameColors.boardFrameInner,
+                    size: 20,
+                  ),
+              ],
+            ),
+          ),
+        ));
   }
 }
 
@@ -1376,53 +1339,58 @@ class _ColorOption extends StatelessWidget {
         : isDark
             ? Colors.grey.shade600
             : Colors.grey.shade300;
-    final chipColor =
-        color == PlayerColor.white ? GameColors.lightPiece : GameColors.darkPiece;
+    final chipColor = color == PlayerColor.white
+        ? GameColors.lightPiece
+        : GameColors.darkPiece;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
-              : null,
+    return Semantics(
+        selected: isSelected,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: borderColor,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: chipColor,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDark ? Colors.white24 : Colors.black26,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? GameColors.boardFrameInner
+                      .withValues(alpha: isDark ? 0.2 : 0.1)
+                  : null,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: borderColor,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: chipColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : Colors.black26,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? GameColors.boardFrameInner
+                        : isDark
+                            ? Colors.white
+                            : null,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? GameColors.boardFrameInner
-                    : isDark
-                        ? Colors.white
-                        : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }

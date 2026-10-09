@@ -146,11 +146,11 @@ scripted sequence through its completion and failure paths.
 
 ### AI strength and ratings — separate application work
 
-- In `lookahead_ai.dart`, search negates child values while keeping a fixed root
-  perspective. Move ordering also uses that perspective on opposing turns.
-  Review the evaluation convention with forced-win/loss tactical fixtures.
-  Blocking by affected-square overlap is a heuristic, not proof that a threat
-  was prevented. Legal-move tests do not establish tactical quality.
+- The 2026-10-09 [playability audit](PLAYABILITY_AUDIT.md) corrected the AI search
+  convention: fixed-perspective minimax and ordering for the side to move.
+  Hard/Expert forced-fork fixtures and seeded full matches cover this correction.
+  Blocking by affected-square overlap remains a heuristic, not proof that a
+  threat was prevented. Legal-move tests do not establish tactical quality.
 - Rating updates can originate from both clients and lack match-based
   idempotency. The checked-in Firestore rules do not allow the ratings collection;
   deployed rules were not inspected. Verify one rating update per completed match

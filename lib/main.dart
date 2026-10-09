@@ -18,6 +18,7 @@ import 'services/services.dart';
 import 'theme/theme.dart';
 import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
+import 'widgets/game_help.dart';
 import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
 
@@ -121,7 +122,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onPressed: () async {
                     final soundManager = ref.read(soundManagerProvider);
                     await soundManager.toggleMute();
-                    ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
+                    if (!mounted) return;
+                    ref.read(isMutedProvider.notifier).state =
+                        soundManager.isMuted;
+                    await ref
+                        .read(appSettingsProvider.notifier)
+                        .setSoundMuted(soundManager.isMuted);
                   },
                 ),
               ),
@@ -136,18 +142,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       // Title
                       Text(
                         'STONES',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: GameColors.titleColor,
-                              letterSpacing: 8,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: GameColors.titleColor,
+                                  letterSpacing: 8,
+                                ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'A game of roads and flats',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: GameColors.subtitleColor,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: GameColors.subtitleColor,
+                                ),
                       ),
                       const SizedBox(height: 64),
 
@@ -171,9 +179,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       // Continue current game button
                       Consumer(
                         builder: (context, ref, _) {
-                          final hasGameInProgress = ref.watch(gameStateProvider.select(
-                            (s) => s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty
-                          ));
+                          final hasGameInProgress = ref.watch(
+                              gameStateProvider.select((s) =>
+                                  s.turnNumber > 1 ||
+                                  s.board.occupiedPositions.isNotEmpty));
                           if (!hasGameInProgress) {
                             return const SizedBox();
                           }
@@ -245,7 +254,8 @@ class _BoardSizeButton extends ConsumerWidget {
   void _startNewGame(BuildContext context, WidgetRef ref) {
     final gameState = ref.read(gameStateProvider);
     final isGameInProgress = !gameState.isGameOver &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+        (gameState.turnNumber > 1 ||
+            gameState.board.occupiedPositions.isNotEmpty);
 
     if (isGameInProgress) {
       // Show confirmation dialog
@@ -282,8 +292,7 @@ class _BoardSizeButton extends ConsumerWidget {
 
   void _doStartNewGame(BuildContext context, WidgetRef ref) {
     ref.read(scenarioStateProvider.notifier).clearScenario();
-    ref.read(gameSessionProvider.notifier).state =
-        const GameSessionConfig();
+    ref.read(gameSessionProvider.notifier).state = const GameSessionConfig();
     ref.read(gameStateProvider.notifier).newGame(size);
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
@@ -304,13 +313,16 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
+  static int _screenGeneration = 0;
+  late final int _generation;
   bool _showHistory = false;
   late final GameStateNotifier _gameNotifier;
+  late final StateController<bool> _thinking;
+  late final StateController<bool> _thinkingVisible;
 
   // Long press stack view state
   Position? _longPressedPosition;
   PieceStack? _longPressedStack;
-  bool _allowNavigationPop = false;
 
   void _startStackView(Position pos, PieceStack stack) {
     if (_longPressedPosition == pos && _longPressedStack == stack) return;
@@ -332,25 +344,41 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _navigateHome() {
-    setState(() => _allowNavigationPop = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    });
+    if (ref.read(gameSessionProvider).mode != GameMode.online &&
+        ref.read(chessClockProvider).isRunning) {
+      ref.read(chessClockProvider.notifier).pause();
+    }
+    Navigator.pop(context);
   }
 
   @override
   void initState() {
     super.initState();
+    _generation = ++_screenGeneration;
     // Set up road win callback
+    _thinking = ref.read(aiThinkingProvider.notifier);
+    _thinkingVisible = ref.read(aiThinkingVisibleProvider.notifier);
     _gameNotifier = ref.read(gameStateProvider.notifier);
     _gameNotifier.onRoadWin = (roadPositions, winner) {
       ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
     };
 
-    // Trigger initial AI turn if needed
-    unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+    // Provider changes must happen after the first widget tree is mounted.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final clock = ref.read(chessClockProvider);
+      if (ref.read(gameSessionProvider).mode != GameMode.online &&
+          ref.read(appSettingsProvider).chessClockEnabled &&
+          clock.activePlayer != null &&
+          !clock.isRunning &&
+          !clock.isExpired &&
+          !ref.read(gameStateProvider).isGameOver) {
+        ref
+            .read(chessClockProvider.notifier)
+            .start(ref.read(gameStateProvider).currentPlayer);
+      }
+      unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+    });
 
     // Set up web back button handler
     if (kIsWeb) {
@@ -359,17 +387,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Handle web back button press.
-  /// Returns true if undo was performed (push new history state to stay on screen),
-  /// false to allow normal browser/Flutter navigation back to menu.
+  /// Allow normal navigation back to the menu without changing the move history.
   bool _handleWebBackButton() {
-    if (_canPerformUndo()) {
-      _undo();
-      return true; // Undo performed - push history state to stay on game screen
-    } else {
-      // No moves to undo - let browser/Flutter handle navigation
-      // PopScope will allow the pop (canPop: true when canUndo is false)
-      return false;
-    }
+    if (mounted) _navigateHome();
+    return false;
   }
 
   /// Check if undo can be performed in current game state
@@ -380,7 +401,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.read(gameStateProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
-    if (!gameNotifier.canUndo) return false;
+    if (!gameNotifier.canUndo || gameState.isGameOver) return false;
 
     // Disable undo when chess clock is enabled (would allow time manipulation)
     final settings = ref.read(appSettingsProvider);
@@ -405,23 +426,31 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     return true;
   }
 
-  void _showAchievementNotification(AchievementType type) {
+  Future<void> _showAchievementNotification(AchievementType type) async {
     final achievement = GameAchievement.forType(type);
 
     // Play unlock sound
-    ref.read(soundManagerProvider).playAchievementUnlock();
+    unawaited(ref.read(soundManagerProvider).playAchievementUnlock());
 
-    // Show the notification dialog
-    showDialog(
+    // Queue awards so several unlocks never stack competing dialogs.
+    await showDialog<void>(
       context: context,
       barrierColor: Colors.black54,
-      builder: (dialogContext) => _AchievementUnlockDialog(achievement: achievement),
+      builder: (dialogContext) =>
+          _AchievementUnlockDialog(achievement: achievement),
     );
   }
 
   @override
   void dispose() {
     _gameNotifier.onRoadWin = null;
+    final thinking = _thinking;
+    final visible = _thinkingVisible;
+    scheduleMicrotask(() {
+      if (_generation != _screenGeneration) return;
+      if (thinking.mounted) thinking.state = false;
+      if (visible.mounted) visible.state = false;
+    });
     if (kIsWeb) {
       disposeWebBackButtonHandler();
     }
@@ -442,7 +471,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Future<void> _checkAchievements(GameState gameState) async {
     final session = ref.read(gameSessionProvider);
     final scenarioState = ref.read(scenarioStateProvider);
-    final isScenarioGame = session.scenario != null || scenarioState.hasScenario;
+    final isScenarioGame =
+        session.scenario != null || scenarioState.hasScenario;
     final achievementNotifier = ref.read(achievementProvider.notifier);
 
     // Debug logging
@@ -452,7 +482,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _debugLog('  session.mode: ${session.mode}');
     _debugLog('  session.aiDifficulty: ${session.aiDifficulty}');
     _debugLog('  isScenarioGame: $isScenarioGame');
-    _debugLog('  session.vsComputerPlayerColor: ${session.vsComputerPlayerColor}');
+    _debugLog(
+        '  session.vsComputerPlayerColor: ${session.vsComputerPlayerColor}');
 
     // Check if it's a win (not a draw)
     final isWhiteWin = gameState.result == GameResult.whiteWins;
@@ -462,19 +493,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final playerColor = session.vsComputerPlayerColor;
     final playerWon = session.mode == GameMode.vsComputer &&
         ((playerColor == PlayerColor.white && isWhiteWin) ||
-         (playerColor == PlayerColor.black && isBlackWin));
+            (playerColor == PlayerColor.black && isBlackWin));
 
     // For online mode, check if local player won
     final onlineState = ref.read(onlineGameProvider);
     final onlinePlayerWon = session.mode == GameMode.online &&
         ((onlineState.localColor == PlayerColor.white && isWhiteWin) ||
-         (onlineState.localColor == PlayerColor.black && isBlackWin));
+            (onlineState.localColor == PlayerColor.black && isBlackWin));
 
     // For local mode, any win counts
-    final localPlayerWon = session.mode == GameMode.local && (isWhiteWin || isBlackWin);
+    final localPlayerWon =
+        session.mode == GameMode.local && (isWhiteWin || isBlackWin);
 
     _debugLog('  isWhiteWin: $isWhiteWin, isBlackWin: $isBlackWin');
-    _debugLog('  playerWon: $playerWon, onlinePlayerWon: $onlinePlayerWon, localPlayerWon: $localPlayerWon');
+    _debugLog(
+        '  playerWon: $playerWon, onlinePlayerWon: $onlinePlayerWon, localPlayerWon: $localPlayerWon');
 
     // Record the win and show notifications for any unlocked achievements
     if (playerWon || onlinePlayerWon || localPlayerWon) {
@@ -491,17 +524,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           byFlats: gameState.winReason == WinReason.flats,
         );
 
-        _debugLog('  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
+        _debugLog(
+            '  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
 
         // Show notification for each unlocked achievement
         for (final achievementType in unlockedAchievements) {
-          _debugLog('  Showing notification for: $achievementType, mounted: $mounted');
+          _debugLog(
+              '  Showing notification for: $achievementType, mounted: $mounted');
           if (mounted) {
-            _showAchievementNotification(achievementType);
-            // Wait a bit before showing the next one if there are multiple
-            if (unlockedAchievements.length > 1) {
-              await Future.delayed(const Duration(milliseconds: 500));
-            }
+            await _showAchievementNotification(achievementType);
           }
         }
       }
@@ -512,24 +543,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Update ELO ratings (skip for scenario/local games)
     if (!isScenarioGame && session.mode != GameMode.local) {
       await _updateEloRatings(gameState, session, onlineState);
-    }
-
-    // Check for scenario completion
-    final activeScenario = session.scenario ?? scenarioState.activeScenario;
-    if (activeScenario != null && (gameState.isGameOver || scenarioState.guidedStepComplete)) {
-      List<AchievementType> scenarioUnlocks = [];
-      if (activeScenario.type == ScenarioType.tutorial) {
-        scenarioUnlocks = await achievementNotifier.completeTutorial(activeScenario.id);
-      } else if (activeScenario.type == ScenarioType.puzzle) {
-        scenarioUnlocks = await achievementNotifier.completePuzzle(activeScenario.id);
-      }
-
-      // Show notification for scenario achievements
-      for (final achievementType in scenarioUnlocks) {
-        if (mounted) {
-          _showAchievementNotification(achievementType);
-        }
-      }
     }
   }
 
@@ -550,11 +563,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
       final playerColor = session.vsComputerPlayerColor;
       final aiDocId = 'ai_${session.aiDifficulty.name}';
-      final aiName = '${session.aiDifficulty.name[0].toUpperCase()}${session.aiDifficulty.name.substring(1)} AI';
+      final aiName =
+          '${session.aiDifficulty.name[0].toUpperCase()}${session.aiDifficulty.name.substring(1)} AI';
 
       // Determine player's display name
       final playGames = ref.read(playGamesServiceProvider);
-      final displayName = playGames.player?.displayName ?? user.displayName ?? 'Player';
+      final displayName =
+          playGames.player?.displayName ?? user.displayName ?? 'Player';
 
       double scoreA; // score for the human player
       if (isDraw) {
@@ -591,7 +606,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (opponent == null) return;
 
       final playGames = ref.read(playGamesServiceProvider);
-      final displayName = playGames.player?.displayName ?? user.displayName ?? 'Player';
+      final displayName =
+          playGames.player?.displayName ?? user.displayName ?? 'Player';
 
       double scoreA; // score for local player
       if (isDraw) {
@@ -676,7 +692,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Update last move highlight
     final history = ref.read(moveHistoryProvider);
     if (history.isNotEmpty) {
-      ref.read(lastMoveProvider.notifier).state = history.last.affectedPositions;
+      ref.read(lastMoveProvider.notifier).state =
+          history.last.affectedPositions;
     } else {
       ref.read(lastMoveProvider.notifier).state = null;
     }
@@ -692,7 +709,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       aiDifficulty: scenario.aiDifficulty,
       scenario: scenario,
     );
-    ref.read(gameStateProvider.notifier).loadState(scenario.buildInitialState());
+    ref
+        .read(gameStateProvider.notifier)
+        .loadState(scenario.buildInitialState());
     ref.read(uiStateProvider.notifier).reset();
     ref.read(animationStateProvider.notifier).reset();
     ref.read(moveHistoryProvider.notifier).clear();
@@ -728,23 +747,30 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // FIX: Use LOCAL game state for turn enforcement instead of Firestore session
     // This prevents race condition where creator can play multiple moves before
     // Firestore listener updates session.currentTurn
-    final isMyTurnLocally = isOnline && onlineState.localColor != null &&
+    final isMyTurnLocally = isOnline &&
+        onlineState.localColor != null &&
         gameState.currentPlayer == onlineState.localColor;
     final isRemoteTurn = isOnline && !isMyTurnLocally;
     final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
     final canUndo = _canPerformUndo();
-    final inputLocked = isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
+    final inputLocked =
+        isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
 
     // Listen for chess clock expiration to trigger game end
     ref.listen<ChessClockState>(chessClockProvider, (previous, next) {
-      if (next.isExpired && next.expiredPlayer != null && !gameState.isGameOver) {
-        ref.read(gameStateProvider.notifier).setTimeExpired(next.expiredPlayer!);
+      if (next.isExpired &&
+          next.expiredPlayer != null &&
+          !gameState.isGameOver) {
+        ref
+            .read(gameStateProvider.notifier)
+            .setTimeExpired(next.expiredPlayer!);
       }
     });
 
     // Listen for game state changes (AI turns, achievements, etc.)
     ref.listen<GameState>(gameStateProvider, (previous, next) {
-      _debugLog('GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
+      _debugLog(
+          'GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
 
       unawaited(_maybeTriggerAiTurn(next));
       final moveCount = ref.read(moveHistoryProvider).length;
@@ -776,13 +802,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Debug logging for turn enforcement
     if (isOnline) {
       _debugLog('>>> GAME SCREEN BUILD (ONLINE MODE) <<<');
-      _debugLog('localColor=${onlineState.localColor}, roomCode=${onlineState.roomCode}');
-      _debugLog('session.currentTurn=${onlineState.session?.currentTurn}, session.moves=${onlineState.session?.moves.length ?? 0}');
-      _debugLog('LOCAL gameState: currentPlayer=${gameState.currentPlayer}, turnNumber=${gameState.turnNumber}');
-      _debugLog('LOCAL board: occupiedCells=${gameState.board.occupiedPositions.length}');
+      _debugLog(
+          'localColor=${onlineState.localColor}, roomCode=${onlineState.roomCode}');
+      _debugLog(
+          'session.currentTurn=${onlineState.session?.currentTurn}, session.moves=${onlineState.session?.moves.length ?? 0}');
+      _debugLog(
+          'LOCAL gameState: currentPlayer=${gameState.currentPlayer}, turnNumber=${gameState.turnNumber}');
+      _debugLog(
+          'LOCAL board: occupiedCells=${gameState.board.occupiedPositions.length}');
       _debugLog('appliedMoveCount=${onlineState.appliedMoveCount}');
       _debugLog('isMyTurnLocally=$isMyTurnLocally, isRemoteTurn=$isRemoteTurn');
-      _debugLog('waitingForOpponent=$waitingForOpponent, inputLocked=$inputLocked');
+      _debugLog(
+          'waitingForOpponent=$waitingForOpponent, inputLocked=$inputLocked');
       _debugLog('>>> END GAME SCREEN BUILD <<<');
     }
 
@@ -793,25 +824,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    // For puzzles with scripted responses (multi-move puzzles), only show
-    // completion when game is actually over so user plays through to victory
-    final isPuzzleWithScripts = activeScenario?.type == ScenarioType.puzzle &&
-        activeScenario!.scriptedResponses.isNotEmpty;
-    final shouldShowCompletion = isPuzzleWithScripts
-        ? gameState.isGameOver
-        : (gameState.isGameOver || scenarioState.guidedStepComplete);
+    final shouldShowCompletion = scenarioState.isSuccessful(gameState);
 
     if (activeScenario != null &&
         !scenarioState.completionShown &&
         shouldShowCompletion) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         ref.read(scenarioStateProvider.notifier).markCompletionShown();
 
         // Mark the scenario as complete in achievements
         if (activeScenario.type == ScenarioType.tutorial) {
-          ref.read(achievementProvider.notifier).completeTutorial(activeScenario.id);
+          ref
+              .read(achievementProvider.notifier)
+              .completeTutorial(activeScenario.id);
         } else {
-          ref.read(achievementProvider.notifier).completePuzzle(activeScenario.id);
+          ref
+              .read(achievementProvider.notifier)
+              .completePuzzle(activeScenario.id);
         }
 
         // Find next uncompleted scenario (smart logic)
@@ -820,6 +850,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         String nextButtonText = 'Next';
 
         // Helper to check if scenario is completed
+        bool isUnlocked(GameScenario s) =>
+            s.prerequisiteScenarioIds.every((id) =>
+                id == activeScenario.id ||
+                achievements.completedTutorials.contains(id) ||
+                achievements.completedPuzzles.contains(id));
+
         bool isCompleted(GameScenario s) {
           return s.type == ScenarioType.tutorial
               ? achievements.completedTutorials.contains(s.id)
@@ -828,11 +864,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
         // First, look for next uncompleted of same type
         final currentIndex = tutorialAndPuzzleLibrary.indexOf(activeScenario);
-        for (var i = currentIndex + 1; i < tutorialAndPuzzleLibrary.length; i++) {
+        for (var i = currentIndex + 1;
+            i < tutorialAndPuzzleLibrary.length;
+            i++) {
           final s = tutorialAndPuzzleLibrary[i];
-          if (s.type == activeScenario.type && !isCompleted(s)) {
+          if (s.type == activeScenario.type &&
+              !isCompleted(s) &&
+              isUnlocked(s)) {
             nextScenario = s;
-            nextButtonText = s.type == ScenarioType.tutorial ? 'Next Tutorial' : 'Next Puzzle';
+            nextButtonText = s.type == ScenarioType.tutorial
+                ? 'Next Tutorial'
+                : 'Next Puzzle';
             break;
           }
         }
@@ -841,18 +883,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         if (nextScenario == null) {
           for (var i = 0; i < currentIndex; i++) {
             final s = tutorialAndPuzzleLibrary[i];
-            if (s.type == activeScenario.type && !isCompleted(s)) {
+            if (s.type == activeScenario.type &&
+                !isCompleted(s) &&
+                isUnlocked(s)) {
               nextScenario = s;
-              nextButtonText = s.type == ScenarioType.tutorial ? 'Next Tutorial' : 'Next Puzzle';
+              nextButtonText = s.type == ScenarioType.tutorial
+                  ? 'Next Tutorial'
+                  : 'Next Puzzle';
               break;
             }
           }
         }
 
         // If all of same type complete, try the other type (tutorials -> puzzles)
-        if (nextScenario == null && activeScenario.type == ScenarioType.tutorial) {
+        if (nextScenario == null &&
+            activeScenario.type == ScenarioType.tutorial) {
           for (final s in tutorialAndPuzzleLibrary) {
-            if (s.type == ScenarioType.puzzle && !isCompleted(s)) {
+            if (s.type == ScenarioType.puzzle &&
+                !isCompleted(s) &&
+                isUnlocked(s)) {
               nextScenario = s;
               nextButtonText = 'Start Puzzles';
               break;
@@ -861,9 +910,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         }
 
         // If all puzzles complete, try tutorials
-        if (nextScenario == null && activeScenario.type == ScenarioType.puzzle) {
+        if (nextScenario == null &&
+            activeScenario.type == ScenarioType.puzzle) {
           for (final s in tutorialAndPuzzleLibrary) {
-            if (s.type == ScenarioType.tutorial && !isCompleted(s)) {
+            if (s.type == ScenarioType.tutorial &&
+                !isCompleted(s) &&
+                isUnlocked(s)) {
               nextScenario = s;
               nextButtonText = 'Back to Tutorials';
               break;
@@ -877,32 +929,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             title: Text('${activeScenario.title} Complete!'),
             content: Text(activeScenario.completionText),
             actions: [
-              if (nextScenario != null) ...[
-                TextButton(
+              TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    _navigateHome();
+                  },
+                  child: const Text('Home')),
+              TextButton(
                   onPressed: () {
                     Navigator.pop(dialogContext);
                     _startNextScenario(activeScenario);
                   },
-                  child: const Text('Replay'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                    _startNextScenario(nextScenario!);
-                  },
-                  child: Text(nextButtonText),
-                ),
-              ] else ...[
-                // Last puzzle completed - show Home button
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                    ref.read(scenarioStateProvider.notifier).clearScenario();
-                    _navigateHome();
-                  },
-                  child: const Text('Home'),
-                ),
-              ],
+                  child: const Text('Replay')),
+              if (nextScenario != null)
+                FilledButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      _startNextScenario(nextScenario!);
+                    },
+                    child: Text(nextButtonText)),
             ],
           ),
         );
@@ -910,364 +955,422 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return PopScope(
-      // Block navigation when there are moves to undo (both web and mobile)
-      // On web, PopScope blocks Flutter navigation but doesn't trigger undo
-      // (the web popstate handler does the undo)
-      canPop: _allowNavigationPop || !canUndo,
-      onPopInvokedWithResult: (didPop, result) {
-        if (_allowNavigationPop) {
-          if (!didPop) {
-            setState(() => _allowNavigationPop = false);
-          }
-          return;
-        }
-        // Only handle undo on mobile - web uses the popstate handler
-        if (!kIsWeb && !didPop && canUndo) {
-          // Back button pressed with moves to undo - undo instead of navigating
-          _undo();
-        }
-      },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Stones'),
+          title: Text(
+              activeScenario != null
+                  ? activeScenario.title
+                  : session.mode == GameMode.vsComputer
+                      ? '${session.aiDifficulty.label} AI'
+                      : isOnline
+                          ? 'Online Game'
+                          : 'Local Game',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
           leading: IconButton(
             icon: const Icon(Icons.home),
+            tooltip: 'Home · resume this session',
             onPressed: _navigateHome,
           ),
-        actions: [
-          // Undo button
-          IconButton(
-            icon: Icon(
-              Icons.undo,
-              color: canUndo ? null : Colors.grey.shade400,
-            ),
-            tooltip: canUndo ? 'Undo last move' : 'No moves to undo',
-            onPressed: canUndo ? _undo : null,
-          ),
-          // History toggle button
-          IconButton(
-            icon: Icon(_showHistory ? Icons.history_toggle_off : Icons.history),
-            tooltip: _showHistory ? 'Hide move history' : 'Show move history',
-            onPressed: () => setState(() => _showHistory = !_showHistory),
-          ),
-          if (session.mode == GameMode.online)
+          actions: [
             IconButton(
-              icon: const Icon(Icons.flag),
-              tooltip: 'Resign',
-              onPressed: () => _confirmResign(context),
-            ),
-          IconButton(
-            icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
-            tooltip: isMuted ? 'Unmute sounds' : 'Mute sounds',
-            onPressed: () async {
-              final soundManager = ref.read(soundManagerProvider);
-              await soundManager.toggleMute();
-              ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'New Game',
-            onPressed: session.mode == GameMode.online
-                ? null
-                : () => _showNewGameDialog(context, ref),
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWideScreen = constraints.maxWidth > 700;
-          final showClockEnabled = ref.watch(appSettingsProvider).chessClockEnabled;
+                icon: const Icon(Icons.help_outline),
+                tooltip: 'How to play',
+                onPressed: () => showGameHelp(context)),
+            IconButton(
+                icon: const Icon(Icons.undo),
+                tooltip: canUndo
+                    ? 'Undo last move'
+                    : gameState.isGameOver
+                        ? 'Finished game'
+                        : ref.read(appSettingsProvider).chessClockEnabled
+                            ? 'Undo unavailable with a clock'
+                            : 'Undo unavailable this turn',
+                onPressed: canUndo ? _undo : null),
+            PopupMenuButton<String>(
+                tooltip: 'Game options',
+                onSelected: (option) async {
+                  if (option == 'history') {
+                    setState(() => _showHistory = !_showHistory);
+                  }
+                  if (option == 'new') _showNewGameDialog(context, ref);
+                  if (option == 'resign') await _confirmResign(context);
+                  if (option == 'sound') {
+                    final manager = ref.read(soundManagerProvider);
+                    await manager.toggleMute();
+                    if (!mounted) return;
+                    ref.read(isMutedProvider.notifier).state = manager.isMuted;
+                    await ref
+                        .read(appSettingsProvider.notifier)
+                        .setSoundMuted(manager.isMuted);
+                  }
+                },
+                itemBuilder: (_) => [
+                      PopupMenuItem(
+                          value: 'history',
+                          child: Text(_showHistory
+                              ? 'Hide move history'
+                              : 'Show move history')),
+                      PopupMenuItem(
+                          value: 'sound',
+                          child:
+                              Text(isMuted ? 'Unmute sounds' : 'Mute sounds')),
+                      if (!isOnline)
+                        PopupMenuItem(
+                            value: 'new',
+                            child: Text(activeScenario != null
+                                ? 'Restart scenario'
+                                : 'New Game')),
+                      if (isOnline && !gameState.isGameOver)
+                        const PopupMenuItem(
+                            value: 'resign', child: Text('Resign')),
+                    ]),
+          ],
+        ),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 700;
+            final showClockEnabled =
+                ref.watch(appSettingsProvider).chessClockEnabled;
 
-          // Board widget (reused in both layouts)
-          final boardWidget = Container(
-            decoration: BoxDecoration(
-              // Frame gradient using board theme
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  boardThemeData.frameInner,
-                  boardThemeData.frameOuter,
-                  boardThemeData.frameInner,
+            // Board widget (reused in both layouts)
+            final boardWidget = Container(
+              decoration: BoxDecoration(
+                // Frame gradient using board theme
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    boardThemeData.frameInner,
+                    boardThemeData.frameOuter,
+                    boardThemeData.frameInner,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: boardThemeData.frameOuter,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(2, 4),
+                  ),
+                  BoxShadow(
+                    color: boardThemeData.frameInner.withValues(alpha: 0.5),
+                    blurRadius: 2,
+                    offset: const Offset(-1, -1),
+                  ),
                 ],
-                stops: const [0.0, 0.5, 1.0],
               ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: boardThemeData.frameOuter,
-                width: 2,
+              child: IgnorePointer(
+                ignoring: inputLocked,
+                child: _GameBoard(
+                  gameState: gameState,
+                  uiState: uiState,
+                  animationState: animationState,
+                  lastMovePositions: lastMovePositions,
+                  explodedPosition: _longPressedPosition,
+                  explodedStack: _longPressedStack,
+                  highlightedPositions: scenarioHighlights,
+                  pieceStyleData: pieceStyleData,
+                  boardThemeData: boardThemeData,
+                  onCellTap: (pos) =>
+                      _handleCellTap(context, ref, pos, guidedMove),
+                  onCellSwipe: (pos, dir) =>
+                      _handleCellSwipe(context, ref, pos, dir, guidedMove),
+                  onLongPressStart: _startStackView,
+                  onLongPressEnd: _endStackView,
+                  onBoardFrameTap: () => _handleBoardFrameTap(ref),
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(2, 4),
-                ),
-                BoxShadow(
-                  color: boardThemeData.frameInner.withValues(alpha: 0.5),
-                  blurRadius: 2,
-                  offset: const Offset(-1, -1),
-                ),
-              ],
-            ),
-            child: IgnorePointer(
+            );
+
+            // Bottom controls
+            final bottomControls = IgnorePointer(
               ignoring: inputLocked,
-              child: _GameBoard(
+              child: _BottomControls(
                 gameState: gameState,
                 uiState: uiState,
-                animationState: animationState,
-                lastMovePositions: lastMovePositions,
-                explodedPosition: _longPressedPosition,
-                explodedStack: _longPressedStack,
-                highlightedPositions: scenarioHighlights,
-                pieceStyleData: pieceStyleData,
-                boardThemeData: boardThemeData,
-                onCellTap: (pos) =>
-                    _handleCellTap(context, ref, pos, guidedMove),
-                onCellSwipe: (pos, dir) =>
-                    _handleCellSwipe(context, ref, pos, dir, guidedMove),
-                onLongPressStart: _startStackView,
-                onLongPressEnd: _endStackView,
-                onBoardFrameTap: () => _handleBoardFrameTap(ref),
+                onPieceTypeChanged: (type) =>
+                    ref.read(uiStateProvider.notifier).setGhostPieceType(type),
+                onConfirmMove: () => _confirmMove(ref),
+                onCancel: () => ref.read(uiStateProvider.notifier).reset(),
+                isWideScreen: isWideScreen,
               ),
-            ),
-          );
+            );
 
-          // Bottom controls
-          final bottomControls = IgnorePointer(
-            ignoring: inputLocked,
-            child: _BottomControls(
-              gameState: gameState,
-              uiState: uiState,
-              onPieceTypeChanged: (type) =>
-                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
-              onConfirmMove: () => _confirmMove(ref),
-              onCancel: () => ref.read(uiStateProvider.notifier).reset(),
-              isWideScreen: isWideScreen,
-            ),
-          );
-
-          return Stack(
-            children: [
-              if (isWideScreen)
-                // Wide screen: side panels layout
-                Row(
-                  children: [
-                    // Left side panel (Light player)
-                    Container(
-                      width: 80,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      child: Column(
-                        children: [
-                          _PlayerSidePanel(
-                            player: PlayerColor.white,
-                            pieces: gameState.whitePieces,
-                            isCurrentTurn: gameState.currentPlayer == PlayerColor.white,
-                            isGameOver: gameState.isGameOver,
-                            showClock: showClockEnabled,
-                          ),
-                          // Piece selector for light player when placing
-                          if (uiState.mode == InteractionMode.placingPiece &&
-                              gameState.currentPlayer == PlayerColor.white &&
-                              !gameState.isOpeningPhase) ...[
-                            const SizedBox(height: 12),
-                            _SidePanelPieceSelector(
-                              pieces: gameState.whitePieces,
-                              currentType: uiState.ghostPieceType,
-                              onTypeChanged: (type) =>
-                                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
-                            ),
-                          ],
-                          const Spacer(),
-                        ],
-                      ),
-                    ),
-                    // Center: game area
-                    Expanded(
-                      child: Column(
-                        children: [
-                          // Win banner or compact turn indicator
-                          if (activeScenario != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: _ScenarioInfoCard(scenario: activeScenario),
-                            ),
-                          if (gameState.isGameOver && gameState.result != null)
-                            _WinBanner(result: gameState.result!, winReason: gameState.winReason)
-                          else
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: _CompactTurnIndicator(
-                                gameState: gameState,
-                                isThinking: isAiThinkingVisible,
-                                onlineState: isOnline ? onlineState : null,
-                              ),
-                            ),
-                          // Board
-                          Expanded(
-                            child: Center(
-                              child: AspectRatio(
-                                aspectRatio: 1,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: boardWidget,
+            final textScale =
+                MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+            final minimumHeight = 520 * textScale +
+                (activeScenario == null ? 0 : 160 * textScale);
+            return SingleChildScrollView(
+                child: SizedBox(
+                    height: math.max(constraints.maxHeight, minimumHeight),
+                    child: Stack(
+                      children: [
+                        if (isWideScreen)
+                          // Wide screen: side panels layout
+                          Row(
+                            children: [
+                              // Left side panel (Light player)
+                              Container(
+                                width: 80 * textScale,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 4),
+                                child: Column(
+                                  children: [
+                                    _PlayerSidePanel(
+                                      player: PlayerColor.white,
+                                      pieces: gameState.whitePieces,
+                                      isCurrentTurn: gameState.currentPlayer ==
+                                          PlayerColor.white,
+                                      isGameOver: gameState.isGameOver,
+                                      showClock: showClockEnabled,
+                                    ),
+                                    // Piece selector for light player when placing
+                                    if (uiState.mode ==
+                                            InteractionMode.placingPiece &&
+                                        gameState.currentPlayer ==
+                                            PlayerColor.white &&
+                                        !gameState.isOpeningPhase) ...[
+                                      const SizedBox(height: 12),
+                                      _SidePanelPieceSelector(
+                                        pieces: gameState.whitePieces,
+                                        currentType: uiState.ghostPieceType,
+                                        onTypeChanged: (type) => ref
+                                            .read(uiStateProvider.notifier)
+                                            .setGhostPieceType(type),
+                                      ),
+                                    ],
+                                    const Spacer(),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ),
-                          // Bottom controls
-                          bottomControls,
-                        ],
-                      ),
-                    ),
-                    // Right side panel (Dark player)
-                    Container(
-                      width: 80,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      child: Column(
-                        children: [
-                          _PlayerSidePanel(
-                            player: PlayerColor.black,
-                            pieces: gameState.blackPieces,
-                            isCurrentTurn: gameState.currentPlayer == PlayerColor.black,
-                            isGameOver: gameState.isGameOver,
-                            showClock: showClockEnabled,
-                          ),
-                          // Piece selector for dark player when placing
-                          if (uiState.mode == InteractionMode.placingPiece &&
-                              gameState.currentPlayer == PlayerColor.black &&
-                              !gameState.isOpeningPhase) ...[
-                            const SizedBox(height: 12),
-                            _SidePanelPieceSelector(
-                              pieces: gameState.blackPieces,
-                              currentType: uiState.ghostPieceType,
-                              onTypeChanged: (type) =>
-                                  ref.read(uiStateProvider.notifier).setGhostPieceType(type),
-                            ),
-                          ],
-                          const Spacer(),
-                        ],
-                      ),
-                    ),
-                    // Move history panel (collapsible sidebar)
-                    if (_showHistory)
-                      _MoveHistoryPanel(
-                        moveHistory: moveHistory,
-                        boardSize: gameState.boardSize,
-                        onClose: () => setState(() => _showHistory = false),
-                      ),
-                  ],
-                )
-              else
-                // Narrow screen: compact layout with overlays
-                Column(
-                  children: [
-                    if (activeScenario != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: _ScenarioInfoCard(scenario: activeScenario),
-                      ),
-                    // Win banner (if game over)
-                    if (gameState.isGameOver && gameState.result != null)
-                      _WinBanner(result: gameState.result!, winReason: gameState.winReason),
-                    // Board area with overlays
-                    Expanded(
-                      child: Stack(
-                        clipBehavior: Clip.none, // Allow tall stacks to overflow
-                        children: [
-                          // Board
-                          Center(
-                            child: AspectRatio(
-                              aspectRatio: 1,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: boardWidget,
-                              ),
-                            ),
-                          ),
-                          // Turn indicator overlay (top center)
-                          if (!gameState.isGameOver)
-                            Positioned(
-                              top: 4,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: _CompactTurnIndicator(
-                                  gameState: gameState,
-                                  isThinking: isAiThinkingVisible,
-                                  onlineState: isOnline ? onlineState : null,
+                              // Center: game area
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    // Win banner or compact turn indicator
+                                    if (activeScenario != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: _ScenarioInfoCard(
+                                            scenario: activeScenario),
+                                      ),
+                                    if (gameState.isGameOver &&
+                                        gameState.result != null)
+                                      _WinBanner(
+                                          result: gameState.result!,
+                                          winReason: gameState.winReason,
+                                          onHome: _navigateHome,
+                                          onNewGame: isOnline
+                                              ? null
+                                              : () => _showNewGameDialog(
+                                                  context, ref))
+                                    else
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: _CompactTurnIndicator(
+                                          gameState: gameState,
+                                          isThinking: isAiThinkingVisible,
+                                          onlineState:
+                                              isOnline ? onlineState : null,
+                                        ),
+                                      ),
+                                    // Board
+                                    Expanded(
+                                      child: Center(
+                                        child: AspectRatio(
+                                          aspectRatio: 1,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8),
+                                            child: boardWidget,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Bottom controls
+                                    bottomControls,
+                                  ],
                                 ),
                               ),
-                            ),
-                          // Player info overlays (bottom corners)
-                          Positioned(
-                            bottom: 4,
-                            left: 4,
-                            child: _PlayerSidePanel(
-                              player: PlayerColor.white,
-                              pieces: gameState.whitePieces,
-                              isCurrentTurn: gameState.currentPlayer == PlayerColor.white,
-                              isGameOver: gameState.isGameOver,
-                              showClock: showClockEnabled,
-                              isVertical: false,
-                            ),
+                              // Right side panel (Dark player)
+                              Container(
+                                width: 80 * textScale,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 4),
+                                child: Column(
+                                  children: [
+                                    _PlayerSidePanel(
+                                      player: PlayerColor.black,
+                                      pieces: gameState.blackPieces,
+                                      isCurrentTurn: gameState.currentPlayer ==
+                                          PlayerColor.black,
+                                      isGameOver: gameState.isGameOver,
+                                      showClock: showClockEnabled,
+                                    ),
+                                    // Piece selector for dark player when placing
+                                    if (uiState.mode ==
+                                            InteractionMode.placingPiece &&
+                                        gameState.currentPlayer ==
+                                            PlayerColor.black &&
+                                        !gameState.isOpeningPhase) ...[
+                                      const SizedBox(height: 12),
+                                      _SidePanelPieceSelector(
+                                        pieces: gameState.blackPieces,
+                                        currentType: uiState.ghostPieceType,
+                                        onTypeChanged: (type) => ref
+                                            .read(uiStateProvider.notifier)
+                                            .setGhostPieceType(type),
+                                      ),
+                                    ],
+                                    const Spacer(),
+                                  ],
+                                ),
+                              ),
+                              // Move history panel (collapsible sidebar)
+                              if (_showHistory)
+                                _MoveHistoryPanel(
+                                  moveHistory: moveHistory,
+                                  boardSize: gameState.boardSize,
+                                  onClose: () =>
+                                      setState(() => _showHistory = false),
+                                ),
+                            ],
+                          )
+                        else
+                          // Narrow screen: compact layout with overlays
+                          Column(
+                            children: [
+                              if (activeScenario != null)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  child: _ScenarioInfoCard(
+                                      scenario: activeScenario),
+                                ),
+                              // Win banner (if game over)
+                              if (gameState.isGameOver &&
+                                  gameState.result != null)
+                                _WinBanner(
+                                    result: gameState.result!,
+                                    winReason: gameState.winReason,
+                                    onHome: _navigateHome,
+                                    onNewGame: isOnline
+                                        ? null
+                                        : () =>
+                                            _showNewGameDialog(context, ref)),
+                              // Board area with overlays
+                              Expanded(
+                                child: Stack(
+                                  clipBehavior: Clip
+                                      .none, // Allow tall stacks to overflow
+                                  children: [
+                                    // Board
+                                    Center(
+                                      child: AspectRatio(
+                                        aspectRatio: 1,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: boardWidget,
+                                        ),
+                                      ),
+                                    ),
+                                    // Turn indicator overlay (top center)
+                                    if (!gameState.isGameOver)
+                                      Positioned(
+                                        top: 4,
+                                        left: 0,
+                                        right: 0,
+                                        child: Center(
+                                          child: _CompactTurnIndicator(
+                                            gameState: gameState,
+                                            isThinking: isAiThinkingVisible,
+                                            onlineState:
+                                                isOnline ? onlineState : null,
+                                          ),
+                                        ),
+                                      ),
+                                    // Player info overlays (bottom corners)
+                                    Positioned(
+                                      bottom: 4,
+                                      left: 4,
+                                      child: _PlayerSidePanel(
+                                        player: PlayerColor.white,
+                                        pieces: gameState.whitePieces,
+                                        isCurrentTurn:
+                                            gameState.currentPlayer ==
+                                                PlayerColor.white,
+                                        isGameOver: gameState.isGameOver,
+                                        showClock: showClockEnabled,
+                                        isVertical: false,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 4,
+                                      right: 4,
+                                      child: _PlayerSidePanel(
+                                        player: PlayerColor.black,
+                                        pieces: gameState.blackPieces,
+                                        isCurrentTurn:
+                                            gameState.currentPlayer ==
+                                                PlayerColor.black,
+                                        isGameOver: gameState.isGameOver,
+                                        showClock: showClockEnabled,
+                                        isVertical: false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Bottom controls
+                              bottomControls,
+                              // Move history panel (appears below on narrow screens)
+                              if (_showHistory)
+                                SizedBox(
+                                  height: 200,
+                                  child: _MoveHistoryPanel(
+                                    moveHistory: moveHistory,
+                                    boardSize: gameState.boardSize,
+                                    onClose: () =>
+                                        setState(() => _showHistory = false),
+                                  ),
+                                ),
+                            ],
                           ),
-                          Positioned(
-                            bottom: 4,
-                            right: 4,
-                            child: _PlayerSidePanel(
-                              player: PlayerColor.black,
-                              pieces: gameState.blackPieces,
-                              isCurrentTurn: gameState.currentPlayer == PlayerColor.black,
-                              isGameOver: gameState.isGameOver,
-                              showClock: showClockEnabled,
-                              isVertical: false,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Bottom controls
-                    bottomControls,
-                    // Move history panel (appears below on narrow screens)
-                    if (_showHistory)
-                      SizedBox(
-                        height: 200,
-                        child: _MoveHistoryPanel(
-                          moveHistory: moveHistory,
-                          boardSize: gameState.boardSize,
-                          onClose: () => setState(() => _showHistory = false),
-                        ),
-                      ),
-                  ],
-                ),
 
-              // Online status banners
-              if (session.mode == GameMode.online && waitingForOpponent)
-                _OnlineStatusBanner(
-                  message:
-                      'Waiting for opponent... Room code: ${onlineState.roomCode ?? '---'}',
-                  icon: Icons.hourglass_empty,
-                ),
-              if (session.mode == GameMode.online &&
-                  onlineState.opponentDisconnected &&
-                  !onlineState.opponentInactive)
-                const _OnlineStatusBanner(
-                  message: 'Opponent may have disconnected (no activity for 60s)',
-                  icon: Icons.wifi_off,
-                  color: Colors.orange,
-                ),
-              if (session.mode == GameMode.online && onlineState.opponentInactive)
-                const _OnlineStatusBanner(
-                  message: 'Opponent disconnected (no activity for 2+ minutes)',
-                  icon: Icons.error_outline,
-                  color: Colors.red,
-                ),
-            ],
-          );
-        },
-      ),
+                        // Online status banners
+                        if (session.mode == GameMode.online &&
+                            waitingForOpponent)
+                          _OnlineStatusBanner(
+                            message:
+                                'Waiting for opponent... Room code: ${onlineState.roomCode ?? '---'}',
+                            icon: Icons.hourglass_empty,
+                          ),
+                        if (session.mode == GameMode.online &&
+                            onlineState.opponentDisconnected &&
+                            !onlineState.opponentInactive)
+                          const _OnlineStatusBanner(
+                            message:
+                                'Opponent may have disconnected (no activity for 60s)',
+                            icon: Icons.wifi_off,
+                            color: Colors.orange,
+                          ),
+                        if (session.mode == GameMode.online &&
+                            onlineState.opponentInactive)
+                          const _OnlineStatusBanner(
+                            message:
+                                'Opponent disconnected (no activity for 2+ minutes)',
+                            icon: Icons.error_outline,
+                            color: Colors.red,
+                          ),
+                      ],
+                    )));
+          },
+        ),
       ),
     );
   }
@@ -1282,8 +1385,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
   }
 
-  void _handleCellTap(
-      BuildContext context, WidgetRef ref, Position pos, GuidedMove? guidedMove) {
+  void _handleCellTap(BuildContext context, WidgetRef ref, Position pos,
+      GuidedMove? guidedMove) {
     _debugLog('_handleCellTap: pos=$pos');
     final gameState = ref.read(gameStateProvider);
     final uiState = ref.read(uiStateProvider);
@@ -1295,12 +1398,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       final onlineState = ref.read(onlineGameProvider);
       final isMyTurnLocally = onlineState.localColor != null &&
           gameState.currentPlayer == onlineState.localColor;
-      _debugLog('_handleCellTap: ONLINE check - localColor=${onlineState.localColor}, '
+      _debugLog(
+          '_handleCellTap: ONLINE check - localColor=${onlineState.localColor}, '
           'localGameTurn=${gameState.currentPlayer}, '
           'isMyTurnLocally=$isMyTurnLocally, '
           'waitingForOpponent=${onlineState.waitingForOpponent}');
       if (!isMyTurnLocally || onlineState.waitingForOpponent) {
-        _debugLog('_handleCellTap: BLOCKED - not local turn or waiting for opponent');
+        _debugLog(
+            '_handleCellTap: BLOCKED - not local turn or waiting for opponent');
         uiNotifier.reset();
         return;
       }
@@ -1322,8 +1427,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         _handleIdleTap(ref, pos, stack, gameState, guidedMove);
 
       case InteractionMode.placingPiece:
-        _handlePlacingPieceTap(
-            ref, pos, stack, gameState, uiState, guidedMove);
+        _handlePlacingPieceTap(ref, pos, stack, gameState, uiState, guidedMove);
 
       case InteractionMode.movingStack:
         _handleMovingStackTap(ref, pos, stack, gameState, uiState, guidedMove);
@@ -1334,8 +1438,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Handle swipe gesture on a cell - selects stack and starts movement
-  void _handleCellSwipe(
-      BuildContext context, WidgetRef ref, Position pos, Direction direction, GuidedMove? guidedMove) {
+  void _handleCellSwipe(BuildContext context, WidgetRef ref, Position pos,
+      Direction direction, GuidedMove? guidedMove) {
     _debugLog('_handleCellSwipe: pos=$pos, direction=$direction');
     final gameState = ref.read(gameStateProvider);
     final uiState = ref.read(uiStateProvider);
@@ -1386,9 +1490,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    final maxPieces = stack.height > gameState.boardSize
-        ? gameState.boardSize
-        : stack.height;
+    final maxPieces =
+        stack.height > gameState.boardSize ? gameState.boardSize : stack.height;
     final pickup = uiState.mode == InteractionMode.movingStack &&
             uiState.selectedPosition == pos
         ? uiState.piecesPickedUp
@@ -1405,7 +1508,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Handle guided move constraints if applicable
     if (guidedMove != null &&
         (guidedMove.type == GuidedMoveType.stackMove ||
-         guidedMove.type == GuidedMoveType.anyStackMove)) {
+            guidedMove.type == GuidedMoveType.anyStackMove)) {
       if (pos != guidedMove.from) {
         return;
       }
@@ -1440,8 +1543,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Handle swipe gesture when in droppingPieces mode
-  void _handleDroppingPiecesSwipe(WidgetRef ref, Position pos, Direction direction,
-      GameState gameState, UIState uiState) {
+  void _handleDroppingPiecesSwipe(WidgetRef ref, Position pos,
+      Direction direction, GameState gameState, UIState uiState) {
     final uiNotifier = ref.read(uiStateProvider.notifier);
     final handPos = uiState.getCurrentHandPosition();
     final currentDir = uiState.selectedDirection;
@@ -1511,7 +1614,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // Tap own stack: select for movement
-    if (!gameState.isOpeningPhase && stack.controller == gameState.currentPlayer) {
+    if (!gameState.isOpeningPhase &&
+        stack.controller == gameState.currentPlayer) {
       final maxPieces = stack.height > gameState.boardSize
           ? gameState.boardSize
           : stack.height;
@@ -1565,10 +1669,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (guidedMove != null &&
         (guidedMove.type == GuidedMoveType.stackMove ||
-         guidedMove.type == GuidedMoveType.anyStackMove)) {
+            guidedMove.type == GuidedMoveType.anyStackMove)) {
       final allowedPositions = guidedMove.highlightedCells(gameState.boardSize);
       // For anyStackMove, we only highlight the from position, not restrict movement
-      if (guidedMove.type == GuidedMoveType.stackMove && !allowedPositions.contains(pos)) {
+      if (guidedMove.type == GuidedMoveType.stackMove &&
+          !allowedPositions.contains(pos)) {
         return;
       }
     }
@@ -1576,9 +1681,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (pos == selectedPos) {
       // Tap same stack: cycle piece count
       final stackHeight = gameState.board.stackAt(pos).height;
-      final maxPieces = stackHeight > gameState.boardSize
-          ? gameState.boardSize
-          : stackHeight;
+      final maxPieces =
+          stackHeight > gameState.boardSize ? gameState.boardSize : stackHeight;
       uiNotifier.cyclePiecesPickedUp(maxPieces);
       return;
     }
@@ -1596,7 +1700,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     // Tap on different own stack: switch selection
-    if (!gameState.isOpeningPhase && stack.controller == gameState.currentPlayer && stack.isNotEmpty) {
+    if (!gameState.isOpeningPhase &&
+        stack.controller == gameState.currentPlayer &&
+        stack.isNotEmpty) {
       final maxPieces = stack.height > gameState.boardSize
           ? gameState.boardSize
           : stack.height;
@@ -1623,7 +1729,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final dropPath = uiState.getDropPath();
 
     // Calculate total pieces in this move
-    final totalPiecesInMove = uiState.piecesPickedUp + uiState.drops.fold<int>(0, (a, b) => a + b);
+    final totalPiecesInMove =
+        uiState.piecesPickedUp + uiState.drops.fold<int>(0, (a, b) => a + b);
 
     // If all pieces are dropped (handPos is null), any click cancels
     if (handPos == null) {
@@ -1687,9 +1794,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // - Still have pieces in hand
     // - Haven't selected ALL remaining pieces (if all selected, must use confirm button)
     final isSinglePieceMove = totalPiecesInMove == 1;
-    final allPiecesSelected = uiState.pendingDropCount == uiState.piecesPickedUp;
-    if (pos == nextPos && canContinue && !isSinglePieceMove &&
-        uiState.piecesPickedUp > 0 && !allPiecesSelected) {
+    final allPiecesSelected =
+        uiState.pendingDropCount == uiState.piecesPickedUp;
+    if (pos == nextPos &&
+        canContinue &&
+        !isSinglePieceMove &&
+        uiState.piecesPickedUp > 0 &&
+        !allPiecesSelected) {
       // Drop current pending at hand position and move to next
       final dropCount = uiState.pendingDropCount;
       uiNotifier.addDrop(dropCount);
@@ -1724,9 +1835,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final remaining = uiState.piecesPickedUp;
 
     // Build final drops list - include any pending pieces still in hand
-    final drops = remaining > 0
-        ? [...uiState.drops, remaining]
-        : uiState.drops;
+    final drops = remaining > 0 ? [...uiState.drops, remaining] : uiState.drops;
 
     if (pos == null || dir == null || drops.isEmpty) return;
 
@@ -1741,14 +1850,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final scenario = session.scenario ?? scenarioState.activeScenario;
     final guidanceActive =
         scenario != null && !scenarioState.guidedStepComplete;
-    final color = gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
+    final color =
+        gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
     if (scenario != null &&
         guidanceActive &&
         (scenario.guidedMove.type == GuidedMoveType.placement ||
-         scenario.guidedMove.type == GuidedMoveType.anyPlacement) &&
+            scenario.guidedMove.type == GuidedMoveType.anyPlacement) &&
         !_isAiTurn(session, gameState)) {
       final expected = scenario.guidedMove;
       // Check piece type if specified
@@ -1771,20 +1881,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       // anyPlacement allows any position
     }
 
-    _debugLog('_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
+    _debugLog(
+        '_performPlacementMove: pos=$pos, type=$type, currentPlayer=${gameState.currentPlayer}, turn=${gameState.turnNumber}');
     final success = gameNotifier.placePiece(pos, type);
     _debugLog('_performPlacementMove: placePiece result=$success');
-      if (success) {
-        if (scenario != null &&
-            guidanceActive &&
-            (scenario.guidedMove.type == GuidedMoveType.placement ||
-             scenario.guidedMove.type == GuidedMoveType.anyPlacement)) {
+    if (success) {
+      if (scenario != null &&
+          guidanceActive &&
+          (scenario.guidedMove.type == GuidedMoveType.placement ||
+              scenario.guidedMove.type == GuidedMoveType.anyPlacement)) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
-        ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+        ref.read(lastMoveProvider.notifier).state =
+            moveRecord.affectedPositions;
         _syncOnlineMove(moveRecord);
       }
 
@@ -1825,7 +1937,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final stack = gameState.board.stackAt(from);
     final topPiece = stack.topPiece;
     Position? flattenedWallPos;
-    if (topPiece != null && topPiece.canFlattenWalls && dropPositions.isNotEmpty) {
+    if (topPiece != null &&
+        topPiece.canFlattenWalls &&
+        dropPositions.isNotEmpty) {
       final targetStack = gameState.board.stackAt(dropPositions.last);
       if (targetStack.topPiece?.type == PieceType.standing) {
         flattenedWallPos = dropPositions.last;
@@ -1835,19 +1949,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final soundManager = ref.read(soundManagerProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
-    if (scenario != null &&
-        guidanceActive &&
-        !_isAiTurn(session, gameState)) {
+    if (scenario != null && guidanceActive && !_isAiTurn(session, gameState)) {
       final guided = scenario.guidedMove;
       if (guided.type == GuidedMoveType.stackMove) {
         // Strict validation for specific stack moves
         final expectedDrops = guided.drops ?? const [];
         final dropsMatch = expectedDrops.length == drops.length &&
-            List.generate(expectedDrops.length, (i) => expectedDrops[i] == drops[i])
+            List.generate(
+                    expectedDrops.length, (i) => expectedDrops[i] == drops[i])
                 .every((e) => e);
-        if (guided.from != from ||
-            guided.direction != dir ||
-            !dropsMatch) {
+        if (guided.from != from || guided.direction != dir || !dropsMatch) {
           soundManager.playIllegalMove();
           return false;
         }
@@ -1865,19 +1976,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (scenario != null &&
           guidanceActive &&
           (scenario.guidedMove.type == GuidedMoveType.stackMove ||
-           scenario.guidedMove.type == GuidedMoveType.anyStackMove)) {
+              scenario.guidedMove.type == GuidedMoveType.anyStackMove)) {
         ref.read(scenarioStateProvider.notifier).markGuidedStepComplete();
       }
       final moveRecord = gameNotifier.lastMoveRecord;
       if (moveRecord != null) {
         ref.read(moveHistoryProvider.notifier).addMove(moveRecord);
-        ref.read(lastMoveProvider.notifier).state = moveRecord.affectedPositions;
+        ref.read(lastMoveProvider.notifier).state =
+            moveRecord.affectedPositions;
         _syncOnlineMove(moveRecord);
       }
 
-      ref.read(animationStateProvider.notifier).stackMoved(from, dir, drops, dropPositions);
+      ref
+          .read(animationStateProvider.notifier)
+          .stackMoved(from, dir, drops, dropPositions);
       if (flattenedWallPos != null) {
-        ref.read(animationStateProvider.notifier).wallFlattened(flattenedWallPos);
+        ref
+            .read(animationStateProvider.notifier)
+            .wallFlattened(flattenedWallPos);
         soundManager.playWallFlatten();
       } else {
         soundManager.playStackMove();
@@ -1909,7 +2025,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.read(chessClockProvider.notifier).start(gameState.currentPlayer);
   }
 
-  List<Position> _calculateDropPositions(Position start, Direction dir, int steps) {
+  List<Position> _calculateDropPositions(
+      Position start, Direction dir, int steps) {
     final dropPositions = <Position>[];
     var currentPos = start;
     for (var i = 0; i < steps; i++) {
@@ -1922,6 +2039,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Future<void> _maybeTriggerAiTurn(GameState state) async {
     final session = ref.read(gameSessionProvider);
     if (session.mode != GameMode.vsComputer || state.isGameOver) return;
+    if (ref.read(scenarioStateProvider).isSuccessful(state)) return;
     if (state.currentPlayer != _aiPlayerColor(session)) return;
     if (ref.read(aiThinkingProvider)) return;
 
@@ -1931,15 +2049,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Start a timer to show the thinking indicator after 500ms
     // This avoids showing a spinner for quick moves
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (ref.read(aiThinkingProvider)) {
+      if (mounted && ref.read(aiThinkingProvider)) {
         ref.read(aiThinkingVisibleProvider.notifier).state = true;
       }
     });
 
+    GameState? searchedState;
     try {
       // Small delay before AI starts for better UX
       await Future.delayed(const Duration(milliseconds: 200));
 
+      if (!mounted) return;
       final latestState = ref.read(gameStateProvider);
       final latestSession = ref.read(gameSessionProvider);
       if (latestSession.mode != GameMode.vsComputer ||
@@ -1947,6 +2067,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           latestState.currentPlayer != _aiPlayerColor(latestSession)) {
         return;
       }
+      if (ref.read(scenarioStateProvider).isSuccessful(latestState)) return;
 
       final scenarioMove = ref.read(scenarioStateProvider).nextScriptedMove;
       if (scenarioMove != null) {
@@ -1958,14 +2079,26 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         }
       }
 
-      final ai = StonesAI.forDifficulty(latestSession.aiDifficulty);
-      final move = await ai.selectMove(latestState);
-
+      searchedState = latestState;
+      final move =
+          await selectStonesMove(latestState, latestSession.aiDifficulty);
+      if (!mounted ||
+          !identical(ref.read(gameStateProvider), latestState) ||
+          !identical(ref.read(gameSessionProvider), latestSession)) {
+        return;
+      }
       _applyAiMove(move, ref);
       ref.read(uiStateProvider.notifier).reset();
     } finally {
-      ref.read(aiThinkingProvider.notifier).state = false;
-      ref.read(aiThinkingVisibleProvider.notifier).state = false;
+      // A departed screen must not touch its WidgetRef or unlock a newer AI turn.
+      if (mounted) {
+        ref.read(aiThinkingProvider.notifier).state = false;
+        ref.read(aiThinkingVisibleProvider.notifier).state = false;
+        if (searchedState != null &&
+            !identical(ref.read(gameStateProvider), searchedState)) {
+          unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+        }
+      }
     }
   }
 
@@ -1983,10 +2116,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.read(gameSessionProvider);
     if (session.mode != GameMode.online) return;
     final latestState = ref.read(gameStateProvider);
-    _debugLog('_syncOnlineMove: Recording move ${moveRecord.notation} to Firestore, '
+    _debugLog(
+        '_syncOnlineMove: Recording move ${moveRecord.notation} to Firestore, '
         'nextTurn=${latestState.currentPlayer}');
     unawaited(
-      ref.read(onlineGameProvider.notifier).recordLocalMove(moveRecord, latestState),
+      ref
+          .read(onlineGameProvider.notifier)
+          .recordLocalMove(moveRecord, latestState),
     );
   }
 
@@ -2022,8 +2158,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _showNewGameDialog(BuildContext context, WidgetRef ref) {
     final gameState = ref.read(gameStateProvider);
     final session = ref.read(gameSessionProvider);
+    final scenario =
+        session.scenario ?? ref.read(scenarioStateProvider).activeScenario;
+    if (scenario != null) {
+      _startNextScenario(scenario);
+      return;
+    }
     final isGameInProgress = !gameState.isGameOver &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
+        (gameState.turnNumber > 1 ||
+            gameState.board.occupiedPositions.isNotEmpty);
     final showSetup = session.mode == GameMode.vsComputer
         ? () => _showVsComputerSetupDialog(context, ref)
         : () => _showBoardSizeDialog(context, ref);
@@ -2064,7 +2207,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _showBoardSizeDialog(BuildContext context, WidgetRef ref) {
     final settings = ref.read(appSettingsProvider);
     final session = ref.read(gameSessionProvider);
-    int selectedSize = settings.boardSize;
+    int selectedSize = ref.read(gameStateProvider).boardSize;
     bool chessClockEnabled = settings.chessClockEnabled;
     int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
     bool chessClockOverridden = false;
@@ -2077,6 +2220,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('New Game'),
+          scrollable: true,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2093,12 +2237,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       onSelected: (_) => setState(() {
                         selectedSize = size;
                         if (!chessClockOverridden) {
-                          chessClockSeconds = settings.chessClockSecondsForSize(size);
+                          chessClockSeconds =
+                              settings.chessClockSecondsForSize(size);
                           clockMinutesController.text =
                               (chessClockSeconds ~/ 60).toString();
                         }
                       }),
-                      selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                      selectedColor:
+                          GameColors.boardFrameInner.withValues(alpha: 0.2),
                       checkmarkColor: GameColors.boardFrameInner,
                     ),
                 ],
@@ -2106,9 +2252,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               const SizedBox(height: 16),
               ChessClockSetup(
                 enabled: chessClockEnabled,
-                onEnabledChanged: (value) => setState(() => chessClockEnabled = value),
+                onEnabledChanged: (value) =>
+                    setState(() => chessClockEnabled = value),
                 minutesController: clockMinutesController,
                 onMinutesChanged: (value) {
+                  setState(() {});
                   chessClockOverridden = true;
                   final minutes = int.tryParse(value);
                   if (minutes != null && minutes > 0) {
@@ -2124,34 +2272,47 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                // Save chess clock preference
-                ref.read(appSettingsProvider.notifier).setChessClockEnabled(chessClockEnabled);
-                ref.read(gameSessionProvider.notifier).state = session.copyWith(
-                  chessClockSecondsOverride: chessClockEnabled && chessClockOverridden
-                      ? chessClockSeconds
-                      : null,
-                );
-
-                ref.read(gameStateProvider.notifier).newGame(selectedSize);
-                ref.read(uiStateProvider.notifier).reset();
-                ref.read(animationStateProvider.notifier).reset();
-                ref.read(moveHistoryProvider.notifier).clear();
-                ref.read(lastMoveProvider.notifier).state = null;
-
-                // Reset chess clock for new game
-                if (chessClockEnabled) {
-                  ref.read(chessClockProvider.notifier).initialize(
-                        selectedSize,
-                        secondsOverride:
-                            chessClockOverridden ? chessClockSeconds : null,
+              onPressed: chessClockEnabled &&
+                      (int.tryParse(clockMinutesController.text) ?? 0) <= 0
+                  ? null
+                  : () {
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .setBoardSize(selectedSize);
+                      // Save chess clock preference
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .setChessClockEnabled(chessClockEnabled);
+                      ref.read(gameSessionProvider.notifier).state =
+                          session.copyWith(
+                        chessClockSecondsOverride:
+                            chessClockEnabled && chessClockOverridden
+                                ? chessClockSeconds
+                                : null,
                       );
-                } else {
-                  ref.read(chessClockProvider.notifier).stop();
-                }
 
-                Navigator.pop(dialogContext);
-              },
+                      ref
+                          .read(gameStateProvider.notifier)
+                          .newGame(selectedSize);
+                      ref.read(uiStateProvider.notifier).reset();
+                      ref.read(animationStateProvider.notifier).reset();
+                      ref.read(moveHistoryProvider.notifier).clear();
+                      ref.read(lastMoveProvider.notifier).state = null;
+
+                      // Reset chess clock for new game
+                      if (chessClockEnabled) {
+                        ref.read(chessClockProvider.notifier).initialize(
+                              selectedSize,
+                              secondsOverride: chessClockOverridden
+                                  ? chessClockSeconds
+                                  : null,
+                            );
+                      } else {
+                        ref.read(chessClockProvider.notifier).stop();
+                      }
+
+                      Navigator.pop(dialogContext);
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GameColors.boardFrameInner,
                 foregroundColor: Colors.white,
@@ -2166,13 +2327,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   String _getBoardSizeDescription(int size) {
     final counts = PieceCounts.forBoardSize(size);
-    return '${counts.flatStones} flat stones, ${counts.capstones} capstone${counts.capstones == 1 ? '' : 's'} per player';
+    return '${counts.flatStones} stones (flat or wall), ${counts.capstones} capstone${counts.capstones == 1 ? '' : 's'} per player';
   }
 
   void _showVsComputerSetupDialog(BuildContext context, WidgetRef ref) {
     final settings = ref.read(appSettingsProvider);
     final session = ref.read(gameSessionProvider);
-    int selectedSize = settings.boardSize;
+    int selectedSize = ref.read(gameStateProvider).boardSize;
     AIDifficulty selectedDifficulty = session.aiDifficulty;
     PlayerColor selectedPlayerColor = session.vsComputerPlayerColor;
     bool chessClockEnabled = settings.chessClockEnabled;
@@ -2199,11 +2360,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onTap: () => setState(() => selectedDifficulty = difficulty),
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 margin: const EdgeInsets.only(bottom: 2),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
+                      ? GameColors.boardFrameInner
+                          .withValues(alpha: isDark ? 0.2 : 0.1)
                       : null,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
@@ -2218,7 +2381,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         title,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected
                               ? GameColors.boardFrameInner
                               : isDark
@@ -2247,17 +2411,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 : isDark
                     ? Colors.grey.shade600
                     : Colors.grey.shade300;
-            final chipColor =
-                color == PlayerColor.white ? GameColors.lightPiece : GameColors.darkPiece;
+            final chipColor = color == PlayerColor.white
+                ? GameColors.lightPiece
+                : GameColors.darkPiece;
 
             return InkWell(
               onTap: () => setState(() => selectedPlayerColor = color),
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? GameColors.boardFrameInner.withValues(alpha: isDark ? 0.2 : 0.1)
+                      ? GameColors.boardFrameInner
+                          .withValues(alpha: isDark ? 0.2 : 0.1)
                       : null,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
@@ -2283,7 +2450,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     Text(
                       title,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                         color: isSelected
                             ? GameColors.boardFrameInner
                             : isDark
@@ -2306,7 +2474,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 children: [
                   Builder(
                     builder: (context) {
-                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
                       return Text(
                         'Board Size',
                         style: TextStyle(
@@ -2328,12 +2497,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           onSelected: (_) => setState(() {
                             selectedSize = size;
                             if (!chessClockOverridden) {
-                              chessClockSeconds = settings.chessClockSecondsForSize(size);
+                              chessClockSeconds =
+                                  settings.chessClockSecondsForSize(size);
                               clockMinutesController.text =
                                   (chessClockSeconds ~/ 60).toString();
                             }
                           }),
-                          selectedColor: GameColors.boardFrameInner.withValues(alpha: 0.2),
+                          selectedColor:
+                              GameColors.boardFrameInner.withValues(alpha: 0.2),
                           checkmarkColor: GameColors.boardFrameInner,
                         ),
                     ],
@@ -2354,6 +2525,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         setState(() => chessClockEnabled = value),
                     minutesController: clockMinutesController,
                     onMinutesChanged: (value) {
+                      setState(() {});
                       chessClockOverridden = true;
                       final minutes = int.tryParse(value);
                       if (minutes != null && minutes > 0) {
@@ -2364,7 +2536,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   const SizedBox(height: 20),
                   Builder(
                     builder: (context) {
-                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
                       return Text(
                         'Your Color',
                         style: TextStyle(
@@ -2377,15 +2550,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(child: buildColorOption('White', PlayerColor.white)),
+                      Expanded(
+                          child: buildColorOption('White', PlayerColor.white)),
                       const SizedBox(width: 8),
-                      Expanded(child: buildColorOption('Black', PlayerColor.black)),
+                      Expanded(
+                          child: buildColorOption('Black', PlayerColor.black)),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Builder(
                     builder: (context) {
-                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
                       return Text(
                         'Difficulty',
                         style: TextStyle(
@@ -2409,37 +2585,47 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  ref
-                      .read(appSettingsProvider.notifier)
-                      .setChessClockEnabled(chessClockEnabled);
-                  ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
-                    mode: GameMode.vsComputer,
-                    aiDifficulty: selectedDifficulty,
-                    vsComputerPlayerColor: selectedPlayerColor,
-                    chessClockSecondsOverride:
-                        chessClockEnabled && chessClockOverridden ? chessClockSeconds : null,
-                  );
-
-                  ref.read(gameStateProvider.notifier).newGame(selectedSize);
-                  ref.read(uiStateProvider.notifier).reset();
-                  ref.read(animationStateProvider.notifier).reset();
-                  ref.read(moveHistoryProvider.notifier).clear();
-                  ref.read(lastMoveProvider.notifier).state = null;
-
-                  if (chessClockEnabled) {
-                    ref.read(chessClockProvider.notifier).initialize(
-                          selectedSize,
-                          secondsOverride:
-                              chessClockOverridden ? chessClockSeconds : null,
+                onPressed: chessClockEnabled &&
+                        (int.tryParse(clockMinutesController.text) ?? 0) <= 0
+                    ? null
+                    : () {
+                        ref
+                            .read(appSettingsProvider.notifier)
+                            .setChessClockEnabled(chessClockEnabled);
+                        ref.read(gameSessionProvider.notifier).state =
+                            GameSessionConfig(
+                          mode: GameMode.vsComputer,
+                          aiDifficulty: selectedDifficulty,
+                          vsComputerPlayerColor: selectedPlayerColor,
+                          chessClockSecondsOverride:
+                              chessClockEnabled && chessClockOverridden
+                                  ? chessClockSeconds
+                                  : null,
                         );
-                  } else {
-                    ref.read(chessClockProvider.notifier).stop();
-                  }
 
-                  Navigator.pop(dialogContext);
-                  unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
-                },
+                        ref
+                            .read(gameStateProvider.notifier)
+                            .newGame(selectedSize);
+                        ref.read(uiStateProvider.notifier).reset();
+                        ref.read(animationStateProvider.notifier).reset();
+                        ref.read(moveHistoryProvider.notifier).clear();
+                        ref.read(lastMoveProvider.notifier).state = null;
+
+                        if (chessClockEnabled) {
+                          ref.read(chessClockProvider.notifier).initialize(
+                                selectedSize,
+                                secondsOverride: chessClockOverridden
+                                    ? chessClockSeconds
+                                    : null,
+                              );
+                        } else {
+                          ref.read(chessClockProvider.notifier).stop();
+                        }
+
+                        Navigator.pop(dialogContext);
+                        unawaited(
+                            _maybeTriggerAiTurn(ref.read(gameStateProvider)));
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: GameColors.boardFrameInner,
                   foregroundColor: Colors.white,
@@ -2452,7 +2638,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ),
     );
   }
-
 }
 
 /// Compact player side panel showing clock and pieces together
@@ -2480,10 +2665,15 @@ class _PlayerSidePanel extends ConsumerWidget {
     final pieceColors = GameColors.forPlayer(isLightPlayer);
     final clockState = ref.watch(chessClockProvider);
 
-    final time = isLightPlayer ? clockState.whiteTimeFormatted : clockState.blackTimeFormatted;
-    final timeRemaining = isLightPlayer ? clockState.whiteTimeRemaining : clockState.blackTimeRemaining;
+    final time = isLightPlayer
+        ? clockState.whiteTimeFormatted
+        : clockState.blackTimeFormatted;
+    final timeRemaining = isLightPlayer
+        ? clockState.whiteTimeRemaining
+        : clockState.blackTimeRemaining;
     final isLow = timeRemaining < 30;
-    final isExpired = clockState.isExpired && clockState.expiredPlayer == player;
+    final isExpired =
+        clockState.isExpired && clockState.expiredPlayer == player;
     final isClockActive = isCurrentTurn && !isGameOver && clockState.isRunning;
 
     final clockColor = isExpired
@@ -2496,7 +2686,10 @@ class _PlayerSidePanel extends ConsumerWidget {
 
     final bgColor = isCurrentTurn
         ? (isDark
-            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+            ? Theme.of(context)
+                .colorScheme
+                .primaryContainer
+                .withValues(alpha: 0.3)
             : pieceColors.primary.withValues(alpha: 0.15))
         : (isDark
             ? Theme.of(context).colorScheme.surfaceContainerHighest
@@ -2523,7 +2716,8 @@ class _PlayerSidePanel extends ConsumerWidget {
                 isLightPlayer ? 'Light' : 'Dark',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: isCurrentTurn ? FontWeight.bold : FontWeight.normal,
+                  fontWeight:
+                      isCurrentTurn ? FontWeight.bold : FontWeight.normal,
                   color: isDark ? Colors.white70 : Colors.black87,
                 ),
               ),
@@ -2548,7 +2742,8 @@ class _PlayerSidePanel extends ConsumerWidget {
                     width: 14,
                     height: 8,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: pieceColors.gradientColors),
+                      gradient:
+                          LinearGradient(colors: pieceColors.gradientColors),
                       border: Border.all(color: pieceColors.border),
                       borderRadius: BorderRadius.circular(2),
                     ),
@@ -2623,7 +2818,9 @@ class _PlayerSidePanel extends ConsumerWidget {
               ),
               Text(
                 '${pieces.flatStones}',
-                style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white70 : Colors.black87),
               ),
               const SizedBox(width: 4),
               CustomPaint(
@@ -2632,7 +2829,9 @@ class _PlayerSidePanel extends ConsumerWidget {
               ),
               Text(
                 '${pieces.capstones}',
-                style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white70 : Colors.black87),
               ),
             ],
           );
@@ -2669,10 +2868,12 @@ class _CompactTurnIndicator extends StatelessWidget {
     final pieceColors = GameColors.forPlayer(isWhite);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    String turnText = '${isWhite ? 'Light' : 'Dark'} · Turn ${gameState.turnNumber}';
+    String turnText =
+        '${isWhite ? 'Light' : 'Dark'} · Turn ${gameState.turnNumber}';
     if (onlineState?.localColor != null) {
       final isMyTurn = gameState.currentPlayer == onlineState!.localColor;
-      turnText = isMyTurn ? 'Your turn · ${gameState.turnNumber}' : 'Waiting...';
+      turnText =
+          isMyTurn ? 'Your turn · ${gameState.turnNumber}' : 'Waiting...';
     }
 
     return Container(
@@ -2768,7 +2969,9 @@ class _SidePanelPieceSelector extends StatelessWidget {
             label: 'Flat',
             isSelected: currentType == PieceType.flat,
             isEnabled: pieces.flatStones > 0,
-            onTap: pieces.flatStones > 0 ? () => onTypeChanged(PieceType.flat) : null,
+            onTap: pieces.flatStones > 0
+                ? () => onTypeChanged(PieceType.flat)
+                : null,
           ),
           const SizedBox(height: 4),
           _SidePieceButton(
@@ -2776,7 +2979,9 @@ class _SidePanelPieceSelector extends StatelessWidget {
             label: 'Wall',
             isSelected: currentType == PieceType.standing,
             isEnabled: pieces.flatStones > 0,
-            onTap: pieces.flatStones > 0 ? () => onTypeChanged(PieceType.standing) : null,
+            onTap: pieces.flatStones > 0
+                ? () => onTypeChanged(PieceType.standing)
+                : null,
           ),
           const SizedBox(height: 4),
           _SidePieceButton(
@@ -2784,7 +2989,9 @@ class _SidePanelPieceSelector extends StatelessWidget {
             label: 'Cap',
             isSelected: currentType == PieceType.capstone,
             isEnabled: pieces.capstones > 0,
-            onTap: pieces.capstones > 0 ? () => onTypeChanged(PieceType.capstone) : null,
+            onTap: pieces.capstones > 0
+                ? () => onTypeChanged(PieceType.capstone)
+                : null,
           ),
         ],
       ),
@@ -2910,6 +3117,24 @@ class _ScenarioInfoCard extends StatelessWidget {
             ],
           ),
           // Only show dialogue/instructions for tutorials, not puzzles
+          if (isPuzzle) ...[
+            const SizedBox(height: 8),
+            Text(scenario.objective),
+            if (scenario.hintText != null)
+              TextButton.icon(
+                  onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                              title: const Text('Puzzle hint'),
+                              content: Text(scenario.hintText!),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Close'))
+                              ])),
+                  icon: const Icon(Icons.lightbulb_outline),
+                  label: const Text('Show hint')),
+          ],
           if (!isPuzzle && scenario.dialogue.isNotEmpty) ...[
             const SizedBox(height: 8),
             for (final line in scenario.dialogue)
@@ -2934,10 +3159,14 @@ class _ScenarioInfoCard extends StatelessWidget {
 class _WinBanner extends StatelessWidget {
   final GameResult result;
   final WinReason? winReason;
+  final VoidCallback onHome;
+  final VoidCallback? onNewGame;
 
   const _WinBanner({
     required this.result,
     this.winReason,
+    required this.onHome,
+    this.onNewGame,
   });
 
   @override
@@ -2971,77 +3200,95 @@ class _WinBanner extends StatelessWidget {
         ),
     };
 
-    final reasonText = switch (winReason) {
-      WinReason.road => 'by road',
-      WinReason.flats => 'by flat count',
-      WinReason.time => 'on time',
-      null => '',
-    };
+    final reasonText = result == GameResult.draw
+        ? 'Equal flat counts'
+        : switch (winReason) {
+            WinReason.road => 'by road',
+            WinReason.flats => 'by flat count',
+            WinReason.time => 'on time',
+            null => '',
+          };
 
-    final textColor = result == GameResult.blackWins ? Colors.white : Colors.black;
+    final textColor =
+        result == GameResult.blackWins ? Colors.white : Colors.black;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: pieceColors.gradientColors,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: pieceColors.gradientColors,
+          ),
+          border: Border(
+            bottom: BorderSide(
+              color: pieceColors.border,
+              width: 3,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: pieceColors.border.withValues(alpha: 0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        border: Border(
-          bottom: BorderSide(
-            color: pieceColors.border,
-            width: 3,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: pieceColors.border.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 32,
-            color: textColor,
-          ),
-          const SizedBox(width: 12),
-          Column(
-            mainAxisSize: MainAxisSize.min,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                  letterSpacing: 1,
-                ),
+              Icon(
+                icon,
+                size: 32,
+                color: textColor,
               ),
-              if (reasonText.isNotEmpty)
-                Text(
-                  reasonText,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: textColor.withValues(alpha: 0.8),
+              const SizedBox(width: 12),
+              Flexible(
+                  child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                      letterSpacing: 1,
+                    ),
                   ),
-                ),
+                  if (reasonText.isNotEmpty)
+                    Text(
+                      reasonText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textColor.withValues(alpha: 0.8),
+                      ),
+                    ),
+                ],
+              )),
+              const SizedBox(width: 12),
+              Icon(
+                icon,
+                size: 32,
+                color: textColor,
+              ),
             ],
           ),
-          const SizedBox(width: 12),
-          Icon(
-            icon,
-            size: 32,
-            color: textColor,
-          ),
-        ],
-      ),
-    );
+          Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
+            TextButton(
+                onPressed: onHome,
+                style: TextButton.styleFrom(foregroundColor: textColor),
+                child: const Text('Home')),
+            if (onNewGame != null)
+              TextButton.icon(
+                  onPressed: onNewGame,
+                  style: TextButton.styleFrom(foregroundColor: textColor),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Play again')),
+          ]),
+        ]));
   }
 }
 
@@ -3135,7 +3382,9 @@ class _GameBoardState extends State<_GameBoard> {
 
   /// Get ghost piece info for a position (for placement mode)
   (PieceType?, PlayerColor?) _getGhostPieceInfo(Position pos) {
-    if (widget.uiState.mode != InteractionMode.placingPiece) return (null, null);
+    if (widget.uiState.mode != InteractionMode.placingPiece) {
+      return (null, null);
+    }
     if (widget.uiState.selectedPosition != pos) return (null, null);
 
     // During opening phase, ghost is opponent's color
@@ -3147,7 +3396,9 @@ class _GameBoardState extends State<_GameBoard> {
   }
 
   /// Build semantic label for a board cell (for screen reader accessibility)
-  String _buildCellSemanticLabel(Position pos, PieceStack stack, {
+  String _buildCellSemanticLabel(
+    Position pos,
+    PieceStack stack, {
     bool isSelected = false,
     bool isLegalMoveHint = false,
     bool isFocused = false,
@@ -3201,11 +3452,12 @@ class _GameBoardState extends State<_GameBoard> {
     final dropPath = widget.uiState.getDropPath();
     final nextDropPos = widget.uiState.getCurrentHandPosition();
     // Get valid destinations for both movingStack and droppingPieces modes
-    final validMoveDestinations = widget.uiState.mode == InteractionMode.movingStack
-        ? widget.uiState.getValidMoveDestinations(widget.gameState)
-        : widget.uiState.mode == InteractionMode.droppingPieces
-            ? widget.uiState.getValidDropDestinations(widget.gameState)
-            : <Position>{};
+    final validMoveDestinations =
+        widget.uiState.mode == InteractionMode.movingStack
+            ? widget.uiState.getValidMoveDestinations(widget.gameState)
+            : widget.uiState.mode == InteractionMode.droppingPieces
+                ? widget.uiState.getValidDropDestinations(widget.gameState)
+                : <Position>{};
     final boardSize = widget.gameState.boardSize;
 
     // Calculate preview stacks for move operations
@@ -3221,14 +3473,12 @@ class _GameBoardState extends State<_GameBoard> {
         : const <Position>{};
 
     // Pre-compute wall flattened position
-    final wallFlattenedPos = lastEvent is WallFlattenedEvent
-        ? lastEvent.position
-        : null;
+    final wallFlattenedPos =
+        lastEvent is WallFlattenedEvent ? lastEvent.position : null;
 
     // Pre-compute newly placed position
-    final newlyPlacedPos = lastEvent is PiecePlacedEvent
-        ? lastEvent.position
-        : null;
+    final newlyPlacedPos =
+        lastEvent is PiecePlacedEvent ? lastEvent.position : null;
 
     // Pre-compute total pieces in move for pending drop display
     final totalPiecesInMove = widget.uiState.piecesPickedUp +
@@ -3246,8 +3496,10 @@ class _GameBoardState extends State<_GameBoard> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Calculate cell size for decoration painter
-          final availableWidth = constraints.maxWidth - padding * 2 - spacing * 2;
-          final cellSize = (availableWidth - spacing * (boardSize - 1)) / boardSize;
+          final availableWidth =
+              constraints.maxWidth - padding * 2 - spacing * 2;
+          final cellSize =
+              (availableWidth - spacing * (boardSize - 1)) / boardSize;
 
           return GestureDetector(
             behavior: HitTestBehavior.translucent,
@@ -3257,163 +3509,182 @@ class _GameBoardState extends State<_GameBoard> {
               widget.onBoardFrameTap?.call();
             },
             child: Container(
-            // Inner board area with inset shadow effect
-            margin: EdgeInsets.all(padding),
-            decoration: BoxDecoration(
-              color: GameColors.gridLine,
-              borderRadius: BorderRadius.circular(6),
-              // Inset shadow effect for the grid area
-              boxShadow: [
-                // Inner shadow (dark)
-                BoxShadow(
-                  color: GameColors.gridLineShadow.withValues(alpha: 0.6),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                  offset: const Offset(2, 2),
-                ),
-                // Highlight edge
-                BoxShadow(
-                  color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
-                  blurRadius: 2,
-                  offset: const Offset(-1, -1),
-                ),
-              ],
-            ),
-            child: Stack(
-              clipBehavior: Clip.none, // Allow pieces to overflow the board
-              children: [
-                // Main grid
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(spacing),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: boardSize,
-                      crossAxisSpacing: spacing,
-                      mainAxisSpacing: spacing,
-                    ),
-                    itemCount: boardSize * boardSize,
-                    itemBuilder: (context, index) {
-                      final row = index ~/ boardSize;
-                      final col = index % boardSize;
-                      final pos = Position(row, col);
-                      final actualStack = widget.gameState.board.stackAt(pos);
-                      final isSelected = widget.uiState.selectedPosition == pos;
-                      final isInDropPath = dropPath.contains(pos);
-                      final isNextDrop = nextDropPos == pos;
-                      final isFocused = _focusedPosition == pos && _boardFocusNode.hasFocus;
-
-                      // Get preview stack and ghost pieces for this position
-                      final preview = previewStacks?[pos];
-                      final displayStack = preview?.$1 ?? actualStack;
-                      final ghostStackPieces = preview?.$2 ?? const <Piece>[];
-
-                      // Use pre-computed animation flags (optimization)
-                      final isNewlyPlaced = newlyPlacedPos == pos;
-                      final isInWinningRoad = winningRoad?.contains(pos) ?? false;
-                      final isStackDropTarget = stackDropPositions.contains(pos);
-                      final wasWallFlattened = wallFlattenedPos == pos;
-
-                      // Check if this is part of the last move
-                      final isLastMove = widget.lastMovePositions?.contains(pos) ?? false;
-
-                      final isExploded = widget.explodedPosition == pos && widget.explodedStack != null;
-                      final stackForExplosion = isExploded ? widget.explodedStack : null;
-
-                      // Check if this is a valid move destination (legal move hint)
-                      final isLegalMoveHint = validMoveDestinations.contains(pos);
-                      final isScenarioHint = widget.highlightedPositions.contains(pos);
-
-                      // Ghost piece info for placement mode
-                      final (ghostPieceType, ghostPieceColor) = _getGhostPieceInfo(pos);
-
-                      // For stack movement mode, show pieces being picked up count
-                      final showPickupCount = widget.uiState.mode == InteractionMode.movingStack &&
-                          widget.uiState.selectedPosition == pos;
-
-                      // Show pending drop count when in droppingPieces mode at hand position
-                      // but only for stack moves (2+ pieces), not single-piece moves
-                      final showPendingDrop = widget.uiState.mode == InteractionMode.droppingPieces &&
-                          nextDropPos == pos &&
-                          totalPiecesInMove > 1;
-
-                      // Wrap in RepaintBoundary to limit repaint scope (optimization)
-                      return RepaintBoundary(
-                        child: Semantics(
-                          label: _buildCellSemanticLabel(
-                            pos,
-                            displayStack,
-                            isSelected: isSelected,
-                            isLegalMoveHint: isLegalMoveHint,
-                            isFocused: isFocused,
-                          ),
-                          button: true,
-                          focused: isFocused,
-                          onTap: () => widget.onCellTap(pos),
-                          child: _CellInteractionLayer(
-                            position: pos,
-                            stack: displayStack,
-                            ghostStackPieces: ghostStackPieces,
-                            onTap: () => widget.onCellTap(pos),
-                            onSwipe: (dir) => widget.onCellSwipe(pos, dir),
-                            onStackViewStart: widget.onLongPressStart,
-                            onStackViewEnd: widget.onLongPressEnd,
-                            child: _BoardCell(
-                            key: ValueKey('cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_${isInDropPath}_$isFocused'),
-                            stack: displayStack,
-                            isSelected: isSelected,
-                            isInDropPath: isInDropPath,
-                            isNextDrop: isNextDrop,
-                            canSelect: !widget.gameState.isGameOver,
-                            boardSize: boardSize,
-                            pieceStyleData: widget.pieceStyleData,
-                            boardThemeData: widget.boardThemeData,
-                            isNewlyPlaced: isNewlyPlaced,
-                            isInWinningRoad: isInWinningRoad,
-                            isStackDropTarget: isStackDropTarget,
-                            wasWallFlattened: wasWallFlattened,
-                            isLastMove: isLastMove,
-                            isLegalMoveHint: isLegalMoveHint,
-                            isScenarioHint: isScenarioHint,
-                            isFocused: isFocused,
-                            ghostPieceType: ghostPieceType,
-                            ghostPieceColor: ghostPieceColor,
-                            ghostStackPieces: ghostStackPieces,
-                            pickupCount: showPickupCount ? widget.uiState.piecesPickedUp : null,
-                            pendingDropCount: showPendingDrop ? widget.uiState.pendingDropCount : null,
-                            piecesInHand: showPendingDrop ? widget.uiState.piecesPickedUp : null,
-                            showExploded: isExploded,
-                            explodedStack: stackForExplosion,
-                          ),
-                        ),
-                        ),
-                      );
-                    },
+              // Inner board area with inset shadow effect
+              margin: EdgeInsets.all(padding),
+              decoration: BoxDecoration(
+                color: GameColors.gridLine,
+                borderRadius: BorderRadius.circular(6),
+                // Inset shadow effect for the grid area
+                boxShadow: [
+                  // Inner shadow (dark)
+                  BoxShadow(
+                    color: GameColors.gridLineShadow.withValues(alpha: 0.6),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                    offset: const Offset(2, 2),
                   ),
-                ),
-                // Overlay decorations - filigree on top of grid lines (visible above cells)
-                // ExcludeSemantics: purely decorative, not relevant for accessibility
-                Positioned.fill(
-                  child: ExcludeSemantics(
-                    child: IgnorePointer(
-                      child: CustomPaint(
-                        painter: BoardDecorationPainter(
-                          boardSize: boardSize,
-                          spacing: spacing,
-                          padding: spacing,
-                          cellSize: cellSize,
-                          theme: widget.boardThemeData.theme,
-                          decorColor: widget.boardThemeData.gridLineHighlight,
+                  // Highlight edge
+                  BoxShadow(
+                    color: GameColors.gridLineHighlight.withValues(alpha: 0.3),
+                    blurRadius: 2,
+                    offset: const Offset(-1, -1),
+                  ),
+                ],
+              ),
+              child: Stack(
+                clipBehavior: Clip.none, // Allow pieces to overflow the board
+                children: [
+                  // Main grid
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.all(spacing),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: boardSize,
+                        crossAxisSpacing: spacing,
+                        mainAxisSpacing: spacing,
+                      ),
+                      itemCount: boardSize * boardSize,
+                      itemBuilder: (context, index) {
+                        final row = index ~/ boardSize;
+                        final col = index % boardSize;
+                        final pos = Position(row, col);
+                        final actualStack = widget.gameState.board.stackAt(pos);
+                        final isSelected =
+                            widget.uiState.selectedPosition == pos;
+                        final isInDropPath = dropPath.contains(pos);
+                        final isNextDrop = nextDropPos == pos;
+                        final isFocused =
+                            _focusedPosition == pos && _boardFocusNode.hasFocus;
+
+                        // Get preview stack and ghost pieces for this position
+                        final preview = previewStacks?[pos];
+                        final displayStack = preview?.$1 ?? actualStack;
+                        final ghostStackPieces = preview?.$2 ?? const <Piece>[];
+
+                        // Use pre-computed animation flags (optimization)
+                        final isNewlyPlaced = newlyPlacedPos == pos;
+                        final isInWinningRoad =
+                            winningRoad?.contains(pos) ?? false;
+                        final isStackDropTarget =
+                            stackDropPositions.contains(pos);
+                        final wasWallFlattened = wallFlattenedPos == pos;
+
+                        // Check if this is part of the last move
+                        final isLastMove =
+                            widget.lastMovePositions?.contains(pos) ?? false;
+
+                        final isExploded = widget.explodedPosition == pos &&
+                            widget.explodedStack != null;
+                        final stackForExplosion =
+                            isExploded ? widget.explodedStack : null;
+
+                        // Check if this is a valid move destination (legal move hint)
+                        final isLegalMoveHint =
+                            validMoveDestinations.contains(pos);
+                        final isScenarioHint =
+                            widget.highlightedPositions.contains(pos);
+
+                        // Ghost piece info for placement mode
+                        final (ghostPieceType, ghostPieceColor) =
+                            _getGhostPieceInfo(pos);
+
+                        // For stack movement mode, show pieces being picked up count
+                        final showPickupCount = widget.uiState.mode ==
+                                InteractionMode.movingStack &&
+                            widget.uiState.selectedPosition == pos;
+
+                        // Show pending drop count when in droppingPieces mode at hand position
+                        // but only for stack moves (2+ pieces), not single-piece moves
+                        final showPendingDrop = widget.uiState.mode ==
+                                InteractionMode.droppingPieces &&
+                            nextDropPos == pos &&
+                            totalPiecesInMove > 1;
+
+                        // Wrap in RepaintBoundary to limit repaint scope (optimization)
+                        return RepaintBoundary(
+                          child: Semantics(
+                            label: _buildCellSemanticLabel(
+                              pos,
+                              displayStack,
+                              isSelected: isSelected,
+                              isLegalMoveHint: isLegalMoveHint,
+                              isFocused: isFocused,
+                            ),
+                            button: true,
+                            focused: isFocused,
+                            onTap: () => widget.onCellTap(pos),
+                            child: _CellInteractionLayer(
+                              position: pos,
+                              stack: displayStack,
+                              ghostStackPieces: ghostStackPieces,
+                              onTap: () => widget.onCellTap(pos),
+                              onSwipe: (dir) => widget.onCellSwipe(pos, dir),
+                              onStackViewStart: widget.onLongPressStart,
+                              onStackViewEnd: widget.onLongPressEnd,
+                              child: _BoardCell(
+                                key: ValueKey(
+                                    'cell_${pos.row}_${pos.col}_${displayStack.height}_${ghostStackPieces.length}_${ghostPieceType?.name ?? ''}_${isSelected}_${isInDropPath}_$isFocused'),
+                                stack: displayStack,
+                                isSelected: isSelected,
+                                isInDropPath: isInDropPath,
+                                isNextDrop: isNextDrop,
+                                canSelect: !widget.gameState.isGameOver,
+                                boardSize: boardSize,
+                                pieceStyleData: widget.pieceStyleData,
+                                boardThemeData: widget.boardThemeData,
+                                isNewlyPlaced: isNewlyPlaced,
+                                isInWinningRoad: isInWinningRoad,
+                                isStackDropTarget: isStackDropTarget,
+                                wasWallFlattened: wasWallFlattened,
+                                isLastMove: isLastMove,
+                                isLegalMoveHint: isLegalMoveHint,
+                                isScenarioHint: isScenarioHint,
+                                isFocused: isFocused,
+                                ghostPieceType: ghostPieceType,
+                                ghostPieceColor: ghostPieceColor,
+                                ghostStackPieces: ghostStackPieces,
+                                pickupCount: showPickupCount
+                                    ? widget.uiState.piecesPickedUp
+                                    : null,
+                                pendingDropCount: showPendingDrop
+                                    ? widget.uiState.pendingDropCount
+                                    : null,
+                                piecesInHand: showPendingDrop
+                                    ? widget.uiState.piecesPickedUp
+                                    : null,
+                                showExploded: isExploded,
+                                explodedStack: stackForExplosion,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Overlay decorations - filigree on top of grid lines (visible above cells)
+                  // ExcludeSemantics: purely decorative, not relevant for accessibility
+                  Positioned.fill(
+                    child: ExcludeSemantics(
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: BoardDecorationPainter(
+                            boardSize: boardSize,
+                            spacing: spacing,
+                            padding: spacing,
+                            cellSize: cellSize,
+                            theme: widget.boardThemeData.theme,
+                            decorColor: widget.boardThemeData.gridLineHighlight,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );
@@ -3502,7 +3773,8 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
     final dy = velocity.dy;
 
     // Check if the swipe velocity is fast enough
-    if (dx.abs() < _swipeVelocityThreshold && dy.abs() < _swipeVelocityThreshold) {
+    if (dx.abs() < _swipeVelocityThreshold &&
+        dy.abs() < _swipeVelocityThreshold) {
       return null;
     }
 
@@ -3770,8 +4042,10 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     // Calculate responsive border radius based on board size
-    final borderRadius = widget.boardSize <= 4 ? 6.0 : (widget.boardSize <= 6 ? 5.0 : 4.0);
-    final borderWidth = widget.boardSize <= 4 ? 2.5 : (widget.boardSize <= 6 ? 2.0 : 1.5);
+    final borderRadius =
+        widget.boardSize <= 4 ? 6.0 : (widget.boardSize <= 6 ? 5.0 : 4.0);
+    final borderWidth =
+        widget.boardSize <= 4 ? 2.5 : (widget.boardSize <= 6 ? 2.0 : 1.5);
 
     // Build decoration based on state
     BoxDecoration decoration;
@@ -3787,7 +4061,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellSelectedBorder, width: borderWidth),
+        border: Border.all(
+            color: GameColors.cellSelectedBorder, width: borderWidth),
         boxShadow: [
           // Glow effect
           BoxShadow(
@@ -3814,7 +4089,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellNextDropBorder, width: borderWidth),
+        border: Border.all(
+            color: GameColors.cellNextDropBorder, width: borderWidth),
         boxShadow: [
           BoxShadow(
             color: GameColors.cellNextDropGlow.withValues(alpha: 0.5),
@@ -3833,7 +4109,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellDropPathBorder, width: borderWidth * 0.8),
+        border: Border.all(
+            color: GameColors.cellDropPathBorder, width: borderWidth * 0.8),
         boxShadow: [
           BoxShadow(
             color: GameColors.cellDropPathGlow.withValues(alpha: 0.4),
@@ -3876,7 +4153,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: GameColors.cellLegalMoveBorder, width: borderWidth * 0.8),
+        border: Border.all(
+            color: GameColors.cellLegalMoveBorder, width: borderWidth * 0.8),
         boxShadow: [
           BoxShadow(
             color: GameColors.cellLegalMoveGlow.withValues(alpha: 0.5),
@@ -3970,7 +4248,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     // Add last move highlighting (subtle outline)
     // Only show if not already highlighted by another state
-    if (widget.isLastMove && !widget.isSelected && !widget.isInDropPath && !widget.isNextDrop && !widget.isInWinningRoad && !widget.isFocused) {
+    if (widget.isLastMove &&
+        !widget.isSelected &&
+        !widget.isInDropPath &&
+        !widget.isNextDrop &&
+        !widget.isInWinningRoad &&
+        !widget.isFocused) {
       cellContent = Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -4020,17 +4303,23 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
       builder: (context, constraints) {
         final cellSize = constraints.maxWidth;
         final pieceSize = cellSize * 0.7;
-        final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
-        final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+        final badgeFontSize =
+            widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+        final badgePadding =
+            widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
         // If showing ghost piece (empty cell with placement preview)
-        if (widget.ghostPieceType != null && widget.ghostPieceColor != null && widget.stack.isEmpty) {
+        if (widget.ghostPieceType != null &&
+            widget.ghostPieceColor != null &&
+            widget.stack.isEmpty) {
           final isLightPlayer = widget.ghostPieceColor == PlayerColor.white;
-          final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
+          final pieceColors =
+              widget.pieceStyleData.colorsForPlayer(isLightPlayer);
 
           return Opacity(
             opacity: 0.5,
-            child: _buildPiece(widget.ghostPieceType!, pieceSize, pieceColors, isLightPlayer),
+            child: _buildPiece(
+                widget.ghostPieceType!, pieceSize, pieceColors, isLightPlayer),
           );
         }
 
@@ -4078,7 +4367,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         // BUT: if explodedStack is set, it already contains ghosts (from _getPreviewStack)
         final bool explodedStackAlreadyCombined = widget.explodedStack != null;
         final combinedStack = explodedStackAlreadyCombined
-            ? stackForDisplay  // Already has ghosts included
+            ? stackForDisplay // Already has ghosts included
             : (hasGhostPieces
                 ? widget.stack.pushAll(widget.ghostStackPieces)
                 : widget.stack);
@@ -4254,10 +4543,12 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         Widget content;
         // For stacks, show depth visualization
         if (height > 1) {
-          content = _buildStackWithDepth(stack, cellSize, pieceSize, pieceColors, isLightPlayer);
+          content = _buildStackWithDepth(
+              stack, cellSize, pieceSize, pieceColors, isLightPlayer);
         } else {
           // Single piece - just show it centered
-          content = _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer);
+          content =
+              _buildPiece(top.type, pieceSize, pieceColors, isLightPlayer);
         }
 
         // Apply placement animation (scale with bounce)
@@ -4312,17 +4603,21 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     // Calculate total pieces to display
     final totalRealPieces = stack.height;
     const maxVisiblePieces = 3;
-    final visibleRealCount = totalRealPieces > maxVisiblePieces ? maxVisiblePieces : totalRealPieces;
+    final visibleRealCount =
+        totalRealPieces > maxVisiblePieces ? maxVisiblePieces : totalRealPieces;
 
     // Always show all ghost pieces
     final visibleCount = visibleRealCount + ghostPieces.length;
     final visibleOffset = visibleCount > 1
         ? (availableHeight - baseFootprint) / (visibleCount - 1)
         : naturalOffset;
-    final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
+    final verticalOffset =
+        math.max(minOffset, math.min(naturalOffset, visibleOffset));
 
-    final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
-    final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+    final badgeFontSize =
+        widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+    final badgePadding =
+        widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
     // Start index for real pieces (skip bottom hidden pieces)
     final startIndex = totalRealPieces - visibleRealCount;
@@ -4338,7 +4633,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: _buildStackPiece(
               stack.pieces[startIndex + i],
               pieceSize,
-              1.0,  // All confirmed pieces are solid (no depth fade)
+              1.0, // All confirmed pieces are solid (no depth fade)
             ),
           ),
 
@@ -4432,10 +4727,13 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
         final visibleOffset = visibleCount > 1
             ? (availableHeight - baseFootprint) / (visibleCount - 1)
             : naturalOffset;
-        final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
+        final verticalOffset =
+            math.max(minOffset, math.min(naturalOffset, visibleOffset));
 
-        final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
-        final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+        final badgeFontSize =
+            widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+        final badgePadding =
+            widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
         final startIndex = ghostPieces.length - visibleCount;
 
@@ -4451,7 +4749,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                   child: _buildStackPiece(
                     ghostPieces[startIndex + i],
                     pieceSize,
-                    1.0,  // No depth fade (ghost opacity already applied by wrapper)
+                    1.0, // No depth fade (ghost opacity already applied by wrapper)
                   ),
                 ),
 
@@ -4527,7 +4825,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
     final adjustedSpacing = stack.height > 1
         ? (availableHeight - baseFootprint) / (stack.height - 1)
         : naturalSpacing;
-    final liftStep = math.max(minSpacing, math.min(naturalSpacing, adjustedSpacing));
+    final liftStep =
+        math.max(minSpacing, math.min(naturalSpacing, adjustedSpacing));
 
     return AnimatedBuilder(
       animation: _stackReveal,
@@ -4563,7 +4862,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           final piece = stack.topPiece;
           if (piece != null) {
             final isLightPlayer = piece.color == PlayerColor.white;
-            final pieceColors = widget.pieceStyleData.colorsForPlayer(isLightPlayer);
+            final pieceColors =
+                widget.pieceStyleData.colorsForPlayer(isLightPlayer);
             final isGhost = ghostStartIndex == 0;
 
             children.add(
@@ -4575,14 +4875,16 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
                     decoration: BoxDecoration(
                       boxShadow: [
                         BoxShadow(
-                          color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                          color: pieceColors.border
+                              .withValues(alpha: 0.35 * progress + 0.1),
                           blurRadius: 10 * progress + 2,
                           spreadRadius: 0.6 * progress,
                           offset: Offset(0, 2 - (progress)),
                         ),
                       ],
                     ),
-                    child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+                    child: _buildPiece(
+                        piece.type, pieceSize, pieceColors, isLightPlayer),
                   ),
                 ),
               ),
@@ -4650,7 +4952,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
+                color:
+                    pieceColors.border.withValues(alpha: 0.35 * progress + 0.1),
                 blurRadius: 12 * progress + 3,
                 spreadRadius: 0.8 * progress,
                 offset: Offset(0, 3 - (progress * 1.5)),
@@ -4659,7 +4962,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
           ),
           child: Transform.scale(
             scale: 1.0 + (0.02 * progress),
-            child: _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
+            child:
+                _buildPiece(piece.type, pieceSize, pieceColors, isLightPlayer),
           ),
         ),
       ),
@@ -4695,14 +4999,18 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
 
     // Show up to 3 pieces visually, use badge for taller stacks
     const maxVisiblePieces = 3;
-    final int visibleCount = height > maxVisiblePieces ? maxVisiblePieces : height;
+    final int visibleCount =
+        height > maxVisiblePieces ? maxVisiblePieces : height;
 
     final visibleOffset = visibleCount > 1
         ? (availableHeight - baseFootprint) / (visibleCount - 1)
         : naturalOffset;
-    final verticalOffset = math.max(minOffset, math.min(naturalOffset, visibleOffset));
-    final badgeFontSize = widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
-    final badgePadding = widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
+    final verticalOffset =
+        math.max(minOffset, math.min(naturalOffset, visibleOffset));
+    final badgeFontSize =
+        widget.boardSize <= 4 ? 10.0 : (widget.boardSize <= 6 ? 9.0 : 8.0);
+    final badgePadding =
+        widget.boardSize <= 4 ? 4.0 : (widget.boardSize <= 6 ? 3.0 : 2.5);
 
     // Get the pieces to display (top N pieces of the stack)
     // pieces[0] is bottom, pieces[height-1] is top
@@ -4722,7 +5030,7 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: _buildStackPiece(
               stack.pieces[startIndex + i],
               pieceSize,
-              1.0,  // All confirmed pieces are solid (no depth fade)
+              1.0, // All confirmed pieces are solid (no depth fade)
             ),
           ),
 
@@ -4790,7 +5098,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 
   /// Build a piece widget based on type - uses current piece style
-  Widget _buildPiece(PieceType type, double size, PieceColors colors, bool isLightPlayer) {
+  Widget _buildPiece(
+      PieceType type, double size, PieceColors colors, bool isLightPlayer) {
     final style = widget.pieceStyleData.style;
 
     switch (type) {
@@ -4804,7 +5113,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 
   /// Flat stone - uses procedural painter based on style
-  Widget _buildFlatStone(double size, PieceColors colors, bool isLightPlayer, PieceStyle style) {
+  Widget _buildFlatStone(
+      double size, PieceColors colors, bool isLightPlayer, PieceStyle style) {
     return CustomPaint(
       size: Size(size, size * 0.55),
       painter: getFlatPainter(
@@ -4816,7 +5126,8 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
   }
 
   /// Standing stone (wall) - uses procedural painter based on style
-  Widget _buildStandingStone(double size, PieceColors colors, PieceStyle style) {
+  Widget _buildStandingStone(
+      double size, PieceColors colors, PieceStyle style) {
     return CustomPaint(
       size: Size(size, size),
       painter: getWallPainter(
@@ -4872,7 +5183,13 @@ class _BottomControls extends StatelessWidget {
   ];
 
   String _getRandomTip() {
-    return _takTips[DateTime.now().millisecond % _takTips.length];
+    final tips = _takTips
+        .where((tip) =>
+            (!tip.contains('Capstone') ||
+                PieceCounts.forBoardSize(gameState.boardSize).capstones > 0) &&
+            (!tip.contains('first two') || gameState.isOpeningPhase))
+        .toList();
+    return tips[(gameState.turnNumber - 1) % tips.length];
   }
 
   @override
@@ -4887,7 +5204,8 @@ class _BottomControls extends StatelessWidget {
     // Fixed height container to prevent board rescaling when controls change
     // Taller height for more breathing room with full hints
     return Container(
-      height: 92 + bottomPadding,
+      height: 144 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.5) +
+          bottomPadding,
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
@@ -4896,7 +5214,10 @@ class _BottomControls extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isDark
-            ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+            ? Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.9)
             : GameColors.controlPanelBg.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(
@@ -4906,7 +5227,7 @@ class _BottomControls extends StatelessWidget {
           ),
         ),
       ),
-      child: _buildControls(context),
+      child: SingleChildScrollView(child: _buildControls(context)),
     );
   }
 
@@ -5050,7 +5371,9 @@ class _BottomControls extends StatelessWidget {
               type: PieceType.flat,
               isSelected: currentType == PieceType.flat,
               isEnabled: pieces.flatStones > 0,
-              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.flat) : null,
+              onTap: pieces.flatStones > 0
+                  ? () => onPieceTypeChanged(PieceType.flat)
+                  : null,
             ),
             const SizedBox(width: 6),
             _PieceTypeToggle(
@@ -5058,14 +5381,18 @@ class _BottomControls extends StatelessWidget {
               label: 'Wall',
               isSelected: currentType == PieceType.standing,
               isEnabled: pieces.flatStones > 0,
-              onTap: pieces.flatStones > 0 ? () => onPieceTypeChanged(PieceType.standing) : null,
+              onTap: pieces.flatStones > 0
+                  ? () => onPieceTypeChanged(PieceType.standing)
+                  : null,
             ),
             const SizedBox(width: 6),
             _PieceTypeToggle(
               type: PieceType.capstone,
               isSelected: currentType == PieceType.capstone,
               isEnabled: pieces.capstones > 0,
-              onTap: pieces.capstones > 0 ? () => onPieceTypeChanged(PieceType.capstone) : null,
+              onTap: pieces.capstones > 0
+                  ? () => onPieceTypeChanged(PieceType.capstone)
+                  : null,
             ),
             const SizedBox(width: 8),
             IconButton(
@@ -5101,7 +5428,8 @@ class _BottomControls extends StatelessWidget {
           children: [
             Text(
               'Move to an adjacent cell to start dropping.',
-              style: TextStyle(color: textColor.withValues(alpha: 0.8), fontSize: 12),
+              style: TextStyle(
+                  color: textColor.withValues(alpha: 0.8), fontSize: 12),
             ),
             const SizedBox(width: 8),
             TextButton.icon(
@@ -5110,7 +5438,8 @@ class _BottomControls extends StatelessWidget {
               label: const Text('Cancel'),
               style: TextButton.styleFrom(
                 foregroundColor: textColor,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               ),
             ),
           ],
@@ -5164,18 +5493,23 @@ class _BottomControls extends StatelessWidget {
     // Build status text for stack moves
     final String statusText;
     if (allPiecesCommitted) {
-      statusText = 'Move planned: ${drops.join(' → ')}. Press Confirm to complete.';
+      statusText =
+          'Move planned: ${drops.join(' → ')}. Press Confirm to complete.';
     } else if (allPiecesSelected) {
       if (drops.isEmpty) {
-        statusText = 'Dropping all $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. Press Confirm.';
+        statusText =
+            'Dropping all $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. Press Confirm.';
       } else {
-        statusText = 'Dropped: ${drops.join(' → ')} · Final $pendingDrop here. Press Confirm.';
+        statusText =
+            'Dropped: ${drops.join(' → ')} · Final $pendingDrop here. Press Confirm.';
       }
     } else {
       if (drops.isEmpty) {
-        statusText = 'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining.';
+        statusText =
+            'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining.';
       } else {
-        statusText = 'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
+        statusText =
+            'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
       }
     }
 
@@ -5200,7 +5534,8 @@ class _BottomControls extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 ),
               ),
               const SizedBox(width: 8),
@@ -5211,7 +5546,8 @@ class _BottomControls extends StatelessWidget {
               label: const Text('Cancel'),
               style: TextButton.styleFrom(
                 foregroundColor: textColor,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               ),
             ),
           ],
@@ -5239,7 +5575,8 @@ class _PieceTypeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayLabel = label ?? type.name[0].toUpperCase() + type.name.substring(1);
+    final displayLabel =
+        label ?? type.name[0].toUpperCase() + type.name.substring(1);
 
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.4,
@@ -5427,10 +5764,12 @@ class _MoveHistoryPanel extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                  icon:
+                      const Icon(Icons.close, color: Colors.white70, size: 18),
                   onPressed: onClose,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                  constraints:
+                      const BoxConstraints(minWidth: 24, minHeight: 24),
                 ),
               ],
             ),
@@ -5450,7 +5789,8 @@ class _MoveHistoryPanel extends StatelessWidget {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: (moveHistory.length + 1) ~/ 2, // Number of turn pairs
+                    itemCount:
+                        (moveHistory.length + 1) ~/ 2, // Number of turn pairs
                     itemBuilder: (context, turnIndex) {
                       return _buildTurnRow(turnIndex);
                     },
@@ -5492,10 +5832,14 @@ class _MoveHistoryPanel extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
-                color: hasWhiteMove ? GameColors.lightPiece.withValues(alpha: 0.5) : Colors.transparent,
+                color: hasWhiteMove
+                    ? GameColors.lightPiece.withValues(alpha: 0.5)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
                 border: hasWhiteMove
-                    ? Border.all(color: GameColors.lightPieceBorder.withValues(alpha: 0.3))
+                    ? Border.all(
+                        color:
+                            GameColors.lightPieceBorder.withValues(alpha: 0.3))
                     : null,
               ),
               child: Text(
@@ -5515,10 +5859,14 @@ class _MoveHistoryPanel extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
-                color: hasBlackMove ? GameColors.darkPiece.withValues(alpha: 0.3) : Colors.transparent,
+                color: hasBlackMove
+                    ? GameColors.darkPiece.withValues(alpha: 0.3)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
                 border: hasBlackMove
-                    ? Border.all(color: GameColors.darkPieceBorder.withValues(alpha: 0.3))
+                    ? Border.all(
+                        color:
+                            GameColors.darkPieceBorder.withValues(alpha: 0.3))
                     : null,
               ),
               child: Text(

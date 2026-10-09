@@ -294,7 +294,9 @@ final _puzzle11TheCrucible = GameScenario(
       ),
       PositionedStack(
         position: Position(0, 2),
-        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),
+        // Keep the two threats separate: a white flat here makes a winding
+        // left-to-right road immediately after the second learner move.
+        stack: PieceStack([Piece(type: PieceType.standing, color: PlayerColor.black)]),
       ),
       // (0,3) White stack - Column 3 road
       PositionedStack(
@@ -506,10 +508,8 @@ final _puzzle12IronCauseway = GameScenario(
           Piece(type: PieceType.flat, color: PlayerColor.white),
         ]),
       ),
-      PositionedStack(
-        position: Position(0, 2),
-        stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.black)]),
-      ),
+      // Leave (0,2) empty so the second scripted block does not fill the
+      // board and trigger flat scoring before the final capstone spread.
       PositionedStack(
         position: Position(0, 3),
         stack: PieceStack([Piece(type: PieceType.flat, color: PlayerColor.white)]),

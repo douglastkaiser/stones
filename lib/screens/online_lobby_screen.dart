@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,6 +86,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
         title: const Text('Online Play'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back to menu',
           onPressed: () {
             ref.read(onlineGameProvider.notifier).leaveRoom();
             Navigator.pop(context);
@@ -131,7 +131,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
         title: Text(playGames.player?.displayName ?? 'Guest'),
         subtitle: Text(playGames.isSignedIn
             ? 'Signed in with Play Games'
-            : 'Will sign in when creating or joining a game'),
+            : 'Online games use a guest identity. Share a code to invite a friend.'),
       ),
     );
   }
@@ -148,7 +148,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.add_circle_outline, color: GameColors.boardFrameInner),
+                    const Icon(Icons.add_circle_outline,
+                        color: GameColors.boardFrameInner),
                     const SizedBox(width: 8),
                     Text(
                       'Create Game',
@@ -169,8 +170,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                       _selectedBoardSize = size;
                       if (!_chessClockOverridden) {
                         final settings = ref.read(appSettingsProvider);
-                        _chessClockSeconds =
-                            settings.chessClockSecondsForSize(_selectedBoardSize);
+                        _chessClockSeconds = settings
+                            .chessClockSecondsForSize(_selectedBoardSize);
                         _clockMinutesController.text =
                             (_chessClockSeconds ~/ 60).toString();
                       }
@@ -180,7 +181,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                 const SizedBox(height: 16),
                 ChessClockSetup(
                   enabled: _chessClockEnabled,
-                  onEnabledChanged: (value) => setState(() => _chessClockEnabled = value),
+                  onEnabledChanged: (value) =>
+                      setState(() => _chessClockEnabled = value),
                   minutesController: _clockMinutesController,
                   onMinutesChanged: (value) {
                     _chessClockOverridden = true;
@@ -188,6 +190,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                     if (minutes != null && minutes > 0) {
                       _chessClockSeconds = minutes * 60;
                     }
+                    setState(() {});
                   },
                 ),
                 const SizedBox(height: 16),
@@ -199,7 +202,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                 const SizedBox(height: 8),
                 _PieceColorSelector(
                   selectedColor: _creatorColor,
-                  onColorSelected: (color) => setState(() => _creatorColor = color),
+                  onColorSelected: (color) =>
+                      setState(() => _creatorColor = color),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -212,33 +216,40 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.play_arrow),
-                    label: Text(online.creating ? 'Creating...' : 'Create Game'),
+                    label:
+                        Text(online.creating ? 'Creating...' : 'Create Game'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: GameColors.boardFrameInner,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: online.creating
+                    onPressed: online.creating ||
+                            (_chessClockEnabled &&
+                                (int.tryParse(_clockMinutesController.text) ??
+                                        0) <=
+                                    0)
                         ? null
                         : () {
                             ref
                                 .read(appSettingsProvider.notifier)
                                 .setChessClockEnabled(_chessClockEnabled);
-                            ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+                            ref.read(gameSessionProvider.notifier).state =
+                                GameSessionConfig(
                               mode: GameMode.online,
-                              chessClockSecondsOverride: _chessClockEnabled && _chessClockOverridden
-                                  ? _chessClockSeconds
-                                  : null,
+                              chessClockSecondsOverride:
+                                  _chessClockEnabled && _chessClockOverridden
+                                      ? _chessClockSeconds
+                                      : null,
                             );
-                            ref
-                                .read(onlineGameProvider.notifier)
-                                .createGame(
+                            ref.read(onlineGameProvider.notifier).createGame(
                                   boardSize: _selectedBoardSize,
                                   chessClockEnabled: _chessClockEnabled,
                                   chessClockSeconds: _chessClockEnabled
                                       ? (_chessClockOverridden
                                           ? _chessClockSeconds
-                                          : ref.read(appSettingsProvider)
-                                              .chessClockSecondsForSize(_selectedBoardSize))
+                                          : ref
+                                              .read(appSettingsProvider)
+                                              .chessClockSecondsForSize(
+                                                  _selectedBoardSize))
                                       : null,
                                   creatorColor: _creatorColor,
                                 );
@@ -284,6 +295,7 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                           suffixIcon: _joinCodeController.text.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear),
+                                  tooltip: 'Clear room code',
                                   onPressed: () {
                                     _joinCodeController.clear();
                                     setState(() {});
@@ -298,7 +310,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                         ),
                         textCapitalization: TextCapitalization.characters,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'[A-Za-z]')),
                           LengthLimitingTextInputFormatter(6),
                           _UpperCaseTextFormatter(),
                         ],
@@ -313,7 +326,10 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
-                        child: const Icon(Icons.qr_code_scanner),
+                        child: Semantics(
+                            label: 'Scan room QR code',
+                            button: true,
+                            child: const Icon(Icons.qr_code_scanner)),
                       ),
                     ),
                   ],
@@ -328,11 +344,13 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                       ref
                           .read(appSettingsProvider.notifier)
                           .setChessClockEnabled(_chessClockEnabled);
-                      ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
+                      ref.read(gameSessionProvider.notifier).state =
+                          GameSessionConfig(
                         mode: GameMode.online,
-                        chessClockSecondsOverride: _chessClockEnabled && _chessClockOverridden
-                            ? _chessClockSeconds
-                            : null,
+                        chessClockSecondsOverride:
+                            _chessClockEnabled && _chessClockOverridden
+                                ? _chessClockSeconds
+                                : null,
                       );
                       ref
                           .read(onlineGameProvider.notifier)
@@ -489,8 +507,10 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   Widget _buildPlayingStatus(BuildContext context, OnlineGameState online) {
     final session = online.session!;
     final isYourTurn = online.isLocalTurn;
-    final yourColor = online.localColor == PlayerColor.white ? 'White' : 'Black';
-    final opponentColor = online.localColor == PlayerColor.white ? 'Black' : 'White';
+    final yourColor =
+        online.localColor == PlayerColor.white ? 'White' : 'Black';
+    final opponentColor =
+        online.localColor == PlayerColor.white ? 'Black' : 'White';
 
     return Card(
       child: Padding(
@@ -507,7 +527,9 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                 Text(
                   isYourTurn ? 'Your turn!' : "Opponent's turn",
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: isYourTurn ? Colors.green.shade700 : Colors.orange.shade700,
+                        color: isYourTurn
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
                       ),
                 ),
               ],
@@ -515,14 +537,18 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
             const SizedBox(height: 16),
             _PlayerInfoCard(
               label: 'You ($yourColor)',
-              player: online.localColor == PlayerColor.white ? session.white : session.black,
+              player: online.localColor == PlayerColor.white
+                  ? session.white
+                  : session.black,
               isLocal: true,
               isActive: isYourTurn,
             ),
             const SizedBox(height: 8),
             _PlayerInfoCard(
               label: 'Opponent ($opponentColor)',
-              player: online.localColor == PlayerColor.white ? session.black : session.white,
+              player: online.localColor == PlayerColor.white
+                  ? session.black
+                  : session.white,
               isLocal: false,
               isActive: !isYourTurn,
             ),
@@ -530,18 +556,23 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               const SizedBox(height: 12),
               Builder(
                 builder: (context) {
-                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
                   return Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.orange.shade900 : Colors.orange.shade50,
+                      color: isDark
+                          ? Colors.orange.shade900
+                          : Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.wifi_off,
-                          color: isDark ? Colors.orange.shade300 : Colors.orange.shade700,
+                          color: isDark
+                              ? Colors.orange.shade300
+                              : Colors.orange.shade700,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -549,7 +580,9 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                           child: Text(
                             'Opponent may have disconnected (no activity for 60s)',
                             style: TextStyle(
-                              color: isDark ? Colors.orange.shade200 : Colors.orange.shade700,
+                              color: isDark
+                                  ? Colors.orange.shade200
+                                  : Colors.orange.shade700,
                               fontSize: 12,
                             ),
                           ),
@@ -564,7 +597,8 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
               const SizedBox(height: 12),
               Builder(
                 builder: (context) {
-                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
                   return Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -575,7 +609,9 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                       children: [
                         Icon(
                           Icons.error_outline,
-                          color: isDark ? Colors.red.shade300 : Colors.red.shade700,
+                          color: isDark
+                              ? Colors.red.shade300
+                              : Colors.red.shade700,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -583,7 +619,9 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
                           child: Text(
                             'Opponent disconnected (no activity for 2+ minutes)',
                             style: TextStyle(
-                              color: isDark ? Colors.red.shade200 : Colors.red.shade700,
+                              color: isDark
+                                  ? Colors.red.shade200
+                                  : Colors.red.shade700,
                               fontSize: 12,
                             ),
                           ),
@@ -651,16 +689,20 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
   Widget _buildFinishedStatus(BuildContext context, OnlineGameState online) {
     final session = online.session!;
     final winner = session.winner;
-    final yourColor = online.localColor == PlayerColor.white ? 'White' : 'Black';
-    final opponentColor = online.localColor == PlayerColor.white ? 'Black' : 'White';
+    final yourColor =
+        online.localColor == PlayerColor.white ? 'White' : 'Black';
+    final opponentColor =
+        online.localColor == PlayerColor.white ? 'Black' : 'White';
 
     String resultText;
     Color resultColor;
     if (winner == OnlineWinner.draw) {
       resultText = 'Game ended in a draw!';
       resultColor = Colors.orange.shade700;
-    } else if ((winner == OnlineWinner.white && online.localColor == PlayerColor.white) ||
-        (winner == OnlineWinner.black && online.localColor == PlayerColor.black)) {
+    } else if ((winner == OnlineWinner.white &&
+            online.localColor == PlayerColor.white) ||
+        (winner == OnlineWinner.black &&
+            online.localColor == PlayerColor.black)) {
       resultText = 'You won!';
       resultColor = Colors.green.shade700;
     } else {
@@ -693,13 +735,17 @@ class _OnlineLobbyScreenState extends ConsumerState<OnlineLobbyScreen> {
             const SizedBox(height: 16),
             _PlayerInfoCard(
               label: 'You ($yourColor)',
-              player: online.localColor == PlayerColor.white ? session.white : session.black,
+              player: online.localColor == PlayerColor.white
+                  ? session.white
+                  : session.black,
               isLocal: true,
             ),
             const SizedBox(height: 8),
             _PlayerInfoCard(
               label: 'Opponent ($opponentColor)',
-              player: online.localColor == PlayerColor.white ? session.black : session.white,
+              player: online.localColor == PlayerColor.white
+                  ? session.black
+                  : session.white,
               isLocal: false,
             ),
             const SizedBox(height: 16),
@@ -834,7 +880,9 @@ class _PlayerInfoCard extends StatelessWidget {
         ? (isDark ? Colors.green.shade900 : Colors.green.shade50)
         : isLocal
             ? (isDark ? Colors.blue.shade900 : Colors.blue.shade50)
-            : (isDark ? colorScheme.surfaceContainerHighest : Colors.grey.shade100);
+            : (isDark
+                ? colorScheme.surfaceContainerHighest
+                : Colors.grey.shade100);
 
     // Border colors
     final borderColor = isActive
@@ -1044,7 +1092,8 @@ class _JoinGameButtonState extends State<_JoinGameButton>
     return AnimatedBuilder(
       animation: _shakeAnimation,
       builder: (context, child) {
-        final shakeOffset = _shakeAnimation.value * 8 *
+        final shakeOffset = _shakeAnimation.value *
+            8 *
             ((_shakeController.value * 8).floor().isEven ? 1 : -1);
         return Transform.translate(
           offset: Offset(shakeOffset, 0),
@@ -1090,11 +1139,10 @@ class _JoinGameButtonState extends State<_JoinGameButton>
                     : Colors.grey.shade300,
             width: 2,
           ),
-          disabledForegroundColor: isDark
-              ? Colors.grey.shade600
-              : Colors.grey.shade400,
+          disabledForegroundColor:
+              isDark ? Colors.grey.shade600 : Colors.grey.shade400,
         ),
-        onPressed: _isEnabled ? _handleTap : _handleTap,
+        onPressed: _isEnabled ? _handleTap : null,
       ),
     );
   }
@@ -1196,7 +1244,8 @@ class _ColorOptionButton extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected
                         ? GameColors.boardFrameInner
                         : (isDark ? Colors.white : Colors.black87),

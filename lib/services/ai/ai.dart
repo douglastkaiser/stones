@@ -1,11 +1,32 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import '../../models/models.dart';
 import 'lookahead_ai.dart';
 import 'move_generator.dart';
 
 /// AI difficulty levels
 enum AIDifficulty { easy, medium, hard, expert }
+
+extension AIDifficultyPresentation on AIDifficulty {
+  String get label => name[0].toUpperCase() + name.substring(1);
+  String get description => switch (this) {
+        AIDifficulty.easy => 'A gentle first opponent',
+        AIDifficulty.medium => 'More options, fewer mistakes',
+        AIDifficulty.hard => 'Looks three turns ahead',
+        AIDifficulty.expert => 'Deepest search; may take longer',
+      };
+}
+
+/// Keep native search off the UI thread. Web search yields between candidates.
+Future<AIMove?> selectStonesMove(GameState state, AIDifficulty difficulty) =>
+    kIsWeb
+        ? StonesAI.forDifficulty(difficulty).selectMove(state)
+        : compute(_selectStonesMove, (state, difficulty));
+
+Future<AIMove?> _selectStonesMove((GameState, AIDifficulty) request) =>
+    StonesAI.forDifficulty(request.$2).selectMove(request.$1);
 
 /// Base class for Stones AI opponents
 abstract class StonesAI {

@@ -51,21 +51,27 @@ class _ChessClockToggleState extends State<ChessClockToggle> {
                 Icon(
                   Icons.timer,
                   size: 20,
-                  color: widget.value ? GameColors.boardFrameInner : inactiveColor,
+                  color:
+                      widget.value ? GameColors.boardFrameInner : inactiveColor,
                 ),
                 const SizedBox(width: 8),
-                Text(
+                Flexible(
+                    child: Text(
                   'Chess Clock',
                   style: TextStyle(
-                    fontWeight: widget.value ? FontWeight.bold : FontWeight.normal,
-                    color: widget.value ? GameColors.boardFrameInner : inactiveColor,
+                    fontWeight:
+                        widget.value ? FontWeight.bold : FontWeight.normal,
+                    color: widget.value
+                        ? GameColors.boardFrameInner
+                        : inactiveColor,
                   ),
-                ),
+                )),
                 const SizedBox(width: 8),
                 Switch(
                   value: widget.value,
                   onChanged: widget.onChanged,
-                  activeTrackColor: GameColors.boardFrameInner.withValues(alpha: 0.5),
+                  activeTrackColor:
+                      GameColors.boardFrameInner.withValues(alpha: 0.5),
                   activeThumbColor: GameColors.boardFrameInner,
                 ),
               ],

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,98 +26,118 @@ class SettingsScreen extends ConsumerWidget {
         backgroundColor: GameColors.boardFrameInner,
         foregroundColor: Colors.white,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const _SectionHeader(title: 'Experimental modes'),
-          const SizedBox(height: 12),
-          _SettingsTile(
-            icon: Icons.hexagon_outlined,
-            title: 'Three-player Hex',
-            subtitle: 'Enable a separate hex game with three human or AI seats.',
-            trailing: Switch(
-              value: settings.hexModeEnabled,
-              onChanged: (enabled) async {
-                await ref.read(appSettingsProvider.notifier).setHexModeEnabled(enabled);
-              },
-            ),
-          ),
-          const SizedBox(height: 32),
-          // Sound Section
-          const _SectionHeader(title: 'Audio'),
-          const SizedBox(height: 12),
-          _SettingsTile(
-            icon: settings.isSoundMuted ? Icons.volume_off : Icons.volume_up,
-            title: 'Sound Effects',
-            subtitle: settings.isSoundMuted ? 'Muted' : 'Enabled',
-            trailing: Switch(
-              value: !settings.isSoundMuted,
-              onChanged: (value) async {
-                await ref.read(appSettingsProvider.notifier).setSoundMuted(!value);
-                final soundManager = ref.read(soundManagerProvider);
-                await soundManager.setMuted(!value);
-                ref.read(isMutedProvider.notifier).state = !value;
-              },
-              activeTrackColor: GameColors.boardFrameInner,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Theme Section
-          const _SectionHeader(title: 'Appearance'),
-          const SizedBox(height: 12),
-          _ThemeSelector(
-            currentMode: settings.themeMode,
-            onModeChanged: (mode) async {
-              await ref.read(appSettingsProvider.notifier).setThemeMode(mode);
-            },
-          ),
-          const SizedBox(height: 32),
-
-          // Chess Clock Defaults Section
-          const _SectionHeader(title: 'Chess Clock Defaults'),
-          const SizedBox(height: 12),
-          const _ChessClockDefaultsSection(),
-          const SizedBox(height: 32),
-
-          // Cosmetics Section
-          const _SectionHeader(title: 'Cosmetics'),
-          const SizedBox(height: 12),
-          const _BoardThemeSelector(),
-          const SizedBox(height: 16),
-          const _PieceStyleSelector(),
-          const SizedBox(height: 32),
-
-          // Play Games Section
-          const _SectionHeader(title: 'Google Play Games'),
-          const SizedBox(height: 12),
-          _PlayGamesSection(
-            playGames: playGames,
-            onManualSignIn: () async {
-              await ref.read(playGamesServiceProvider.notifier).manualSignIn();
-              // Check if there was an error
-              final updatedState = ref.read(playGamesServiceProvider);
-              if (updatedState.errorMessage != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(updatedState.errorMessage!),
-                    backgroundColor: Colors.red.shade700,
-                    duration: const Duration(seconds: 5),
+      body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  const _SectionHeader(title: 'Experimental modes'),
+                  const SizedBox(height: 12),
+                  _SettingsTile(
+                    icon: Icons.hexagon_outlined,
+                    title: 'Three-player Hex',
+                    subtitle:
+                        'Enable a separate hex game with three human or AI seats.',
+                    trailing: Switch(
+                      value: settings.hexModeEnabled,
+                      onChanged: (enabled) async {
+                        await ref
+                            .read(appSettingsProvider.notifier)
+                            .setHexModeEnabled(enabled);
+                      },
+                    ),
                   ),
-                );
-              } else if (updatedState.isSignedIn && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Successfully signed in as ${updatedState.player?.displayName ?? 'User'}'),
-                    backgroundColor: Colors.green.shade700,
-                    duration: const Duration(seconds: 2),
+                  const SizedBox(height: 32),
+                  // Sound Section
+                  const _SectionHeader(title: 'Audio'),
+                  const SizedBox(height: 12),
+                  _SettingsTile(
+                    icon: settings.isSoundMuted
+                        ? Icons.volume_off
+                        : Icons.volume_up,
+                    title: 'Sound Effects',
+                    subtitle: settings.isSoundMuted ? 'Muted' : 'Enabled',
+                    trailing: Switch(
+                      value: !settings.isSoundMuted,
+                      onChanged: (value) async {
+                        await ref
+                            .read(appSettingsProvider.notifier)
+                            .setSoundMuted(!value);
+                        if (!context.mounted) return;
+                        final soundManager = ref.read(soundManagerProvider);
+                        await soundManager.setMuted(!value);
+                        ref.read(isMutedProvider.notifier).state = !value;
+                      },
+                      activeTrackColor: GameColors.boardFrameInner,
+                    ),
                   ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
+                  const SizedBox(height: 32),
+
+                  // Theme Section
+                  const _SectionHeader(title: 'Appearance'),
+                  const SizedBox(height: 12),
+                  _ThemeSelector(
+                    currentMode: settings.themeMode,
+                    onModeChanged: (mode) async {
+                      await ref
+                          .read(appSettingsProvider.notifier)
+                          .setThemeMode(mode);
+                    },
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Chess Clock Defaults Section
+                  const _SectionHeader(title: 'Chess Clock Defaults'),
+                  const SizedBox(height: 12),
+                  const _ChessClockDefaultsSection(),
+                  const SizedBox(height: 32),
+
+                  // Cosmetics Section
+                  const _SectionHeader(title: 'Cosmetics'),
+                  const Text(
+                      'Square boards only. Tap a locked style to see how to earn it.'),
+                  const SizedBox(height: 12),
+                  const _BoardThemeSelector(),
+                  const SizedBox(height: 16),
+                  const _PieceStyleSelector(),
+                  const SizedBox(height: 32),
+
+                  // Play Games Section
+                  const _SectionHeader(title: 'Google Play Games'),
+                  const SizedBox(height: 12),
+                  _PlayGamesSection(
+                    playGames: playGames,
+                    onManualSignIn: () async {
+                      await ref
+                          .read(playGamesServiceProvider.notifier)
+                          .manualSignIn();
+                      // Check if there was an error
+                      final updatedState = ref.read(playGamesServiceProvider);
+                      if (updatedState.errorMessage != null &&
+                          context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(updatedState.errorMessage!),
+                            backgroundColor: Colors.red.shade700,
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      } else if (updatedState.isSignedIn && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Successfully signed in as ${updatedState.player?.displayName ?? 'User'}'),
+                            backgroundColor: Colors.green.shade700,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ))),
     );
   }
 }
@@ -173,7 +195,8 @@ class _SettingsTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           icon,
-          color: isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
+          color:
+              isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
         ),
         title: Text(title),
         subtitle: Text(
@@ -182,7 +205,7 @@ class _SettingsTile extends StatelessWidget {
             color: isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600,
           ),
         ),
-        trailing: trailing,
+        trailing: Semantics(label: title, child: trailing),
       ),
     );
   }
@@ -230,29 +253,38 @@ class _PlayGamesSection extends StatelessWidget {
               : null,
         ),
         title: Text(
-          isSignedIn ? playGames.player?.displayName ?? 'Signed in' : 'Not signed in',
+          kIsWeb
+              ? 'Play Games is available on Android'
+              : isSignedIn
+                  ? playGames.player?.displayName ?? 'Signed in'
+                  : 'Not signed in',
         ),
         subtitle: Text(
-          isSignedIn
-              ? 'Achievements, leaderboards, and cloud saves are enabled.'
-              : 'Sign in to enable achievements, leaderboards, and cloud saves.',
+          kIsWeb
+              ? 'Browser achievements and preferences save on this device. Android sign-in enables Play Games cloud saves.'
+              : isSignedIn
+                  ? 'Play Games cloud saves are enabled. Achievements are tracked on this device.'
+                  : 'Achievements work without signing in. Sign in on Android for Play Games cloud saves.',
           style: TextStyle(
             color: isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600,
           ),
         ),
-        trailing: isSignedIn
-            ? const Icon(Icons.check_circle, color: Colors.green)
-            : ElevatedButton.icon(
-                onPressed: playGames.isSigningIn ? null : onManualSignIn,
-                icon: playGames.isSigningIn
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.login),
-                label: Text(playGames.isSigningIn ? 'Signing in' : 'Sign in'),
-              ),
+        trailing: kIsWeb
+            ? const Icon(Icons.info_outline)
+            : isSignedIn
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : ElevatedButton.icon(
+                    onPressed: playGames.isSigningIn ? null : onManualSignIn,
+                    icon: playGames.isSigningIn
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.login),
+                    label:
+                        Text(playGames.isSigningIn ? 'Signing in' : 'Sign in'),
+                  ),
       ),
     );
   }
@@ -345,11 +377,17 @@ class _ChessClockDefaultsSectionState
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(3),
                         ],
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           isDense: true,
+                          labelText: '$size×$size minutes',
                           suffixText: 'min',
+                          errorText:
+                              (int.tryParse(_controllers[size]!.text) ?? 0) <= 0
+                                  ? 'Enter 1–999'
+                                  : null,
                         ),
                         onChanged: (value) {
+                          setState(() {});
                           final minutes = int.tryParse(value);
                           if (minutes == null || minutes <= 0) return;
                           ref
@@ -412,10 +450,11 @@ class _ThemeSelector extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 12),
-                Text(
+                Expanded(
+                    child: Text(
                   'Theme',
                   style: Theme.of(context).textTheme.titleMedium,
-                ),
+                )),
               ],
             ),
             const SizedBox(height: 16),
@@ -493,7 +532,7 @@ class _ThemeOptionState extends State<_ThemeOption> {
         button: true,
         child: Focus(
           onFocusChange: (focused) => setState(() => _isFocused = focused),
-          child: GestureDetector(
+          child: InkWell(
             onTap: widget.onTap,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -535,7 +574,9 @@ class _ThemeOptionState extends State<_ThemeOption> {
                     widget.label,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: widget.isSelected
                           ? colorScheme.onPrimaryContainer
                           : colorScheme.onSurfaceVariant,
@@ -582,13 +623,16 @@ class _BoardThemeSelector extends ConsumerWidget {
               children: [
                 Icon(
                   Icons.grid_view,
-                  color: isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
+                  color: isDark
+                      ? colorScheme.onSurfaceVariant
+                      : GameColors.subtitleColor,
                 ),
                 const SizedBox(width: 12),
-                Text(
+                Expanded(
+                    child: Text(
                   'Board Theme',
                   style: Theme.of(context).textTheme.titleMedium,
-                ),
+                )),
               ],
             ),
             const SizedBox(height: 16),
@@ -602,11 +646,14 @@ class _BoardThemeSelector extends ConsumerWidget {
                     description: BoardThemeData.forTheme(theme).description,
                     isSelected: cosmetics.selectedBoardTheme == theme,
                     isUnlocked: ref.watch(isBoardThemeUnlockedProvider(theme)),
-                    unlockRequirement: ref.watch(boardThemeUnlockRequirementProvider(theme)),
+                    unlockRequirement:
+                        ref.watch(boardThemeUnlockRequirementProvider(theme)),
                     previewColor: BoardThemeData.forTheme(theme).cellBackground,
                     onTap: () {
                       if (ref.read(isBoardThemeUnlockedProvider(theme))) {
-                        ref.read(cosmeticsProvider.notifier).setBoardTheme(theme);
+                        ref
+                            .read(cosmeticsProvider.notifier)
+                            .setBoardTheme(theme);
                       }
                     },
                   ),
@@ -650,13 +697,16 @@ class _PieceStyleSelector extends ConsumerWidget {
               children: [
                 Icon(
                   Icons.circle,
-                  color: isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
+                  color: isDark
+                      ? colorScheme.onSurfaceVariant
+                      : GameColors.subtitleColor,
                 ),
                 const SizedBox(width: 12),
-                Text(
+                Expanded(
+                    child: Text(
                   'Piece Style',
                   style: Theme.of(context).textTheme.titleMedium,
-                ),
+                )),
               ],
             ),
             const SizedBox(height: 16),
@@ -670,11 +720,14 @@ class _PieceStyleSelector extends ConsumerWidget {
                     description: PieceStyleData.forStyle(style).description,
                     isSelected: cosmetics.selectedPieceStyle == style,
                     isUnlocked: ref.watch(isPieceStyleUnlockedProvider(style)),
-                    unlockRequirement: ref.watch(pieceStyleUnlockRequirementProvider(style)),
+                    unlockRequirement:
+                        ref.watch(pieceStyleUnlockRequirementProvider(style)),
                     previewColor: PieceStyleData.forStyle(style).lightPrimary,
                     onTap: () {
                       if (ref.read(isPieceStyleUnlockedProvider(style))) {
-                        ref.read(cosmeticsProvider.notifier).setPieceStyle(style);
+                        ref
+                            .read(cosmeticsProvider.notifier)
+                            .setPieceStyle(style);
                       }
                     },
                   ),
@@ -720,17 +773,26 @@ class _CosmeticOptionState extends State<_CosmeticOption> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Tooltip(
-      message: widget.isUnlocked ? widget.description : (widget.unlockRequirement ?? ''),
+      message: widget.isUnlocked
+          ? widget.description
+          : (widget.unlockRequirement ?? ''),
       waitDuration: const Duration(milliseconds: 500),
       child: Semantics(
-        label: '${widget.name} style${widget.isUnlocked ? '' : ', locked'}${widget.isSelected ? ', selected' : ''}',
+        label:
+            '${widget.name} style${widget.isUnlocked ? '' : ', locked'}${widget.isSelected ? ', selected' : ''}',
         selected: widget.isSelected,
-        enabled: widget.isUnlocked,
+        enabled: true,
         button: true,
         child: Focus(
           onFocusChange: (focused) => setState(() => _isFocused = focused),
-          child: GestureDetector(
-            onTap: widget.isUnlocked ? widget.onTap : null,
+          child: InkWell(
+            onTap: widget.isUnlocked
+                ? widget.onTap
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(widget.unlockRequirement ??
+                            'Earn this style through achievements.')));
+                  },
             onLongPress: widget.isUnlocked
                 ? null
                 : () {
@@ -750,7 +812,7 @@ class _CosmeticOptionState extends State<_CosmeticOption> {
                     ? colorScheme.primaryContainer
                     : widget.isUnlocked
                         ? (isDark ? colorScheme.surface : Colors.grey.shade100)
-                        : Colors.grey.shade300,
+                        : colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _isFocused
@@ -780,10 +842,12 @@ class _CosmeticOptionState extends State<_CosmeticOption> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: widget.isUnlocked ? widget.previewColor : Colors.grey,
+                      color: widget.previewColor,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: widget.isUnlocked ? widget.previewColor.withValues(alpha: 0.5) : Colors.grey,
+                        color: widget.isUnlocked
+                            ? widget.previewColor.withValues(alpha: 0.5)
+                            : Colors.grey,
                         width: 2,
                       ),
                       boxShadow: [
@@ -796,7 +860,13 @@ class _CosmeticOptionState extends State<_CosmeticOption> {
                     ),
                     child: widget.isUnlocked
                         ? null
-                        : const Icon(Icons.lock, size: 20, color: Colors.white70),
+                        : Icon(Icons.lock,
+                            size: 20,
+                            color: ThemeData.estimateBrightnessForColor(
+                                        widget.previewColor) ==
+                                    Brightness.dark
+                                ? Colors.white
+                                : Colors.black87),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -804,12 +874,14 @@ class _CosmeticOptionState extends State<_CosmeticOption> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: widget.isUnlocked
                           ? (widget.isSelected
                               ? colorScheme.onPrimaryContainer
                               : colorScheme.onSurface)
-                          : Colors.grey.shade600,
+                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

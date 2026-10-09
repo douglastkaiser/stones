@@ -21,39 +21,41 @@ class ChessClockSetup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: ChessClockToggle(
-                value: enabled,
-                onChanged: onEnabledChanged,
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 88,
-              child: TextField(
-                controller: minutesController,
-                enabled: enabled,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: 'Min',
-                  helperText: helperText,
-                ),
-                onChanged: onMinutesChanged,
-              ),
-            ),
-          ],
+    return LayoutBuilder(builder: (context, constraints) {
+      final toggle = ChessClockToggle(
+        value: enabled,
+        onChanged: onEnabledChanged,
+      );
+      final field = TextField(
+        controller: minutesController,
+        enabled: enabled,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(3),
+        ],
+        decoration: InputDecoration(
+          isDense: true,
+          labelText: 'Minutes per player',
+          errorText: enabled && (int.tryParse(minutesController.text) ?? 0) <= 0
+              ? 'Enter 1–999'
+              : null,
+          helperText: helperText,
         ),
-      ],
-    );
+        onChanged: onMinutesChanged,
+      );
+      if (constraints.maxWidth < 360) {
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          toggle,
+          const SizedBox(height: 12),
+          field,
+        ]);
+      }
+      return Row(children: [
+        Expanded(child: toggle),
+        const SizedBox(width: 12),
+        SizedBox(width: 160, child: field)
+      ]);
+    });
   }
 }
