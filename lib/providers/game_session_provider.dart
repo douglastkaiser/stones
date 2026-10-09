@@ -13,6 +13,10 @@ enum GameMode {
 /// Session configuration for the current game
 class GameSessionConfig {
   final GameMode mode;
+  final bool courtMode;
+
+  bool get isCourtMode =>
+      courtMode && mode == GameMode.vsComputer && scenario == null;
   final AIDifficulty aiDifficulty;
   final GameScenario? scenario;
   final int? chessClockSecondsOverride;
@@ -20,6 +24,7 @@ class GameSessionConfig {
 
   const GameSessionConfig({
     this.mode = GameMode.local,
+    this.courtMode = false,
     this.aiDifficulty = AIDifficulty.easy,
     this.scenario,
     this.chessClockSecondsOverride,
@@ -28,6 +33,7 @@ class GameSessionConfig {
 
   GameSessionConfig copyWith({
     GameMode? mode,
+    bool? courtMode,
     AIDifficulty? aiDifficulty,
     GameScenario? scenario,
     int? chessClockSecondsOverride,
@@ -36,10 +42,13 @@ class GameSessionConfig {
   }) {
     return GameSessionConfig(
       mode: mode ?? this.mode,
+      courtMode: courtMode ?? this.courtMode,
       aiDifficulty: aiDifficulty ?? this.aiDifficulty,
       scenario: clearScenario ? null : (scenario ?? this.scenario),
-      chessClockSecondsOverride: chessClockSecondsOverride ?? this.chessClockSecondsOverride,
-      vsComputerPlayerColor: vsComputerPlayerColor ?? this.vsComputerPlayerColor,
+      chessClockSecondsOverride:
+          chessClockSecondsOverride ?? this.chessClockSecondsOverride,
+      vsComputerPlayerColor:
+          vsComputerPlayerColor ?? this.vsComputerPlayerColor,
     );
   }
 }

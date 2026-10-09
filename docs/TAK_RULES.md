@@ -187,3 +187,14 @@ Reconnects preserve existing participants and their cosmetics instead of
 rewriting the player slot. These fixes do not resolve the separate online
 correctness findings above. Backend deployment and live multi-device validation
 remain distinct from model/widget verification.
+
+## Courtly play and coaching
+
+The complete publisher [Companion Book](https://crabfragmentlabs.com/s/TakCompanionBookPDF.pdf),
+printed pages 29–31, describes courtly play: announce Tak, permit takebacks,
+and help teach an inexperienced opponent. These are play customs, not changes
+to legal moves or victory. Stones implements optional **Court Mode** for square
+AI games with legal suggestions, factual move commentary, movement-aware Tak
+warnings and repeatable takebacks, including after a result. It is untimed
+practice without ratings or achievement awards. See COURT_MODE.md for the
+application contract and remaining boundaries. Hex retains its separate rules.

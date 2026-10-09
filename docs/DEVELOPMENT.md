@@ -127,3 +127,9 @@ GameRules. Square mode changes detach online subscriptions. Hex retains
 independent replay/seat authority and now applies only appended moves on updates.
 AI browser work cooperatively yields during ranking and recursive search; square
 AI uses completed iterative-deepening results with difficulty-specific budgets.
+
+## Court Mode
+
+See [Court Mode](COURT_MODE.md) for the optional square AI coaching contract,
+source customs, threat warnings, takeback semantics and verification. Court
+sessions are untimed, unrated practice; core move validation remains GameRules.

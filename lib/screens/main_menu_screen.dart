@@ -254,12 +254,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     GameMode mode,
     AIDifficulty difficulty,
     int? chessClockSecondsOverride,
-    PlayerColor vsComputerPlayerColor,
-  ) {
+    PlayerColor vsComputerPlayerColor, {
+    bool courtMode = false,
+  }) {
     ref.read(appSettingsProvider.notifier).setBoardSize(size);
     ref.read(scenarioStateProvider.notifier).clearScenario();
     ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
       mode: mode,
+      courtMode: courtMode,
       aiDifficulty: difficulty,
       chessClockSecondsOverride: chessClockSecondsOverride,
       vsComputerPlayerColor: vsComputerPlayerColor,
@@ -272,7 +274,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
     // Always reset chess clock when starting a new game
     final settings = ref.read(appSettingsProvider);
-    if (settings.chessClockEnabled) {
+    if (settings.chessClockEnabled && !courtMode) {
       // Initialize with new board size (resets times and stops any running timer)
       ref.read(chessClockProvider.notifier).initialize(
             size,
@@ -483,6 +485,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     AIDifficulty selectedDifficulty =
         ref.read(gameSessionProvider).aiDifficulty;
     bool chessClockEnabled = settings.chessClockEnabled;
+    bool courtMode = false;
     PlayerColor selectedPlayerColor =
         ref.read(gameSessionProvider).vsComputerPlayerColor;
     int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
@@ -553,20 +556,29 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                ChessClockSetup(
-                  enabled: chessClockEnabled,
-                  onEnabledChanged: (value) =>
-                      setState(() => chessClockEnabled = value),
-                  minutesController: clockMinutesController,
-                  onMinutesChanged: (value) {
-                    setState(() {});
-                    chessClockOverridden = true;
-                    final minutes = int.tryParse(value);
-                    if (minutes != null && minutes > 0) {
-                      chessClockSeconds = minutes * 60;
-                    }
-                  },
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Court Mode'),
+                  subtitle: const Text(
+                      'Learn with hints, AI explanations and free takebacks. Untimed practice; no ratings or achievements.'),
+                  value: courtMode,
+                  onChanged: (value) => setState(() => courtMode = value),
                 ),
+                if (!courtMode)
+                  ChessClockSetup(
+                    enabled: chessClockEnabled,
+                    onEnabledChanged: (value) =>
+                        setState(() => chessClockEnabled = value),
+                    minutesController: clockMinutesController,
+                    onMinutesChanged: (value) {
+                      setState(() {});
+                      chessClockOverridden = true;
+                      final minutes = int.tryParse(value);
+                      if (minutes != null && minutes > 0) {
+                        chessClockSeconds = minutes * 60;
+                      }
+                    },
+                  ),
                 const SizedBox(height: 20),
 
                 // Color Section
@@ -653,7 +665,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: chessClockEnabled &&
+              onPressed: !courtMode &&
+                      chessClockEnabled &&
                       (int.tryParse(clockMinutesController.text) ?? 0) <= 0
                   ? null
                   : () {
@@ -670,6 +683,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                             ? chessClockSeconds
                             : null,
                         selectedPlayerColor,
+                        courtMode: courtMode,
                       );
                     },
               style: ElevatedButton.styleFrom(
@@ -694,11 +708,13 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   Widget build(BuildContext context) {
     // Use granular selector to avoid rebuilding on every game state change
     // Only rebuild when "has game in progress" status actually changes
-    final hasGameInProgress = ref.watch(gameSessionProvider.select((session) => session.mode != GameMode.online)) && ref.watch(gameStateProvider.select(
-      (s) =>
-          !s.isGameOver &&
-          (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
-    ));
+    final hasGameInProgress = ref.watch(gameSessionProvider
+            .select((session) => session.mode != GameMode.online)) &&
+        ref.watch(gameStateProvider.select(
+          (s) =>
+              !s.isGameOver &&
+              (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
+        ));
     final playGames = ref.watch(playGamesServiceProvider);
 
     return Scaffold(

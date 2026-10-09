@@ -15,6 +15,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'providers/providers.dart';
 import 'models/models.dart';
 import 'services/services.dart';
+import 'services/ai/court_coach.dart';
+
 import 'theme/theme.dart';
 import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
@@ -318,6 +320,105 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   static int _screenGeneration = 0;
   late final int _generation;
   bool _showHistory = false;
+  bool _coachBusy = false;
+
+  bool _courtRewinding = false;
+
+  String _courtExplanation =
+      'Ask the coach for a suggested move and its effects. Takebacks return to your previous decision; repeat to go further back.';
+
+  String _courtWarning = '';
+
+  Future<void> _refreshCourtWarning(GameState state) async {
+    if (!ref.read(gameSessionProvider).isCourtMode) return;
+
+    final warning = await courtWarnings(state);
+
+    if (mounted &&
+        identical(ref.read(gameStateProvider), state) &&
+        ref.read(gameSessionProvider).isCourtMode) {
+      setState(() => _courtWarning = warning);
+    }
+  }
+
+  Future<void> _askCourtCoach() async {
+    final session = ref.read(gameSessionProvider);
+
+    final state = ref.read(gameStateProvider);
+
+    if (!session.isCourtMode ||
+        state.isGameOver ||
+        _isAiTurn(session, state) ||
+        _coachBusy ||
+        ref.read(aiThinkingProvider)) {
+      return;
+    }
+
+    setState(() => _coachBusy = true);
+
+    try {
+      final move = await selectStonesMove(state, AIDifficulty.expert,
+          cancelled: () =>
+              !mounted ||
+              !identical(ref.read(gameStateProvider), state) ||
+              !identical(ref.read(gameSessionProvider), session));
+
+      if (!mounted ||
+          !identical(ref.read(gameStateProvider), state) ||
+          !identical(ref.read(gameSessionProvider), session)) {
+        return;
+      }
+
+      if (move == null) return;
+
+      final explanation = CourtCoach.explain(state, move);
+
+      final play = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Coach’s suggestion'),
+          content: SingleChildScrollView(child: Text(explanation)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Keep thinking')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Play suggested move')),
+          ],
+        ),
+      );
+
+      if (mounted &&
+          play == true &&
+          identical(ref.read(gameStateProvider), state) &&
+          identical(ref.read(gameSessionProvider), session)) {
+        ref.read(uiStateProvider.notifier).reset();
+
+        _applyAiMove(move, ref);
+      }
+    } finally {
+      if (mounted) setState(() => _coachBusy = false);
+    }
+  }
+
+  void _showCourtExplanation() {
+    showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Court Mode · coach'),
+              content: SingleChildScrollView(
+                  child: Text([_courtWarning, _courtExplanation]
+                      .where((text) => text.isNotEmpty)
+                      .join('\n\n'))),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'))
+              ],
+            ));
+  }
+
   late final GameStateNotifier _gameNotifier;
   late final StateController<bool> _thinking;
   late final StateController<bool> _thinkingVisible;
@@ -370,6 +471,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (!mounted) return;
       final clock = ref.read(chessClockProvider);
       if (ref.read(gameSessionProvider).mode != GameMode.online &&
+          !ref.read(gameSessionProvider).isCourtMode &&
           ref.read(appSettingsProvider).chessClockEnabled &&
           clock.activePlayer != null &&
           !clock.isRunning &&
@@ -380,6 +482,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             .start(ref.read(gameStateProvider).currentPlayer);
       }
       unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
+      unawaited(_refreshCourtWarning(ref.read(gameStateProvider)));
     });
 
     // Set up web back button handler
@@ -403,7 +506,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.read(gameStateProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
-    if (!gameNotifier.canUndo || gameState.isGameOver) return false;
+    if (!gameNotifier.canUndo) return false;
+
+    if (session.isCourtMode) {
+      return !_coachBusy &&
+          ref
+              .read(moveHistoryProvider)
+              .any((move) => move.player == session.vsComputerPlayerColor);
+    }
+
+    if (gameState.isGameOver) return false;
 
     // Disable undo when chess clock is enabled (would allow time manipulation)
     final settings = ref.read(appSettingsProvider);
@@ -472,6 +584,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   Future<void> _checkAchievements(GameState gameState) async {
     final session = ref.read(gameSessionProvider);
+    if (session.isCourtMode) return;
+
     final scenarioState = ref.read(scenarioStateProvider);
     final isScenarioGame =
         session.scenario != null || scenarioState.hasScenario;
@@ -638,6 +752,33 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.read(gameStateProvider);
     final gameNotifier = ref.read(gameStateProvider.notifier);
 
+    if (session.isCourtMode) {
+      if (_coachBusy || !gameNotifier.canUndo) return;
+
+      _courtRewinding = true;
+
+      try {
+        do {
+          _performSingleUndo();
+        } while (gameNotifier.canUndo &&
+            ref.read(gameStateProvider).currentPlayer !=
+                session.vsComputerPlayerColor);
+      } finally {
+        _courtRewinding = false;
+      }
+
+      setState(() {
+        _courtExplanation =
+            'Takeback accepted. Try a different plan, or ask the coach for a suggestion.';
+
+        _courtWarning = '';
+      });
+
+      unawaited(_refreshCourtWarning(ref.read(gameStateProvider)));
+
+      return;
+    }
+
     // Online mode: only allow undo of your own move before opponent responds
     if (session.mode == GameMode.online) {
       final onlineState = ref.read(onlineGameProvider);
@@ -772,13 +913,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Listen for chess clock expiration to trigger game end
     ref.listen<ChessClockState>(chessClockProvider, (previous, next) {
-      if (next.isExpired &&
+      if (!session.isCourtMode &&
+          next.isExpired &&
           next.expiredPlayer != null &&
           !gameState.isGameOver) {
         if (session.mode == GameMode.online) {
-          unawaited(ref.read(onlineGameProvider.notifier).finishOnTimeout(next.expiredPlayer!));
+          unawaited(ref
+              .read(onlineGameProvider.notifier)
+              .finishOnTimeout(next.expiredPlayer!));
         } else {
-          ref.read(gameStateProvider.notifier).setTimeExpired(next.expiredPlayer!);
+          ref
+              .read(gameStateProvider.notifier)
+              .setTimeExpired(next.expiredPlayer!);
         }
       }
     });
@@ -789,6 +935,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           'GameState listener fired: prev.isGameOver=${previous?.isGameOver}, next.isGameOver=${next.isGameOver}');
 
       unawaited(_maybeTriggerAiTurn(next));
+      if (session.isCourtMode) {
+        if (next.isOpeningPhase &&
+            next.turnNumber == 1 &&
+            next.currentPlayer == PlayerColor.white) {
+          _courtExplanation =
+              'Ask the coach for a suggested move and its effects. Takebacks return to your previous decision; repeat to go further back.';
+          _courtWarning = '';
+        }
+        unawaited(_refreshCourtWarning(next));
+
+        return;
+      }
+
       final moveCount = ref.read(moveHistoryProvider).length;
       unawaited(
         ref.read(playGamesServiceProvider.notifier).onGameStateChanged(
@@ -973,28 +1132,59 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     return PopScope(
       child: Scaffold(
         appBar: AppBar(
-          bottom: isOnline
+          bottom: session.isCourtMode
               ? PreferredSize(
-                  preferredSize: const Size.fromHeight(48),
-                  child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
+                  preferredSize: const Size.fromHeight(64),
+                  child: SizedBox(
+                      height: 64,
                       child: Row(children: [
-                        for (final color in PlayerColor.values)
-                          Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: MatchThemeBadge(
-                                  label: color == PlayerColor.white
-                                      ? 'Ivory'
-                                      : 'Charcoal',
-                                  style: playerPieceStyles[color]!.style)),
-                      ])))
-              : null,
+                        Expanded(
+                            child: TextButton(
+                          onPressed: _showCourtExplanation,
+                          child: Text(
+                              _courtWarning.isNotEmpty
+                                  ? _courtWarning
+                                  : _courtExplanation.startsWith('AI move')
+                                      ? 'Court Mode · Why that AI move?'
+                                      : 'Court Mode · Untimed practice',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
+                        )),
+                        TextButton.icon(
+                          onPressed: !_coachBusy &&
+                                  !inputLocked &&
+                                  !gameState.isGameOver
+                              ? _askCourtCoach
+                              : null,
+                          icon: const Icon(Icons.school_outlined),
+                          label: Text(_coachBusy ? 'Thinking…' : 'Ask coach'),
+                        ),
+                      ])),
+                )
+              : isOnline
+                  ? PreferredSize(
+                      preferredSize: const Size.fromHeight(48),
+                      child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(children: [
+                            for (final color in PlayerColor.values)
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  child: MatchThemeBadge(
+                                      label: color == PlayerColor.white
+                                          ? 'Ivory'
+                                          : 'Charcoal',
+                                      style: playerPieceStyles[color]!.style)),
+                          ])))
+                  : null,
           title: Text(
               activeScenario != null
                   ? activeScenario.title
                   : session.mode == GameMode.vsComputer
-                      ? '${session.aiDifficulty.label} AI'
+                      ? session.isCourtMode
+                          ? 'Court · ${session.aiDifficulty.label} AI'
+                          : '${session.aiDifficulty.label} AI'
                       : isOnline
                           ? 'Online Game'
                           : 'Local Game',
@@ -1013,7 +1203,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             IconButton(
                 icon: const Icon(Icons.undo),
                 tooltip: canUndo
-                    ? 'Undo last move'
+                    ? session.isCourtMode
+                        ? 'Take back to your previous decision'
+                        : 'Undo last move'
                     : gameState.isGameOver
                         ? 'Finished game'
                         : ref.read(appSettingsProvider).chessClockEnabled
@@ -1064,7 +1256,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           builder: (context, constraints) {
             final isWideScreen = constraints.maxWidth > 700;
             final showClockEnabled =
-                ref.watch(appSettingsProvider).chessClockEnabled;
+                ref.watch(appSettingsProvider).chessClockEnabled &&
+                    !session.isCourtMode;
 
             // Board widget (reused in both layouts)
             final boardWidget = Container(
@@ -1401,10 +1594,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           ),
 
                         // Online status banners
-                        if (session.mode == GameMode.online && onlineState.errorMessage != null)
-                          _OnlineStatusBanner(message: onlineState.errorMessage!, icon: Icons.error_outline, color: Colors.red),
-                        if (session.mode == GameMode.online && onlineState.reconnecting && onlineState.errorMessage == null)
-                          const _OnlineStatusBanner(message: 'Confirming saved state… Input resumes when the server responds.', icon: Icons.sync),
+                        if (session.mode == GameMode.online &&
+                            onlineState.errorMessage != null)
+                          _OnlineStatusBanner(
+                              message: onlineState.errorMessage!,
+                              icon: Icons.error_outline,
+                              color: Colors.red),
+
+                        if (session.mode == GameMode.online &&
+                            onlineState.reconnecting &&
+                            onlineState.errorMessage == null)
+                          const _OnlineStatusBanner(
+                              message:
+                                  'Confirming saved state… Input resumes when the server responds.',
+                              icon: Icons.sync),
+
                         if (session.mode == GameMode.online &&
                             waitingForOpponent)
                           _OnlineStatusBanner(
@@ -1413,8 +1617,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             icon: Icons.hourglass_empty,
                           ),
                         if (session.mode == GameMode.online &&
-                            onlineState.opponentDisconnected && onlineState.errorMessage == null && !onlineState.reconnecting &&
-                            !onlineState.opponentInactive && onlineState.errorMessage == null && !onlineState.reconnecting)
+                            onlineState.opponentDisconnected &&
+                            onlineState.errorMessage == null &&
+                            !onlineState.reconnecting &&
+                            !onlineState.opponentInactive &&
+                            onlineState.errorMessage == null &&
+                            !onlineState.reconnecting)
                           const _OnlineStatusBanner(
                             message:
                                 'No moves for a minute. Your opponent may be thinking.',
@@ -1422,7 +1630,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             color: Colors.orange,
                           ),
                         if (session.mode == GameMode.online &&
-                            onlineState.opponentInactive && onlineState.errorMessage == null && !onlineState.reconnecting)
+                            onlineState.opponentInactive &&
+                            onlineState.errorMessage == null &&
+                            !onlineState.reconnecting)
                           const _OnlineStatusBanner(
                             message:
                                 'No recent moves. The room stays saved if either player leaves.',
@@ -1898,7 +2108,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   bool _performPlacementMove(Position pos, PieceType type, WidgetRef ref) {
-    if (ref.read(gameSessionProvider).mode == GameMode.online && !ref.read(onlineGameProvider).isLocalTurn) return false;
+    if (ref.read(gameSessionProvider).mode == GameMode.online &&
+        !ref.read(onlineGameProvider).isLocalTurn) {
+      return false;
+    }
+
     final gameState = ref.read(gameStateProvider);
     final session = ref.read(gameSessionProvider);
     final scenarioState = ref.read(scenarioStateProvider);
@@ -1981,7 +2195,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     List<int> drops,
     WidgetRef ref,
   ) {
-    if (ref.read(gameSessionProvider).mode == GameMode.online && !ref.read(onlineGameProvider).isLocalTurn) return false;
+    if (ref.read(gameSessionProvider).mode == GameMode.online &&
+        !ref.read(onlineGameProvider).isLocalTurn) {
+      return false;
+    }
+
     final dropPositions = _calculateDropPositions(from, dir, drops.length);
 
     final gameState = ref.read(gameStateProvider);
@@ -2074,7 +2292,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void _switchChessClock(WidgetRef ref) {
     final settings = ref.read(appSettingsProvider);
-    if (!settings.chessClockEnabled) return;
+    if (!settings.chessClockEnabled ||
+        ref.read(gameSessionProvider).isCourtMode) {
+      return;
+    }
 
     final gameState = ref.read(gameStateProvider);
     // The game state has already switched to the next player, so start their clock
@@ -2094,7 +2315,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   Future<void> _maybeTriggerAiTurn(GameState state) async {
     final session = ref.read(gameSessionProvider);
-    if (session.mode != GameMode.vsComputer || state.isGameOver) return;
+    if (_courtRewinding ||
+        session.mode != GameMode.vsComputer ||
+        state.isGameOver) {
+      return;
+    }
+
     if (ref.read(scenarioStateProvider).isSuccessful(state)) return;
     if (state.currentPlayer != _aiPlayerColor(session)) return;
     if (ref.read(aiThinkingProvider)) return;
@@ -2136,13 +2362,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
 
       searchedState = latestState;
-      final move =
-          await selectStonesMove(latestState, latestSession.aiDifficulty,
-              cancelled: () => !mounted || !identical(ref.read(gameStateProvider), latestState) || !identical(ref.read(gameSessionProvider), latestSession));
+      final move = await selectStonesMove(
+          latestState, latestSession.aiDifficulty,
+          cancelled: () =>
+              !mounted ||
+              !identical(ref.read(gameStateProvider), latestState) ||
+              !identical(ref.read(gameSessionProvider), latestSession));
+
       if (!mounted ||
           !identical(ref.read(gameStateProvider), latestState) ||
           !identical(ref.read(gameSessionProvider), latestSession)) {
         return;
+      }
+
+      if (latestSession.isCourtMode && move != null) {
+        setState(() => _courtExplanation =
+            'AI move\n\n${CourtCoach.explain(latestState, move)}');
       }
       _applyAiMove(move, ref);
       ref.read(uiStateProvider.notifier).reset();
@@ -2394,6 +2629,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     AIDifficulty selectedDifficulty = session.aiDifficulty;
     PlayerColor selectedPlayerColor = session.vsComputerPlayerColor;
     bool chessClockEnabled = settings.chessClockEnabled;
+    bool courtMode = session.isCourtMode;
+
     int chessClockSeconds = settings.chessClockSecondsForSize(selectedSize);
     bool chessClockOverridden = false;
     final clockMinutesController = TextEditingController(
@@ -2576,20 +2813,32 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ChessClockSetup(
-                    enabled: chessClockEnabled,
-                    onEnabledChanged: (value) =>
-                        setState(() => chessClockEnabled = value),
-                    minutesController: clockMinutesController,
-                    onMinutesChanged: (value) {
-                      setState(() {});
-                      chessClockOverridden = true;
-                      final minutes = int.tryParse(value);
-                      if (minutes != null && minutes > 0) {
-                        chessClockSeconds = minutes * 60;
-                      }
-                    },
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Court Mode'),
+                    subtitle: const Text(
+                        'Hints, explanations and free takebacks. Untimed practice; no ratings or achievements.'),
+                    value: courtMode,
+                    onChanged: (value) => setState(() => courtMode = value),
                   ),
+                  if (!courtMode)
+                    ChessClockSetup(
+                      enabled: chessClockEnabled,
+                      onEnabledChanged: (value) =>
+                          setState(() => chessClockEnabled = value),
+                      minutesController: clockMinutesController,
+                      onMinutesChanged: (value) {
+                        setState(() {});
+
+                        chessClockOverridden = true;
+
+                        final minutes = int.tryParse(value);
+
+                        if (minutes != null && minutes > 0) {
+                          chessClockSeconds = minutes * 60;
+                        }
+                      },
+                    ),
                   const SizedBox(height: 20),
                   Builder(
                     builder: (context) {
@@ -2642,7 +2891,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: chessClockEnabled &&
+                onPressed: !courtMode &&
+                        chessClockEnabled &&
                         (int.tryParse(clockMinutesController.text) ?? 0) <= 0
                     ? null
                     : () {
@@ -2652,6 +2902,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         ref.read(gameSessionProvider.notifier).state =
                             GameSessionConfig(
                           mode: GameMode.vsComputer,
+                          courtMode: courtMode,
                           aiDifficulty: selectedDifficulty,
                           vsComputerPlayerColor: selectedPlayerColor,
                           chessClockSecondsOverride:
@@ -2668,7 +2919,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         ref.read(moveHistoryProvider.notifier).clear();
                         ref.read(lastMoveProvider.notifier).state = null;
 
-                        if (chessClockEnabled) {
+                        if (chessClockEnabled && !courtMode) {
                           ref.read(chessClockProvider.notifier).initialize(
                                 selectedSize,
                                 secondsOverride: chessClockOverridden
