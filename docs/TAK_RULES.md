@@ -167,3 +167,20 @@ scoring is not implemented; Elo is not a substitute for that scoring system.
 See `docs/DEVELOPMENT.md` for commands and architecture. The audit adds model,
 provider, and rendered gesture regressions. Final verification results are
 recorded there. No live Firebase session or Android device was used for this audit.
+
+## Application visuals and Hex learning
+
+The five coordinated themes and renderer changes are application features; they
+do not alter square legality or outcomes. Hex is now discoverable by default
+and has separate interactive tutorials/puzzles. These teach the experimental
+HEX_MODE.md contract, not publisher Tak rules. Learning completion is separate
+from square achievements. See THEMES.md and HEX_MODE.md for the current design.
+
+Online piece sets are also application metadata, independent of legality and
+move replay. Each color/seat brings a room-scoped style; opponents can see it
+without receiving its achievement. Legacy rooms fall back to Classic. Square
+serialization now includes the room code required by the checked-in rules.
+Reconnects preserve existing participants and their cosmetics instead of
+rewriting the player slot. These fixes do not resolve the separate online
+correctness findings above. Backend deployment and live multi-device validation
+remain distinct from model/widget verification.

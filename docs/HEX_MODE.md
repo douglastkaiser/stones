@@ -1,9 +1,11 @@
 # Three-player Hex: variant contract and implementation
 
-This is a Stones experiment, not an official Tak ruleset. Enable it in Settings
-→ Experimental modes → Three-player Hex. The default is off. Enabling it adds a
-separate menu entry; Local Game, Online Game, Vs Computer, tutorials, square
-reserves, saved square state, and square results keep their existing behavior.
+This is a Stones experiment, not an official Tak ruleset. Three-player Hex is
+always selectable from the main menu; it no longer requires a Settings switch.
+Local Game, Online Game, Vs Computer and square results retain their behavior.
+The legacy enable flag is ignored for discovery so saved preferences cannot hide
+this mode. Hex tutorials and puzzles are accessible from its setup screen and
+from the main Tutorials & Puzzles chooser.
 
 ## Design decisions
 
@@ -70,7 +72,7 @@ two-cap dynamics before treating them as balanced.
    wins; ties for highest draw the entire match, including two-way ties with a
    third player below them. Caps still in reserve prevent exhaustion; caps on
    the board do not count as flats. There is no secondary reserve tie-break.
-8. Finished matches reject further moves. No square-game rating, clock, tutorial,
+8. Finished matches reject further moves. No square-game rating, clock,
    achievement, or resignation/elimination protocol is applied to this variant.
    Return to setup to configure another match. There is no silent repetition or
    no-progress draw in this version.
@@ -128,8 +130,9 @@ inactive human's seat.
 
 ## Backend contract and deployment
 
-Hex rooms use a separate `/hexGames` collection. Existing `/games` rules are
-unchanged. The rules require authentication, fixed version/configuration/roles,
+Hex rooms use a separate `/hexGames` collection. Square gameplay authorization
+is independent; its player validation also accepts known cosmetic names. The
+Hex rules require authentication, fixed version/configuration/roles,
 one vacant-seat join at a time, ownership/host authority for the current turn,
 and exactly one new immutable log entry. Room enumeration is denied. A room code
 acts as an invitation; authenticated callers knowing it can read that room.
@@ -190,7 +193,7 @@ secure-storage dependency still produce deprecation/Wasm dry-run warnings;
 the JavaScript release succeeds. The local server opens at
 `http://127.0.0.1:4173/stones/` and binds only to the loopback interface.
 
-A release-browser playtest verified the setting starts off, enabling it adds
+The initial opt-in release playtest verified the setting starts off, enabling it adds
 the menu entry, two local humans can play with a third-seat AI, the AI completes
 the opening exchange and returns control, and a stack spread previews and
 confirms with correct turn rotation. Remote multiplayer was checked against the
@@ -203,3 +206,30 @@ Future changes to goals, opening, carry limit, reserves, or tie policy require a
 new room rules version so old logs remain interpretable. Additional improvements
 include bot-host handoff, a room cleanup policy, consensual draw/resignation
 protocols, stronger tactical AI, and larger-board touch/keyboard accessibility.
+
+## Hex learning and visuals
+
+`hex_exercises.dart` defines four interactive tutorials (opening exchange, six
+neighbors, assigned road edges, and a mixed stack spread ending in a capstone
+crush) and three one-move puzzles for Ivory, Charcoal and Copper. Solutions and
+failure paths use HexRules, with no separate teaching validator for legality.
+Tutorial objectives restrict accepted moves; puzzles accept legal attempts and
+award completion only for the learner's victory. Hint, Retry, preview/Confirm
+and Finish lesson controls support exploration. Completion persists under
+`hex_learning_completed_v1`; no square achievement or match state is changed.
+These are constructed teaching positions with fresh reserves, not match replays.
+
+The reusable `hex_board.dart` retains polygon hit areas and now uses the same
+five board/piece painters as square play. Copper keeps an independent visible
+palette; seat symbols and assigned boundary markers remain. See THEMES.md for
+visual design and migration details. Native screen-reader/device validation and
+human balance studies remain separate work.
+
+Online rooms additionally carry optional `pieceStyles` metadata by seat. The
+host chooses styles for local human and AI seats; remote humans publish theirs
+when reserving a seat. Rejoins and appended moves preserve all choices. Metadata
+is independent of the version-1 rules log; legacy rooms default to Classic. The
+board renders each top stone using its owning seat's style, including previews,
+while every viewer uses the host's board material. Theme labels show samples
+and unlock requirements without granting rewards. Deploy the updated Firestore
+rules before production clients create/join rooms with this metadata.

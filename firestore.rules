@@ -10,7 +10,7 @@ service cloud.firestore {
     // Helper function to check if user is a player in the game
     function isPlayer(gameData) {
       return isAuthenticated() && (
-        gameData.white.id == request.auth.uid ||
+        (gameData.white != null && gameData.white.id == request.auth.uid) ||
         (gameData.black != null && gameData.black.id == request.auth.uid)
       );
     }
@@ -21,7 +21,16 @@ service cloud.firestore {
              player.id is string &&
              player.displayName is string &&
              player.displayName.size() > 0 &&
-             player.displayName.size() <= 30; // Prevent extremely long names
+             player.displayName.size() <= 30 &&
+             validPieceStyle(player.get('pieceStyle', 'standard'));
+    }
+
+    function validPieceStyle(style) {
+      return style in ['standard', 'stone', 'polishedMarble', 'morocco', 'kyoto'];
+    }
+
+    function validBoardTheme(theme) {
+      return theme in ['classicWood', 'darkStone', 'marble', 'morocco', 'kyoto'];
     }
 
     // Helper function to validate move object structure
@@ -51,6 +60,17 @@ service cloud.firestore {
 
     // Games collection rules
     match /games/{roomCode} {
+      function squareJoin(color, other) {
+        return resource.data.status == 'waiting' &&
+          resource.data[color] == null &&
+          request.resource.data[color].id == request.auth.uid &&
+          isValidPlayer(request.resource.data[color]) &&
+          request.resource.data[other] == resource.data[other] &&
+          request.resource.data.status == 'playing' &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly([color, 'status', 'lastMoveAt']);
+      }
+
 
       // Allow authenticated users to read games they are part of
       allow read: if isAuthenticated() && (
@@ -69,11 +89,12 @@ service cloud.firestore {
         // Room code must be 6 uppercase letters
         request.resource.data.roomCode is string &&
         request.resource.data.roomCode.matches('^[A-Z]{6}$') &&
-        // Creator must be the white player
-        request.resource.data.white.id == request.auth.uid &&
-        isValidPlayer(request.resource.data.white) &&
-        // Black player must be null initially
-        request.resource.data.black == null &&
+        request.resource.data.get('creatorColor', 'white') in ['white', 'black'] &&
+        request.resource.data[request.resource.data.get('creatorColor', 'white')].id == request.auth.uid &&
+        isValidPlayer(request.resource.data[request.resource.data.get('creatorColor', 'white')]) &&
+        ((request.resource.data.get('creatorColor', 'white') == 'white' && request.resource.data.black == null) ||
+         (request.resource.data.get('creatorColor', 'white') == 'black' && request.resource.data.white == null)) &&
+        validBoardTheme(request.resource.data.get('boardTheme', 'classicWood')) &&
         // Validate board size
         isValidBoardSize(request.resource.data.boardSize) &&
         // Moves must be empty array initially
@@ -87,19 +108,11 @@ service cloud.firestore {
         (!request.resource.data.keys().hasAll(['winner']) || request.resource.data.winner == null);
 
       // Allow updates under specific conditions
-      allow update: if isAuthenticated() && (
-        // Scenario 1: Black player joining a waiting game
-        (resource.data.status == 'waiting' &&
-         resource.data.black == null &&
-         request.resource.data.black.id == request.auth.uid &&
-         isValidPlayer(request.resource.data.black) &&
-         request.resource.data.status == 'playing' &&
-         // Ensure other fields aren't changed during join
-         request.resource.data.white == resource.data.white &&
-         request.resource.data.boardSize == resource.data.boardSize &&
-         request.resource.data.moves == resource.data.moves &&
-         request.resource.data.currentTurn == resource.data.currentTurn
-        ) ||
+      allow update: if isAuthenticated() &&
+        request.resource.data.get('boardTheme', 'classicWood') == resource.data.get('boardTheme', 'classicWood') &&
+        request.resource.data.get('creatorColor', 'white') == resource.data.get('creatorColor', 'white') && (
+        // A joining player fills the vacant color; host metadata is immutable.
+        (squareJoin('black', 'white') || squareJoin('white', 'black')) ||
 
         // Scenario 2: Player making a move
         (isPlayer(resource.data) &&
@@ -154,9 +167,23 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Separate, versioned three-player variant; square /games rules above stay
-    // unchanged. A map log makes its already-applied prefix immutable.
+    // Separate, versioned three-player variant. Cosmetic metadata is independent
+    // of the rules log; its already-applied prefix remains immutable.
     match /hexGames/{code} {
+      function hexStyles(data) {
+        return data.get('pieceStyles', {'0': 'standard', '1': 'standard', '2': 'standard'});
+      }
+      function validHexStyles(data) {
+        let styles = hexStyles(data);
+        return styles is map && styles.keys().hasAll(['0', '1', '2']) &&
+          styles.size() == 3 && validPieceStyle(styles['0']) &&
+          validPieceStyle(styles['1']) && validPieceStyle(styles['2']);
+      }
+      function joinedStyles(key) {
+        return validHexStyles(request.resource.data) &&
+          hexStyles(request.resource.data).diff(hexStyles(resource.data))
+            .affectedKeys().hasOnly([key]);
+      }
       function validHexSeat(data, key, creating) {
         return data.kinds[key] in ['localHuman', 'remoteHuman', 'ai'] && (
           (data.kinds[key] == 'ai' && data.owners[key] == null) ||
@@ -179,7 +206,8 @@ service cloud.firestore {
           request.auth.uid != resource.data.owners['0'] &&
           request.auth.uid != resource.data.owners['1'] &&
           request.auth.uid != resource.data.owners['2'] &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'pieceStyles']) &&
+          joinedStyles(key) &&
           request.resource.data.owners.diff(resource.data.owners).affectedKeys().hasOnly([key]);
       }
       function hexDrop(drops, index, carry) {
@@ -225,7 +253,7 @@ service cloud.firestore {
       allow list, delete: if false;
       allow create: if isAuthenticated() && code.matches('^H[A-Z]{6}$') &&
         request.resource.data.keys().hasOnly([
-          'version', 'code', 'host', 'radius', 'starter', 'ply', 'kinds', 'owners', 'moves'
+          'version', 'code', 'host', 'radius', 'starter', 'ply', 'kinds', 'owners', 'moves', 'pieceStyles', 'boardTheme'
         ]) && request.resource.data.version == 1 &&
         request.resource.data.code == code && request.resource.data.host == request.auth.uid &&
         request.resource.data.radius is int && request.resource.data.radius >= 2 &&
@@ -238,6 +266,11 @@ service cloud.firestore {
         request.resource.data.kinds.size() == 3 &&
         request.resource.data.owners.keys().hasAll(['0', '1', '2']) &&
         request.resource.data.owners.size() == 3 &&
+        validBoardTheme(request.resource.data.get('boardTheme', 'classicWood')) &&
+        validHexStyles(request.resource.data) &&
+        (request.resource.data.kinds['0'] != 'remoteHuman' || hexStyles(request.resource.data)['0'] == 'standard') &&
+        (request.resource.data.kinds['1'] != 'remoteHuman' || hexStyles(request.resource.data)['1'] == 'standard') &&
+        (request.resource.data.kinds['2'] != 'remoteHuman' || hexStyles(request.resource.data)['2'] == 'standard') &&
         validHexSeat(request.resource.data, '0', true) &&
         validHexSeat(request.resource.data, '1', true) &&
         validHexSeat(request.resource.data, '2', true);

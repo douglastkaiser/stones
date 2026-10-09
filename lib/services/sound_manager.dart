@@ -153,8 +153,8 @@ class SoundManager {
       BoardTheme.classicWood => GameSound.piecePlaceWood,
       BoardTheme.darkStone => GameSound.piecePlaceStone,
       BoardTheme.marble => GameSound.piecePlaceMarble,
-      BoardTheme.minimalist => GameSound.piecePlaceMinimal,
-      BoardTheme.pixelArt => GameSound.piecePlacePixel,
+      BoardTheme.morocco => GameSound.piecePlaceStone,
+      BoardTheme.kyoto => GameSound.piecePlaceWood,
     };
     return play(sound);
   }
@@ -165,8 +165,8 @@ class SoundManager {
       PieceStyle.standard => GameSound.stackMoveWood,
       PieceStyle.stone => GameSound.stackMoveStone,
       PieceStyle.polishedMarble => GameSound.stackMoveMarble,
-      PieceStyle.minimalist => GameSound.stackMoveMinimal,
-      PieceStyle.pixel => GameSound.stackMovePixel,
+      PieceStyle.morocco => GameSound.stackMoveStone,
+      PieceStyle.kyoto => GameSound.stackMoveWood,
     };
     return play(sound);
   }

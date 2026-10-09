@@ -11,6 +11,7 @@ import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
 import '../hex/hex_screen.dart';
+import '../hex/hex_learning_screen.dart';
 import '../widgets/chess_clock_setup.dart';
 import '../widgets/play_mode_card.dart';
 import 'achievements_screen.dart';
@@ -420,6 +421,20 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                ListTile(
+                  leading: const Icon(Icons.hexagon_outlined),
+                  title: const Text('Hex tutorials & puzzles'),
+                  subtitle: const Text(
+                      'Learn three-player roads, spreads and capstone puzzles.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    Navigator.push<void>(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const HexLearningScreen()));
+                  },
+                ),
                 for (final group in chapterGroups) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
@@ -684,8 +699,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
     ));
     final playGames = ref.watch(playGamesServiceProvider);
-    final hexEnabled = ref.watch(
-        appSettingsProvider.select((settings) => settings.hexModeEnabled));
 
     return Scaffold(
       body: SafeArea(
@@ -829,7 +842,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                             context,
                             MaterialPageRoute(
                                 builder: (_) => const OnlineLobbyScreen()))),
-                    if (hexEnabled) ...[
+                    ...[
                       const SizedBox(height: 12),
                       PlayModeCard(
                           title: 'Three-player Hex',

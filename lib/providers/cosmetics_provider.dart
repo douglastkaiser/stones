@@ -71,6 +71,16 @@ class CosmeticsNotifier extends StateNotifier<CosmeticsState> {
   }
 
   /// Set the board theme and persist
+  Future<void> setTheme(BoardTheme theme) async {
+    final style = PieceStyle.values[theme.index];
+    state =
+        CosmeticsState(selectedBoardTheme: theme, selectedPieceStyle: style);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(CosmeticsKeys.boardTheme, theme.index);
+    await prefs.setInt(CosmeticsKeys.pieceStyle, style.index);
+  }
+
+  /// Set the board theme and persist
   Future<void> setBoardTheme(BoardTheme theme) async {
     state = state.copyWith(selectedBoardTheme: theme);
     final prefs = await SharedPreferences.getInstance();
@@ -153,4 +163,19 @@ final pieceStyleUnlockRequirementProvider =
 
   final achievement = GameAchievement.forType(styleData.requiredAchievement!);
   return 'Unlock: ${achievement.description}';
+});
+
+/// Advertise only an earned selection. Viewing another style grants nothing.
+final shareablePieceStyleProvider = Provider<PieceStyle>((ref) {
+  final style = ref.watch(cosmeticsProvider).selectedPieceStyle;
+  final unlocked = ref.watch(isPieceStyleUnlockedProvider(style)) ||
+      ref.watch(isBoardThemeUnlockedProvider(BoardTheme.values[style.index]));
+  return unlocked ? style : PieceStyle.standard;
+});
+
+final shareableBoardThemeProvider = Provider<BoardTheme>((ref) {
+  final theme = ref.watch(cosmeticsProvider).selectedBoardTheme;
+  final unlocked = ref.watch(isBoardThemeUnlockedProvider(theme)) ||
+      ref.watch(isPieceStyleUnlockedProvider(PieceStyle.values[theme.index]));
+  return unlocked ? theme : BoardTheme.classicWood;
 });

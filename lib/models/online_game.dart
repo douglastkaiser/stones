@@ -32,8 +32,13 @@ class OnlineGamePlayer {
   final String id;
   final String displayName;
   final int? rating;
+  final PieceStyle pieceStyle;
 
-  const OnlineGamePlayer({required this.id, required this.displayName, this.rating});
+  const OnlineGamePlayer(
+      {required this.id,
+      required this.displayName,
+      this.rating,
+      this.pieceStyle = PieceStyle.standard});
 
   /// Sanitize display name for security (public API)
   static String sanitize(String name) => _sanitizeDisplayName(name);
@@ -41,14 +46,17 @@ class OnlineGamePlayer {
   Map<String, dynamic> toMap() => {
         'id': id,
         'displayName': displayName,
+        'pieceStyle': pieceStyle.name,
         if (rating != null) 'rating': rating,
       };
 
   factory OnlineGamePlayer.fromMap(Map<String, dynamic> map) {
     return OnlineGamePlayer(
       id: map['id'] as String? ?? '',
-      displayName: _sanitizeDisplayName(map['displayName'] as String? ?? 'Player'),
+      displayName:
+          _sanitizeDisplayName(map['displayName'] as String? ?? 'Player'),
       rating: (map['rating'] as num?)?.toInt(),
+      pieceStyle: pieceStyleFromWire(map['pieceStyle']),
     );
   }
 }
@@ -77,7 +85,8 @@ class OnlineGameMove {
     final placementPattern = RegExp(r'^[SC]?[a-z]\d+$');
     final stackPattern = RegExp(r'^\d?[a-z]\d+[<>+\-]\d*$');
 
-    return placementPattern.hasMatch(notation) || stackPattern.hasMatch(notation);
+    return placementPattern.hasMatch(notation) ||
+        stackPattern.hasMatch(notation);
   }
 
   Map<String, dynamic> toMap() => {
@@ -119,6 +128,7 @@ class OnlineGameSession {
   final int? chessClockSeconds;
   // Creator's chosen color (defaults to white)
   final PlayerColor creatorColor;
+  final BoardTheme boardTheme;
 
   const OnlineGameSession({
     required this.roomCode,
@@ -134,12 +144,14 @@ class OnlineGameSession {
     this.chessClockEnabled = false,
     this.chessClockSeconds,
     this.creatorColor = PlayerColor.white,
+    this.boardTheme = BoardTheme.classicWood,
   });
 
   bool get hasOpponent => white != null && black != null;
 
   Map<String, dynamic> toMap() {
     return {
+      'roomCode': roomCode,
       'white': white?.toMap(),
       'black': black?.toMap(),
       'boardSize': boardSize,
@@ -150,10 +162,12 @@ class OnlineGameSession {
       'chessClockEnabled': chessClockEnabled,
       'chessClockSeconds': chessClockSeconds,
       'creatorColor': creatorColor.name,
+      'boardTheme': boardTheme.name,
     };
   }
 
-  factory OnlineGameSession.fromSnapshot(String code, Map<String, dynamic> data) {
+  factory OnlineGameSession.fromSnapshot(
+      String code, Map<String, dynamic> data) {
     // Helper to safely convert Firestore maps (which can be Map<Object?, Object?> on web)
     // to Map<String, dynamic>
     Map<String, dynamic> toStringDynamicMap(dynamic map) {
@@ -187,6 +201,7 @@ class OnlineGameSession {
       chessClockEnabled: data['chessClockEnabled'] as bool? ?? false,
       chessClockSeconds: (data['chessClockSeconds'] as num?)?.toInt(),
       creatorColor: _colorFromString(data['creatorColor'] as String?),
+      boardTheme: boardThemeFromWire(data['boardTheme']),
     );
   }
 
@@ -203,6 +218,7 @@ class OnlineGameSession {
     bool? chessClockEnabled,
     int? chessClockSeconds,
     PlayerColor? creatorColor,
+    BoardTheme? boardTheme,
   }) {
     return OnlineGameSession(
       roomCode: roomCode,
@@ -218,6 +234,7 @@ class OnlineGameSession {
       chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
       chessClockSeconds: chessClockSeconds ?? this.chessClockSeconds,
       creatorColor: creatorColor ?? this.creatorColor,
+      boardTheme: boardTheme ?? this.boardTheme,
     );
   }
 }

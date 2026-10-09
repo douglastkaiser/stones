@@ -122,3 +122,54 @@ test('normal square room creation/join is unaffected', async () => {
   await assertSucceeds(updateDoc(doc(environment.authenticatedContext('guest').firestore(), 'games', 'ABCDEF'),
     {black: {id: 'guest', displayName: 'Guest'}, status: 'playing'}));
 });
+
+test('Hex shares seat cosmetics but joiners cannot replace opponent or bot styles', async () => {
+  await setDoc(ref('host'), {...base(), pieceStyles: {'0': 'morocco', '1': 'standard', '2': 'kyoto'}});
+  await assertFails(updateDoc(ref('guest'), {'owners.1': 'guest', 'pieceStyles.0': 'marble'}));
+  await assertFails(updateDoc(ref('guest'), {'owners.1': 'guest', 'pieceStyles.2': 'stone'}));
+  await assertFails(updateDoc(ref('guest'), {'owners.1': 'guest', 'pieceStyles.1': 'unknown'}));
+  await assertSucceeds(updateDoc(ref('guest'), {'owners.1': 'guest', 'pieceStyles.1': 'polishedMarble'}));
+  await assertFails(updateDoc(ref('guest'), {'pieceStyles.1': 'stone'}));
+  await assertFails(updateDoc(ref('host'), {'moves.0': placement(0), ply: 1, 'pieceStyles.1': 'stone'}));
+  await assertSucceeds(append('host', 0, placement(0)));
+});
+
+test('legacy Hex rooms accept a themed join with untouched default opponent styles', async () => {
+  await setDoc(ref('host'), base());
+  await assertFails(updateDoc(ref('guest'), {'owners.1': 'guest',
+    pieceStyles: {'0': 'morocco', '1': 'kyoto', '2': 'standard'}}));
+  await assertSucceeds(updateDoc(ref('guest'), {'owners.1': 'guest',
+    pieceStyles: {'0': 'standard', '1': 'kyoto', '2': 'standard'}}));
+  await assertSucceeds(append('host', 0, placement(0)));
+});
+
+test('square players can bring known styles; malformed styles are rejected', async () => {
+  const square = doc(environment.authenticatedContext('host').firestore(), 'games', 'ABCDEF');
+  const data = {roomCode: 'ABCDEF', white: {id: 'host', displayName: 'Host', pieceStyle: 'morocco'},
+    black: null, boardSize: 5, moves: [], currentTurn: 'white', status: 'waiting', winner: null};
+  await assertFails(setDoc(square, {...data, white: {...data.white, pieceStyle: 'unknown'}}));
+  await assertSucceeds(setDoc(square, data));
+  const guest = doc(environment.authenticatedContext('guest').firestore(), 'games', 'ABCDEF');
+  await assertFails(updateDoc(guest, {black: {id: 'guest', displayName: 'Guest', pieceStyle: 4}, status: 'playing'}));
+  await assertSucceeds(updateDoc(guest, {black: {id: 'guest', displayName: 'Guest', pieceStyle: 'kyoto'}, status: 'playing'}));
+});
+
+test('Hex host board survives joins and cannot be replaced by a guest or move', async () => {
+  await assertFails(setDoc(ref('host'), {...base(), boardTheme: 'unknown'}));
+  await setDoc(ref('host'), {...base(), boardTheme: 'morocco'});
+  await assertFails(updateDoc(ref('guest'), {'owners.1': 'guest', boardTheme: 'kyoto'}));
+  await assertSucceeds(updateDoc(ref('guest'), {'owners.1': 'guest'}));
+  await assertFails(updateDoc(ref('host'), {'moves.0': placement(0), ply: 1, boardTheme: 'marble'}));
+  await assertSucceeds(append('host', 0, placement(0)));
+});
+
+test('square host can choose either color and guest cannot replace the board', async () => {
+  const square = doc(environment.authenticatedContext('host').firestore(), 'games', 'ABCDEF');
+  await assertSucceeds(setDoc(square, {roomCode: 'ABCDEF', creatorColor: 'black', boardTheme: 'kyoto',
+    white: null, black: {id: 'host', displayName: 'Host', pieceStyle: 'morocco'},
+    boardSize: 5, moves: [], currentTurn: 'white', status: 'waiting', winner: null}));
+  const guest = doc(environment.authenticatedContext('guest').firestore(), 'games', 'ABCDEF');
+  await assertFails(updateDoc(guest, {white: {id: 'guest', displayName: 'Guest'}, status: 'playing', boardTheme: 'marble'}));
+  await assertSucceeds(updateDoc(guest, {white: {id: 'guest', displayName: 'Guest'}, status: 'playing'}));
+  await assertFails(updateDoc(guest, {moves: [{notation: 'a1', player: 'white'}], currentTurn: 'black', boardTheme: 'marble'}));
+});

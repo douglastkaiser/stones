@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/online_game_provider.dart';
+import '../providers/cosmetics_provider.dart';
 import 'hex_ai.dart';
 import 'hex_game.dart';
 import 'hex_room.dart';
@@ -316,5 +317,7 @@ final hexMatchProvider =
         if (user == null) throw StateError('Sign in to join a hex match');
         return user.uid;
       },
-      store: () => FirestoreHexRoomStore(FirebaseFirestore.instance));
+      store: () => FirestoreHexRoomStore(FirebaseFirestore.instance,
+          pieceStyle: ref.read(shareablePieceStyleProvider),
+          boardTheme: ref.read(shareableBoardThemeProvider)));
 });

@@ -10,7 +10,7 @@ The initial refresh fast-forwarded `main` to `b409e0273ca9d08d1b697513659cd93892
 The prior local formatting change in `android/app/google-services.json` was
 discarded at the user's request before pushing the rules audit commit.
 
-The opt-in three-player variant is isolated under `lib/hex/`; read
+The selectable three-player variant is isolated under `lib/hex/`; read
 [its rules and protocol contract](HEX_MODE.md) before changing it.
 
 The [playability audit](PLAYABILITY_AUDIT.md) records player-journey questions,
@@ -99,3 +99,20 @@ Two widget regressions exercise actual flings/taps (swipes require velocity),
 including safe screen disposal. Model fixtures cover published spreads and reject
 invalid moves without state/history changes. Online multi-client, deployment,
 Android device, and exhaustive tutorial playthrough checks remain separate work.
+
+### Theme and Hex learning iteration
+
+See [theme design](THEMES.md) for the five-set visual contract, saved-index
+migration and rendering repair. Hex learning is isolated in `lib/hex/`:
+`hex_exercises.dart` supplies tested positions and `hex_learning_screen.dart`
+handles previews, objectives, retry and independent progress. Both square and
+Hex use the same cosmetic painter factories; the gallery renders those factories
+rather than surrogate color swatches.
+
+Online cosmetic metadata lives in square `OnlineGamePlayer.pieceStyle` and
+Hex `HexRoom.pieceStyles`. `shareablePieceStyleProvider` validates the local
+selection against paired rewards before publishing. `match_theme_badge.dart`
+provides in-match inspection without awarding cosmetics. Square cell rendering
+uses an owner-color lookup for all stone/ghost/inspection paths; Hex receives
+the room's seat styles explicitly, leaving its learning sandbox independent.
+See THEMES.md for the wire compatibility and backend deployment requirements.

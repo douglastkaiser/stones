@@ -8,8 +8,8 @@ enum BoardTheme {
   classicWood,
   darkStone,
   marble,
-  minimalist,
-  pixelArt,
+  morocco,
+  kyoto,
 }
 
 /// Piece style types - each matches a board theme
@@ -17,8 +17,8 @@ enum PieceStyle {
   standard, // Matches Classic Wood
   stone, // Matches Dark Stone
   polishedMarble, // Matches Marble
-  minimalist, // Matches Minimalist
-  pixel, // Matches Pixel Art
+  morocco, // Glazed ceramic
+  kyoto, // Lacquer and bamboo
 }
 
 /// Board theme definition with colors and metadata
@@ -80,16 +80,16 @@ const List<BoardThemeData> boardThemes = [
     gridLine: Color(0xFF4E342E),
     gridLineShadow: Color(0xFF3E2723),
     gridLineHighlight: Color(0xFF8D6E63),
-    cellBackground: Color(0xFFD7CCC8),
-    cellBackgroundLight: Color(0xFFEFEBE9),
-    cellBackgroundDark: Color(0xFFBCAAA4),
-    woodGrainAccent: Color(0xFFC9B8A8),
+    cellBackground: Color(0xFFDAC8A5),
+    cellBackgroundLight: Color(0xFFEADCC0),
+    cellBackgroundDark: Color(0xFFBBA27A),
+    woodGrainAccent: Color(0xFF9A7750),
     placementSound: 'piece_place_wood',
   ),
   // Dark Stone - unlocks with "Strategist" (Beat Hard AI)
   BoardThemeData(
     theme: BoardTheme.darkStone,
-    name: 'Dark Stone',
+    name: 'Slate',
     description: 'Slate and granite board',
     requiredAchievement: AchievementType.strategist,
     frameOuter: Color(0xFF263238),
@@ -122,40 +122,40 @@ const List<BoardThemeData> boardThemes = [
     woodGrainAccent: Color(0xFFE8E8E8),
     placementSound: 'piece_place_marble',
   ),
-  // Minimalist - unlocks with "Student" (Complete all tutorials)
+  // Morocco - unlocks with "Student" (Complete all tutorials)
   BoardThemeData(
-    theme: BoardTheme.minimalist,
-    name: 'Minimalist',
-    description: 'Clean, modern design',
+    theme: BoardTheme.morocco,
+    name: 'Morocco',
+    description: 'Zellige tiles, cedar and brass',
     requiredAchievement: AchievementType.student,
-    frameOuter: Color(0xFF212121),
-    frameInner: Color(0xFF424242),
-    background: Color(0xFF303030),
-    gridLine: Color(0xFF1A1A1A),
-    gridLineShadow: Color(0xFF0D0D0D),
-    gridLineHighlight: Color(0xFF505050),
-    cellBackground: Color(0xFFFAFAFA),
-    cellBackgroundLight: Color(0xFFFFFFFF),
-    cellBackgroundDark: Color(0xFFF0F0F0),
-    woodGrainAccent: Color(0xFFF5F5F5),
+    frameOuter: Color(0xFF164E50),
+    frameInner: Color(0xFFB98946),
+    background: Color(0xFF246568),
+    gridLine: Color(0xFF164E50),
+    gridLineShadow: Color(0xFF12393C),
+    gridLineHighlight: Color(0xFFDEC498),
+    cellBackground: Color(0xFFE7D9BA),
+    cellBackgroundLight: Color(0xFFF4EBD7),
+    cellBackgroundDark: Color(0xFFCDBE9C),
+    woodGrainAccent: Color(0xFF2B7778),
     placementSound: 'piece_place_minimal',
   ),
-  // Pixel Art - unlocks with "Veteran" (Win 50 games)
+  // Kyoto - unlocks with "Veteran" (Win 50 games)
   BoardThemeData(
-    theme: BoardTheme.pixelArt,
-    name: 'Pixel Art',
-    description: 'Retro pixel aesthetic',
+    theme: BoardTheme.kyoto,
+    name: 'Kyoto',
+    description: 'Bamboo, indigo and lacquer',
     requiredAchievement: AchievementType.veteran,
-    frameOuter: Color(0xFF1A1C2C),
-    frameInner: Color(0xFF5D275D),
-    background: Color(0xFFB13E53),
-    gridLine: Color(0xFF0D0D0D),
-    gridLineShadow: Color(0xFF000000),
-    gridLineHighlight: Color(0xFFEF7D57),
-    cellBackground: Color(0xFFFFCD75),
-    cellBackgroundLight: Color(0xFFF4F4F4),
-    cellBackgroundDark: Color(0xFFA7F070),
-    woodGrainAccent: Color(0xFF38B764),
+    frameOuter: Color(0xFF202E49),
+    frameInner: Color(0xFF8D6947),
+    background: Color(0xFF364764),
+    gridLine: Color(0xFF162238),
+    gridLineShadow: Color(0xFF10192B),
+    gridLineHighlight: Color(0xFFCFB485),
+    cellBackground: Color(0xFFD5C6A0),
+    cellBackgroundLight: Color(0xFFE5D8BA),
+    cellBackgroundDark: Color(0xFFBCAD89),
+    woodGrainAccent: Color(0xFF957A50),
     placementSound: 'piece_place_pixel',
   ),
 ];
@@ -218,17 +218,17 @@ class PieceStyleData {
 
   /// Light player piece colors
   PieceColors get lightPlayerColors => PieceColors(
-    primary: lightPrimary,
-    secondary: lightSecondary,
-    border: lightBorder,
-  );
+        primary: lightPrimary,
+        secondary: lightSecondary,
+        border: lightBorder,
+      );
 
   /// Dark player piece colors
   PieceColors get darkPlayerColors => PieceColors(
-    primary: darkPrimary,
-    secondary: darkSecondary,
-    border: darkBorder,
-  );
+        primary: darkPrimary,
+        secondary: darkSecondary,
+        border: darkBorder,
+      );
 }
 
 /// All piece styles - each matches a board theme
@@ -268,38 +268,47 @@ const List<PieceStyleData> pieceStyles = [
     requiredAchievement: AchievementType.puzzleSolver,
     lightPrimary: Color(0xFFFFFBF0),
     lightSecondary: Color(0xFFEEE8DD),
-    lightBorder: Color(0xFFB8A898),
+    lightBorder: Color(0xFF78654F),
     darkPrimary: Color(0xFF2A3540),
     darkSecondary: Color(0xFF3A4550),
     darkBorder: Color(0xFF5A6570),
     stackMoveSound: 'stack_move_marble',
   ),
-  // Minimalist - matches Minimalist board, unlocks with "First Steps"
+  // Morocco - matches Morocco board, unlocks with "First Steps"
   PieceStyleData(
-    style: PieceStyle.minimalist,
-    name: 'Minimalist',
-    description: 'Clean geometric pieces',
+    style: PieceStyle.morocco,
+    name: 'Morocco',
+    description: 'Ivory and teal glazed ceramic',
     requiredAchievement: AchievementType.firstSteps,
-    lightPrimary: Color(0xFFFAFAFA),
-    lightSecondary: Color(0xFFE0E0E0),
-    lightBorder: Color(0xFF9E9E9E),
-    darkPrimary: Color(0xFF212121),
-    darkSecondary: Color(0xFF424242),
-    darkBorder: Color(0xFF616161),
+    lightPrimary: Color(0xFFFFF1D7),
+    lightSecondary: Color(0xFFE7CDA4),
+    lightBorder: Color(0xFF886333),
+    darkPrimary: Color(0xFF16777A),
+    darkSecondary: Color(0xFF164A52),
+    darkBorder: Color(0xFF092F36),
     stackMoveSound: 'stack_move_minimal',
   ),
-  // Pixel - matches Pixel Art board, unlocks with "Competitor"
+  // Kyoto - matches Kyoto board, unlocks with "Competitor"
   PieceStyleData(
-    style: PieceStyle.pixel,
-    name: 'Pixel Art',
-    description: 'Retro 8-bit pieces',
+    style: PieceStyle.kyoto,
+    name: 'Kyoto',
+    description: 'Cream and indigo lacquer',
     requiredAchievement: AchievementType.competitor,
-    lightPrimary: Color(0xFFFFCD75),
-    lightSecondary: Color(0xFFEF7D57),
-    lightBorder: Color(0xFFB13E53),
-    darkPrimary: Color(0xFF38B764),
-    darkSecondary: Color(0xFF257953),
-    darkBorder: Color(0xFF0D2B45),
+    lightPrimary: Color(0xFFFFF4DD),
+    lightSecondary: Color(0xFFD9C9A4),
+    lightBorder: Color(0xFF826F4D),
+    darkPrimary: Color(0xFF293F67),
+    darkSecondary: Color(0xFF162743),
+    darkBorder: Color(0xFF9DABC5),
     stackMoveSound: 'stack_move_pixel',
   ),
 ];
+
+/// Unknown or legacy wire names fall back to the base set.
+PieceStyle pieceStyleFromWire(Object? value) =>
+    PieceStyle.values.where((style) => style.name == value).firstOrNull ??
+    PieceStyle.standard;
+
+BoardTheme boardThemeFromWire(Object? value) =>
+    BoardTheme.values.where((theme) => theme.name == value).firstOrNull ??
+    BoardTheme.classicWood;

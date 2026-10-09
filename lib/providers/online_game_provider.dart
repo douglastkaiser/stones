@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math';
@@ -13,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../firebase_options.dart';
 import '../models/models.dart';
 import 'chess_clock_provider.dart';
+import 'cosmetics_provider.dart';
 import 'elo_provider.dart';
 import 'game_provider.dart';
 import 'game_session_provider.dart';
@@ -94,8 +94,11 @@ class OnlineGameState {
   });
 
   bool get isLocalTurn {
-    final result = session != null && localColor != null && session!.currentTurn == localColor;
-    _debugLog('isLocalTurn check: session=${session != null}, localColor=$localColor, '
+    final result = session != null &&
+        localColor != null &&
+        session!.currentTurn == localColor;
+    _debugLog(
+        'isLocalTurn check: session=${session != null}, localColor=$localColor, '
         'sessionTurn=${session?.currentTurn}, result=$result');
     return result;
   }
@@ -188,17 +191,18 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             androidProvider: kDebugMode
                 ? AndroidProvider.debug
                 : AndroidProvider.playIntegrity,
-            appleProvider: kDebugMode
-                ? AppleProvider.debug
-                : AppleProvider.appAttest,
-            webProvider: ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
+            appleProvider:
+                kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+            webProvider:
+                ReCaptchaV3Provider('6LcddkcsAAAAAOg3-0rrUshkC6Tjk6VxzrBbK7YC'),
           );
           _appCheckActivated = true;
           _debugLog('initialize: Firebase App Check activated successfully');
         } catch (appCheckError) {
           // App Check activation might fail if already activated or other issues
           // Log but don't fail - App Check is for abuse prevention, not critical
-          _debugLog('initialize: App Check activation error (non-fatal): $appCheckError');
+          _debugLog(
+              'initialize: App Check activation error (non-fatal): $appCheckError');
           _appCheckActivated = true; // Mark as activated to avoid retrying
         }
       } else {
@@ -223,13 +227,16 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     int? chessClockSeconds,
     PlayerColor creatorColor = PlayerColor.white,
   }) async {
-    _debugLog('createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
-    _debugLog('createGame: state.errorMessage=${state.errorMessage}, state.initializing=${state.initializing}');
+    _debugLog(
+        'createGame() called with boardSize=$boardSize, creatorColor=$creatorColor');
+    _debugLog(
+        'createGame: state.errorMessage=${state.errorMessage}, state.initializing=${state.initializing}');
     await initialize();
 
     // Check if initialize() failed
     if (state.errorMessage != null) {
-      _debugLog('createGame: initialize() failed with error: ${state.errorMessage}');
+      _debugLog(
+          'createGame: initialize() failed with error: ${state.errorMessage}');
       return;
     }
 
@@ -258,6 +265,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         chessClockEnabled: chessClockEnabled,
         chessClockSeconds: chessClockSeconds,
         creatorColor: creatorColor,
+        boardTheme: _ref.read(shareableBoardThemeProvider),
       );
 
       // Create with both createdAt and lastMoveAt fields
@@ -308,8 +316,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
 
     try {
-      final user = FirebaseAuth.instance.currentUser ??
-          (await _ensureAuth(force: true));
+      final user =
+          FirebaseAuth.instance.currentUser ?? (await _ensureAuth(force: true));
       if (user == null) {
         throw Exception('Unable to sign in. Please try again.');
       }
@@ -326,10 +334,20 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         final data = snapshot.data();
         if (data == null) throw Exception('Game data missing.');
         final existing = OnlineGameSession.fromSnapshot(code, data);
-        _debugLog('Found game: boardSize=${existing.boardSize}, moves=${existing.moves.length}, currentTurn=${existing.currentTurn}, creatorColor=${existing.creatorColor}');
+        _debugLog(
+            'Found game: boardSize=${existing.boardSize}, moves=${existing.moves.length}, currentTurn=${existing.currentTurn}, creatorColor=${existing.creatorColor}');
 
         if (existing.status == OnlineStatus.finished) {
           throw Exception('This game has already ended.');
+        }
+
+        // Reconnect without rewriting either participant's match cosmetics.
+        if (existing.white?.id == user.uid || existing.black?.id == user.uid) {
+          joinerColor = existing.white?.id == user.uid
+              ? PlayerColor.white
+              : PlayerColor.black;
+          joinedSession = existing;
+          return;
         }
 
         // Determine joiner's color (opposite of creator's color)
@@ -338,7 +356,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             : PlayerColor.white;
 
         // Check if the slot for joiner's color is available
-        final joinerPlayer = _playerFor(user);
+        final joinerPlayer = (joinerColor == PlayerColor.white
+                ? existing.white
+                : existing.black) ??
+            _playerFor(user);
         if (joinerColor == PlayerColor.white) {
           if (existing.white != null && existing.white!.id != user.uid) {
             throw Exception('Game already has two players.');
@@ -385,19 +406,25 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         localColor: joinerColor,
         appliedMoveCount: 0, // Will be updated by _syncMovesWithLocalGame
       );
-      _debugLog('>>> JOINER: State set: localColor=$joinerColor, roomCode=$code <<<');
-      _debugLog('>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
+      _debugLog(
+          '>>> JOINER: State set: localColor=$joinerColor, roomCode=$code <<<');
+      _debugLog(
+          '>>> JOINER: session.moves=${joinedSession!.moves.length}, session.currentTurn=${joinedSession!.currentTurn} <<<');
 
       _debugLog('>>> JOINER: About to call _beginLocalGame <<<');
       _beginLocalGame(joinedSession!.boardSize, session: joinedSession);
-      _debugLog('>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
+      _debugLog(
+          '>>> JOINER: Local game initialized with boardSize=${joinedSession!.boardSize} <<<');
 
       // Log the final state after joining
       final finalLocalState = _ref.read(gameStateProvider);
       _debugLog('>>> JOINER FINAL STATE <<<');
-      _debugLog('gameStateProvider: currentPlayer=${finalLocalState.currentPlayer}, turnNumber=${finalLocalState.turnNumber}');
-      _debugLog('gameStateProvider: board.occupiedPositions=${finalLocalState.board.occupiedPositions.length}');
-      _debugLog('onlineGameState: session.moves=${state.session?.moves.length}, appliedMoveCount=${state.appliedMoveCount}');
+      _debugLog(
+          'gameStateProvider: currentPlayer=${finalLocalState.currentPlayer}, turnNumber=${finalLocalState.turnNumber}');
+      _debugLog(
+          'gameStateProvider: board.occupiedPositions=${finalLocalState.board.occupiedPositions.length}');
+      _debugLog(
+          'onlineGameState: session.moves=${state.session?.moves.length}, appliedMoveCount=${state.appliedMoveCount}');
     } catch (e) {
       _debugLog('joinGame error: $e');
       state = state.copyWith(errorMessage: _sanitizeErrorMessage(e));
@@ -414,10 +441,12 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   Future<void> recordLocalMove(MoveRecord move, GameState latestState) async {
-    _debugLog('recordLocalMove() called: notation=${move.notation}, player=${move.player}');
+    _debugLog(
+        'recordLocalMove() called: notation=${move.notation}, player=${move.player}');
     final activeSession = state.session;
     if (activeSession == null || state.localColor == null) {
-      _debugLog('recordLocalMove: ABORT - session=${activeSession != null}, localColor=${state.localColor}');
+      _debugLog(
+          'recordLocalMove: ABORT - session=${activeSession != null}, localColor=${state.localColor}');
       return;
     }
 
@@ -433,7 +462,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
                 ? OnlineWinner.white.name
                 : OnlineWinner.black.name;
 
-    _debugLog('recordLocalMove: Writing to Firestore - nextTurn=${latestState.currentPlayer.name}, status=$nextStatus');
+    _debugLog(
+        'recordLocalMove: Writing to Firestore - nextTurn=${latestState.currentPlayer.name}, status=$nextStatus');
     await _firestore.runTransaction((txn) async {
       final snapshot = await txn.get(docRef);
       if (!snapshot.exists) return;
@@ -463,14 +493,16 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         'lastMoveAt': FieldValue.serverTimestamp(),
       };
 
-      _debugLog('recordLocalMove: Firestore update data: moves=${moves.length}, currentTurn=${updateData['currentTurn']}, status=${updateData['status']}');
+      _debugLog(
+          'recordLocalMove: Firestore update data: moves=${moves.length}, currentTurn=${updateData['currentTurn']}, status=${updateData['status']}');
       _debugLog('recordLocalMove: New move: $newMoveMap');
 
       txn.update(docRef, updateData);
     });
 
     final newCount = state.appliedMoveCount + 1;
-    _debugLog('recordLocalMove: Transaction complete, appliedMoveCount: ${state.appliedMoveCount} -> $newCount');
+    _debugLog(
+        'recordLocalMove: Transaction complete, appliedMoveCount: ${state.appliedMoveCount} -> $newCount');
     state = state.copyWith(appliedMoveCount: newCount);
   }
 
@@ -503,8 +535,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _beginLocalGame(activeSession.boardSize, session: activeSession);
   }
 
-  Future<void> _listenToRoom(String roomCode, {required PlayerColor localColor}) async {
-    _debugLog('_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
+  Future<void> _listenToRoom(String roomCode,
+      {required PlayerColor localColor}) async {
+    _debugLog(
+        '_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
     await _subscription?.cancel();
 
     final docRef = _firestore.collection('games').doc(roomCode);
@@ -512,7 +546,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     _subscription = docRef.snapshots().listen((snapshot) {
       _debugLog('>>> FIRESTORE SNAPSHOT RECEIVED <<<');
-      _debugLog('>>> connectionState: exists=${snapshot.exists}, metadata.isFromCache=${snapshot.metadata.isFromCache}, metadata.hasPendingWrites=${snapshot.metadata.hasPendingWrites} <<<');
+      _debugLog(
+          '>>> connectionState: exists=${snapshot.exists}, metadata.isFromCache=${snapshot.metadata.isFromCache}, metadata.hasPendingWrites=${snapshot.metadata.hasPendingWrites} <<<');
 
       final data = snapshot.data();
       if (data == null) {
@@ -533,7 +568,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       OnlineGameSession session;
       try {
         session = OnlineGameSession.fromSnapshot(roomCode, data);
-        _debugLog('Deserialization SUCCESS: moves=${session.moves.length}, currentTurn=${session.currentTurn}');
+        _debugLog(
+            'Deserialization SUCCESS: moves=${session.moves.length}, currentTurn=${session.currentTurn}');
       } catch (e, stackTrace) {
         _debugLog('!!! DESERIALIZATION ERROR !!!');
         _debugLog('Error: $e');
@@ -543,9 +579,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       }
       final previousSession = state.session;
 
-      _debugLog('Snapshot data: moves=${session.moves.length}, currentTurn=${session.currentTurn}, '
+      _debugLog(
+          'Snapshot data: moves=${session.moves.length}, currentTurn=${session.currentTurn}, '
           'status=${session.status}, white=${session.white?.displayName}, black=${session.black?.displayName}');
-      _debugLog('Previous state: appliedMoveCount=${state.appliedMoveCount}, session=${previousSession != null}');
+      _debugLog(
+          'Previous state: appliedMoveCount=${state.appliedMoveCount}, session=${previousSession != null}');
 
       // Detect opponent join (for sound trigger)
       final opponentJustJoined = previousSession != null &&
@@ -562,7 +600,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       if (opponentJustMoved) _debugLog('EVENT: Opponent just moved!');
 
       // Check activity status (2 minutes = inactive, 60 seconds = disconnected warning)
-      final (opponentInactive, opponentDisconnected) = _checkOpponentActivity(session);
+      final (opponentInactive, opponentDisconnected) =
+          _checkOpponentActivity(session);
 
       _debugLog('Updating state with session, localColor=$localColor');
       state = state.copyWith(
@@ -581,7 +620,9 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       _debugLog('!!! FIRESTORE LISTENER ERROR !!!');
       _debugLog('Error: $error');
       _debugLog('Stack trace: $stackTrace');
-      state = state.copyWith(errorMessage: 'Connection error. Please check your internet connection.');
+      state = state.copyWith(
+          errorMessage:
+              'Connection error. Please check your internet connection.');
     });
     _debugLog('Firestore listener setup complete');
   }
@@ -638,7 +679,11 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     // Include ELO rating if available
     final eloState = _ref.read(eloProvider);
     final rating = eloState.localPlayerRating?.rating;
-    return OnlineGamePlayer(id: user.uid, displayName: displayName, rating: rating);
+    return OnlineGamePlayer(
+        id: user.uid,
+        displayName: displayName,
+        rating: rating,
+        pieceStyle: _ref.read(shareablePieceStyleProvider));
   }
 
   String _generateRoomCode() {
@@ -648,7 +693,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   }
 
   void _beginLocalGame(int boardSize, {OnlineGameSession? session}) {
-    _debugLog('_beginLocalGame: Starting new local game with boardSize=$boardSize');
+    _debugLog(
+        '_beginLocalGame: Starting new local game with boardSize=$boardSize');
     final currentSession = _ref.read(gameSessionProvider);
 
     // Use chess clock settings from the online session if available (synced from creator)
@@ -672,40 +718,48 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             boardSize,
             secondsOverride: clockSeconds,
           );
-      _debugLog('_beginLocalGame: Chess clock enabled with ${clockSeconds ?? 'default'} seconds');
+      _debugLog(
+          '_beginLocalGame: Chess clock enabled with ${clockSeconds ?? 'default'} seconds');
     } else {
       _ref.read(chessClockProvider.notifier).stop();
     }
-    _debugLog('_beginLocalGame: Local game initialized, gameSessionProvider mode=online');
+    _debugLog(
+        '_beginLocalGame: Local game initialized, gameSessionProvider mode=online');
   }
 
   void _syncMovesWithLocalGame(OnlineGameSession session) {
     final applied = state.appliedMoveCount;
     _debugLog('>>> _syncMovesWithLocalGame START <<<');
-    _debugLog('session.moves.length=${session.moves.length}, appliedMoveCount=$applied');
+    _debugLog(
+        'session.moves.length=${session.moves.length}, appliedMoveCount=$applied');
 
     // Log the LOCAL game state BEFORE sync
     final localStateBefore = _ref.read(gameStateProvider);
-    _debugLog('LOCAL STATE BEFORE SYNC: currentPlayer=${localStateBefore.currentPlayer}, '
+    _debugLog(
+        'LOCAL STATE BEFORE SYNC: currentPlayer=${localStateBefore.currentPlayer}, '
         'turnNumber=${localStateBefore.turnNumber}, '
         'occupiedCells=${localStateBefore.board.occupiedPositions.length}');
 
     if (session.moves.length < applied) {
-      _debugLog('_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
+      _debugLog(
+          '_syncMovesWithLocalGame: Moves decreased! Resetting local game.');
       _beginLocalGame(session.boardSize, session: session);
       state = state.copyWith(appliedMoveCount: 0);
     }
 
     if (session.moves.length == state.appliedMoveCount) {
-      _debugLog('_syncMovesWithLocalGame: No new moves to apply (${session.moves.length} == ${state.appliedMoveCount})');
+      _debugLog(
+          '_syncMovesWithLocalGame: No new moves to apply (${session.moves.length} == ${state.appliedMoveCount})');
       _debugLog('>>> _syncMovesWithLocalGame END (no changes) <<<');
       return;
     }
 
-    _debugLog('>>> APPLYING ${session.moves.length - state.appliedMoveCount} NEW MOVES <<<');
+    _debugLog(
+        '>>> APPLYING ${session.moves.length - state.appliedMoveCount} NEW MOVES <<<');
     for (var i = state.appliedMoveCount; i < session.moves.length; i++) {
       final move = session.moves[i];
-      _debugLog('Applying move $i: notation="${move.notation}", player=${move.player}');
+      _debugLog(
+          'Applying move $i: notation="${move.notation}", player=${move.player}');
       final success = _applyNotation(move);
       if (!success) {
         _debugLog('!!! FAILED to apply move ${move.notation} !!!');
@@ -719,7 +773,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
     // Log the LOCAL game state AFTER sync
     final localStateAfter = _ref.read(gameStateProvider);
-    _debugLog('LOCAL STATE AFTER SYNC: currentPlayer=${localStateAfter.currentPlayer}, '
+    _debugLog(
+        'LOCAL STATE AFTER SYNC: currentPlayer=${localStateAfter.currentPlayer}, '
         'turnNumber=${localStateAfter.turnNumber}, '
         'occupiedCells=${localStateAfter.board.occupiedPositions.length}');
 
@@ -741,7 +796,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     final gameNotifier = _ref.read(gameStateProvider.notifier);
     final currentGameState = _ref.read(gameStateProvider);
 
-    _debugLog('_applyNotation: notation=$notation, currentPlayer=${currentGameState.currentPlayer}, '
+    _debugLog(
+        '_applyNotation: notation=$notation, currentPlayer=${currentGameState.currentPlayer}, '
         'turnNumber=${currentGameState.turnNumber}, phase=${currentGameState.phase}');
 
     final placement = RegExp(r'^(S|C)?([a-z])(\d+)$');
@@ -782,7 +838,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
       final from = _positionFromNotation(col, row, boardSize);
       final direction = _directionFromSymbol(dirSymbol);
-      _debugLog('_applyNotation: Moving stack from $from, direction=$direction, drops=$drops');
+      _debugLog(
+          '_applyNotation: Moving stack from $from, direction=$direction, drops=$drops');
       final success = gameNotifier.moveStack(from, direction, drops);
       _debugLog('_applyNotation: moveStack result=$success');
       if (success) {

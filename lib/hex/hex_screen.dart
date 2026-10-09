@@ -6,12 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/piece.dart' show PieceType;
+import '../models/cosmetics.dart';
+import '../providers/cosmetics_provider.dart';
+import '../widgets/match_theme_badge.dart';
 import 'hex_game.dart';
+import 'hex_board.dart';
+import 'hex_learning_screen.dart';
+export 'hex_board.dart';
 import 'hex_match_provider.dart';
 import 'hex_room.dart';
-
-const _seatColors = [Color(0xFFFFE3A0), Color(0xFF607D8B), Color(0xFFE68B54)];
-const _symbols = ['I', 'Ch', 'Cu'];
 
 const hexRulesText =
     '''Each color connects its own pair of matching edge markers. Only exposed flats and capstones connect roads. Cells touch along six edges.
@@ -95,6 +98,12 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
           const SizedBox(height: 8),
           const Text(
               'Experimental hex variant. Each player connects their own matching edges. Choose any mix of human and AI seats. Matches do not award square-game achievements or ratings.'),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+              onPressed: () => Navigator.push<void>(context,
+                  MaterialPageRoute(builder: (_) => const HexLearningScreen())),
+              icon: const Icon(Icons.school_outlined),
+              label: const Text('Hex tutorials & puzzles')),
           const SizedBox(height: 24),
           const Text('Board size'),
           Wrap(spacing: 8, children: [
@@ -320,10 +329,19 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                         spacing: 8,
                         runSpacing: 4,
                         children: HexSeat.values
-                            .map((seat) => Chip(
+                            .map((seat) => ActionChip(
+                                  tooltip:
+                                      '${seat.label} · ${BoardThemeData.forTheme(BoardTheme.values[(match.room?.pieceStyles[seat.index] ?? ref.watch(cosmeticsProvider).selectedPieceStyle).index]).name} pieces. Tap to preview and see unlock requirements.',
+                                  onPressed: () => showPieceThemePreview(
+                                      context,
+                                      match.room?.pieceStyles[seat.index] ??
+                                          ref
+                                              .read(cosmeticsProvider)
+                                              .selectedPieceStyle),
                                   avatar: CircleAvatar(
-                                      backgroundColor: _seatColors[seat.index],
-                                      child: Text(_symbols[seat.index],
+                                      backgroundColor:
+                                          hexSeatColors[seat.index],
+                                      child: Text(hexSeatSymbols[seat.index],
                                           style: const TextStyle(
                                               color: Colors.black,
                                               fontSize: 11))),
@@ -362,6 +380,10 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                       child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: HexBoard(
+                              turnSeat: game.current,
+                              pieceStyles: match.room?.pieceStyles,
+                              boardTheme: match.room?.boardTheme,
+                              preview: _planned != null,
                               game: preview ?? game,
                               selected: _source,
                               destinations: spreads.map(_destination).toSet(),
@@ -439,7 +461,8 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                                 runSpacing: 4,
                                 children: _choices
                                     .map((move) => ChoiceChip(
-                                          label: Text(move.drops.join(' → ')),
+                                          label: Text(
+                                              'Drop ${move.drops.join(' → ')}'),
                                           selected: identical(move, _planned),
                                           onSelected: (_) =>
                                               setState(() => _planned = move),
@@ -486,217 +509,4 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
     if (match.room?.owners[seat.index] == null) return 'Open seat';
     return 'Remote human';
   }
-}
-
-/// Pointy-top axial geometry, shared by painting and hit-testing. Hex-shaped
-/// hit areas avoid selecting a neighboring cell through a bounding-box corner.
-class HexBoardGeometry {
-  HexBoardGeometry(this.size, this.radius)
-      : unit = math.min(size.width / (math.sqrt(3) * (2 * radius + 1) + 1),
-            size.height / (3 * radius + 3));
-  final Size size;
-  final int radius;
-  final double unit;
-  Offset center(HexCell cell) => Offset(
-      size.width / 2 + unit * math.sqrt(3) * (cell.q + cell.r / 2),
-      size.height / 2 + unit * 1.5 * cell.r);
-  Path polygon(HexCell cell) {
-    final origin = center(cell);
-    final path = Path();
-    for (var i = 0; i < 6; i++) {
-      final angle = (60 * i - 30) * math.pi / 180;
-      final point =
-          origin + Offset(math.cos(angle), math.sin(angle)) * (unit * 0.94);
-      if (i == 0) {
-        path.moveTo(point.dx, point.dy);
-      } else {
-        path.lineTo(point.dx, point.dy);
-      }
-    }
-    return path..close();
-  }
-
-  HexCell? hit(Offset point, Iterable<HexCell> cells) {
-    for (final cell in cells) {
-      if (polygon(cell).contains(point)) return cell;
-    }
-    return null;
-  }
-}
-
-class HexBoard extends StatelessWidget {
-  const HexBoard(
-      {super.key,
-      required this.game,
-      this.selected,
-      this.destinations = const {},
-      this.road = const {},
-      this.onCell});
-  final HexGame game;
-  final HexCell? selected;
-  final Set<HexCell> destinations;
-  final Set<HexCell> road;
-  final ValueChanged<HexCell>? onCell;
-  @override
-  Widget build(BuildContext context) =>
-      LayoutBuilder(builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final geometry = HexBoardGeometry(size, game.radius);
-        return Semantics(
-          label:
-              'Hex board, ${game.cells.length} cells. ${game.current.label} to play.',
-          child: Stack(children: [
-            CustomPaint(
-                size: size,
-                painter:
-                    _HexPainter(game, geometry, selected, destinations, road)),
-            for (final cell in game.cells)
-              Positioned(
-                left: geometry.center(cell).dx - geometry.unit,
-                top: geometry.center(cell).dy - geometry.unit,
-                width: geometry.unit * 2,
-                height: geometry.unit * 2,
-                child: ClipPath(
-                  clipper: _CellClipper(geometry, cell),
-                  child: Semantics(
-                    label:
-                        'Cell ${cell.q}, ${cell.r}, ${game.stackAt(cell).isEmpty ? 'empty' : '${game.stackAt(cell).last.seat.label} ${game.stackAt(cell).last.type.name}, ${game.stackAt(cell).length} pieces'}',
-                    button: true,
-                    enabled: onCell != null,
-                    selected: selected == cell,
-                    child: Material(
-                        type: MaterialType.transparency,
-                        child: InkWell(
-                            onTap: onCell == null ? null : () => onCell!(cell),
-                            child: const SizedBox.expand())),
-                  ),
-                ),
-              ),
-          ]),
-        );
-      });
-}
-
-class _CellClipper extends CustomClipper<Path> {
-  const _CellClipper(this.geometry, this.cell);
-  final HexBoardGeometry geometry;
-  final HexCell cell;
-  @override
-  Path getClip(Size size) => geometry
-      .polygon(cell)
-      .shift(-geometry.center(cell) + Offset(geometry.unit, geometry.unit));
-  @override
-  bool shouldReclip(_CellClipper oldClipper) =>
-      oldClipper.geometry != geometry || oldClipper.cell != cell;
-}
-
-class _HexPainter extends CustomPainter {
-  _HexPainter(
-      this.game, this.geometry, this.selected, this.destinations, this.road);
-  final HexGame game;
-  final HexBoardGeometry geometry;
-  final HexCell? selected;
-  final Set<HexCell> destinations;
-  final Set<HexCell> road;
-  void _text(
-      Canvas canvas, String value, Offset position, double size, Color color) {
-    final text = TextPainter(
-        text: TextSpan(
-            text: value,
-            style: TextStyle(
-                fontSize: size, fontWeight: FontWeight.bold, color: color)),
-        textDirection: TextDirection.ltr)
-      ..layout();
-    text.paint(canvas, position - Offset(text.width / 2, text.height / 2));
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final unit = geometry.unit;
-    for (final cell in game.cells) {
-      final center = geometry.center(cell);
-      final polygon = geometry.polygon(cell);
-      canvas.drawPath(polygon, Paint()..color = const Color(0xFFAD855F));
-      canvas.drawPath(
-          polygon,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1
-            ..color = const Color(0xFF50392A));
-      for (final direction in HexDirection.values) {
-        final neighbor = cell.step(direction);
-        if (neighbor.inside(game.radius)) continue;
-        final sides = HexSeat.values
-            .where((seat) => seat.axis(neighbor).abs() > game.radius)
-            .toList();
-        final angle = -direction.index * math.pi / 3;
-        final a = center +
-            Offset(math.cos(angle - math.pi / 6),
-                    math.sin(angle - math.pi / 6)) *
-                (unit * 0.94);
-        final b = center +
-            Offset(math.cos(angle + math.pi / 6),
-                    math.sin(angle + math.pi / 6)) *
-                (unit * 0.94);
-        for (var i = 0; i < sides.length; i++) {
-          canvas.drawLine(
-              Offset.lerp(a, b, i / sides.length)!,
-              Offset.lerp(a, b, (i + 1) / sides.length)!,
-              Paint()
-                ..strokeWidth = math.max(3, unit * 0.12)
-                ..color = _seatColors[sides[i].index]);
-        }
-      }
-      if (selected == cell ||
-          destinations.contains(cell) ||
-          road.contains(cell)) {
-        canvas.drawPath(
-            polygon,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 3
-              ..color = road.contains(cell)
-                  ? Colors.yellowAccent
-                  : Colors.cyanAccent);
-      }
-      final stack = game.stackAt(cell);
-      if (stack.isNotEmpty) {
-        final top = stack.last;
-        final paint = Paint()..color = _seatColors[top.seat.index];
-        if (top.type == PieceType.standing) {
-          canvas.drawRRect(
-              RRect.fromRectAndRadius(
-                  Rect.fromCenter(
-                      center: center, width: unit * 0.8, height: unit * 0.35),
-                  Radius.circular(unit * 0.08)),
-              paint);
-        } else {
-          canvas.drawCircle(center,
-              unit * (top.type == PieceType.capstone ? 0.5 : 0.4), paint);
-          if (top.type == PieceType.capstone) {
-            canvas.drawCircle(
-                center,
-                unit * 0.5,
-                Paint()
-                  ..style = PaintingStyle.stroke
-                  ..strokeWidth = 3
-                  ..color = Colors.white);
-          }
-        }
-        _text(
-            canvas,
-            '${top.type == PieceType.capstone ? '▲' : ''}${_symbols[top.seat.index]}',
-            center,
-            unit * 0.3,
-            Colors.black);
-        if (stack.length > 1) {
-          _text(canvas, '${stack.length}', center + Offset(0, unit * 0.62),
-              unit * 0.25, Colors.white);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _HexPainter old) => true;
 }

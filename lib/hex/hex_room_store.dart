@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 
 import 'hex_game.dart';
+import '../models/cosmetics.dart';
 import 'hex_room.dart';
 
 abstract class HexRoomStore {
@@ -15,7 +16,11 @@ abstract class HexRoomStore {
 }
 
 class FirestoreHexRoomStore implements HexRoomStore {
-  FirestoreHexRoomStore(this.firestore);
+  FirestoreHexRoomStore(this.firestore,
+      {this.pieceStyle = PieceStyle.standard,
+      this.boardTheme = BoardTheme.classicWood});
+  final BoardTheme boardTheme;
+  final PieceStyle pieceStyle;
   final FirebaseFirestore firestore;
   DocumentReference<Map<String, dynamic>> _room(String code) =>
       firestore.collection('hexGames').doc(code);
@@ -33,6 +38,12 @@ class FirestoreHexRoomStore implements HexRoomStore {
           radius: radius,
           kinds: kinds,
           starter: starter,
+          boardTheme: boardTheme,
+          pieceStyles: kinds
+              .map((kind) => kind == HexSeatKind.remoteHuman
+                  ? PieceStyle.standard
+                  : pieceStyle)
+              .toList(),
           owners: kinds
               .map((kind) => kind == HexSeatKind.localHuman ? uid : null)
               .toList());
@@ -59,9 +70,12 @@ class FirestoreHexRoomStore implements HexRoomStore {
           final room = HexRoom.fromMap(snapshot.data()!);
           ownersBefore = room.owners;
           room.replay();
-          final joined = room.join(uid);
+          final joined = room.join(uid, pieceStyle: pieceStyle);
           if (!identical(joined, room)) {
-            transaction.update(doc, {'owners': joined.toMap()['owners']});
+            transaction.update(doc, {
+              'owners': joined.toMap()['owners'],
+              'pieceStyles': joined.toMap()['pieceStyles'],
+            });
           }
           return joined;
         });

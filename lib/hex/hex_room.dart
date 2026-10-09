@@ -1,4 +1,5 @@
 import 'hex_game.dart';
+import '../models/cosmetics.dart';
 
 enum HexSeatKind { localHuman, remoteHuman, ai }
 
@@ -11,8 +12,15 @@ class HexRoom {
       required List<HexSeatKind> kinds,
       required List<String?> owners,
       this.starter = HexSeat.ivory,
+      this.boardTheme = BoardTheme.classicWood,
+      List<PieceStyle> pieceStyles = const [
+        PieceStyle.standard,
+        PieceStyle.standard,
+        PieceStyle.standard
+      ],
       List<Map<String, dynamic>> moves = const []})
-      : kinds = List.unmodifiable(kinds),
+      : pieceStyles = List.unmodifiable(pieceStyles),
+        kinds = List.unmodifiable(kinds),
         owners = List.unmodifiable(owners),
         moves = List.unmodifiable(
             moves.map((move) => Map<String, dynamic>.unmodifiable({
@@ -20,7 +28,8 @@ class HexRoom {
                   'drops': List<int>.unmodifiable(
                       (move['drops'] as List).cast<int>()),
                 }))) {
-    if (kinds.length != 3 ||
+    if (pieceStyles.length != 3 ||
+        kinds.length != 3 ||
         owners.length != 3 ||
         host.isEmpty ||
         radius < 2 ||
@@ -39,8 +48,10 @@ class HexRoom {
   final String host;
   final int radius;
   final List<HexSeatKind> kinds;
+  final List<PieceStyle> pieceStyles;
   final List<String?> owners;
   final HexSeat starter;
+  final BoardTheme boardTheme;
   final List<Map<String, dynamic>> moves;
   bool get ready =>
       List.generate(3, (i) => kinds[i] == HexSeatKind.ai || owners[i] != null)
@@ -70,7 +81,7 @@ class HexRoom {
     return game;
   }
 
-  HexRoom join(String uid) {
+  HexRoom join(String uid, {PieceStyle pieceStyle = PieceStyle.standard}) {
     if (uid.isEmpty) throw ArgumentError('Sign in before joining');
     if (uid == host || owners.contains(uid)) return this;
     final seat = List.generate(3, (i) => i)
@@ -78,13 +89,16 @@ class HexRoom {
         .firstOrNull;
     if (seat == null || moves.isNotEmpty) throw StateError('This room is full');
     final joined = List<String?>.from(owners)..[seat] = uid;
+    final styles = List<PieceStyle>.from(pieceStyles)..[seat] = pieceStyle;
     return HexRoom(
         code: code,
         host: host,
         radius: radius,
         kinds: kinds,
         owners: joined,
+        pieceStyles: styles,
         starter: starter,
+        boardTheme: boardTheme,
         moves: moves);
   }
 
@@ -101,7 +115,9 @@ class HexRoom {
         radius: radius,
         kinds: kinds,
         owners: owners,
+        pieceStyles: pieceStyles,
         starter: starter,
+        boardTheme: boardTheme,
         moves: [...moves, move.toMap(game.current)]);
   }
 
@@ -111,9 +127,11 @@ class HexRoom {
         'host': host,
         'radius': radius,
         'starter': starter.index,
+        'boardTheme': boardTheme.name,
         'ply': moves.length,
         'kinds': {for (var i = 0; i < 3; i++) '$i': kinds[i].name},
         'owners': {for (var i = 0; i < 3; i++) '$i': owners[i]},
+        'pieceStyles': {for (var i = 0; i < 3; i++) '$i': pieceStyles[i].name},
         'moves': {for (var i = 0; i < moves.length; i++) '$i': moves[i]},
       };
 
@@ -124,6 +142,7 @@ class HexRoom {
     final kinds = Map<String, dynamic>.from(data['kinds'] as Map);
     final owners = Map<String, dynamic>.from(data['owners'] as Map);
     final log = Map<String, dynamic>.from(data['moves'] as Map);
+    final styles = data['pieceStyles'];
     final count = data['ply'] as int;
     if (count < 0 ||
         log.length != count ||
@@ -136,9 +155,12 @@ class HexRoom {
         host: data['host'] as String,
         radius: data['radius'] as int,
         starter: HexSeat.values[data['starter'] as int],
+        boardTheme: boardThemeFromWire(data['boardTheme']),
         kinds: List.generate(
             3, (i) => HexSeatKind.values.byName(kinds['$i'] as String)),
         owners: List.generate(3, (i) => owners['$i'] as String?),
+        pieceStyles: List.generate(
+            3, (i) => pieceStyleFromWire(styles is Map ? styles['$i'] : null)),
         moves: List.generate(
             count, (i) => Map<String, dynamic>.from(log['$i'] as Map)));
   }
