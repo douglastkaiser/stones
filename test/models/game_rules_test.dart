@@ -315,7 +315,7 @@ void main() {
           contains(const Position(2, 1)));
     });
 
-    test('wall is reachable as a final step but never as a transit square', () {
+    test('direction highlights the first step rather than a distant wall', () {
       const selection = UIState(
         selectedPosition: Position(2, 0),
         mode: InteractionMode.movingStack,
@@ -323,8 +323,37 @@ void main() {
       );
       final destinations =
           selection.getValidMoveDestinations(_capstoneSpread());
-      expect(destinations, contains(const Position(2, 2)));
+      expect(destinations, contains(const Position(2, 1)));
+      expect(destinations, isNot(contains(const Position(2, 2))));
       expect(destinations, isNot(contains(const Position(2, 3))));
+    });
+
+    test(
+        'a forced three-square crush can advance through each intermediate cell',
+        () {
+      final state = _playing(Board.empty(5)
+          .setStack(const Position(2, 0),
+              const PieceStack([_whiteFlat, _whiteFlat, _whiteCap]))
+          .placePiece(const Position(2, 3), _blackWall));
+      const spread = UIState(
+        selectedPosition: Position(2, 0),
+        selectedDirection: Direction.right,
+        mode: InteractionMode.droppingPieces,
+        piecesPickedUp: 3,
+      );
+      expect(spread.canContinueDropping(state), isTrue);
+      expect(spread.getValidDropDestinations(state),
+          contains(const Position(2, 2)));
+      expect(spread.getValidDropDestinations(state),
+          isNot(contains(const Position(2, 3))));
+      final next = spread.copyWith(drops: [1], piecesPickedUp: 2);
+      expect(next.canContinueDropping(state), isTrue);
+      expect(next.copyWith(pendingDropCount: 2).canContinueDropping(state),
+          isFalse);
+      expect(
+          GameRules.tryMoveStack(
+              state, const Position(2, 0), Direction.right, [1, 1, 1]),
+          isNotNull);
     });
 
     test('continuing to the wall requires leaving only the capstone in hand',

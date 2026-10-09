@@ -87,6 +87,11 @@ avoid accidentally including that unrelated generated edit in a rules change.
 
 ### Audit verification
 
+See [movement UX](MOVEMENT_UX.md) for the carry/drop interaction contract,
+usability questions, regression coverage, and future square/Hex improvements.
+The first movement revision passed the complete 244-test suite, strict analysis,
+and a release web build, with phone/desktop browser trials.
+
 The latest playability audit passed all 176 tests, and `flutter analyze --fatal-infos`
 reported no issues using the temporary SDK listed above. Four additional
 targeted Hex/isolate tests also passed, bringing current coverage to 180 tests.

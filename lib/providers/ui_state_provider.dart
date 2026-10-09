@@ -79,10 +79,14 @@ class UIState {
     }
     final destinations = <Position>{};
     for (final direction in Direction.values) {
-      for (final pattern in GameRules.legalStackDrops(
-        gameState, selectedPosition!, direction, piecesPickedUp,
-      )) {
-        destinations.add(_positionAfter(direction, pattern.length));
+      if (GameRules.legalStackDrops(
+        gameState,
+        selectedPosition!,
+        direction,
+        piecesPickedUp,
+      ).isNotEmpty) {
+        // Selecting a direction always previews the adjacent square first.
+        destinations.add(_positionAfter(direction, 1));
       }
     }
     return destinations;
@@ -97,10 +101,14 @@ class UIState {
       return {};
     }
     final direction = selectedDirection!;
-    final pickup = piecesPickedUp + drops.fold<int>(0, (sum, drop) => sum + drop);
+    final pickup =
+        piecesPickedUp + drops.fold<int>(0, (sum, drop) => sum + drop);
     final destinations = <Position>{};
     for (final pattern in GameRules.legalStackDrops(
-      gameState, selectedPosition!, direction, pickup,
+      gameState,
+      selectedPosition!,
+      direction,
+      pickup,
     )) {
       if (pattern.length <= drops.length) continue;
       if (!List.generate(drops.length, (i) => pattern[i] == drops[i])
@@ -111,7 +119,8 @@ class UIState {
       destinations.add(_positionAfter(direction, drops.length + 1));
       if (pattern.length > drops.length + 1 &&
           pattern[drops.length] == pendingDropCount) {
-        destinations.add(_positionAfter(direction, pattern.length));
+        // Advancing visits one square, even when finishing requires more steps.
+        destinations.add(_positionAfter(direction, drops.length + 2));
       }
     }
     return destinations;
@@ -136,6 +145,7 @@ class UIState {
     }
     return position;
   }
+
   /// Calculate preview stacks for all positions during move operations.
   /// Returns a map of Position -> (previewStack, ghostPieces) where:
   /// - previewStack: what the stack at this position would look like after the move
@@ -161,14 +171,13 @@ class UIState {
       // ALL pieces at source are ghosts since the move is unconfirmed
       // The pickup count badge shows which ones will be picked up
       previews[selectedPosition!] = (
-        PieceStack.empty,  // no solid pieces - everything is part of the plan
-        sourceStack.pieces,  // entire stack as ghosts
+        PieceStack.empty, // no solid pieces - everything is part of the plan
+        sourceStack.pieces, // entire stack as ghosts
       );
     }
 
     // In droppingPieces mode: calculate full preview of the move
-    if (mode == InteractionMode.droppingPieces &&
-        selectedDirection != null) {
+    if (mode == InteractionMode.droppingPieces && selectedDirection != null) {
       final piecesToPickUp = piecesPickedUp + drops.fold(0, (a, b) => a + b);
       final actualPickup = piecesToPickUp.clamp(0, sourceStack.height).toInt();
 
@@ -239,9 +248,11 @@ class UIState {
     bool clearSelection = false,
   }) {
     return UIState(
-      selectedPosition: clearSelection ? null : (selectedPosition ?? this.selectedPosition),
+      selectedPosition:
+          clearSelection ? null : (selectedPosition ?? this.selectedPosition),
       mode: mode ?? this.mode,
-      selectedDirection: clearSelection ? null : (selectedDirection ?? this.selectedDirection),
+      selectedDirection:
+          clearSelection ? null : (selectedDirection ?? this.selectedDirection),
       drops: drops ?? this.drops,
       piecesPickedUp: piecesPickedUp ?? this.piecesPickedUp,
       ghostPieceType: ghostPieceType ?? this.ghostPieceType,
@@ -272,15 +283,20 @@ class UIStateNotifier extends StateNotifier<UIState> {
   }
 
   /// Cycle the ghost piece type (flat -> wall -> capstone -> flat)
-  void cycleGhostPieceType({bool hasCapstones = true, bool hasFlatStones = true}) {
+  void cycleGhostPieceType(
+      {bool hasCapstones = true, bool hasFlatStones = true}) {
     PieceType nextType;
     switch (state.ghostPieceType) {
       case PieceType.flat:
-        nextType = hasFlatStones ? PieceType.standing : (hasCapstones ? PieceType.capstone : PieceType.flat);
+        nextType = hasFlatStones
+            ? PieceType.standing
+            : (hasCapstones ? PieceType.capstone : PieceType.flat);
       case PieceType.standing:
         nextType = hasCapstones ? PieceType.capstone : PieceType.flat;
       case PieceType.capstone:
-        nextType = hasFlatStones ? PieceType.flat : (hasCapstones ? PieceType.capstone : PieceType.flat);
+        nextType = hasFlatStones
+            ? PieceType.flat
+            : (hasCapstones ? PieceType.capstone : PieceType.flat);
     }
     state = state.copyWith(ghostPieceType: nextType);
   }

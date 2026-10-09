@@ -1097,6 +1097,30 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 onPieceTypeChanged: (type) =>
                     ref.read(uiStateProvider.notifier).setGhostPieceType(type),
                 onConfirmMove: () => _confirmMove(ref),
+                onPickupChanged: (count) =>
+                    ref.read(uiStateProvider.notifier).setPiecesPickedUp(count),
+                onDropChanged: (count) => ref
+                    .read(uiStateProvider.notifier)
+                    .setPendingDropCount(count),
+                onContinue: () {
+                  final current = ref.read(uiStateProvider);
+                  if (current
+                      .canContinueDropping(ref.read(gameStateProvider))) {
+                    ref
+                        .read(uiStateProvider.notifier)
+                        .addDrop(current.pendingDropCount);
+                  }
+                },
+                onBack: () {
+                  final current = ref.read(uiStateProvider);
+                  final notifier = ref.read(uiStateProvider.notifier);
+                  if (current.drops.isNotEmpty) {
+                    notifier.undoDropsTo(current.drops.length - 1);
+                  } else if (current.selectedPosition != null) {
+                    notifier.selectStack(
+                        current.selectedPosition!, current.piecesPickedUp);
+                  }
+                },
                 onCancel: () => ref.read(uiStateProvider.notifier).reset(),
                 isWideScreen: isWideScreen,
               ),
@@ -1104,7 +1128,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
             final textScale =
                 MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
-            final minimumHeight = 520 * textScale +
+            final minimumHeight = 584 * textScale +
                 (activeScenario == null ? 0 : 160 * textScale);
             return SingleChildScrollView(
                 child: SizedBox(
@@ -1710,14 +1734,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    // Tap on empty cell that's not a valid destination: cancel and handle as new placement
-    if (stack.isEmpty) {
-      uiNotifier.selectCellForPlacement(pos);
-      return;
-    }
-
-    // Otherwise cancel
-    uiNotifier.reset();
+    // An off-target tap keeps the plan intact. Cancel is explicit.
   }
 
   /// Handle tap when dropping pieces (movement in progress)
@@ -1807,8 +1824,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    // Tapping elsewhere on the board (not on path, origin, hand, or valid next cell): cancel completely
-    uiNotifier.reset();
+    // An off-target tap keeps the plan intact. Cancel is explicit.
   }
 
   /// Get the direction from one position to an adjacent position
@@ -3724,6 +3740,7 @@ class _CellInteractionLayer extends StatefulWidget {
 class _CellInteractionLayerState extends State<_CellInteractionLayer> {
   Timer? _hoverTimer;
   bool _isViewing = false;
+  Offset _dragDisplacement = Offset.zero;
 
   /// Minimum velocity in pixels/second to recognize as a swipe
   static const double _swipeVelocityThreshold = 100.0;
@@ -3793,9 +3810,14 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
       return;
     }
 
-    // Use the velocity to determine swipe direction for better UX
+    // Deliberate slow drags should work as reliably as quick swipes.
     final velocity = details.velocity.pixelsPerSecond;
-    final direction = _getSwipeDirection(velocity);
+    final displacement = _dragDisplacement;
+    final direction = displacement.distance >= 24
+        ? (displacement.dx.abs() > displacement.dy.abs()
+            ? (displacement.dx > 0 ? Direction.right : Direction.left)
+            : (displacement.dy > 0 ? Direction.down : Direction.up))
+        : _getSwipeDirection(velocity);
 
     if (direction != null) {
       _deactivateView();
@@ -3814,6 +3836,17 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
           widget.onTap();
         },
         onPanEnd: widget.onSwipe != null ? _handlePanEnd : null,
+        onPanStart: widget.onSwipe == null
+            ? null
+            : (_) {
+                _dragDisplacement = Offset.zero;
+                _deactivateView();
+              },
+        onPanUpdate: widget.onSwipe == null
+            ? null
+            : (details) {
+                _dragDisplacement += details.delta;
+              },
         onLongPressStart: _hasContent ? (_) => _activateView() : null,
         onLongPressEnd: _hasContent ? (_) => _deactivateView() : null,
         onLongPressCancel: _hasContent ? _deactivateView : null,
@@ -5157,6 +5190,10 @@ class _BottomControls extends StatelessWidget {
   final Function(PieceType) onPieceTypeChanged;
   final VoidCallback onConfirmMove;
   final VoidCallback onCancel;
+  final ValueChanged<int> onPickupChanged;
+  final ValueChanged<int> onDropChanged;
+  final VoidCallback onContinue;
+  final VoidCallback onBack;
   final bool isWideScreen;
 
   const _BottomControls({
@@ -5165,6 +5202,10 @@ class _BottomControls extends StatelessWidget {
     required this.onPieceTypeChanged,
     required this.onConfirmMove,
     required this.onCancel,
+    required this.onPickupChanged,
+    required this.onDropChanged,
+    required this.onContinue,
+    required this.onBack,
     this.isWideScreen = false,
   });
 
@@ -5204,7 +5245,7 @@ class _BottomControls extends StatelessWidget {
     // Fixed height container to prevent board rescaling when controls change
     // Taller height for more breathing room with full hints
     return Container(
-      height: 144 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.5) +
+      height: 208 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.5) +
           bottomPadding,
       padding: EdgeInsets.only(
         left: 16,
@@ -5409,151 +5450,110 @@ class _BottomControls extends StatelessWidget {
     );
   }
 
-  Widget _buildMovingStackHint(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
-    final piecesPickedUp = uiState.piecesPickedUp;
+  Widget _countControl({
+    required String label,
+    required int value,
+    required int maximum,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      IconButton(
+        tooltip: 'Decrease $label',
+        onPressed: value > 1 ? () => onChanged(value - 1) : null,
+        icon: const Icon(Icons.remove),
+      ),
+      Semantics(liveRegion: true, child: Text('$label: $value')),
+      IconButton(
+        tooltip: 'Increase $label',
+        onPressed: value < maximum ? () => onChanged(value + 1) : null,
+        icon: const Icon(Icons.add),
+      ),
+    ]);
+  }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Picking up $piecesPickedUp piece${piecesPickedUp > 1 ? 's' : ''}. Tap the stack again to change count.',
-          style: TextStyle(color: textColor, fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildMovingStackHint(BuildContext context) {
+    final source = uiState.selectedPosition!;
+    final maximum =
+        math.min(gameState.boardSize, gameState.board.stackAt(source).height);
+    final canMove = uiState.getValidMoveDestinations(gameState).isNotEmpty;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
           children: [
-            Text(
-              'Move to an adjacent cell to start dropping.',
-              style: TextStyle(
-                  color: textColor.withValues(alpha: 0.8), fontSize: 12),
-            ),
-            const SizedBox(width: 8),
+            _countControl(
+                label: 'Carry',
+                value: uiState.piecesPickedUp,
+                maximum: maximum,
+                onChanged: onPickupChanged),
             TextButton.icon(
-              onPressed: onCancel,
-              icon: const Icon(Icons.close, size: 16),
-              label: const Text('Cancel'),
-              style: TextButton.styleFrom(
-                foregroundColor: textColor,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+                onPressed: onCancel,
+                icon: const Icon(Icons.close),
+                label: const Text('Cancel')),
+          ]),
+      Text(
+          canMove
+              ? 'Choose a highlighted neighbor. Carry top pieces; drop bottom first.'
+              : 'No legal direction with this count. Carry fewer pieces or choose another stack.',
+          textAlign: TextAlign.center),
+    ]);
   }
 
   Widget _buildDroppingPiecesControls(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white70 : GameColors.subtitleColor;
     final remaining = uiState.piecesPickedUp;
     final drops = uiState.drops;
-
-    // Calculate total pieces in this move to determine if it's a stack move
-    final totalPiecesInMove = remaining + drops.fold<int>(0, (a, b) => a + b);
-    final isStackMove = totalPiecesInMove > 1;
-    final pendingDrop = uiState.pendingDropCount;
-
-    // For stack moves, can confirm when:
-    // - All pieces already committed (remaining == 0), OR
-    // - All remaining pieces selected to drop (pendingDrop == remaining)
-    final allPiecesCommitted = remaining == 0 && drops.isNotEmpty;
-    final allPiecesSelected = remaining > 0 && pendingDrop == remaining;
-    final canConfirm = isStackMove && (allPiecesCommitted || allPiecesSelected);
-
-    // For single-piece moves, show simpler message (tap to confirm)
-    if (!isStackMove) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Tap the highlighted cell to confirm move.',
-            style: TextStyle(color: textColor, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          TextButton.icon(
-            onPressed: onCancel,
-            icon: const Icon(Icons.close, size: 16),
-            label: const Text('Cancel'),
-            style: TextButton.styleFrom(
-              foregroundColor: textColor,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Build status text for stack moves
-    final String statusText;
-    if (allPiecesCommitted) {
-      statusText =
-          'Move planned: ${drops.join(' → ')}. Press Confirm to complete.';
-    } else if (allPiecesSelected) {
-      if (drops.isEmpty) {
-        statusText =
-            'Dropping all $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. Press Confirm.';
-      } else {
-        statusText =
-            'Dropped: ${drops.join(' → ')} · Final $pendingDrop here. Press Confirm.';
-      }
-    } else {
-      if (drops.isEmpty) {
-        statusText =
-            'Dropping $pendingDrop piece${pendingDrop > 1 ? 's' : ''} here. ${remaining - pendingDrop} remaining.';
-      } else {
-        statusText =
-            'Dropped: ${drops.join(' → ')} · Now dropping $pendingDrop. ${remaining - pendingDrop} remaining.';
-      }
-    }
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          statusText,
-          style: TextStyle(color: textColor, fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    final pending = uiState.pendingDropCount;
+    final source = uiState.selectedPosition!;
+    final direction = uiState.selectedDirection!;
+    final hand = uiState.getCurrentHandPosition();
+    final finalDrops = remaining > 0 ? [...drops, remaining] : drops;
+    final canConfirm = (remaining == 0 || pending == remaining) &&
+        GameRules.tryMoveStack(gameState, source, direction, finalDrops) !=
+            null;
+    final canContinue = uiState.canContinueDropping(gameState);
+    final square = hand == null
+        ? ''
+        : '${String.fromCharCode(65 + hand.col)}${gameState.boardSize - hand.row}';
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(
+          remaining > 0
+              ? '$remaining in hand - Drop at $square - ${direction.name}'
+              : 'Spread planned',
+          textAlign: TextAlign.center),
+      Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 4,
           children: [
-            // Show confirm button only when all pieces are committed as drops
-            if (canConfirm) ...[
-              ElevatedButton.icon(
-                onPressed: onConfirmMove,
+            if (remaining > 1)
+              _countControl(
+                  label: 'Drop',
+                  value: pending,
+                  maximum: remaining,
+                  onChanged: onDropChanged),
+            if (remaining > 1 && pending != remaining)
+              TextButton(
+                  onPressed: () => onDropChanged(remaining),
+                  child: const Text('All here')),
+            if (remaining > pending)
+              FilledButton.tonal(
+                  onPressed: canContinue ? onContinue : null,
+                  child: const Text('Drop & next')),
+            ElevatedButton.icon(
+                onPressed: canConfirm ? onConfirmMove : null,
                 icon: const Icon(Icons.check, size: 16),
-                label: const Text('Confirm'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-            TextButton.icon(
-              onPressed: onCancel,
-              icon: const Icon(Icons.close, size: 16),
-              label: const Text('Cancel'),
-              style: TextButton.styleFrom(
-                foregroundColor: textColor,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+                label: const Text('Confirm')),
+            TextButton(onPressed: onBack, child: const Text('Back step')),
+            TextButton(onPressed: onCancel, child: const Text('Cancel')),
+          ]),
+      Text(
+          drops.isEmpty
+              ? 'Preview only. Drop bottom first; Confirm finishes the turn.'
+              : 'Planned drops: ${drops.join(' → ')}${remaining > 0 ? ' → $pending' : ''}. Board changes only on Confirm.',
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center),
+    ]);
   }
 }
 

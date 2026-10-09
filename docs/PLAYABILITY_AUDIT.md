@@ -143,6 +143,11 @@ need device smoke tests.
 
 ## Prioritized remaining work
 
+The next movement iteration is documented in [MOVEMENT_UX.md](MOVEMENT_UX.md).
+It adds explicit square carry/drop controls, actionable adjacent highlights,
+reversible step planning and displacement-based dragging. Hex's endpoint and
+distribution picker remains a separate follow-up.
+
 - **Before production online Hex trials:** deploy reviewed Firestore rules. AI
   still runs on the host; there is no host failover or authoritative server
   adjudication. Honest clients reject illegal logs, but a modified client can
