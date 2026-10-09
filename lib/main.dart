@@ -305,6 +305,7 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class _GameScreenState extends ConsumerState<GameScreen> {
   bool _showHistory = false;
+  late final GameStateNotifier _gameNotifier;
 
   // Long press stack view state
   Position? _longPressedPosition;
@@ -343,7 +344,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void initState() {
     super.initState();
     // Set up road win callback
-    ref.read(gameStateProvider.notifier).onRoadWin = (roadPositions, winner) {
+    _gameNotifier = ref.read(gameStateProvider.notifier);
+    _gameNotifier.onRoadWin = (roadPositions, winner) {
       ref.read(animationStateProvider.notifier).roadWin(roadPositions, winner);
     };
 
@@ -419,7 +421,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
-    ref.read(gameStateProvider.notifier).onRoadWin = null;
+    _gameNotifier.onRoadWin = null;
     if (kIsWeb) {
       disposeWebBackButtonHandler();
     }
@@ -1361,6 +1363,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
+    if (uiState.mode == InteractionMode.droppingPieces) {
+      _handleDroppingPiecesSwipe(ref, pos, direction, gameState, uiState);
+      return;
+    }
+
     final stack = gameState.board.stackAt(pos);
 
     // Must have a stack to move
@@ -1379,13 +1386,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    // Check if target can be moved onto
-    final targetStack = gameState.board.stackAt(targetPos);
-    final topPiece = stack.topPiece!;
-    final canMove = targetStack.canMoveOnto(topPiece) ||
-        (targetStack.topPiece?.type == PieceType.standing && topPiece.canFlattenWalls);
-
-    if (!canMove) {
+    final maxPieces = stack.height > gameState.boardSize
+        ? gameState.boardSize
+        : stack.height;
+    final pickup = uiState.mode == InteractionMode.movingStack &&
+            uiState.selectedPosition == pos
+        ? uiState.piecesPickedUp
+        : maxPieces;
+    final selection = UIState(
+      selectedPosition: pos,
+      mode: InteractionMode.movingStack,
+      piecesPickedUp: pickup,
+    );
+    if (!selection.getValidMoveDestinations(gameState).contains(targetPos)) {
       return;
     }
 
@@ -1397,12 +1410,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         return;
       }
     }
-
-    // If currently in idle or movingStack mode on a different cell, select this stack
-    // Calculate max pieces that can be picked up
-    final maxPieces = stack.height > gameState.boardSize
-        ? gameState.boardSize
-        : stack.height;
 
     // Based on current mode, handle the swipe
     switch (uiState.mode) {
@@ -1453,23 +1460,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    // Check if we can continue to the next cell
-    final originalStack = gameState.board.stackAt(uiState.selectedPosition!);
-    final movingPiece = originalStack.topPiece;
-    if (movingPiece == null) {
-      return;
-    }
-
-    final nextPos = currentDir.apply(handPos);
-    if (!gameState.board.isValidPosition(nextPos)) {
-      return;
-    }
-
-    final targetStack = gameState.board.stackAt(nextPos);
-    final canContinue = targetStack.canMoveOnto(movingPiece) ||
-        (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls);
-
-    if (!canContinue) {
+    if (!uiState.canContinueDropping(gameState)) {
       return;
     }
 
@@ -1650,11 +1641,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Check if we can continue to the next cell after current hand position
     final nextPos = dir.apply(handPos);
-    final canContinue = gameState.board.isValidPosition(nextPos) && (() {
-      final targetStack = gameState.board.stackAt(nextPos);
-      return targetStack.canMoveOnto(movingPiece) ||
-          (targetStack.topPiece?.type == PieceType.standing && movingPiece.canFlattenWalls);
-    })();
+    final canContinue = uiState.canContinueDropping(gameState);
 
     // Tapping on origin position: go back to movingStack mode (direction selection)
     if (pos == uiState.selectedPosition) {
@@ -4900,7 +4887,7 @@ class _BottomControls extends StatelessWidget {
     // Fixed height container to prevent board rescaling when controls change
     // Taller height for more breathing room with full hints
     return Container(
-      height: 72 + bottomPadding,
+      height: 92 + bottomPadding,
       padding: EdgeInsets.only(
         left: 16,
         right: 16,

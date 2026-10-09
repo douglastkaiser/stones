@@ -112,11 +112,13 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
 
 ### AI System (`lib/services/ai/`)
 - `ai.dart` - Base class, difficulty enum, factory
-- `intro_ai.dart` - Random moves (learning mode)
-- `easy_ai.dart` - 1-ply lookahead (threat detection)
-- `medium_ai.dart` - 2-ply lookahead (fork detection, aggressive)
-- `hard_ai.dart` - 3-ply minimax (very aggressive, deep search)
+- `lookahead_ai.dart` - Shared search engine for every difficulty; depths 2/2/3/4
+- `board_analysis.dart` - Road detection and evaluation analysis
 - `move_generator.dart` - Legal move generation
+- `lib/models/game_rules.dart` - Shared placement/spread validation and flat results
+
+See [the rules audit](docs/TAK_RULES.md) and [development map](docs/DEVELOPMENT.md)
+for current mechanics, regression coverage, and known online/puzzle gaps.
 
 ### Key Directories
 - `lib/models/` - Game state, board, pieces

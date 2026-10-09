@@ -147,15 +147,20 @@ class BoardAnalysis {
     return edges;
   }
 
-  /// Check if both players have roads (returns winner or null)
-  static PlayerColor? getRoadWinner(GameState state) {
-    // Check current player first (they moved last)
-    if (hasRoad(state, state.currentPlayer)) {
-      return state.currentPlayer;
+  /// Resolve roads, giving the mover priority when both players have one.
+  /// Pass the mover explicitly because callers may have advanced the turn.
+  static PlayerColor? getRoadWinner(
+    GameState state, {
+    required PlayerColor lastMover,
+  }) {
+    if (hasRoad(state, lastMover)) {
+      return lastMover;
     }
-    // Check opponent
-    if (hasRoad(state, state.opponent)) {
-      return state.opponent;
+    final otherPlayer = lastMover == PlayerColor.white
+        ? PlayerColor.black
+        : PlayerColor.white;
+    if (hasRoad(state, otherPlayer)) {
+      return otherPlayer;
     }
     return null;
   }

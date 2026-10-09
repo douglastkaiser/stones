@@ -361,7 +361,7 @@ final _tutorial7OpeningRule = GameScenario(
   objective: 'Place a Black flat stone (your opponent\'s color).',
   dialogue: const [
     'There\'s one special rule: on the very first turn, each player places a piece of their opponent\'s color.',
-    'This prevents a first-player advantage and creates interesting opening positions.',
+    'This reduces the first-player advantage and creates interesting opening positions.',
     'You\'re White, going first. Place a Black flat stone anywhere.',
   ],
   guidedMove: const GuidedMove.anyPlacement(pieceType: PieceType.flat),

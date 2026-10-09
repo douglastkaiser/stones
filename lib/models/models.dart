@@ -6,6 +6,7 @@ export 'board.dart';
 export 'cosmetics.dart';
 export 'elo_rating.dart';
 export 'game_state.dart';
+export 'game_rules.dart';
 export 'piece.dart';
 export 'player.dart';
 export 'online_game.dart';

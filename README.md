@@ -1,7 +1,22 @@
 # stones
 Stones: An Okay Game
 
+## Win Rules
+
+Win detection follows the [US Tak Association rules](https://ustak.org/play-beautiful-game-tak/):
+
+- A road connects opposite edges using exposed flat stones and capstones.
+- Roads take priority over flat scoring. If a move creates roads for both players,
+  the player who made that move wins; if only the opponent has a road, they win.
+- With no road, a full board or an exhausted reserve ends the game. Only exposed
+  flat stones count (not walls, capstones, or buried stones). Equal counts draw,
+  including when a player uses their last piece.
+
 ## Development
+
+See the [rules audit](docs/TAK_RULES.md) for official sources, verified mechanics,
+and remaining gaps, and the [development map](docs/DEVELOPMENT.md) for architecture
+and local testing notes.
 
 ### Prerequisites
 - Flutter SDK (3.0+)

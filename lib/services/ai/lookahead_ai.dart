@@ -32,6 +32,10 @@ class LookaheadStonesAI extends StonesAI {
 
   @override
   Future<AIMove?> selectMove(GameState state) async {
+    if (state.isGameOver ||
+        _terminalScore(state, state.currentPlayer, searchDepth) != null) {
+      return null;
+    }
     final moves = _generator.generateMoves(state);
     if (moves.isEmpty) return null;
 
@@ -117,18 +121,23 @@ class LookaheadStonesAI extends StonesAI {
   }
 
   double? _terminalScore(GameState state, PlayerColor perspective, int depth) {
-    final opponent = _opponentOf(perspective);
-
-    if (BoardAnalysis.hasRoad(state, perspective)) {
-      return _winScore + depth;
+    final roadWinner = BoardAnalysis.getRoadWinner(
+      state,
+      lastMover: state.opponent,
+    );
+    if (roadWinner != null) {
+      return roadWinner == perspective
+          ? _winScore + depth
+          : -_winScore - depth;
     }
-    if (BoardAnalysis.hasRoad(state, opponent)) {
-      return -_winScore - depth;
-    }
 
-    final flatWinner = _flatWinner(state);
-    if (flatWinner != null) {
-      return flatWinner == perspective ? _winScore / 2 : -_winScore / 2;
+    final flatResult = _flatResult(state);
+    if (flatResult != null) {
+      if (flatResult == GameResult.draw) return 0;
+      final perspectiveResult = perspective == PlayerColor.white
+          ? GameResult.whiteWins
+          : GameResult.blackWins;
+      return flatResult == perspectiveResult ? _winScore / 2 : -_winScore / 2;
     }
 
     return null;
@@ -138,8 +147,13 @@ class LookaheadStonesAI extends StonesAI {
     final opponent = _opponentOf(perspective);
 
     // Immediate wins/losses dominate the evaluation.
-    if (BoardAnalysis.hasRoad(state, perspective)) return _winScore;
-    if (BoardAnalysis.hasRoad(state, opponent)) return -_winScore;
+    final roadWinner = BoardAnalysis.getRoadWinner(
+      state,
+      lastMover: state.opponent,
+    );
+    if (roadWinner != null) {
+      return roadWinner == perspective ? _winScore : -_winScore;
+    }
 
     final threatCount = BoardAnalysis.countThreats(state, perspective, maxCount: 3);
     final opponentThreats =
@@ -174,7 +188,11 @@ class LookaheadStonesAI extends StonesAI {
       final score = _evaluateState(postMoveState, perspective);
 
       // Encourage moves that immediately win or block.
-      final immediateWin = BoardAnalysis.hasRoad(applied, state.currentPlayer);
+      final immediateWin = BoardAnalysis.getRoadWinner(
+            applied,
+            lastMover: state.currentPlayer,
+          ) ==
+          state.currentPlayer;
       final immediateBlock = BoardAnalysis.hasRoad(applied, state.opponent);
 
       final adjustedScore = score + (immediateWin ? 500 : 0) + (immediateBlock ? 100 : 0);
@@ -188,7 +206,12 @@ class LookaheadStonesAI extends StonesAI {
   AIMove? _findImmediateWinningMove(GameState state, List<AIMove> moves) {
     for (final move in moves) {
       final applied = _applyMove(state, move);
-      if (applied != null && BoardAnalysis.hasRoad(applied, state.currentPlayer)) {
+      if (applied != null &&
+          BoardAnalysis.getRoadWinner(
+                applied,
+                lastMover: state.currentPlayer,
+              ) ==
+              state.currentPlayer) {
         return move;
       }
     }
@@ -250,54 +273,11 @@ class LookaheadStonesAI extends StonesAI {
   }
 
   GameState? _applyPlacement(GameState state, AIPlacementMove move) {
-    final stack = state.board.stackAt(move.position);
-    if (!stack.canPlaceOn) return null;
-
-    final availablePieces = state.currentPlayerPieces;
-    if (!availablePieces.hasPiece(move.pieceType)) return null;
-
-    final piece = Piece(type: move.pieceType, color: state.currentPlayer);
-    final newBoard = state.board.placePiece(move.position, piece);
-
-    final updatedPieces = availablePieces.usePiece(move.pieceType);
-    return state
-        .updatePieces(state.currentPlayer, updatedPieces)
-        .copyWith(board: newBoard);
+    return GameRules.tryPlacePiece(state, move.position, move.pieceType);
   }
 
   GameState? _applyStackMove(GameState state, AIStackMove move) {
-    final board = state.board;
-    final stack = board.stackAt(move.from);
-    if (stack.isEmpty || stack.controller != state.currentPlayer) return null;
-
-    final totalPicked = move.drops.fold(0, (sum, d) => sum + d);
-    if (totalPicked > stack.height || totalPicked > state.boardSize) return null;
-
-    var currentPos = move.from;
-    final (remaining, pickedUp) = stack.pop(totalPicked);
-    var boardState = board.setStack(move.from, remaining);
-    var pieceIndex = 0;
-
-    for (final dropCount in move.drops) {
-      currentPos = move.direction.apply(currentPos);
-      if (!boardState.isValidPosition(currentPos)) return null;
-
-      var targetStack = boardState.stackAt(currentPos);
-      final movingPiece = pickedUp[pieceIndex];
-      if (!targetStack.canMoveOnto(movingPiece)) return null;
-
-      if (targetStack.topPiece?.type == PieceType.standing &&
-          movingPiece.canFlattenWalls) {
-        targetStack = targetStack.flattenTop();
-      }
-
-      final piecesToDrop = pickedUp.sublist(pieceIndex, pieceIndex + dropCount);
-      targetStack = targetStack.pushAll(piecesToDrop);
-      boardState = boardState.setStack(currentPos, targetStack);
-      pieceIndex += dropCount;
-    }
-
-    return state.copyWith(board: boardState);
+    return GameRules.tryMoveStack(state, move.from, move.direction, move.drops);
   }
 
   GameState _advanceTurn(GameState state) {
@@ -308,38 +288,7 @@ class LookaheadStonesAI extends StonesAI {
     return color == PlayerColor.white ? PlayerColor.black : PlayerColor.white;
   }
 
-  PlayerColor? _flatWinner(GameState state) {
-    var emptySpaces = 0;
-    var whiteFlats = 0;
-    var blackFlats = 0;
-
-    for (final pos in state.board.allPositions) {
-      final top = state.board.stackAt(pos).topPiece;
-      if (top == null) {
-        emptySpaces++;
-        continue;
-      }
-
-      if (top.type == PieceType.flat) {
-        if (top.color == PlayerColor.white) {
-          whiteFlats++;
-        } else {
-          blackFlats++;
-        }
-      }
-    }
-
-    final whiteOutOfPieces = state.whitePieces.total == 0;
-    final blackOutOfPieces = state.blackPieces.total == 0;
-    final boardFull = emptySpaces == 0;
-
-    if (boardFull || whiteOutOfPieces || blackOutOfPieces) {
-      if (whiteFlats > blackFlats) return PlayerColor.white;
-      if (blackFlats > whiteFlats) return PlayerColor.black;
-    }
-
-    return null;
-  }
+  GameResult? _flatResult(GameState state) => GameRules.flatResult(state);
 
   double _chainPotential(GameState state, PlayerColor color) {
     double score = 0;

@@ -72,133 +72,70 @@ class UIState {
     return selectedDirection!.apply(pos);
   }
 
-  /// Get all valid destination cells when moving a stack
-  /// Returns a set of positions that can be reached in each direction
+  /// Destinations reachable with the exact selected pickup count.
   Set<Position> getValidMoveDestinations(GameState gameState) {
-    if (selectedPosition == null) return {};
-    if (mode != InteractionMode.movingStack) return {};
-
-    final stack = gameState.board.stackAt(selectedPosition!);
-    if (stack.isEmpty) return {};
-
-    final topPiece = stack.topPiece!;
-    final validDestinations = <Position>{};
-
-    // Use piecesPickedUp as the max distance (carry limit)
-    final maxDistance = piecesPickedUp;
-
-    // Check each direction
+    if (selectedPosition == null || mode != InteractionMode.movingStack) {
+      return {};
+    }
+    final destinations = <Position>{};
     for (final direction in Direction.values) {
-      var pos = selectedPosition!;
-      var distance = 0;
-
-      while (distance < maxDistance) {
-        pos = direction.apply(pos);
-        distance++;
-
-        if (!gameState.board.isValidPosition(pos)) break;
-
-        final targetStack = gameState.board.stackAt(pos);
-
-        if (targetStack.canMoveOnto(topPiece)) {
-          validDestinations.add(pos);
-        } else if (targetStack.topPiece?.type == PieceType.standing &&
-            topPiece.canFlattenWalls) {
-          // Capstone can flatten a wall as final move
-          validDestinations.add(pos);
-          break;
-        } else {
-          break;
-        }
+      for (final pattern in GameRules.legalStackDrops(
+        gameState, selectedPosition!, direction, piecesPickedUp,
+      )) {
+        destinations.add(_positionAfter(direction, pattern.length));
       }
     }
-
-    return validDestinations;
+    return destinations;
   }
 
-  /// Get valid drop positions when in droppingPieces mode
-  /// Returns ALL positions we can reach with remaining pieces in hand
+  /// Legal completion squares for the current spread, respecting pending drops.
   Set<Position> getValidDropDestinations(GameState gameState) {
-    if (selectedPosition == null || selectedDirection == null) return {};
-    if (mode != InteractionMode.droppingPieces) return {};
-    if (piecesPickedUp == 0) return {};
-
-    final stack = gameState.board.stackAt(selectedPosition!);
-    if (stack.isEmpty && drops.isEmpty) return {};
-
-    // Get the piece that's moving (we need original stack's top piece for canMoveOnto checks)
-    final originalStack = gameState.board.stackAt(selectedPosition!);
-    final movingPieceType = originalStack.topPiece?.type ??
-        (drops.isEmpty ? null : gameState.board.stackAt(getDropPath().first).topPiece?.type);
-    if (movingPieceType == null) return {};
-
-    // Create a dummy piece for checking
-    final movingPiece = Piece(type: movingPieceType, color: PlayerColor.white);
-
-    final validDestinations = <Position>{};
-
-    // Get current hand position
-    final handPos = getCurrentHandPosition();
-    if (handPos == null) return {};
-
-    // The current hand position is always valid (already validated when we got here)
-    validDestinations.add(handPos);
-
-    // Check ALL positions we can reach with remaining pieces in hand
-    // After dropping pendingDropCount at current position, we have remainingPieces left
-    // Each subsequent cell requires dropping at least 1 piece
-    var currentPos = handPos;
-    var remainingPieces = piecesPickedUp - pendingDropCount;
-
-    while (remainingPieces > 0) {  // Can continue if any pieces remain after pending drop
-      final nextPos = selectedDirection!.apply(currentPos);
-      if (!gameState.board.isValidPosition(nextPos)) break;
-
-      final targetStack = gameState.board.stackAt(nextPos);
-      if (targetStack.canMoveOnto(movingPiece)) {
-        validDestinations.add(nextPos);
-        currentPos = nextPos;
-        remainingPieces--;  // Will drop one piece here
-      } else if (targetStack.topPiece?.type == PieceType.standing &&
-          movingPiece.canFlattenWalls) {
-        // Capstone can flatten wall as final move
-        validDestinations.add(nextPos);
-        break;  // Can't continue past a flattened wall
-      } else {
-        break;  // Can't move onto this cell
+    if (selectedPosition == null ||
+        selectedDirection == null ||
+        mode != InteractionMode.droppingPieces ||
+        piecesPickedUp <= 0) {
+      return {};
+    }
+    final direction = selectedDirection!;
+    final pickup = piecesPickedUp + drops.fold<int>(0, (sum, drop) => sum + drop);
+    final destinations = <Position>{};
+    for (final pattern in GameRules.legalStackDrops(
+      gameState, selectedPosition!, direction, pickup,
+    )) {
+      if (pattern.length <= drops.length) continue;
+      if (!List.generate(drops.length, (i) => pattern[i] == drops[i])
+          .every((matches) => matches)) {
+        continue;
+      }
+      // The hand square can be a legal finish after cycling its drop count.
+      destinations.add(_positionAfter(direction, drops.length + 1));
+      if (pattern.length > drops.length + 1 &&
+          pattern[drops.length] == pendingDropCount) {
+        destinations.add(_positionAfter(direction, pattern.length));
       }
     }
-
-    return validDestinations;
+    return destinations;
   }
 
-  /// Check if we can continue dropping after dropping at current position
   bool canContinueDropping(GameState gameState) {
-    if (selectedPosition == null || selectedDirection == null) return false;
-    if (piecesPickedUp <= pendingDropCount) return false;
-
-    final handPos = getCurrentHandPosition();
-    if (handPos == null) return false;
-
-    final nextPos = selectedDirection!.apply(handPos);
-    if (!gameState.board.isValidPosition(nextPos)) return false;
-
-    final originalStack = gameState.board.stackAt(selectedPosition!);
-    if (originalStack.isEmpty) return false;
-
-    final movingPiece = originalStack.topPiece!;
-    final targetStack = gameState.board.stackAt(nextPos);
-
-    if (targetStack.canMoveOnto(movingPiece)) {
-      return true;
-    } else if (targetStack.topPiece?.type == PieceType.standing &&
-        movingPiece.canFlattenWalls) {
-      return true;
+    final hand = getCurrentHandPosition();
+    if (hand == null ||
+        selectedDirection == null ||
+        pendingDropCount <= 0 ||
+        piecesPickedUp <= pendingDropCount) {
+      return false;
     }
-
-    return false;
+    return getValidDropDestinations(gameState)
+        .contains(selectedDirection!.apply(hand));
   }
 
+  Position _positionAfter(Direction direction, int steps) {
+    var position = selectedPosition!;
+    for (var i = 0; i < steps; i++) {
+      position = direction.apply(position);
+    }
+    return position;
+  }
   /// Calculate preview stacks for all positions during move operations.
   /// Returns a map of Position -> (previewStack, ghostPieces) where:
   /// - previewStack: what the stack at this position would look like after the move
@@ -257,8 +194,8 @@ class UIState {
         // Check if we need to flatten a wall (capstone moving onto standing stone)
         PieceStack baseStack = targetStack;
         if (baseStack.topPiece?.type == PieceType.standing &&
-            droppedPieces.isNotEmpty &&
-            droppedPieces.last.canFlattenWalls) {
+            droppedPieces.length == 1 &&
+            droppedPieces.single.canFlattenWalls) {
           baseStack = baseStack.flattenTop();
         }
 
@@ -278,8 +215,8 @@ class UIState {
           // Check if we need to flatten a wall
           PieceStack baseStack = targetStack;
           if (baseStack.topPiece?.type == PieceType.standing &&
-              ghostPieces.isNotEmpty &&
-              ghostPieces.last.canFlattenWalls) {
+              ghostPieces.length == 1 &&
+              ghostPieces.single.canFlattenWalls) {
             baseStack = baseStack.flattenTop();
           }
 

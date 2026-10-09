@@ -258,77 +258,19 @@ class GameStateNotifier extends StateNotifier<GameState> {
   /// During opening phase, places opponent's flat stone
   /// Returns true if the move was successful
   bool placePiece(Position pos, PieceType type) {
-    if (state.isGameOver) return false;
-
-    final stack = state.board.stackAt(pos);
-    if (!stack.canPlaceOn) return false;
-
-    // Save state before making the move
     final stateBefore = state;
+    final placed = GameRules.tryPlacePiece(stateBefore, pos, type);
+    if (placed == null) return false;
     _saveToHistory();
-
-    // During opening phase, can only place flat stones of opponent's color
-    if (state.isOpeningPhase) {
-      if (type != PieceType.flat) {
-        _history.removeLast(); // Rollback history save
-        onHistoryChanged?.call(_history.isNotEmpty);
-        return false;
-      }
-
-      final opponentColor = state.opponent;
-      final piece = Piece(type: PieceType.flat, color: opponentColor);
-      final newBoard = state.board.placePiece(pos, piece);
-
-      // Deduct from opponent's pieces
-      final opponentPieces = state.piecesFor(opponentColor);
-      final newOpponentPieces = opponentPieces.usePiece(PieceType.flat);
-
-      // Record move notation
-      final notation = placementNotation(pos, type, state.boardSize);
-      _lastMoveRecord = MoveRecord(
-        notation: notation,
-        player: state.currentPlayer,
-        turnNumber: state.turnNumber,
-        affectedPositions: {pos},
-        stateBefore: stateBefore,
-      );
-
-      state = state
-          .copyWith(board: newBoard)
-          .updatePieces(opponentColor, newOpponentPieces)
-          .nextTurn();
-
-      return true;
-    }
-
-    // Normal placement
-    final playerPieces = state.currentPlayerPieces;
-    if (!playerPieces.hasPiece(type)) {
-      _history.removeLast(); // Rollback history save
-      onHistoryChanged?.call(_history.isNotEmpty);
-      return false;
-    }
-
-    final piece = Piece(type: type, color: state.currentPlayer);
-    final newBoard = state.board.placePiece(pos, piece);
-    final newPieces = playerPieces.usePiece(type);
-
-    // Record move notation
-    final notation = placementNotation(pos, type, state.boardSize);
     _lastMoveRecord = MoveRecord(
-      notation: notation,
-      player: state.currentPlayer,
-      turnNumber: state.turnNumber,
+      notation: placementNotation(pos, type, state.boardSize),
+      player: stateBefore.currentPlayer,
+      turnNumber: stateBefore.turnNumber,
       affectedPositions: {pos},
       stateBefore: stateBefore,
     );
-
-    state = state
-        .copyWith(board: newBoard)
-        .updatePieces(state.currentPlayer, newPieces)
-        .nextTurn();
-
-    _checkWinCondition();
+    state = placed.nextTurn();
+    _checkWinCondition(stateBefore.currentPlayer);
     return true;
   }
 
@@ -336,70 +278,31 @@ class GameStateNotifier extends StateNotifier<GameState> {
   /// [drops] is how many pieces to drop at each step
   /// Returns true if the move was successful
   bool moveStack(Position from, Direction direction, List<int> drops) {
-    if (state.isGameOver || state.isOpeningPhase) return false;
-
-    final stack = state.board.stackAt(from);
-    if (stack.isEmpty) return false;
-    if (stack.controller != state.currentPlayer) return false;
-
-    final totalPicked = drops.fold(0, (sum, d) => sum + d);
-    if (totalPicked > stack.height) return false;
-    if (totalPicked > state.boardSize) return false; // Carry limit
-
-    // Save state before making the move
     final stateBefore = state;
-    _saveToHistory();
-
-    // Validate the move path and collect affected positions
+    final moved = GameRules.tryMoveStack(stateBefore, from, direction, drops);
+    if (moved == null) return false;
     final affectedPositions = <Position>{from};
-    var currentPos = from;
-    final (remaining, pickedUp) = stack.pop(totalPicked);
-    var board = state.board.setStack(from, remaining);
-    var pieceIndex = 0;
-
-    for (final dropCount in drops) {
-      currentPos = direction.apply(currentPos);
-      affectedPositions.add(currentPos);
-
-      if (!board.isValidPosition(currentPos)) {
-        _history.removeLast(); // Rollback history save
-        onHistoryChanged?.call(_history.isNotEmpty);
-        return false;
-      }
-
-      var targetStack = board.stackAt(currentPos);
-      final movingPiece = pickedUp[pieceIndex];
-
-      if (!targetStack.canMoveOnto(movingPiece)) {
-        _history.removeLast(); // Rollback history save
-        onHistoryChanged?.call(_history.isNotEmpty);
-        return false;
-      }
-
-      // If capstone flattening a wall
-      if (targetStack.topPiece?.type == PieceType.standing &&
-          movingPiece.canFlattenWalls) {
-        targetStack = targetStack.flattenTop();
-      }
-
-      // Drop pieces
-      final piecesToDrop = pickedUp.sublist(pieceIndex, pieceIndex + dropCount);
-      board = board.setStack(currentPos, targetStack.pushAll(piecesToDrop));
-      pieceIndex += dropCount;
+    var position = from;
+    for (var i = 0; i < drops.length; i++) {
+      position = direction.apply(position);
+      affectedPositions.add(position);
     }
-
-    // Record move notation
-    final notation = stackMoveNotation(from, direction, drops, totalPicked, state.boardSize);
+    _saveToHistory();
     _lastMoveRecord = MoveRecord(
-      notation: notation,
-      player: state.currentPlayer,
-      turnNumber: state.turnNumber,
+      notation: stackMoveNotation(
+        from,
+        direction,
+        drops,
+        drops.fold(0, (sum, drop) => sum + drop),
+        stateBefore.boardSize,
+      ),
+      player: stateBefore.currentPlayer,
+      turnNumber: stateBefore.turnNumber,
       affectedPositions: affectedPositions,
       stateBefore: stateBefore,
     );
-
-    state = state.copyWith(board: board).nextTurn();
-    _checkWinCondition();
+    state = moved.nextTurn();
+    _checkWinCondition(stateBefore.currentPlayer);
     return true;
   }
 
@@ -422,9 +325,13 @@ class GameStateNotifier extends StateNotifier<GameState> {
   }
 
   /// Check for win conditions (road win or flat win)
-  void _checkWinCondition() {
-    // Check road win for both players
-    for (final color in PlayerColor.values) {
+  void _checkWinCondition(PlayerColor lastMover) {
+    // Double road: the player who made the move wins. The turn has
+    // already advanced, so use the mover captured before the move.
+    final otherPlayer = lastMover == PlayerColor.white
+        ? PlayerColor.black
+        : PlayerColor.white;
+    for (final color in [lastMover, otherPlayer]) {
       final roadPositions = _findRoad(color);
       if (roadPositions != null) {
         state = state.copyWith(
@@ -439,37 +346,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
       }
     }
 
-    // Check if board is full or either player is out of pieces
-    final boardFull = state.board.allPositions
-        .every((pos) => state.board.stackAt(pos).isNotEmpty);
-    final whiteDone = state.whitePieces.total == 0;
-    final blackDone = state.blackPieces.total == 0;
-
-    if (boardFull || whiteDone || blackDone) {
-      // Flat count wins
-      var whiteFlats = 0;
-      var blackFlats = 0;
-
-      for (final pos in state.board.allPositions) {
-        final top = state.board.stackAt(pos).topPiece;
-        if (top?.type == PieceType.flat) {
-          if (top?.color == PlayerColor.white) {
-            whiteFlats++;
-          } else {
-            blackFlats++;
-          }
-        }
-      }
-
-      GameResult result;
-      if (whiteFlats > blackFlats) {
-        result = GameResult.whiteWins;
-      } else if (blackFlats > whiteFlats) {
-        result = GameResult.blackWins;
-      } else {
-        result = GameResult.draw;
-      }
-
+    final result = GameRules.flatResult(state);
+    if (result != null) {
       state = state.copyWith(
         phase: GamePhase.finished,
         result: result,
