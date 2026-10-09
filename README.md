@@ -14,6 +14,11 @@ Win detection follows the [US Tak Association rules](https://ustak.org/play-beau
 
 ## Development
 
+An experimental **Three-player Hex** mode can be enabled in Settings. It is off
+by default and supports three local/remote human or AI seats. See the
+[variant rules and setup guide](docs/HEX_MODE.md), including the required online
+backend rules deployment.
+
 See the [rules audit](docs/TAK_RULES.md) for official sources, verified mechanics,
 and remaining gaps, and the [development map](docs/DEVELOPMENT.md) for architecture
 and local testing notes.

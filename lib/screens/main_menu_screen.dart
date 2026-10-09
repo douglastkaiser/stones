@@ -10,6 +10,7 @@ import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
+import '../hex/hex_screen.dart';
 import '../widgets/chess_clock_setup.dart';
 import 'achievements_screen.dart';
 import 'leaderboard_screen.dart';
@@ -641,6 +642,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
       (s) => !s.isGameOver && (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
     ));
     final playGames = ref.watch(playGamesServiceProvider);
+    final hexEnabled = ref.watch(appSettingsProvider.select((settings) => settings.hexModeEnabled));
 
     return Scaffold(
       body: SafeArea(
@@ -735,7 +737,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Column(
+                  child: SingleChildScrollView(child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Logo/Title
@@ -830,6 +832,19 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
                       const SizedBox(height: 12),
 
+                      if (hexEnabled) ...[
+                        SizedBox(
+                          width: 220,
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            onPressed: () => Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const HexSetupScreen())),
+                            icon: const Icon(Icons.hexagon_outlined),
+                            label: const Text('Three-player Hex'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       // Tutorial and puzzle hub
                       Builder(
                         builder: (context) {
@@ -883,7 +898,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         ),
                       ],
                     ],
-                  ),
+                  )),
                 ),
               ),
             ),

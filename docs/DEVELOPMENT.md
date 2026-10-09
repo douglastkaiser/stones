@@ -7,8 +7,11 @@ mechanics; it includes the prioritized follow-up findings.
 
 Remote: `https://github.com/douglastkaiser/stones.git`.
 The initial refresh fast-forwarded `main` to `b409e0273ca9d08d1b697513659cd938923e824d`.
-There was already a local change in
-`android/app/google-services.json`; it has been preserved.
+The prior local formatting change in `android/app/google-services.json` was
+discarded at the user's request before pushing the rules audit commit.
+
+The opt-in three-player variant is isolated under `lib/hex/`; read
+[its rules and protocol contract](HEX_MODE.md) before changing it.
 
 ## Code map
 

@@ -4,8 +4,11 @@ Stones is a Flutter implementation of Tak. Before changing mechanics, read
 [the rules audit](docs/TAK_RULES.md). Read [the development map](docs/DEVELOPMENT.md)
 for architecture, verification commands, and known gaps.
 
-- Put placement and spread validation in `lib/models/game_rules.dart`. Gameplay,
+- For square play, put placement and spread validation in `lib/models/game_rules.dart`. Gameplay,
   AI simulation, and previews must agree on legal moves.
+- The opt-in three-player variant is isolated in `lib/hex/`. Read
+  [its rules contract](docs/HEX_MODE.md) before editing it and keep validation in
+  `HexRules`. Do not extend square PlayerColor/GameState to host hex games.
 - Resolve roads before flat scoring, using the player who completed the move to
   break simultaneous roads. A tied flat count is a draw.
 - Keep rule regressions in the model/provider tests and gesture regressions in

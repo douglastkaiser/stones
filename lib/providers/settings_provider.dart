@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings keys for SharedPreferences
 class SettingsKeys {
+  static const String hexModeEnabled = 'hex_mode_enabled';
   static const String boardSize = 'board_size';
   static const String soundMuted = 'sound_muted';
   static const String themeMode = 'theme_mode';
@@ -38,6 +39,7 @@ class ChessClockDefaults {
 
 /// App settings state
 class AppSettings {
+  final bool hexModeEnabled;
   final int boardSize;
   final bool isSoundMuted;
   final ThemeMode themeMode;
@@ -45,6 +47,7 @@ class AppSettings {
   final Map<int, int> chessClockDefaults;
 
   const AppSettings({
+    this.hexModeEnabled = false,
     this.boardSize = 5,
     this.isSoundMuted = false,
     this.themeMode = ThemeMode.system,
@@ -53,6 +56,7 @@ class AppSettings {
   });
 
   AppSettings copyWith({
+    bool? hexModeEnabled,
     int? boardSize,
     bool? isSoundMuted,
     ThemeMode? themeMode,
@@ -60,6 +64,7 @@ class AppSettings {
     Map<int, int>? chessClockDefaults,
   }) {
     return AppSettings(
+      hexModeEnabled: hexModeEnabled ?? this.hexModeEnabled,
       boardSize: boardSize ?? this.boardSize,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
       themeMode: themeMode ?? this.themeMode,
@@ -85,6 +90,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       prefs.getString(SettingsKeys.chessClockDefaults),
     );
     state = AppSettings(
+      hexModeEnabled: prefs.getBool(SettingsKeys.hexModeEnabled) ?? false,
       boardSize: prefs.getInt(SettingsKeys.boardSize) ?? 5,
       isSoundMuted: prefs.getBool(SettingsKeys.soundMuted) ?? false,
       themeMode: themeModeIndex != null
@@ -93,6 +99,13 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       chessClockEnabled: prefs.getBool(SettingsKeys.chessClockEnabled) ?? false,
       chessClockDefaults: defaults,
     );
+  }
+
+  /// Expose the experimental hex mode without changing the active square game.
+  Future<void> setHexModeEnabled(bool enabled) async {
+    state = state.copyWith(hexModeEnabled: enabled);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(SettingsKeys.hexModeEnabled, enabled);
   }
 
   /// Set board size and persist
@@ -140,6 +153,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> resetToDefaults() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(SettingsKeys.boardSize);
+    await prefs.remove(SettingsKeys.hexModeEnabled);
     await prefs.remove(SettingsKeys.soundMuted);
     await prefs.remove(SettingsKeys.themeMode);
     await prefs.remove(SettingsKeys.chessClockEnabled);

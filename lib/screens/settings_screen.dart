@@ -27,6 +27,20 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const _SectionHeader(title: 'Experimental modes'),
+          const SizedBox(height: 12),
+          _SettingsTile(
+            icon: Icons.hexagon_outlined,
+            title: 'Three-player Hex',
+            subtitle: 'Enable a separate hex game with three human or AI seats.',
+            trailing: Switch(
+              value: settings.hexModeEnabled,
+              onChanged: (enabled) async {
+                await ref.read(appSettingsProvider.notifier).setHexModeEnabled(enabled);
+              },
+            ),
+          ),
+          const SizedBox(height: 32),
           // Sound Section
           const _SectionHeader(title: 'Audio'),
           const SizedBox(height: 12),

@@ -1,0 +1,4 @@
+# Generated local dependencies and test artifacts.
+tools/hex_rules/node_modules/
+*-debug.log
+.firebase/

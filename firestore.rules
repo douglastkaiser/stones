@@ -154,6 +154,97 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Separate, versioned three-player variant; square /games rules above stay
+    // unchanged. A map log makes its already-applied prefix immutable.
+    match /hexGames/{code} {
+      function validHexSeat(data, key, creating) {
+        return data.kinds[key] in ['localHuman', 'remoteHuman', 'ai'] && (
+          (data.kinds[key] == 'ai' && data.owners[key] == null) ||
+          (data.kinds[key] == 'localHuman' && data.owners[key] == data.host) ||
+          (data.kinds[key] == 'remoteHuman' &&
+            (data.owners[key] == null || (!creating && data.owners[key] is string)))
+        );
+      }
+      function hexReady(data) {
+        return (data.kinds['0'] == 'ai' || data.owners['0'] != null) &&
+               (data.kinds['1'] == 'ai' || data.owners['1'] != null) &&
+               (data.kinds['2'] == 'ai' || data.owners['2'] != null);
+      }
+      function hexJoin(key) {
+        return resource.data.ply == 0 &&
+          resource.data.kinds[key] == 'remoteHuman' &&
+          resource.data.owners[key] == null &&
+          request.resource.data.owners[key] == request.auth.uid &&
+          request.auth.uid != resource.data.host &&
+          request.auth.uid != resource.data.owners['0'] &&
+          request.auth.uid != resource.data.owners['1'] &&
+          request.auth.uid != resource.data.owners['2'] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners']) &&
+          request.resource.data.owners.diff(resource.data.owners).affectedKeys().hasOnly([key]);
+      }
+      function hexDrop(drops, index, carry) {
+        return drops.size() <= index ||
+          (drops[index] is int && drops[index] > 0 && drops[index] <= carry);
+      }
+      function hexMoveShape(move, radius, seat) {
+        let carry = 2 * radius + 1;
+        return move.keys().hasOnly(['seat', 'q', 'r', 'type', 'direction', 'drops']) &&
+          move.seat == seat && move.q is int && move.r is int &&
+          move.q >= -radius && move.q <= radius &&
+          move.r >= -radius && move.r <= radius &&
+          move.q + move.r >= -radius && move.q + move.r <= radius &&
+          move.drops is list && (
+            (move.type is int && move.type >= 0 && move.type <= 2 &&
+              move.direction == -1 && move.drops.size() == 0) ||
+            (move.type == -1 && move.direction is int &&
+              move.direction >= 0 && move.direction <= 5 &&
+              move.drops.size() > 0 && move.drops.size() <= carry &&
+              hexDrop(move.drops, 0, carry) && hexDrop(move.drops, 1, carry) &&
+              hexDrop(move.drops, 2, carry) && hexDrop(move.drops, 3, carry) &&
+              hexDrop(move.drops, 4, carry) && hexDrop(move.drops, 5, carry) &&
+              hexDrop(move.drops, 6, carry) && hexDrop(move.drops, 7, carry) &&
+              hexDrop(move.drops, 8, carry))
+          );
+      }
+      function hexAppend() {
+        let seat = (resource.data.starter + resource.data.ply) % 3;
+        let key = string(seat);
+        let logKey = string(resource.data.ply);
+        return hexReady(resource.data) &&
+          (resource.data.owners[key] == request.auth.uid ||
+            (resource.data.kinds[key] == 'ai' && resource.data.host == request.auth.uid)) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ply', 'moves']) &&
+          request.resource.data.ply == resource.data.ply + 1 &&
+          request.resource.data.moves is map &&
+          request.resource.data.moves.size() == resource.data.moves.size() + 1 &&
+          request.resource.data.moves.diff(resource.data.moves).affectedKeys().hasOnly([logKey]) &&
+          hexMoveShape(request.resource.data.moves[logKey], resource.data.radius, seat);
+      }
+      // Room codes are invitations. No public room enumeration is permitted.
+      allow get: if isAuthenticated();
+      allow list, delete: if false;
+      allow create: if isAuthenticated() && code.matches('^H[A-Z]{6}$') &&
+        request.resource.data.keys().hasOnly([
+          'version', 'code', 'host', 'radius', 'starter', 'ply', 'kinds', 'owners', 'moves'
+        ]) && request.resource.data.version == 1 &&
+        request.resource.data.code == code && request.resource.data.host == request.auth.uid &&
+        request.resource.data.radius is int && request.resource.data.radius >= 2 &&
+        request.resource.data.radius <= 4 && request.resource.data.starter is int &&
+        request.resource.data.starter >= 0 && request.resource.data.starter <= 2 &&
+        request.resource.data.ply == 0 && request.resource.data.moves is map &&
+        request.resource.data.moves.size() == 0 &&
+        request.resource.data.kinds is map && request.resource.data.owners is map &&
+        request.resource.data.kinds.keys().hasAll(['0', '1', '2']) &&
+        request.resource.data.kinds.size() == 3 &&
+        request.resource.data.owners.keys().hasAll(['0', '1', '2']) &&
+        request.resource.data.owners.size() == 3 &&
+        validHexSeat(request.resource.data, '0', true) &&
+        validHexSeat(request.resource.data, '1', true) &&
+        validHexSeat(request.resource.data, '2', true);
+      allow update: if isAuthenticated() &&
+        (hexJoin('0') || hexJoin('1') || hexJoin('2') || hexAppend());
+    }
+
     // Deny all other database access by default
     match /{document=**} {
       allow read, write: if false;

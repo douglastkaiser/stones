@@ -1,0 +1,8 @@
+{
+  "name": "stones-hex-rules-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test hex_rules.test.mjs"
+  }
+}
