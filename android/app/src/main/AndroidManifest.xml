@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="stones"
-        android:name="${applicationName}"
+        android:label="Stones"
+        android:name=".StonesApplication"
         android:icon="@mipmap/ic_launcher">
+        <meta-data android:name="com.google.android.gms.games.APP_ID"
+            android:value="@string/play_games_app_id" />
+        <meta-data android:name="com.google.android.gms.games.SUPPRESS_GAME_PROFILE_CREATION"
+            android:value="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

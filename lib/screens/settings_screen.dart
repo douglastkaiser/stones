@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/theme_gallery.dart';
+import '../widgets/account_card.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
@@ -33,6 +34,10 @@ class SettingsScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  const _SectionHeader(title: 'Account'),
+                  const SizedBox(height: 12),
+                  const AccountCard(),
+                  const SizedBox(height: 32),
                   // Sound Section
                   const _SectionHeader(title: 'Audio'),
                   const SizedBox(height: 12),
@@ -90,6 +95,20 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _PlayGamesSection(
                     playGames: playGames,
+                    onRestore: () async {
+                      final restored = await ref
+                          .read(playGamesServiceProvider.notifier)
+                          .restoreCloudGame();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(restored
+                                ? 'Cloud match restored. Return to the menu to continue.'
+                                : ref
+                                        .read(playGamesServiceProvider)
+                                        .errorMessage ??
+                                    'No compatible cloud save found.')));
+                      }
+                    },
                     onManualSignIn: () async {
                       await ref
                           .read(playGamesServiceProvider.notifier)
@@ -195,15 +214,16 @@ class _SettingsTile extends StatelessWidget {
 class _PlayGamesSection extends StatelessWidget {
   final PlayGamesState playGames;
   final Future<void> Function() onManualSignIn;
+  final Future<void> Function() onRestore;
 
   const _PlayGamesSection({
     required this.playGames,
     required this.onManualSignIn,
+    required this.onRestore,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
 
     ImageProvider? avatar;
@@ -214,60 +234,57 @@ class _PlayGamesSection extends StatelessWidget {
     }
 
     final isSignedIn = playGames.isSignedIn;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundImage: avatar,
-          child: avatar == null
-              ? const Icon(Icons.videogame_asset, color: Colors.white)
-              : null,
-        ),
-        title: Text(
-          kIsWeb
-              ? 'Play Games is available on Android'
-              : isSignedIn
-                  ? playGames.player?.displayName ?? 'Signed in'
-                  : 'Not signed in',
-        ),
-        subtitle: Text(
-          kIsWeb
-              ? 'Browser achievements and preferences save on this device. Android sign-in enables Play Games cloud saves.'
-              : isSignedIn
-                  ? 'Play Games cloud saves are enabled. Achievements are tracked on this device.'
-                  : 'Achievements work without signing in. Sign in on Android for Play Games cloud saves.',
-          style: TextStyle(
-            color: isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600,
-          ),
-        ),
-        trailing: kIsWeb
-            ? const Icon(Icons.info_outline)
-            : isSignedIn
-                ? const Icon(Icons.check_circle, color: Colors.green)
-                : ElevatedButton.icon(
-                    onPressed: playGames.isSigningIn ? null : onManualSignIn,
-                    icon: playGames.isSigningIn
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login),
-                    label:
-                        Text(playGames.isSigningIn ? 'Signing in' : 'Sign in'),
-                  ),
-      ),
-    );
+    return Card(
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                CircleAvatar(
+                    backgroundImage: avatar,
+                    child: avatar == null
+                        ? const Icon(Icons.videogame_asset)
+                        : null),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(kIsWeb
+                        ? 'Play Games is available on Android'
+                        : !playGamesAvailable
+                            ? 'Play Games is not enabled in this build'
+                            : isSignedIn
+                                ? playGames.player?.displayName ?? 'Connected'
+                                : 'Optional Play Games connection'))
+              ]),
+              const SizedBox(height: 12),
+              Text(playGamesAvailable
+                  ? 'Play Games is separate from your Stones account. Cloud saves support untimed square matches. Restore a save explicitly; it never replaces a match during sign-in.'
+                  : 'Use the Account section above to sign in with Google. Achievements and themes work locally without Play Games.'),
+              if (playGames.errorMessage != null)
+                Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(playGames.errorMessage!,
+                        style: TextStyle(color: colorScheme.error))),
+              if (playGamesAvailable)
+                Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: isSignedIn
+                        ? OutlinedButton(
+                            onPressed: onRestore,
+                            child: const Text('Restore cloud save'))
+                        : FilledButton.icon(
+                            onPressed:
+                                playGames.isSigningIn ? null : onManualSignIn,
+                            icon: playGames.isSigningIn
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : const Icon(Icons.videogame_asset),
+                            label: Text(playGames.isSigningIn
+                                ? 'Connecting…'
+                                : 'Connect Play Games'))),
+            ])));
   }
 }
 

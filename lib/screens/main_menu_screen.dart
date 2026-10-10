@@ -56,7 +56,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     await soundManager.setMuted(settings.isSoundMuted);
     ref.read(isMutedProvider.notifier).state = soundManager.isMuted;
 
-    // Attempt silent sign-in for Google Play Games
+    // Prepare optional Play Games; interactive sign-in belongs in Settings.
     await ref.read(playGamesServiceProvider.notifier).initialize();
 
     // Initialize ELO rating system

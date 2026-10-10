@@ -20,6 +20,7 @@ import '../services/services.dart';
 import '../services/online_replay.dart';
 import '../models/online_clock.dart';
 import 'saved_rooms_provider.dart';
+import 'account_provider.dart';
 import 'settings_provider.dart';
 import 'scenario_provider.dart';
 import 'ui_state_provider.dart';
@@ -154,6 +155,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
   bool _firebaseInitialized = false;
+  bool get firebaseInitialized => _firebaseInitialized;
   Future<void>? _initialization;
   bool _appCheckActivated = false;
   int _roomEpoch = 0;
@@ -235,10 +237,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         _debugLog('initialize: App Check already activated, skipping');
       }
 
-      _firebaseInitialized = true;
       // Wait for restored authentication before considering anonymous sign-in.
       // The SDK persists web identities locally and native identities on device.
       await FirebaseAuth.instance.authStateChanges().first;
+      _firebaseInitialized = true;
       _debugLog('initialize: Firebase initialization complete');
       // Clear any previous errors on successful initialization
       state = state.copyWith(clearError: true);
@@ -279,7 +281,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       final existingUser = FirebaseAuth.instance.currentUser;
       _debugLog('createGame: currentUser=${existingUser?.uid}');
 
-      final user = existingUser ?? (await _ensureAuth(force: true));
+      final user = existingUser ?? (await _ensureAuth());
       _debugLog('createGame: got user=${user?.uid}');
 
       if (user == null) {
@@ -365,8 +367,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         throw Exception(
             'This room belongs to a different identity. Use the original browser profile or sign in with the original account.');
       }
-      final user =
-          FirebaseAuth.instance.currentUser ?? (await _ensureAuth(force: true));
+      final user = FirebaseAuth.instance.currentUser ?? (await _ensureAuth());
       if (user == null) {
         throw Exception('Unable to sign in. Please try again.');
       }
@@ -771,47 +772,20 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     _debugLog('Firestore listener setup complete');
   }
 
-  Future<User?> _ensureAuth({bool force = false}) async {
-    final auth = FirebaseAuth.instance;
-    if (auth.currentUser != null && !force) return auth.currentUser;
-
-    // On web, use anonymous authentication - no sign-in required
-    if (kIsWeb) {
-      try {
-        final credential = await auth.signInAnonymously();
-        _debugLog('Signed in anonymously for web');
-        return credential.user;
-      } catch (e) {
-        _debugLog('Anonymous authentication failed: $e');
-        throw Exception('Unable to connect. Please try again.');
-      }
-    }
-
-    // On mobile, try Play Games sign-in first (optional, for display name)
-    try {
-      await _ref.read(playGamesServiceProvider.notifier).manualSignIn();
-    } catch (e) {
-      _debugLog('Play Games sign-in failed (optional): $e');
-      // Continue to Firebase Auth - Play Games is just for display name
-    }
-
-    // Firebase Auth with Google for mobile
-    try {
-      final credential = await auth.signInWithProvider(GoogleAuthProvider());
-      return credential.user;
-    } catch (e) {
-      _debugLog('Firebase authentication failed: $e');
-      throw Exception('Please sign in with Google to play online.');
-    }
+  Future<User?> _ensureAuth() async {
+    // Both modes share the same restored identity. Google is an optional
+    // upgrade in Settings, never a surprise second chooser while joining.
+    await _ref.read(accountProvider.notifier).ensurePlayer();
+    return FirebaseAuth.instance.currentUser;
   }
 
   OnlineGamePlayer _playerFor(User user) {
     final playGames = _ref.read(playGamesServiceProvider);
     String displayName;
-    if (playGames.player?.displayName != null) {
-      displayName = playGames.player!.displayName;
-    } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+    if (user.displayName != null && user.displayName!.isNotEmpty) {
       displayName = user.displayName!;
+    } else if (playGames.player?.displayName != null) {
+      displayName = playGames.player!.displayName;
     } else {
       // Generate random "Player-XXXX" name for anonymous users
       final rand = Random.secure();

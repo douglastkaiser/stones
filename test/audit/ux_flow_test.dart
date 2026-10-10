@@ -9,6 +9,8 @@ import 'package:stones/models/models.dart';
 import 'package:stones/providers/game_provider.dart';
 import 'package:stones/providers/game_session_provider.dart';
 import 'package:stones/widgets/chess_clock_setup.dart';
+import 'package:stones/providers/account_provider.dart';
+import '../support/fake_account_service.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -58,7 +60,10 @@ void main() {
           tester.view.devicePixelRatio = 1;
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
-          final container = ProviderContainer();
+          final account = FakeAccount();
+          addTearDown(account.events.close);
+          final container = ProviderContainer(
+              overrides: [accountServiceProvider.overrideWithValue(account)]);
           addTearDown(container.dispose);
           await tester.pumpWidget(UncontrolledProviderScope(
               container: container,

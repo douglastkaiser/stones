@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/online_game_provider.dart';
 import '../providers/cosmetics_provider.dart';
 import '../providers/saved_rooms_provider.dart';
+import '../providers/account_provider.dart';
 import 'hex_ai.dart';
 import 'hex_game.dart';
 import 'hex_room.dart';
@@ -341,13 +340,7 @@ final hexMatchProvider =
     StateNotifierProvider<HexMatchController, HexMatchState>((ref) {
   return HexMatchController(
       authenticate: () async {
-        await ref.read(onlineGameProvider.notifier).initialize();
-        final error = ref.read(onlineGameProvider).errorMessage;
-        if (error != null) throw StateError(error);
-        final user = FirebaseAuth.instance.currentUser ??
-            (await FirebaseAuth.instance.signInAnonymously()).user;
-        if (user == null) throw StateError('Sign in to join a hex match');
-        return user.uid;
+        return (await ref.read(accountProvider.notifier).ensurePlayer()).uid;
       },
       store: () => FirestoreHexRoomStore(FirebaseFirestore.instance,
           onAllocated: (room, uid) => ref

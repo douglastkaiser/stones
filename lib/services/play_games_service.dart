@@ -1,13 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:games_services/games_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
+import 'play_games_save.dart';
+import '../hex/hex_match_provider.dart';
 import '../providers/providers.dart';
+
+bool get playGamesAvailable =>
+    !kIsWeb &&
+    defaultTargetPlatform == TargetPlatform.android &&
+    const bool.fromEnvironment('STONES_PLAY_GAMES_ENABLED');
 
 class PlayGamesState {
   final bool isSigningIn;
@@ -39,7 +47,8 @@ class PlayGamesState {
   }) {
     return PlayGamesState(
       isSigningIn: isSigningIn ?? this.isSigningIn,
-      attemptedSilentSignIn: attemptedSilentSignIn ?? this.attemptedSilentSignIn,
+      attemptedSilentSignIn:
+          attemptedSilentSignIn ?? this.attemptedSilentSignIn,
       player: player ?? this.player,
       iconImage: iconImage ?? this.iconImage,
       resumedMoveCount: resumedMoveCount ?? this.resumedMoveCount,
@@ -51,7 +60,7 @@ class PlayGamesState {
 class PlayGamesService extends StateNotifier<PlayGamesState> {
   PlayGamesService(this._ref) : super(const PlayGamesState()) {
     // Play Games Services is not available on web
-    if (!kIsWeb) {
+    if (playGamesAvailable) {
       _listenToPlayer();
     }
   }
@@ -62,11 +71,13 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
 
   Future<void> initialize() async {
     // Play Games Services is not available on web
-    if (kIsWeb) return;
+    if (!playGamesAvailable) return;
     if (state.isSigningIn || state.isSignedIn || state.attemptedSilentSignIn) {
       return;
     }
-    await silentSignIn();
+    // Explicit opt-in only: GameAuth.signIn is interactive, not silent.
+    // Native Play Games restores its own session without us opening a chooser.
+    state = state.copyWith(attemptedSilentSignIn: true);
   }
 
   @override
@@ -75,80 +86,109 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
     super.dispose();
   }
 
-  Future<void> silentSignIn() async {
-    // Play Games Services is not available on web
-    if (kIsWeb) return;
-    state = state.copyWith(isSigningIn: true, attemptedSilentSignIn: true);
-    try {
-      await GameAuth.signIn();
-      // Clear any previous error on successful sign-in
-      state = state.copyWith(clearError: true);
-    } catch (e) {
-      // Silent sign-in failure is expected if user hasn't signed in before
-      // Don't show error for silent sign-in, but log it
-      // User can manually sign in later if needed
-    } finally {
-      state = state.copyWith(isSigningIn: false);
-    }
-  }
-
   Future<void> manualSignIn() async {
-    // Play Games Services is not available on web
-    if (kIsWeb) return;
+    if (!playGamesAvailable || state.isSigningIn) return;
     state = state.copyWith(isSigningIn: true, clearError: true);
     try {
-      await GameAuth.signIn();
-      // Clear any previous error on successful sign-in
-      state = state.copyWith(clearError: true);
-    } catch (e) {
-      // Store the error message for the UI to display
-      state = state.copyWith(
-        errorMessage: 'Failed to sign in with Google Play Games. Error: $e',
-      );
+      await GameAuth.signIn().timeout(const Duration(seconds: 30));
+      if (mounted && !state.isSignedIn) {
+        final player = await GameAuth.player
+            .firstWhere((p) => p != null)
+            .timeout(const Duration(seconds: 5));
+        if (mounted) state = state.copyWith(player: player);
+      }
+      if (mounted) state = state.copyWith(clearError: true);
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+            errorMessage:
+                'Play Games could not connect. Check your network and Play Games profile, then try again. Your Stones account and offline play are still available.');
+      }
     } finally {
-      state = state.copyWith(isSigningIn: false);
+      if (mounted) state = state.copyWith(isSigningIn: false);
     }
   }
 
-  Future<void> onGameStateChanged(
+  Future<void> _syncQueue = Future<void>.value();
+
+  Future<void> onGameStateChanged(GameState next,
+      {GameState? previous, int moveCount = 0}) {
+    final session = _ref.read(gameSessionProvider);
+    final skip = session.mode == GameMode.online ||
+        session.scenario != null ||
+        session.isCourtMode ||
+        session.chessClockSecondsOverride != null ||
+        _ref.read(appSettingsProvider).chessClockEnabled;
+    if (!mounted || !state.isSignedIn || skip) return Future<void>.value();
+    final work = _syncQueue.then((_) => _syncGame(next,
+        previous: previous, moveCount: moveCount, session: session));
+    _syncQueue = work.catchError((Object _) {});
+    return work;
+  }
+
+  Future<void> _syncGame(
     GameState next, {
     GameState? previous,
     int moveCount = 0,
+    required GameSessionConfig session,
   }) async {
-    if (!state.isSignedIn) return;
-
-    if (next.turnNumber == 1 && next.board.occupiedPositions.isEmpty) {
-      if (state.resumedMoveCount != 0) {
-        state = state.copyWith(resumedMoveCount: 0);
+    if (!mounted || !state.isSignedIn) return;
+    try {
+      if (next.turnNumber == 1 && next.board.occupiedPositions.isEmpty) {
+        if (state.resumedMoveCount != 0) {
+          state = state.copyWith(resumedMoveCount: 0);
+        }
+        return; // Opening an empty board must not overwrite a resumable save.
       }
-    }
 
-    final effectiveMoveCount = moveCount + state.resumedMoveCount;
-    if (next.isGameOver) {
-      if (previous?.isGameOver != true) {
-        await _handleGameFinished(next, moveCount: effectiveMoveCount);
+      final effectiveMoveCount = moveCount + state.resumedMoveCount;
+      if (next.isGameOver) {
+        if (previous?.isGameOver != true) {
+          await _handleGameFinished(next,
+              moveCount: effectiveMoveCount, session: session);
+        }
+        await _clearCloudSave();
+        if (mounted) state = state.copyWith(resumedMoveCount: 0);
+      } else {
+        await _saveCloudGame(next,
+            moveCount: effectiveMoveCount, session: session);
       }
-      await _clearCloudSave();
-      state = state.copyWith(resumedMoveCount: 0);
-    } else {
-      await _saveCloudGame(next, moveCount: effectiveMoveCount);
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+            errorMessage:
+                'Play Games sync failed. Your current match is still available on this device.');
+      }
     }
   }
 
   Future<void> _listenToPlayer() async {
     _playerSubscription = GameAuth.player.listen((playerData) async {
-      state = state.copyWith(player: playerData);
-      if (playerData != null) {
-        await _loadPlayerImage();
-        await _maybeLoadCloudGame();
+      if (!mounted) return;
+      state = PlayGamesState(
+          player: playerData,
+          isSigningIn: state.isSigningIn,
+          attemptedSilentSignIn: state.attemptedSilentSignIn,
+          resumedMoveCount: state.resumedMoveCount);
+      if (playerData != null) await _loadPlayerImage();
+    }, onError: (Object _) {
+      if (!mounted || (!state.isSignedIn && !state.isSigningIn)) return;
+      if (mounted) {
+        state = state.copyWith(
+            errorMessage:
+                'Play Games disconnected. You can retry from Settings.');
       }
     });
   }
 
   Future<void> _loadPlayerImage() async {
+    final player = state.player;
     try {
       final icon = await GamesServices.getPlayerIconImage();
-      if (icon != null && icon.isNotEmpty) {
+      if (mounted &&
+          identical(state.player, player) &&
+          icon != null &&
+          icon.isNotEmpty) {
         state = state.copyWith(iconImage: icon.replaceAll('\n', ''));
       }
     } catch (_) {}
@@ -157,8 +197,14 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
   Future<void> _handleGameFinished(
     GameState state, {
     required int moveCount,
+    required GameSessionConfig session,
   }) async {
-    if (state.result == GameResult.draw) {
+    final humanWon = session.mode == GameMode.vsComputer &&
+        (state.result == GameResult.whiteWins
+                ? PlayerColor.white
+                : PlayerColor.black) ==
+            session.vsComputerPlayerColor;
+    if (!humanWon || state.result == GameResult.draw) {
       await _resetCurrentStreak();
       return;
     }
@@ -196,74 +242,55 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
 
     await prefs.setInt(_PrefsKeys.lastMoveCount, moveCount);
 
-    await GamesServices.submitScore(
-      score: Score(
-        androidLeaderboardID: PlayGamesIds.leaderboards.totalWins,
-        value: totalWins,
-      ),
-    );
+    await _score(PlayGamesIds.leaderboards.totalWins, totalWins);
 
-    await GamesServices.submitScore(
-      score: Score(
-        androidLeaderboardID: PlayGamesIds.leaderboards.longestStreak,
-        value: longestStreak,
-      ),
-    );
+    await _score(PlayGamesIds.leaderboards.longestStreak, longestStreak);
   }
 
-  Future<void> _unlockAchievements(
-    GameState state, {
-    required int moveCount,
-  }) async {
-    await GamesServices.unlock(
-      achievement: Achievement(androidID: PlayGamesIds.achievements.firstWin),
-    );
-
+  Future<void> _unlockAchievements(GameState state,
+      {required int moveCount}) async {
+    await _unlock(PlayGamesIds.achievements.firstWin);
     if (state.winReason == WinReason.road) {
-      await GamesServices.increment(
-        achievement: Achievement(
-          androidID: PlayGamesIds.achievements.roadBuilder,
-          steps: 1,
-        ),
-      );
+      await _increment(PlayGamesIds.achievements.roadBuilder);
     }
-
     if (state.winReason == WinReason.flats) {
-      await GamesServices.increment(
-        achievement: Achievement(
-          androidID: PlayGamesIds.achievements.flatEarth,
-          steps: 1,
-        ),
-      );
+      await _increment(PlayGamesIds.achievements.flatEarth);
     }
-
     if (state.boardSize == 8) {
-      await GamesServices.unlock(
-        achievement: Achievement(androidID: PlayGamesIds.achievements.giantSlayer),
-      );
+      await _unlock(PlayGamesIds.achievements.giantSlayer);
     }
-
     if (moveCount > 0 && moveCount < 20) {
-      await GamesServices.unlock(
-        achievement: Achievement(androidID: PlayGamesIds.achievements.speedDemon),
-      );
+      await _unlock(PlayGamesIds.achievements.speedDemon);
     }
-
     if (state.winReason == WinReason.road && _roadHasCapstone(state)) {
-      await GamesServices.unlock(
-        achievement:
-            Achievement(androidID: PlayGamesIds.achievements.capstoneMaster),
-      );
+      await _unlock(PlayGamesIds.achievements.capstoneMaster);
+    }
+  }
+
+  Future<void> _unlock(String id) async {
+    if (id.isNotEmpty) {
+      await GamesServices.unlock(achievement: Achievement(androidID: id));
+    }
+  }
+
+  Future<void> _increment(String id) async {
+    if (id.isNotEmpty) {
+      await GamesServices.increment(
+          achievement: Achievement(androidID: id, steps: 1));
+    }
+  }
+
+  Future<void> _score(String id, int value) async {
+    if (id.isNotEmpty) {
+      await GamesServices.submitScore(
+          score: Score(androidLeaderboardID: id, value: value));
     }
   }
 
   Future<void> _submitLeaderboards(int moveCount) async {
-    await GamesServices.submitScore(
-      score: Score(
-        androidLeaderboardID: PlayGamesIds.leaderboards.fastestWin,
-        value: moveCount,
-      ),
-    );
+    if (moveCount > 0) {
+      await _score(PlayGamesIds.leaderboards.fastestWin, moveCount);
+    }
   }
 
   bool _roadHasCapstone(GameState state) {
@@ -293,7 +320,8 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
     }
 
     for (final start in leftEdge) {
-      final path = _findPathToEdge(state, start, color, (p) => p.col == size - 1);
+      final path =
+          _findPathToEdge(state, start, color, (p) => p.col == size - 1);
       if (path != null) return path;
     }
 
@@ -306,7 +334,8 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
     }
 
     for (final start in topEdge) {
-      final path = _findPathToEdge(state, start, color, (p) => p.row == size - 1);
+      final path =
+          _findPathToEdge(state, start, color, (p) => p.row == size - 1);
       if (path != null) return path;
     }
 
@@ -329,17 +358,17 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
       if (visited.contains(current)) continue;
       visited.add(current);
 
-        if (isTargetEdge(current)) {
-          final path = <Position>{};
-          var pos = current;
-          while (true) {
-            path.add(pos);
-            final nextPos = parent[pos];
-            if (nextPos == null) break;
-            pos = nextPos;
-          }
-          return path;
+      if (isTargetEdge(current)) {
+        final path = <Position>{};
+        var pos = current;
+        while (true) {
+          path.add(pos);
+          final nextPos = parent[pos];
+          if (nextPos == null) break;
+          pos = nextPos;
         }
+        return path;
+      }
 
       for (final adj in current.adjacentPositions(state.boardSize)) {
         if (_controlsForRoad(state, adj, color) && !visited.contains(adj)) {
@@ -376,10 +405,12 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
   Future<void> _saveCloudGame(
     GameState gameState, {
     required int moveCount,
+    required GameSessionConfig session,
   }) async {
-    final payload = _GameSaveBundle(
+    final payload = PlayGamesSave(
       state: gameState,
       moveCount: moveCount,
+      session: session,
     );
     final data = jsonEncode(payload.toJson());
     await GamesServices.saveGame(data: data, name: _saveGameName);
@@ -391,35 +422,56 @@ class PlayGamesService extends StateNotifier<PlayGamesState> {
     } catch (_) {}
   }
 
-  Future<void> _maybeLoadCloudGame() async {
-    final gameState = _ref.read(gameStateProvider);
-    final hasLocalProgress = !gameState.isGameOver &&
-        (gameState.turnNumber > 1 || gameState.board.occupiedPositions.isNotEmpty);
-    if (hasLocalProgress) return;
-
-    final savedGames = await GamesServices.getSavedGames();
-    if (savedGames == null || savedGames.isEmpty) return;
-
-    savedGames.sort((a, b) => b.modificationDate.compareTo(a.modificationDate));
-    final latest = savedGames.first;
-    final raw = await GamesServices.loadGame(name: latest.name);
-    if (raw == null || raw.isEmpty) return;
-
-    try {
-      final json = jsonDecode(raw) as Map<String, dynamic>;
-      final bundle = _GameSaveBundle.fromJson(json);
-      _applyLoadedGame(bundle);
-    } catch (_) {}
+  bool _canRestore() {
+    final current = _ref.read(gameStateProvider);
+    final session = _ref.read(gameSessionProvider);
+    return (current.isGameOver || current.board.occupiedPositions.isEmpty) &&
+        session.mode != GameMode.online &&
+        session.scenario == null &&
+        !session.isCourtMode &&
+        session.chessClockSecondsOverride == null &&
+        !_ref.read(appSettingsProvider).chessClockEnabled &&
+        _ref.read(onlineGameProvider).session == null &&
+        _ref.read(hexMatchProvider).room == null;
   }
 
-  void _applyLoadedGame(_GameSaveBundle bundle) {
+  Future<bool> restoreCloudGame() async {
+    if (!mounted || !playGamesAvailable || !state.isSignedIn) return false;
+    if (!_canRestore()) {
+      state = state.copyWith(
+          errorMessage:
+              'Finish or reset your current match before restoring a cloud save.');
+      return false;
+    }
+    try {
+      await _syncQueue;
+      final raw = await GamesServices.loadGame(name: _saveGameName);
+      if (raw == null || raw.isEmpty) return false;
+      final bundle =
+          PlayGamesSave.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      if (!mounted || !_canRestore()) return false;
+      _applyLoadedGame(bundle);
+      return true;
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+            errorMessage:
+                'This cloud save could not be restored safely. Your current match is unchanged.');
+      }
+      return false;
+    }
+  }
+
+  void _applyLoadedGame(PlayGamesSave bundle) {
     final gameNotifier = _ref.read(gameStateProvider.notifier);
+    _ref.read(gameSessionProvider.notifier).state = bundle.session;
     gameNotifier.loadState(bundle.state);
     _ref.read(uiStateProvider.notifier).reset();
     _ref.read(animationStateProvider.notifier).reset();
     _ref.read(moveHistoryProvider.notifier).clear();
     _ref.read(lastMoveProvider.notifier).state = null;
-    state = state.copyWith(resumedMoveCount: bundle.moveCount);
+    state =
+        state.copyWith(resumedMoveCount: bundle.moveCount, clearError: true);
   }
 }
 
@@ -440,126 +492,29 @@ class PlayGamesIds {
 class _AchievementIds {
   const _AchievementIds();
 
-  final String firstWin = 'achievement_first_win_placeholder';
-  final String roadBuilder = 'achievement_road_builder_placeholder';
-  final String flatEarth = 'achievement_flat_earth_placeholder';
-  final String giantSlayer = 'achievement_giant_slayer_placeholder';
-  final String speedDemon = 'achievement_speed_demon_placeholder';
-  final String capstoneMaster = 'achievement_capstone_master_placeholder';
+  final String firstWin =
+      const String.fromEnvironment('PLAY_GAMES_ACHIEVEMENT_FIRST_WIN');
+  final String roadBuilder =
+      const String.fromEnvironment('PLAY_GAMES_ACHIEVEMENT_ROAD_BUILDER');
+  final String flatEarth =
+      const String.fromEnvironment('PLAY_GAMES_ACHIEVEMENT_FLAT_EARTH');
+  final String giantSlayer =
+      const String.fromEnvironment('PLAY_GAMES_ACHIEVEMENT_GIANT_SLAYER');
+  final String speedDemon =
+      const String.fromEnvironment('PLAY_GAMES_ACHIEVEMENT_SPEED_DEMON');
+  final String capstoneMaster =
+      const String.fromEnvironment('PLAY_GAMES_ACHIEVEMENT_CAPSTONE_MASTER');
 }
 
 class _LeaderboardIds {
   const _LeaderboardIds();
 
-  final String totalWins = 'leaderboard_total_wins_placeholder';
-  final String longestStreak = 'leaderboard_longest_streak_placeholder';
-  final String fastestWin = 'leaderboard_fastest_win_placeholder';
-}
-
-class _GameSaveBundle {
-  const _GameSaveBundle({required this.state, required this.moveCount});
-
-  final GameState state;
-  final int moveCount;
-
-  Map<String, dynamic> toJson() {
-    return {
-      'state': _GameStateCodec.toJson(state),
-      'moveCount': moveCount,
-    };
-  }
-
-  factory _GameSaveBundle.fromJson(Map<String, dynamic> json) {
-    return _GameSaveBundle(
-      state: _GameStateCodec.fromJson(json['state'] as Map<String, dynamic>),
-      moveCount: json['moveCount'] as int? ?? 0,
-    );
-  }
-}
-
-class _GameStateCodec {
-  static Map<String, dynamic> toJson(GameState state) {
-    return {
-      'boardSize': state.boardSize,
-      'currentPlayer': state.currentPlayer.name,
-      'whitePieces': _playerPiecesToJson(state.whitePieces),
-      'blackPieces': _playerPiecesToJson(state.blackPieces),
-      'turnNumber': state.turnNumber,
-      'phase': state.phase.name,
-      'result': state.result?.name,
-      'winReason': state.winReason?.name,
-      'cells': [
-        for (int r = 0; r < state.boardSize; r++)
-          [
-            for (int c = 0; c < state.boardSize; c++)
-              state.board.cells[r][c].pieces
-                  .map(_pieceToJson)
-                  .toList(),
-          ]
-      ],
-    };
-  }
-
-  static GameState fromJson(Map<String, dynamic> json) {
-    final size = json['boardSize'] as int;
-    var board = Board.empty(size);
-    final cells = (json['cells'] as List<dynamic>);
-    for (int r = 0; r < size; r++) {
-      final row = cells[r] as List<dynamic>;
-      for (int c = 0; c < size; c++) {
-        final pieces = (row[c] as List<dynamic>)
-            .map((e) => _pieceFromJson(e as Map<String, dynamic>))
-            .toList();
-        board = board.setStack(Position(r, c), PieceStack(pieces));
-      }
-    }
-
-    return GameState(
-      board: board,
-      currentPlayer:
-          PlayerColor.values.firstWhere((e) => e.name == json['currentPlayer']),
-      whitePieces: _playerPiecesFromJson(json['whitePieces'] as Map<String, dynamic>),
-      blackPieces: _playerPiecesFromJson(json['blackPieces'] as Map<String, dynamic>),
-      turnNumber: json['turnNumber'] as int,
-      phase: GamePhase.values.firstWhere((e) => e.name == json['phase']),
-      result: json['result'] == null
-          ? null
-          : GameResult.values.firstWhere((e) => e.name == json['result']),
-      winReason: json['winReason'] == null
-          ? null
-          : WinReason.values.firstWhere((e) => e.name == json['winReason']),
-    );
-  }
-
-  static Map<String, dynamic> _playerPiecesToJson(PlayerPieces pieces) {
-    return {
-      'color': pieces.color.name,
-      'flat': pieces.flatStones,
-      'cap': pieces.capstones,
-    };
-  }
-
-  static PlayerPieces _playerPiecesFromJson(Map<String, dynamic> json) {
-    return PlayerPieces(
-      color: PlayerColor.values.firstWhere((e) => e.name == json['color']),
-      flatStones: json['flat'] as int,
-      capstones: json['cap'] as int,
-    );
-  }
-
-  static Map<String, dynamic> _pieceToJson(Piece piece) {
-    return {
-      'type': piece.type.name,
-      'color': piece.color.name,
-    };
-  }
-
-  static Piece _pieceFromJson(Map<String, dynamic> json) {
-    return Piece(
-      type: PieceType.values.firstWhere((e) => e.name == json['type']),
-      color: PlayerColor.values.firstWhere((e) => e.name == json['color']),
-    );
-  }
+  final String totalWins =
+      const String.fromEnvironment('PLAY_GAMES_LEADERBOARD_TOTAL_WINS');
+  final String longestStreak =
+      const String.fromEnvironment('PLAY_GAMES_LEADERBOARD_LONGEST_STREAK');
+  final String fastestWin =
+      const String.fromEnvironment('PLAY_GAMES_LEADERBOARD_FASTEST_WIN');
 }
 
 final playGamesServiceProvider =

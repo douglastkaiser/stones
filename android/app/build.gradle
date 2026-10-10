@@ -1,7 +1,7 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    id "com.google.gms.google-services"      // Add this line
+    id "com.google.gms.google-services"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -22,12 +22,12 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = JavaVersion.VERSION_17
     }
 
     defaultConfig {
@@ -36,22 +36,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        resValue "string", "play_games_app_id", System.getenv("STONES_PLAY_GAMES_APP_ID") ?: "0"
     }
 
-    // Split APKs by ABI to reduce download size per device
-    // Note: Must disable splits when building App Bundles due to AGP 8.9.0 bug
-    // See: https://issuetracker.google.com/issues/402800800
-    splits {
-        abi {
-            // Disable ABI splits when building App Bundles (they handle this automatically)
-            def isBuildingBundle = gradle.startParameter.taskNames.any { it.toLowerCase().contains("bundle") }
-            enable !isBuildingBundle
-            reset()
-            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-            universalApk true  // Also build a universal APK for fallback
-        }
-    }
-
+    // Flutter owns ABI splitting through --split-per-abi. Gradle-level splits
+    // previously also affected debug builds and conflicted with bundle tasks.
     signingConfigs {
         release {
             if (androidUploadStoreFile) {
@@ -79,4 +68,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Profile-prompt suppression requires v21+, above the plugin's v20 default.
+    implementation "com.google.android.gms:play-services-games-v2:21.0.0"
 }
