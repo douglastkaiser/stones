@@ -1,10 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/piece.dart';
 import 'hex_board.dart';
 import 'hex_exercises.dart';
 import 'hex_game.dart';
+import 'hex_move_selection.dart';
 import 'hex_forcing_position.dart';
 import '../puzzles/certificates.dart';
 import '../widgets/puzzle_hints.dart';
@@ -95,11 +95,12 @@ class HexExerciseScreen extends StatefulWidget {
 
 class _HexExerciseScreenState extends State<HexExerciseScreen> {
   late HexGame _game;
-  HexCell? _source;
-  int _carry = 1;
-  PieceType _type = PieceType.flat;
-  HexMove? _planned;
-  List<HexMove> _choices = [];
+  final _selection = HexMoveSelection();
+  HexCell? get _source => _selection.source;
+  PieceType get _type => _selection.type;
+  set _type(PieceType value) => _selection.type = value;
+  HexMove? get _planned => _selection.planned;
+  set _planned(HexMove? value) => _selection.planned = value;
   int _steps = 0;
   bool _done = false;
   bool _attempted = false;
@@ -111,11 +112,7 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
     _reset();
   }
 
-  void _clear() {
-    _source = null;
-    _planned = null;
-    _choices = [];
-  }
+  void _clear() => _selection.clear();
 
   void _reset() {
     _game = widget.exercise.initial;
@@ -127,36 +124,14 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
     _clear();
   }
 
-  HexCell _end(HexMove move) {
-    var cell = move.from;
-    for (final _ in move.drops) {
-      cell = cell.step(move.direction!);
-    }
-    return cell;
-  }
-
-  List<HexMove> get _spreads => _source == null
-      ? []
-      : HexRules.spreads(_game, _source!, pickup: _carry).toList();
   void _tap(HexCell cell) {
     if (_done || _attempted) return;
-    final options = _spreads.where((move) => _end(move) == cell).toList();
+    var confirm = false;
     setState(() {
       _feedback = null;
-      if (options.isNotEmpty && cell != _source) {
-        _choices = options;
-        _planned = options.first;
-      } else if (!_game.opening && _game.topAt(cell)?.seat == _game.current) {
-        _clear();
-        _source = cell;
-        _carry = math.min(_game.carryLimit, _game.stackAt(cell).length);
-      } else if (_game.stackAt(cell).isEmpty) {
-        _clear();
-        final move =
-            HexMove.place(cell, _game.opening ? PieceType.flat : _type);
-        if (HexRules.play(_game, move) != null) _planned = move;
-      }
+      confirm = _selection.tap(_game, cell);
     });
+    if (confirm) _confirm();
   }
 
   void _confirm() {
@@ -220,9 +195,7 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
   Widget build(BuildContext context) {
     final exercise = widget.exercise;
     final preview = _planned == null ? null : HexRules.play(_game, _planned!);
-    final carryMax = _source == null
-        ? 1
-        : math.min(_game.carryLimit, _game.stackAt(_source!).length);
+
     return Scaffold(
       appBar: AppBar(title: Text(exercise.title)),
       body: Center(
@@ -258,10 +231,15 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                                 game: preview ?? _game,
                                 inspectionGame: preview == null ? null : _game,
                                 selected: _source,
-                                destinations: _spreads.map(_end).toSet(),
+                                destinations: _selection.destinations(_game),
                                 road: _done && _game.winner != null
                                     ? HexRules.road(_game, _game.winner!)
                                     : {},
+                                onSwipe: _done || _attempted
+                                    ? null
+                                    : (cell, direction) => setState(() =>
+                                        _selection.swipe(
+                                            _game, cell, direction)),
                                 onCell: _done || _attempted ? null : _tap)),
                         if (!_done &&
                             !_attempted &&
@@ -270,45 +248,29 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                           Wrap(spacing: 8, children: [
                             for (final type in PieceType.values)
                               ChoiceChip(
-                                  label: Text(type == PieceType.standing
-                                      ? 'Wall'
-                                      : type.name),
+                                  label: Text(switch (type) {
+                                    PieceType.flat => 'Flat',
+                                    PieceType.standing => 'Wall',
+                                    PieceType.capstone => 'Capstone',
+                                  }),
                                   selected: _type == type,
-                                  onSelected: (_) => setState(() {
-                                        _type = type;
-                                        _planned = null;
-                                      }))
+                                  onSelected: !_game
+                                          .reserves[_game.current.index]
+                                          .has(type)
+                                      ? null
+                                      : (_) => setState(() {
+                                            _type = type;
+                                            _planned = null;
+                                          }))
                           ]),
                         if (_source != null)
-                          Row(children: [
-                            Text('Carry: $_carry'),
-                            Expanded(
-                                child: Slider(
-                                    label: 'Carry $_carry',
-                                    value: _carry.toDouble(),
-                                    min: 1,
-                                    max: math.max(2, carryMax).toDouble(),
-                                    divisions: math.max(1, carryMax - 1),
-                                    onChanged: carryMax == 1
-                                        ? null
-                                        : (value) => setState(() {
-                                              _carry = value.round();
-                                              _planned = null;
-                                              _choices = [];
-                                            }))),
-                          ]),
-                        if (_choices.isNotEmpty)
-                          Wrap(spacing: 8, children: [
-                            for (final move in _choices)
-                              ChoiceChip(
-                                  label: Text('Drop ${move.drops.join(' → ')}'),
-                                  selected: identical(move, _planned),
-                                  onSelected: (_) =>
-                                      setState(() => _planned = move))
-                          ]),
+                          HexMoveControls(
+                              selection: _selection,
+                              game: _game,
+                              onChanged: () => setState(() {})),
                         if (!_done && !_attempted)
                           const Text(
-                              'Tap an empty cell to place, or your stack then a highlighted destination. Confirm applies the preview.'),
+                              'Tap to preview; tap again to place. Tap or drag your stack toward a neighbor. Carry and Drop adjust the spread; Confirm finishes it.'),
                         if (_feedback != null)
                           Semantics(
                               liveRegion: true,

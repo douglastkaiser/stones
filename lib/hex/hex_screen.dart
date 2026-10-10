@@ -10,6 +10,7 @@ import '../models/cosmetics.dart';
 import '../providers/cosmetics_provider.dart';
 import '../widgets/match_theme_badge.dart';
 import 'hex_game.dart';
+import 'hex_move_selection.dart';
 import 'hex_board.dart';
 import 'hex_learning_screen.dart';
 export 'hex_board.dart';
@@ -49,10 +50,13 @@ void _showRules(BuildContext context, {bool legacy = false}) {
 }
 
 class HexSetupScreen extends ConsumerStatefulWidget {
-  const HexSetupScreen({super.key});
+  const HexSetupScreen({super.key, this.initialMode = HexSetupMode.local});
+  final HexSetupMode initialMode;
   @override
   ConsumerState<HexSetupScreen> createState() => _HexSetupScreenState();
 }
+
+enum HexSetupMode { computer, local, online }
 
 class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
   int _radius = 2;
@@ -63,6 +67,18 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
     HexSeatKind.localHuman
   ];
   final _code = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMode == HexSetupMode.computer) {
+      _kinds[1] = HexSeatKind.ai;
+      _kinds[2] = HexSeatKind.ai;
+    } else if (widget.initialMode == HexSetupMode.online) {
+      _kinds[1] = HexSeatKind.remoteHuman;
+      _kinds[2] = HexSeatKind.remoteHuman;
+    }
+  }
 
   @override
   void dispose() {
@@ -88,12 +104,18 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
   Widget build(BuildContext context) {
     final match = ref.watch(hexMatchProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Three-player Hex'), actions: [
-        IconButton(
-            onPressed: () => _showRules(context),
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'Hex rules'),
-      ]),
+      appBar: AppBar(
+          title: Text('Hex · ${switch (widget.initialMode) {
+            HexSetupMode.computer => 'Vs Computer',
+            HexSetupMode.local => 'Local Game',
+            HexSetupMode.online => 'Online Game',
+          }}'),
+          actions: [
+            IconButton(
+                onPressed: () => _showRules(context),
+                icon: const Icon(Icons.help_outline),
+                tooltip: 'Hex rules'),
+          ]),
       body: Center(
           child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
@@ -169,24 +191,26 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
               label: Text(_kinds.contains(HexSeatKind.remoteHuman)
                   ? 'Create hex room'
                   : 'Start hex match')),
-          const SizedBox(height: 28),
-          const Divider(),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _code,
-            maxLength: 7,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-                labelText: 'Join a hex room',
-                hintText: 'HABCDEF',
-                border: OutlineInputBorder()),
-            onSubmitted:
-                match.busy ? null : (_) => unawaited(_start(join: true)),
-          ),
-          OutlinedButton(
-              onPressed:
-                  match.busy ? null : () => unawaited(_start(join: true)),
-              child: const Text('Join room')),
+          if (widget.initialMode == HexSetupMode.online) ...[
+            const SizedBox(height: 28),
+            const Divider(),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _code,
+              maxLength: 7,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                  labelText: 'Join a hex room',
+                  hintText: 'HABCDEF',
+                  border: OutlineInputBorder()),
+              onSubmitted:
+                  match.busy ? null : (_) => unawaited(_start(join: true)),
+            ),
+            OutlinedButton(
+                onPressed:
+                    match.busy ? null : () => unawaited(_start(join: true)),
+                child: const Text('Join room')),
+          ],
           if (match.busy)
             const Padding(
                 padding: EdgeInsets.all(16),
@@ -211,12 +235,12 @@ class HexGameScreen extends ConsumerStatefulWidget {
 
 class _HexGameScreenState extends ConsumerState<HexGameScreen> {
   late final HexMatchController _controller;
-  HexCell? _source;
-  int _pickup = 1;
-  PieceType _type = PieceType.flat;
-  HexMove? _planned;
-  List<HexMove> _choices = [];
-
+  final _selection = HexMoveSelection();
+  HexCell? get _source => _selection.source;
+  PieceType get _type => _selection.type;
+  set _type(PieceType value) => _selection.type = value;
+  HexMove? get _planned => _selection.planned;
+  set _planned(HexMove? value) => _selection.planned = value;
   @override
   void initState() {
     super.initState();
@@ -229,40 +253,19 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
     super.dispose();
   }
 
-  void _clear() {
-    _source = null;
-    _planned = null;
-    _choices = [];
+  void _clear() => _selection.clear();
+
+  Future<void> _confirm() async {
+    final move = _planned;
+    if (move == null || !ref.read(hexMatchProvider).canPlay) return;
+    if (await _controller.play(move) && mounted) setState(_clear);
   }
 
-  void _tap(HexCell cell, HexGame game, List<HexMove> spreads) {
+  void _tap(HexCell cell, HexGame game) {
     if (!ref.read(hexMatchProvider).canPlay) return;
-    final destinations =
-        spreads.where((move) => _destination(move) == cell).toList();
-    setState(() {
-      if (destinations.isNotEmpty && cell != _source) {
-        _choices = destinations;
-        _planned = destinations.first;
-      } else if (!game.opening && game.topAt(cell)?.seat == game.current) {
-        _clear();
-        _source = cell;
-        _pickup = math.min(game.carryLimit, game.stackAt(cell).length);
-      } else if (game.stackAt(cell).isEmpty) {
-        _clear();
-        final move = HexMove.place(cell, game.opening ? PieceType.flat : _type);
-        if (HexRules.play(game, move) != null) _planned = move;
-      } else {
-        _clear();
-      }
-    });
-  }
-
-  HexCell _destination(HexMove move) {
-    var cell = move.from;
-    for (var i = 0; i < move.drops.length; i++) {
-      cell = cell.step(move.direction!);
-    }
-    return cell;
+    var confirm = false;
+    setState(() => confirm = _selection.tap(game, cell));
+    if (confirm) unawaited(_confirm());
   }
 
   @override
@@ -278,9 +281,6 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
     // A sole human's goal stays visible while either bot takes its turn.
     final goalSeat =
         match.controls.length == 1 ? match.controls.single : game.current;
-    final spreads = _source == null
-        ? <HexMove>[]
-        : HexRules.spreads(game, _source!, pickup: _pickup).toList();
     final preview = _planned == null ? null : HexRules.play(game, _planned!);
     final road = game.finished && game.winner != null
         ? HexRules.road(game, game.winner!)
@@ -317,7 +317,7 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
         // instruction, Carry slider or Confirm button resizes the board.
         final headerHeight =
             (constraints.maxWidth < 600 ? 220 : 160) * textScale;
-        final controlsHeight = 180 * textScale;
+        final controlsHeight = 240 * textScale;
         final boardHeight = math.min(320.0, constraints.maxWidth);
         return SingleChildScrollView(
             child: SizedBox(
@@ -410,10 +410,14 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                               game: preview ?? game,
                               inspectionGame: preview == null ? null : game,
                               selected: _source,
-                              destinations: spreads.map(_destination).toSet(),
+                              destinations: _selection.destinations(game),
                               road: road,
+                              onSwipe: match.canPlay
+                                  ? (cell, direction) => setState(() =>
+                                      _selection.swipe(game, cell, direction))
+                                  : null,
                               onCell: match.canPlay
-                                  ? (cell) => _tap(cell, game, spreads)
+                                  ? (cell) => _tap(cell, game)
                                   : null))),
                   SizedBox(
                       height: controlsHeight,
@@ -465,57 +469,16 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                                         ))
                                     .toList()),
                           if (match.canPlay && _source != null)
-                            Row(children: [
-                              Text('Carry $_pickup'),
-                              Expanded(
-                                  child: Slider(
-                                      value: _pickup.toDouble(),
-                                      min: 1,
-                                      max: math
-                                          .max(
-                                              2,
-                                              math.min(
-                                                  game.carryLimit,
-                                                  game
-                                                      .stackAt(_source!)
-                                                      .length))
-                                          .toDouble(),
-                                      divisions: math.max(
-                                          1,
-                                          math.min(
-                                                  game.carryLimit,
-                                                  game
-                                                      .stackAt(_source!)
-                                                      .length) -
-                                              1),
-                                      onChanged:
-                                          game.stackAt(_source!).length <= 1
-                                              ? null
-                                              : (value) => setState(() {
-                                                    _pickup = value.round();
-                                                    _planned = null;
-                                                    _choices = [];
-                                                  }))),
-                            ]),
-                          if (_choices.isNotEmpty)
-                            Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: _choices
-                                    .map((move) => ChoiceChip(
-                                          label: Text(
-                                              'Drop ${move.drops.join(' → ')}'),
-                                          selected: identical(move, _planned),
-                                          onSelected: (_) =>
-                                              setState(() => _planned = move),
-                                        ))
-                                    .toList()),
+                            HexMoveControls(
+                                selection: _selection,
+                                game: game,
+                                onChanged: () => setState(() {})),
                           if (match.canPlay)
                             Text(_planned != null
                                 ? 'Preview — confirm to finish your move'
                                 : _source != null
-                                    ? 'Tap a highlighted destination; choose how many pieces to drop on each cell.'
-                                    : 'Tap an empty cell to place, or your stack to spread.'),
+                                    ? 'Tap a highlighted destination or drag toward it. Carry chooses the top pieces.'
+                                    : 'Tap to preview; tap again to place. Tap or drag your stack to spread.'),
                           if (_planned != null || _source != null)
                             Wrap(
                                 alignment: WrapAlignment.center,
@@ -526,16 +489,8 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                                       child: const Text('Cancel')),
                                   if (_planned != null)
                                     FilledButton(
-                                        onPressed: match.canPlay
-                                            ? () async {
-                                                final move = _planned!;
-                                                if (await _controller
-                                                        .play(move) &&
-                                                    mounted) {
-                                                  setState(_clear);
-                                                }
-                                              }
-                                            : null,
+                                        onPressed:
+                                            match.canPlay ? _confirm : null,
                                         child: const Text('Confirm')),
                                 ]),
                         ]),

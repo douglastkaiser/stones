@@ -96,6 +96,9 @@ avoid accidentally including that unrelated generated edit in a rules change.
 
 See [movement UX](MOVEMENT_UX.md) for the carry/drop interaction contract,
 usability questions, regression coverage, and future square/Hex improvements.
+The [play selector](PLAY_SELECTION.md) explains the common board/opponent
+hierarchy and controls. `board_cell_gestures.dart` shares gesture recognition;
+`hex_move_selection.dart` shares Hex match/exercise planning and controls.
 The first movement revision passed the complete 244-test suite, strict analysis,
 and a release web build, with phone/desktop browser trials.
 

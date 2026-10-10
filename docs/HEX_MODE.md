@@ -2,7 +2,10 @@
 
 This is a Stones experiment, not an official Tak ruleset. Three-player Hex is
 always selectable from the main menu; it no longer requires a Settings switch.
-Local Game, Online Game, Vs Computer and square results retain their behavior.
+Square and Hex share a home board selector, followed by the same Vs Computer,
+Local Game and Online Game choices. Hex presets choose one human/two AIs, three
+local humans, or host/two remote humans; every seat remains editable. Square
+results and setup remain independent. See [play selection](PLAY_SELECTION.md).
 The legacy enable flag is ignored for discovery so saved preferences cannot hide
 this mode. Hex tutorials and puzzles are accessible from its setup screen and
 from the main Tutorials & Puzzles chooser.

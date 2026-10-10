@@ -7,6 +7,7 @@ import '../theme/game_colors.dart';
 import '../providers/cosmetics_provider.dart';
 import '../widgets/procedural_painters.dart';
 import '../widgets/piece_stack_view.dart';
+import '../widgets/board_cell_gestures.dart';
 import 'hex_game.dart';
 
 const hexSeatColors = [Color(0xFFFFE3A0), Color(0xFF607D8B), Color(0xFFE68B54)];
@@ -51,6 +52,23 @@ class HexBoardGeometry {
     return null;
   }
 
+  /// Project onto six unit neighbor vectors; independent of cell/board size.
+  HexDirection direction(Offset delta) {
+    var best = HexDirection.east;
+    var score = double.negativeInfinity;
+    for (final direction in HexDirection.values) {
+      final vector = Offset(
+          math.sqrt(3) * (direction.dq + direction.dr / 2), 1.5 * direction.dr);
+      final projection =
+          (delta.dx * vector.dx + delta.dy * vector.dy) / vector.distance;
+      if (projection > score) {
+        score = projection;
+        best = direction;
+      }
+    }
+    return best;
+  }
+
   /// Label anchors are derived from the same boundary cells the road finder
   /// uses, instead of inferring goals from painter/direction indices.
   Offset goalAnchor(HexGame game, HexAxis axis, bool positive) {
@@ -77,7 +95,8 @@ class HexBoard extends ConsumerWidget {
       this.selected,
       this.destinations = const {},
       this.road = const {},
-      this.onCell});
+      this.onCell,
+      this.onSwipe});
   final HexGame game;
   final HexGame? inspectionGame;
   final List<PieceStyle>? pieceStyles;
@@ -89,6 +108,7 @@ class HexBoard extends ConsumerWidget {
   final Set<HexCell> destinations;
   final Set<HexCell> road;
   final ValueChanged<HexCell>? onCell;
+  final void Function(HexCell, HexDirection)? onSwipe;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fallback = ref.watch(currentPieceStyleProvider);
@@ -176,42 +196,51 @@ class HexBoard extends ConsumerWidget {
                     pieces: visualStacks[cell]!,
                     builder: (expanded) => Material(
                         type: MaterialType.transparency,
-                        child: InkWell(
-                            onTap: onCell == null ? null : () => onCell!(cell),
-                            child: Stack(children: [
-                              Padding(
-                                  padding: EdgeInsets.all(geometry.unit * .12),
-                                  child: IgnorePointer(
-                                      child: PieceStackView(
-                                          pieces: visualStacks[cell]!,
-                                          expanded: expanded))),
-                              if (game.stackAt(cell).isNotEmpty)
-                                Positioned(
-                                    top: geometry.unit * .35,
-                                    right: geometry.unit * .4,
-                                    child: IgnorePointer(
-                                        child: ExcludeSemantics(
-                                            child: Text(
-                                                hexSeatSymbols[game
-                                                    .stackAt(cell)
-                                                    .last
-                                                    .seat
-                                                    .index],
-                                                textScaler:
-                                                    TextScaler.noScaling,
-                                                style: TextStyle(
-                                                    fontSize:
-                                                        (geometry.unit * .28)
-                                                            .clamp(8, 13),
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black,
-                                                    backgroundColor:
-                                                        hexSeatColors[game
-                                                            .stackAt(cell)
-                                                            .last
-                                                            .seat
-                                                            .index]))))),
-                            ]))),
+                        child: BoardCellGestures(
+                            onDrag: onSwipe == null
+                                ? null
+                                : (delta) =>
+                                    onSwipe!(cell, geometry.direction(delta)),
+                            child: InkWell(
+                                onTap:
+                                    onCell == null ? null : () => onCell!(cell),
+                                child: Stack(children: [
+                                  Padding(
+                                      padding:
+                                          EdgeInsets.all(geometry.unit * .12),
+                                      child: IgnorePointer(
+                                          child: PieceStackView(
+                                              pieces: visualStacks[cell]!,
+                                              expanded: expanded))),
+                                  if (game.stackAt(cell).isNotEmpty)
+                                    Positioned(
+                                        top: geometry.unit * .35,
+                                        right: geometry.unit * .4,
+                                        child: IgnorePointer(
+                                            child: ExcludeSemantics(
+                                                child: Text(
+                                                    hexSeatSymbols[game
+                                                        .stackAt(cell)
+                                                        .last
+                                                        .seat
+                                                        .index],
+                                                    textScaler:
+                                                        TextScaler.noScaling,
+                                                    style: TextStyle(
+                                                        fontSize:
+                                                            (geometry.unit *
+                                                                    .28)
+                                                                .clamp(8, 13),
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black,
+                                                        backgroundColor:
+                                                            hexSeatColors[game
+                                                                .stackAt(cell)
+                                                                .last
+                                                                .seat
+                                                                .index]))))),
+                                ])))),
                   ),
                 )),
               ),

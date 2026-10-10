@@ -25,6 +25,7 @@ import 'widgets/puzzle_hints.dart';
 import 'widgets/match_theme_badge.dart';
 import 'widgets/procedural_painters.dart';
 import 'widgets/piece_stack_view.dart';
+import 'widgets/board_cell_gestures.dart';
 import 'screens/main_menu_screen.dart';
 
 void _debugLog(String message) {
@@ -4083,51 +4084,8 @@ class _CellInteractionLayer extends StatefulWidget {
 }
 
 class _CellInteractionLayerState extends State<_CellInteractionLayer> {
-  Offset _dragDisplacement = Offset.zero;
-  static const double _swipeVelocityThreshold = 100.0;
-
   PieceStack _getPreviewStack() =>
       widget.stack.pushAll(widget.ghostStackPieces);
-
-  /// Convert velocity to a Direction based on swipe gesture
-  Direction? _getSwipeDirection(Offset velocity) {
-    final dx = velocity.dx;
-    final dy = velocity.dy;
-
-    // Check if the swipe velocity is fast enough
-    if (dx.abs() < _swipeVelocityThreshold &&
-        dy.abs() < _swipeVelocityThreshold) {
-      return null;
-    }
-
-    // Determine primary direction based on which axis has greater velocity
-    if (dx.abs() > dy.abs()) {
-      // Horizontal swipe
-      return dx > 0 ? Direction.right : Direction.left;
-    } else {
-      // Vertical swipe - note: in screen coordinates, positive Y is down
-      return dy > 0 ? Direction.down : Direction.up;
-    }
-  }
-
-  void _handlePanEnd(DragEndDetails details) {
-    if (widget.onSwipe == null) {
-      return;
-    }
-
-    // Deliberate slow drags should work as reliably as quick swipes.
-    final velocity = details.velocity.pixelsPerSecond;
-    final displacement = _dragDisplacement;
-    final direction = displacement.distance >= 24
-        ? (displacement.dx.abs() > displacement.dy.abs()
-            ? (displacement.dx > 0 ? Direction.right : Direction.left)
-            : (displacement.dy > 0 ? Direction.down : Direction.up))
-        : _getSwipeDirection(velocity);
-
-    if (direction != null) {
-      widget.onSwipe!(direction);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -4147,19 +4105,13 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
               stack.pieces[i], widget.pieceStyles, widget.fallbackStyle,
               preview: i >= widget.stack.height)
       ],
-      builder: (expanded) => GestureDetector(
+      builder: (expanded) => BoardCellGestures(
         onTap: widget.onTap,
-        onPanEnd: widget.onSwipe != null ? _handlePanEnd : null,
-        onPanStart: widget.onSwipe == null
+        onDrag: widget.onSwipe == null
             ? null
-            : (_) {
-                _dragDisplacement = Offset.zero;
-              },
-        onPanUpdate: widget.onSwipe == null
-            ? null
-            : (details) {
-                _dragDisplacement += details.delta;
-              },
+            : (delta) => widget.onSwipe!(delta.dx.abs() > delta.dy.abs()
+                ? (delta.dx > 0 ? Direction.right : Direction.left)
+                : (delta.dy > 0 ? Direction.down : Direction.up)),
         child: widget.childBuilder(expanded),
       ),
     );

@@ -8,6 +8,28 @@ import 'package:stones/hex/hex_game.dart';
 import 'package:stones/hex/hex_learning_screen.dart';
 
 void main() {
+  testWidgets('Hex lesson uses swipe preview and second destination tap',
+      (tester) async {
+    final exercise = hexExercises.firstWhere((item) => item.id == 'neighbors');
+    await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(home: HexExerciseScreen(exercise: exercise))));
+    await tester.ensureVisible(find.byType(HexBoard));
+    final rect = tester.getRect(find.byType(HexBoard));
+    final geometry = HexBoardGeometry(rect.size, 2);
+    final center = rect.topLeft + geometry.center(const HexCell(0, 0));
+    final target = rect.topLeft + geometry.center(const HexCell(1, 0));
+    await tester.flingFrom(center, target - center, 400);
+    await tester.pump();
+    final board = tester.widget<HexBoard>(find.byType(HexBoard));
+    expect(board.preview, isTrue);
+    expect(board.inspectionGame!.ply, exercise.initial.ply);
+    await tester.tapAt(target);
+    await tester.pump();
+    expect(find.text('Objective complete'), findsOneWidget);
+    expect(tester.widget<HexBoard>(find.byType(HexBoard)).preview, isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   for (final exercise in hexExercises) {
     test('${exercise.id} solution is legal and completes its objective', () {
       var game = exercise.initial;

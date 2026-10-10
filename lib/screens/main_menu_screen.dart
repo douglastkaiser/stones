@@ -31,6 +31,10 @@ class MainMenuScreen extends ConsumerStatefulWidget {
 }
 
 class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
+  bool _hexBoard = false;
+
+  void _openHex(HexSetupMode mode) => Navigator.push<void>(context,
+      MaterialPageRoute(builder: (_) => HexSetupScreen(initialMode: mode)));
   @override
   void initState() {
     super.initState();
@@ -424,20 +428,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ListTile(
-                  leading: const Icon(Icons.hexagon_outlined),
-                  title: const Text('Hex tutorials & puzzles'),
-                  subtitle: const Text(
-                      'Learn three-player roads, spreads and capstone puzzles.'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(dialogContext);
-                    Navigator.push<void>(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const HexLearningScreen()));
-                  },
-                ),
                 for (final group in chapterGroups) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
@@ -830,48 +820,82 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                           onTap: () => _continueGame(context)),
                       const SizedBox(height: 12),
                     ],
-                    PlayModeCard(
-                        title: 'Tutorials & Puzzles',
-                        description:
-                            'New to Tak? Learn by playing, then solve challenges.',
-                        icon: Icons.school_outlined,
-                        featured: !hasGameInProgress,
-                        onTap: () => _openScenarioSelector(context)),
-                    const SizedBox(height: 12),
+                    Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Choose your board',
+                            style: Theme.of(context).textTheme.titleMedium)),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 12, runSpacing: 8, children: [
+                      ChoiceChip(
+                          avatar: const Icon(Icons.grid_view, size: 20),
+                          label: const Text('Square · 2 players'),
+                          selected: !_hexBoard,
+                          onSelected: (_) => setState(() => _hexBoard = false)),
+                      ChoiceChip(
+                          avatar: const Icon(Icons.hexagon_outlined, size: 20),
+                          label: const Text('Hex · 3 players'),
+                          selected: _hexBoard,
+                          onSelected: (_) => setState(() => _hexBoard = true)),
+                    ]),
+                    const SizedBox(height: 8),
+                    Text(
+                        _hexBoard
+                            ? 'Three-player variant · six directions · shared opposite-side goals.'
+                            : 'Classic Tak · four directions · connect opposite edges.',
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 20),
+                    Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('How do you want to play?',
+                            style: Theme.of(context).textTheme.titleMedium)),
+                    const SizedBox(height: 8),
                     PlayModeCard(
                         title: 'Vs Computer',
-                        description:
-                            'One player · four AI difficulties · no connection needed.',
+                        description: _hexBoard
+                            ? 'You and two AIs · customize each seat.'
+                            : 'You and an AI · four difficulties · optional Court Mode.',
                         icon: Icons.smart_toy_outlined,
-                        onTap: () => _startVsComputer(context)),
+                        featured: !hasGameInProgress,
+                        onTap: () => _hexBoard
+                            ? _openHex(HexSetupMode.computer)
+                            : _startVsComputer(context)),
                     const SizedBox(height: 12),
                     PlayModeCard(
                         title: 'Local Game',
-                        description: 'Two players sharing this device.',
+                        description: _hexBoard
+                            ? 'Three players sharing this device · AI seats optional.'
+                            : 'Two players sharing this device.',
                         icon: Icons.group_outlined,
-                        onTap: () => _startNewGame(context, GameMode.local)),
+                        onTap: () => _hexBoard
+                            ? _openHex(HexSetupMode.local)
+                            : _startNewGame(context, GameMode.local)),
                     const SizedBox(height: 12),
                     PlayModeCard(
                         title: 'Online Game',
-                        description:
-                            'Two players on separate devices · share a room code.',
+                        description: _hexBoard
+                            ? 'Host or join a three-seat room · humans and AI.'
+                            : 'Host or join a two-player room · share a code.',
                         icon: Icons.wifi,
-                        onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const OnlineLobbyScreen()))),
-                    ...[
-                      const SizedBox(height: 12),
-                      PlayModeCard(
-                          title: 'Three-player Hex',
-                          description:
-                              'Experimental · any mix of three humans and AI.',
-                          icon: Icons.hexagon_outlined,
-                          onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const HexSetupScreen()))),
-                    ],
+                        onTap: () => _hexBoard
+                            ? _openHex(HexSetupMode.online)
+                            : Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const OnlineLobbyScreen()))),
+                    const SizedBox(height: 20),
+                    PlayModeCard(
+                        title: 'Tutorials & Puzzles',
+                        description: _hexBoard
+                            ? 'Learn Hex, then solve three-player tactical studies.'
+                            : 'Learn square Tak, then solve progressive challenges.',
+                        icon: Icons.school_outlined,
+                        onTap: () => _hexBoard
+                            ? Navigator.push<void>(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const HexLearningScreen()))
+                            : _openScenarioSelector(context)),
                     const SizedBox(height: 16),
                     const Text(
                         'Offline matches resume in this session. Achievements and settings are saved on this device.',
@@ -907,14 +931,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          'STONES',
-          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : GameColors.titleColor,
-                letterSpacing: 8,
-              ),
-        ),
+        FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'STONES',
+              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : GameColors.titleColor,
+                    letterSpacing: 8,
+                  ),
+            )),
       ],
     );
   }
@@ -1211,8 +1237,9 @@ class _VersionFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               AppVersion.displayVersion,
