@@ -25,7 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      ANDROID_UPLOAD_STORE_FILE: ${{ runner.temp }}/stones-upload.jks
       STONES_PLAY_GAMES_APP_ID: ${{ vars.STONES_PLAY_GAMES_APP_ID }}
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +56,8 @@ jobs:
           KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
         run: |
           test -n "$KEYSTORE_B64" || { echo '::error::ANDROID_UPLOAD_KEYSTORE_B64 is missing'; exit 1; }
+          export ANDROID_UPLOAD_STORE_FILE="$RUNNER_TEMP/stones-upload.jks"
+          echo "ANDROID_UPLOAD_STORE_FILE=$ANDROID_UPLOAD_STORE_FILE" >> "$GITHUB_ENV"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$ANDROID_UPLOAD_STORE_FILE"
           chmod 600 "$ANDROID_UPLOAD_STORE_FILE"
       - name: Validate signing and Firebase configuration
@@ -145,4 +146,5 @@ jobs:
           retention-days: 30
       - name: Remove temporary signing key
         if: always()
-        run: rm -f "$ANDROID_UPLOAD_STORE_FILE"
+        run: |
+          if [[ -n "${ANDROID_UPLOAD_STORE_FILE:-}" ]]; then rm -f "$ANDROID_UPLOAD_STORE_FILE"; fi
