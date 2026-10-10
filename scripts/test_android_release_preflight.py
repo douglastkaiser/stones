@@ -70,6 +70,23 @@ class ReleasePreflightTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, 'numeric Play Games'):
             self.run_preflight()
 
+    def test_signing_errors_are_classified_without_exposing_raw_values(self):
+        cases = [
+            (b'Alias <private-alias> does not exist', 'ANDROID_UPLOAD_KEY_ALIAS'),
+            (b'Keystore password was incorrect: private-password', 'ANDROID_UPLOAD_STORE_PASSWORD'),
+            (b'Invalid keystore format', 'ANDROID_UPLOAD_KEYSTORE_B64'),
+        ]
+        for raw, expected in cases:
+            with self.subTest(expected=expected), patch.dict(os.environ, self.env, clear=True), \
+                 patch.object(pathlib.Path, 'is_file', return_value=True), \
+                 patch.object(pathlib.Path, 'stat', return_value=SimpleNamespace(st_size=12)), \
+                 patch.object(pathlib.Path, 'read_text', return_value=json.dumps(self.config)), \
+                 patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, raw, b'')):
+                with self.assertRaises(SystemExit) as failure:
+                    preflight.main()
+                self.assertIn(expected, str(failure.exception))
+                self.assertNotIn('private-', str(failure.exception))
+
 
 if __name__ == '__main__':
     unittest.main()

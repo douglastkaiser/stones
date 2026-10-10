@@ -24,7 +24,17 @@ def main():
                            "-storepass:env", "ANDROID_UPLOAD_STORE_PASSWORD", "-alias",
                            os.environ["ANDROID_UPLOAD_KEY_ALIAS"]], capture_output=True)
     if cert.returncode:
-        raise SystemExit("Cannot read the signing certificate: verify store password and alias")
+        # Classify the diagnostic without publishing alias, password or raw tool output.
+        detail = (cert.stdout + cert.stderr).decode(errors="replace").lower()
+        if "does not exist" in detail and "alias" in detail:
+            reason = "ANDROID_UPLOAD_KEY_ALIAS does not identify a key in this keystore"
+        elif "password" in detail and ("incorrect" in detail or "tampered" in detail):
+            reason = "ANDROID_UPLOAD_STORE_PASSWORD does not open this keystore"
+        elif "invalid keystore format" in detail or "unrecognized keystore format" in detail:
+            reason = "ANDROID_UPLOAD_KEYSTORE_B64 did not decode to a supported keystore"
+        else:
+            reason = "Verify the upload keystore, store password and alias together"
+        raise SystemExit("Cannot read the signing certificate: " + reason)
     info = subprocess.run(["keytool", "-printcert"], input=cert.stdout, capture_output=True, check=True)
     # These fingerprints are public identifiers, useful for OAuth/App Check setup.
     for line in info.stdout.decode().splitlines():
