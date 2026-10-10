@@ -1,12 +1,12 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show listEquals, setEquals;
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/piece.dart';
 import '../models/cosmetics.dart';
 import '../theme/game_colors.dart';
 import '../providers/cosmetics_provider.dart';
 import '../widgets/procedural_painters.dart';
+import '../widgets/piece_stack_view.dart';
 import 'hex_game.dart';
 
 const hexSeatColors = [Color(0xFFFFE3A0), Color(0xFF607D8B), Color(0xFFE68B54)];
@@ -68,6 +68,7 @@ class HexBoard extends ConsumerWidget {
   const HexBoard(
       {super.key,
       required this.game,
+      this.inspectionGame,
       this.turnSeat,
       this.goalSeat,
       this.preview = false,
@@ -78,6 +79,7 @@ class HexBoard extends ConsumerWidget {
       this.road = const {},
       this.onCell});
   final HexGame game;
+  final HexGame? inspectionGame;
   final List<PieceStyle>? pieceStyles;
   final BoardTheme? boardTheme;
   final HexSeat? turnSeat;
@@ -88,88 +90,179 @@ class HexBoard extends ConsumerWidget {
   final Set<HexCell> road;
   final ValueChanged<HexCell>? onCell;
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      LayoutBuilder(builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final geometry = HexBoardGeometry(size, game.radius);
-        return Semantics(
-          label:
-              'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${(turnSeat ?? game.current).label} to play.'} ${game.rulesVersion == 1 ? 'Legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left.' : 'Every color may connect either A pair, B pair or C pair of opposite sides.'}',
-          child: Stack(children: [
-            RepaintBoundary(
-                child: CustomPaint(
-                    size: size,
-                    painter: _HexPainter(
-                        game,
-                        geometry,
-                        selected,
-                        destinations,
-                        road,
-                        boardTheme == null
-                            ? ref.watch(currentBoardThemeProvider)
-                            : BoardThemeData.forTheme(boardTheme!),
-                        ref.watch(currentPieceStyleProvider),
-                        pieceStyles))),
-            for (final axis in HexAxis.values)
-              for (final positive in [false, true])
-                Positioned(
-                    left: geometry.goalAnchor(game, axis, positive).dx - 16,
-                    top: geometry.goalAnchor(game, axis, positive).dy - 9,
-                    width: 32,
-                    height: 18,
-                    child: IgnorePointer(
-                        child: Semantics(
-                            label: game.rulesVersion == 1
-                                ? '${HexSeat.values[axis.index].label} goal ${positive ? 'B' : 'A'}: ${HexSeat.values[axis.index].edgeName(positive)}'
-                                : 'Shared pair ${axis.marker}: ${HexSeat.values[axis.index].edgeName(positive)}; any color may connect it to its opposite side',
-                            child: ExcludeSemantics(
-                                child: Container(
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                        color: game.rulesVersion == 1
-                                            ? hexSeatColors[axis.index]
-                                            : hexPairColors[axis.index],
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                            color:
-                                                (game.rulesVersion == 1 && goalSeat?.index == axis.index)
-                                                    ? Colors.white
-                                                    : Colors.black54,
-                                            width:
-                                                (game.rulesVersion == 1 && goalSeat?.index == axis.index)
-                                                    ? 2
-                                                    : 1)),
-                                    child: Text(game.rulesVersion == 1 ? '${hexSeatSymbols[axis.index]} ${positive ? 'B' : 'A'}' : axis.marker,
-                                        textScaler: TextScaler.noScaling,
-                                        style: const TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold))))))),
-            for (final cell in game.cells)
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fallback = ref.watch(currentPieceStyleProvider);
+    final visualStacks = {
+      for (final cell in game.cells)
+        cell: _visuals(game.stackAt(cell), fallback,
+            previewStart:
+                inspectionGame == null ? null : _unchangedPrefix(cell))
+    };
+    return LayoutBuilder(builder: (context, constraints) {
+      final size = Size(constraints.maxWidth, constraints.maxHeight);
+      final geometry = HexBoardGeometry(size, game.radius);
+      return Semantics(
+        label:
+            'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${(turnSeat ?? game.current).label} to play.'} ${game.rulesVersion == 1 ? 'Legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left.' : 'Every color may connect either A pair, B pair or C pair of opposite sides.'}',
+        child: Stack(children: [
+          RepaintBoundary(
+              child: CustomPaint(
+                  size: size,
+                  painter: _HexPainter(
+                    game,
+                    geometry,
+                    selected,
+                    destinations,
+                    road,
+                    boardTheme == null
+                        ? ref.watch(currentBoardThemeProvider)
+                        : BoardThemeData.forTheme(boardTheme!),
+                  ))),
+          for (final axis in HexAxis.values)
+            for (final positive in [false, true])
               Positioned(
-                left: geometry.center(cell).dx - geometry.unit,
-                top: geometry.center(cell).dy - geometry.unit,
-                width: geometry.unit * 2,
-                height: geometry.unit * 2,
-                child: ClipPath(
-                  clipper: _CellClipper(geometry, cell),
-                  child: Semantics(
+                  left: geometry.goalAnchor(game, axis, positive).dx - 16,
+                  top: geometry.goalAnchor(game, axis, positive).dy - 9,
+                  width: 32,
+                  height: 18,
+                  child: IgnorePointer(
+                      child: Semantics(
+                          label: game.rulesVersion == 1
+                              ? '${HexSeat.values[axis.index].label} goal ${positive ? 'B' : 'A'}: ${HexSeat.values[axis.index].edgeName(positive)}'
+                              : 'Shared pair ${axis.marker}: ${HexSeat.values[axis.index].edgeName(positive)}; any color may connect it to its opposite side',
+                          child: ExcludeSemantics(
+                              child: Container(
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                      color: game.rulesVersion == 1
+                                          ? hexSeatColors[axis.index]
+                                          : hexPairColors[axis.index],
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: (game.rulesVersion == 1 && goalSeat?.index == axis.index)
+                                              ? Colors.white
+                                              : Colors.black54,
+                                          width: (game.rulesVersion == 1 &&
+                                                  goalSeat?.index == axis.index)
+                                              ? 2
+                                              : 1)),
+                                  child: Text(game.rulesVersion == 1 ? '${hexSeatSymbols[axis.index]} ${positive ? 'B' : 'A'}' : axis.marker,
+                                      textScaler: TextScaler.noScaling,
+                                      style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold))))))),
+          for (final cell in game.cells)
+            Positioned(
+              left: geometry.center(cell).dx - geometry.unit,
+              top: geometry.center(cell).dy - geometry.unit,
+              width: geometry.unit * 2,
+              height: geometry.unit * 2,
+              child: ClipPath(
+                clipper: _CellClipper(geometry, cell),
+                child: MergeSemantics(
+                    child: Semantics(
+                  label:
+                      'Cell ${cell.q}, ${cell.r}, ${game.stackAt(cell).isEmpty ? 'empty' : '${game.stackAt(cell).last.seat.label} ${game.stackAt(cell).last.type.name}, ${game.stackAt(cell).length} pieces'}',
+                  button: true,
+                  enabled: onCell != null,
+                  selected: selected == cell,
+                  child: StackInspection(
                     label:
-                        'Cell ${cell.q}, ${cell.r}, ${game.stackAt(cell).isEmpty ? 'empty' : '${game.stackAt(cell).last.seat.label} ${game.stackAt(cell).last.type.name}, ${game.stackAt(cell).length} pieces'}',
-                    button: true,
-                    enabled: onCell != null,
-                    selected: selected == cell,
-                    child: Material(
+                        'Stack ${cell.q}, ${cell.r}${inspectionGame != null && selected == cell ? ' · before move' : ''}',
+                    inspectionPieces: inspectionGame != null && selected == cell
+                        ? _visuals(inspectionGame!.stackAt(cell), fallback)
+                        : null,
+                    pieces: visualStacks[cell]!,
+                    builder: (expanded) => Material(
                         type: MaterialType.transparency,
                         child: InkWell(
                             onTap: onCell == null ? null : () => onCell!(cell),
-                            child: const SizedBox.expand())),
+                            child: Stack(children: [
+                              Padding(
+                                  padding: EdgeInsets.all(geometry.unit * .12),
+                                  child: IgnorePointer(
+                                      child: PieceStackView(
+                                          pieces: visualStacks[cell]!,
+                                          expanded: expanded))),
+                              if (game.stackAt(cell).isNotEmpty)
+                                Positioned(
+                                    top: geometry.unit * .35,
+                                    right: geometry.unit * .4,
+                                    child: IgnorePointer(
+                                        child: ExcludeSemantics(
+                                            child: Text(
+                                                hexSeatSymbols[game
+                                                    .stackAt(cell)
+                                                    .last
+                                                    .seat
+                                                    .index],
+                                                textScaler:
+                                                    TextScaler.noScaling,
+                                                style: TextStyle(
+                                                    fontSize:
+                                                        (geometry.unit * .28)
+                                                            .clamp(8, 13),
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black,
+                                                    backgroundColor:
+                                                        hexSeatColors[game
+                                                            .stackAt(cell)
+                                                            .last
+                                                            .seat
+                                                            .index]))))),
+                            ]))),
                   ),
-                ),
+                )),
               ),
-          ]),
-        );
-      });
+            ),
+        ]),
+      );
+    });
+  }
+
+  int _unchangedPrefix(HexCell cell) {
+    final before = inspectionGame!.stackAt(cell);
+    final after = game.stackAt(cell);
+    var index = 0;
+    while (index < before.length &&
+        index < after.length &&
+        before[index].seat == after[index].seat &&
+        before[index].type == after[index].type) {
+      index++;
+    }
+    return index;
+  }
+
+  List<StackVisualPiece> _visuals(
+          List<HexStone> stones, PieceStyleData fallback,
+          {int? previewStart}) =>
+      [
+        for (var index = 0; index < stones.length; index++)
+          _visual(stones[index], fallback,
+              preview: previewStart != null && index >= previewStart),
+      ];
+
+  StackVisualPiece _visual(HexStone stone, PieceStyleData fallback,
+          {required bool preview}) =>
+      StackVisualPiece(
+          preview: preview,
+          type: stone.type,
+          style: (pieceStyles == null
+                  ? fallback
+                  : PieceStyleData.forStyle(pieceStyles![stone.seat.index]))
+              .style,
+          colors: stone.seat == HexSeat.copper
+              ? const PieceColors(
+                  primary: Color(0xFFE8A568),
+                  secondary: Color(0xFFB76832),
+                  border: Color(0xFF593418))
+              : (pieceStyles == null
+                      ? fallback
+                      : PieceStyleData.forStyle(pieceStyles![stone.seat.index]))
+                  .colorsForPlayer(stone.seat == HexSeat.ivory),
+          isLight: stone.seat != HexSeat.charcoal,
+          owner: stone.seat.label);
 }
 
 class _CellClipper extends CustomClipper<Path> {
@@ -189,27 +282,13 @@ class _CellClipper extends CustomClipper<Path> {
 
 class _HexPainter extends CustomPainter {
   _HexPainter(this.game, this.geometry, this.selected, this.destinations,
-      this.road, this.theme, this.pieces, this.pieceStyles);
+      this.road, this.theme);
   final BoardThemeData theme;
-  final PieceStyleData pieces;
-  final List<PieceStyle>? pieceStyles;
   final HexGame game;
   final HexBoardGeometry geometry;
   final HexCell? selected;
   final Set<HexCell> destinations;
   final Set<HexCell> road;
-  void _text(
-      Canvas canvas, String value, Offset position, double size, Color color) {
-    final text = TextPainter(
-        text: TextSpan(
-            text: value,
-            style: TextStyle(
-                fontSize: size, fontWeight: FontWeight.bold, color: color)),
-        textDirection: TextDirection.ltr)
-      ..layout();
-    text.paint(canvas, position - Offset(text.width / 2, text.height / 2));
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
     final unit = geometry.unit;
@@ -266,40 +345,6 @@ class _HexPainter extends CustomPainter {
                   ? Colors.yellowAccent
                   : Colors.cyanAccent);
       }
-      final stack = game.stackAt(cell);
-      if (stack.isNotEmpty) {
-        final top = stack.last;
-        final style = pieceStyles == null
-            ? pieces
-            : PieceStyleData.forStyle(pieceStyles![top.seat.index]);
-        final colors = top.seat == HexSeat.copper
-            ? const PieceColors(
-                primary: Color(0xFFE8A568),
-                secondary: Color(0xFFB76832),
-                border: Color(0xFF593418))
-            : style.colorsForPlayer(top.seat == HexSeat.ivory);
-        final width = unit * (top.type == PieceType.standing ? .48 : 1.05);
-        final height = unit * (top.type == PieceType.flat ? .65 : 1.2);
-        canvas.save();
-        canvas.translate(center.dx - width / 2, center.dy - height / 2);
-        ThemedPiecePainter(
-                style: style.style,
-                colors: colors,
-                type: top.type,
-                isLightPlayer: top.seat != HexSeat.charcoal)
-            .paint(canvas, Size(width, height));
-        canvas.restore();
-        _text(
-            canvas,
-            hexSeatSymbols[top.seat.index],
-            center + Offset(unit * .48, -unit * .53),
-            unit * .28,
-            top.seat == HexSeat.charcoal ? Colors.white : Colors.black);
-        if (stack.length > 1) {
-          _text(canvas, '${stack.length}', center + Offset(0, unit * 0.62),
-              unit * 0.25, Colors.white);
-        }
-      }
     }
   }
 
@@ -310,7 +355,5 @@ class _HexPainter extends CustomPainter {
       selected != old.selected ||
       !setEquals(destinations, old.destinations) ||
       !setEquals(road, old.road) ||
-      theme != old.theme ||
-      pieces != old.pieces ||
-      !listEquals(pieceStyles, old.pieceStyles);
+      theme != old.theme;
 }

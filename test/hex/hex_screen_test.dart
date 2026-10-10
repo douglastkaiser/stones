@@ -45,6 +45,99 @@ void main() {
     });
   }
 
+  for (final size in [
+    const Size(320, 568),
+    const Size(390, 844),
+    const Size(1100, 900),
+    const Size(1280, 720),
+  ]) {
+    for (final radius in [2, 3, 4]) {
+      testWidgets('Hex board stays anchored through moves R$radius $size',
+          (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(hexMatchProvider.notifier);
+        controller.startLocal(
+            radius, List.filled(3, HexSeatKind.localHuman), HexSeat.ivory);
+        await tester.pumpWidget(UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+                builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                        textScaler:
+                            TextScaler.linear(size.width == 320 ? 1.5 : 1)),
+                    child: child!),
+                home: const HexGameScreen())));
+        await tester.pump();
+        final board = find.byType(HexBoard);
+        await Scrollable.ensureVisible(tester.element(board), alignment: .5);
+        await tester.pumpAndSettle();
+        final outerPosition = tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position;
+        final scrollOffset = outerPosition.pixels;
+        final original = tester.getRect(board);
+        final geometry = HexBoardGeometry(original.size, radius);
+        void anchored() {
+          expect(tester.getRect(board), original);
+          expect(tester.takeException(), isNull);
+        }
+
+        Future<void> tapCell(HexCell cell) async {
+          await tester.tapAt(original.topLeft + geometry.center(cell));
+          await tester.pump();
+          anchored();
+        }
+
+        Future<void> cancel() async {
+          final button = find.widgetWithText(TextButton, 'Cancel');
+          // Large-text phones need intentional scrolling to reach the dock.
+          // Return to the same scroll offset before comparing board geometry.
+          await tester.ensureVisible(button);
+          await tester.pumpAndSettle();
+          await tester.tap(button);
+          await tester.pump();
+          outerPosition.jumpTo(scrollOffset);
+          await tester.pump();
+          anchored();
+          expect(find.text('Cancel'), findsNothing);
+        }
+
+        // Placement previews and cancellation must not resize or recenter cells.
+        await tapCell(const HexCell(0, 0));
+        expect(
+            find.text('Preview — confirm to finish your move'), findsOneWidget);
+        await cancel();
+        // Build a mixed two-stone stack through real legal moves.
+        for (final move in [
+          HexMove.place(const HexCell(0, 0), PieceType.flat),
+          HexMove.place(const HexCell(1, -1), PieceType.flat),
+          HexMove.place(const HexCell(-1, 0), PieceType.flat),
+          HexMove.spread(const HexCell(-1, 0), HexDirection.east, [1]),
+          HexMove.place(const HexCell(-2, 0), PieceType.flat),
+          HexMove.place(const HexCell(2, -1), PieceType.flat),
+        ]) {
+          expect(await controller.play(move), isTrue);
+          await tester.pump();
+          anchored();
+        }
+        await tapCell(const HexCell(0, 0));
+        expect(find.text('Carry 2'), findsOneWidget);
+        await tapCell(const HexCell(1, 0));
+        expect(find.text('Drop 2'), findsOneWidget);
+        await cancel();
+        controller.togglePause();
+        await tester.pump();
+        anchored();
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+  }
+
   testWidgets('setup exposes three independent seat choices and mobile layout',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);

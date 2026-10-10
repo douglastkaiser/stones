@@ -23,6 +23,8 @@ Turns cycle Ivory → Charcoal → Copper, starting with the chosen seat. On eac
 
 Carry up to the board's widest row (5, 7 or 9 pieces). Keep their order, travel straight in one of six directions, and drop at least one piece on every cell. Stacks can be taller than the carry limit. Walls and caps block covering; only a lone capstone at the last step can flatten a wall of any color.
 
+Inspect: hover to fan a stack. Hold or right-click to open its full top-to-bottom list, including buried colors. Close it to return to play.
+
 Check roads after the entire move. If multiple colors gain roads, the mover wins if included. One opponent road wins for that opponent; two opponent roads draw.
 
 Without a road, a full board or any exhausted total reserve ends the match. Most exposed flats wins; a tie for most is a draw. Walls, caps and buried pieces do not score.
@@ -311,91 +313,91 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
       body: SafeArea(child: LayoutBuilder(builder: (context, constraints) {
         final textScale =
             MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+        // Reserve chrome independently of the current move. Otherwise a new
+        // instruction, Carry slider or Confirm button resizes the board.
+        final headerHeight =
+            (constraints.maxWidth < 600 ? 220 : 160) * textScale;
+        final controlsHeight = 180 * textScale;
+        final boardHeight = math.min(320.0, constraints.maxWidth);
         return SingleChildScrollView(
             child: SizedBox(
-                // Wrapped seats and goal instructions must not squeeze the
-                // board into an unusable strip. Short screens scroll instead.
-                height: math.max(constraints.maxHeight, 680 * textScale),
+                // Short screens scroll the whole play surface without shrinking
+                // cells. Each dock can also scroll independently for long text.
+                height: math.max(constraints.maxHeight,
+                    headerHeight + boardHeight + controlsHeight),
                 child: Column(children: [
-                  if (match.room != null)
-                    TextButton.icon(
-                        onPressed: () async {
-                          await Clipboard.setData(
-                              ClipboardData(text: match.room!.code));
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Room code copied')));
-                          }
-                        },
-                        icon: const Icon(Icons.copy, size: 16),
-                        label: Text('Room ${match.room!.code}')),
-                  Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: HexSeat.values
-                            .map((seat) => ActionChip(
-                                  tooltip:
-                                      '${seat.label} · ${BoardThemeData.forTheme(BoardTheme.values[(match.room?.pieceStyles[seat.index] ?? ref.watch(cosmeticsProvider).selectedPieceStyle).index]).name} pieces. Tap to preview and see unlock requirements.',
-                                  onPressed: () => showPieceThemePreview(
-                                      context,
-                                      match.room?.pieceStyles[seat.index] ??
-                                          ref
-                                              .read(cosmeticsProvider)
-                                              .selectedPieceStyle),
-                                  avatar: CircleAvatar(
-                                      backgroundColor:
-                                          hexSeatColors[seat.index],
-                                      child: Text(hexSeatSymbols[seat.index],
-                                          style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 11))),
-                                  label: Text(
-                                      '${seat.label}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
-                                  side: BorderSide(
-                                      color: seat ==
-                                              (game.finished
-                                                  ? game.winner
-                                                  : game.current)
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                          : Colors.transparent,
-                                      width: 2),
-                                ))
-                            .toList(),
-                      )),
-                  Text(status,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium),
-                  Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      child: Text(
-                          game.rulesVersion == 1
-                              ? 'Legacy room · ${goalSeat.label}: ${goalSeat.goalLabel}\nConnect ${hexSeatSymbols[goalSeat.index]} A to ${hexSeatSymbols[goalSeat.index]} B.'
-                              : 'Any color · A to A, B to B, or C to C\nConnect opposite sides with your exposed flats or caps.',
-                          textAlign: TextAlign.center)),
-                  if (game.finished) ...[
-                    Text(
-                        'Exposed flats: ${HexSeat.values.map((seat) => '${seat.label} ${HexRules.flatCounts(game)[seat.index]}').join(' · ')}',
-                        textAlign: TextAlign.center),
-                    TextButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Set up another match')),
-                  ],
-                  if (match.paused) const Text('AI paused'),
-                  if (match.error != null)
-                    Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(match.error!,
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.error))),
+                  SizedBox(
+                    height: headerHeight,
+                    child: SingleChildScrollView(
+                      child: Column(children: [
+                        if (match.room != null)
+                          TextButton.icon(
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                    ClipboardData(text: match.room!.code));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Room code copied')));
+                                }
+                              },
+                              icon: const Icon(Icons.copy, size: 16),
+                              label: Text('Room ${match.room!.code}')),
+                        Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: HexSeat.values
+                                  .map((seat) => ActionChip(
+                                        tooltip:
+                                            '${seat.label} · ${BoardThemeData.forTheme(BoardTheme.values[(match.room?.pieceStyles[seat.index] ?? ref.watch(cosmeticsProvider).selectedPieceStyle).index]).name} pieces. Tap to preview and see unlock requirements.',
+                                        onPressed: () => showPieceThemePreview(
+                                            context,
+                                            match.room
+                                                    ?.pieceStyles[seat.index] ??
+                                                ref
+                                                    .read(cosmeticsProvider)
+                                                    .selectedPieceStyle),
+                                        avatar: CircleAvatar(
+                                            backgroundColor:
+                                                hexSeatColors[seat.index],
+                                            child: Text(
+                                                hexSeatSymbols[seat.index],
+                                                style: const TextStyle(
+                                                    color: Colors.black,
+                                                    fontSize: 11))),
+                                        label: Text(
+                                            '${seat.label}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
+                                        side: BorderSide(
+                                            color: seat ==
+                                                    (game.finished
+                                                        ? game.winner
+                                                        : game.current)
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                : Colors.transparent,
+                                            width: 2),
+                                      ))
+                                  .toList(),
+                            )),
+                        Text(status,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium),
+                        Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            child: Text(
+                                game.rulesVersion == 1
+                                    ? 'Legacy room · ${goalSeat.label}: ${goalSeat.goalLabel}\nConnect ${hexSeatSymbols[goalSeat.index]} A to ${hexSeatSymbols[goalSeat.index]} B.'
+                                    : 'Any color · A to A, B to B, or C to C\nConnect opposite sides with your exposed flats or caps.',
+                                textAlign: TextAlign.center)),
+                      ]),
+                    ),
+                  ),
                   Expanded(
                       child: Padding(
                           padding: const EdgeInsets.all(8),
@@ -406,19 +408,38 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                               boardTheme: match.room?.boardTheme,
                               preview: _planned != null,
                               game: preview ?? game,
+                              inspectionGame: preview == null ? null : game,
                               selected: _source,
                               destinations: spreads.map(_destination).toSet(),
                               road: road,
                               onCell: match.canPlay
                                   ? (cell) => _tap(cell, game, spreads)
                                   : null))),
-                  ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 220),
+                  SizedBox(
+                      height: controlsHeight,
                       child: SingleChildScrollView(
                           child: Padding(
                         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                         child:
                             Column(mainAxisSize: MainAxisSize.min, children: [
+                          if (game.finished) ...[
+                            Text(
+                                'Exposed flats: ${HexSeat.values.map((seat) => '${seat.label} ${HexRules.flatCounts(game)[seat.index]}').join(' · ')}',
+                                textAlign: TextAlign.center),
+                            TextButton.icon(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Set up another match')),
+                          ],
+                          if (match.paused) const Text('AI paused'),
+                          if (match.error != null)
+                            Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Text(match.error!,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error))),
                           if (!match.ready)
                             const Text(
                                 'Share the room code. Each joining device fills one open human seat.'),

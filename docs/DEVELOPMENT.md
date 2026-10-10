@@ -17,6 +17,8 @@ connection, shared opposite-side goals, legacy room compatibility, and independe
 
 The [playability audit](PLAYABILITY_AUDIT.md) records player-journey questions,
 UX improvements, browser trials, automated evidence and remaining product work.
+The [shared stack display](STACK_DISPLAY.md) records layer rendering, hover and
+touch inspection across square and Hex, including owner themes and previews.
 
 ## Code map
 

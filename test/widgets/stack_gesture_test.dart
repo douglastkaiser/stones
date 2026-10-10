@@ -44,6 +44,49 @@ Finder _cell(int row, int col) => find
     .at(row * 5 + col);
 
 void main() {
+  testWidgets('holding a selected square stack preserves its carry preview',
+      (tester) async {
+    final board = Board.empty(5).setStack(
+        const Position(2, 2),
+        const PieceStack([
+          Piece(type: PieceType.flat, color: PlayerColor.black),
+          _flat,
+          _cap
+        ]));
+    final container =
+        await _showBoard(tester, board, size: const Size(320, 568));
+    await tester.tap(_cell(2, 2));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Decrease Carry'));
+    await tester.pump();
+    final pickup = container.read(uiStateProvider).piecesPickedUp;
+    await tester.longPress(_cell(2, 2));
+    await tester.pumpAndSettle();
+    expect(find.text('Light capstone'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Dark flat'), 100,
+        scrollable: find.byType(Scrollable).last);
+    expect(find.text('Bottom'), findsOneWidget);
+    await tester.tap(find.byTooltip('Close stack inspection'));
+    await tester.pumpAndSettle();
+    expect(container.read(gameStateProvider).board, board);
+    expect(container.read(uiStateProvider).piecesPickedUp, pickup);
+    expect(container.read(uiStateProvider).mode, InteractionMode.movingStack);
+    await tester.tap(find.byTooltip('Increase Carry'));
+    await tester.pump();
+    expect(container.read(uiStateProvider).piecesPickedUp, 3);
+    await tester.longPress(_cell(2, 2));
+    await tester.pumpAndSettle();
+    expect(find.text('Light capstone'), findsOneWidget);
+    expect(find.textContaining('before move'), findsOneWidget);
+    await tester.tap(find.byTooltip('Close stack inspection'));
+    await tester.pumpAndSettle();
+    expect(container.read(gameStateProvider).board, board);
+    expect(container.read(uiStateProvider).piecesPickedUp, 3);
+
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   for (final size in [const Size(320, 568), const Size(1100, 900)]) {
     testWidgets('explicit carry, drops, back and confirm work at $size',
         (tester) async {

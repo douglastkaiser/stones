@@ -256,6 +256,7 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                                 turnSeat: _game.current,
                                 preview: _planned != null,
                                 game: preview ?? _game,
+                                inspectionGame: preview == null ? null : _game,
                                 selected: _source,
                                 destinations: _spreads.map(_end).toSet(),
                                 road: _done && _game.winner != null

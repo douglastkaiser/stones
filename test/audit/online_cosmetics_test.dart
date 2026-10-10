@@ -162,13 +162,16 @@ void main() {
             (widget) => widget.runtimeType.toString() == '_BoardCell')
         .at(12);
     await tester.longPress(cell);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(
         paintedStyles(), containsAll([PieceStyle.morocco, PieceStyle.kyoto]));
     expect(container.read(isPieceStyleUnlockedProvider(PieceStyle.kyoto)),
         isFalse);
     expect(container.read(cosmeticsProvider).selectedPieceStyle,
         PieceStyle.standard);
+    await tester.tap(find.byTooltip('Close stack inspection'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Close stack inspection'), findsNothing);
     container.read(gameSessionProvider.notifier).state =
         const GameSessionConfig();
     await tester.pump();

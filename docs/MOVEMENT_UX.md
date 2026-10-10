@@ -42,7 +42,8 @@ continue to share GameRules; Hex remains isolated in HexRules.
 
 The immutable board changes only when a complete move is submitted. Planning
 does not pause the clock. Pointer displacement supports slow releases; holding
-before moving still invokes inspection, which is intentional. Wrap layouts and
+opens a scrollable inspection sheet, which is intentional. Hover fans bounded
+layers in both modes; see [the stack display contract](STACK_DISPLAY.md). Wrap layouts and
 scrollable controls keep actions available on narrow screens and large text.
 
 ## Further work to evaluate
