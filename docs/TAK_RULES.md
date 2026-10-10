@@ -139,13 +139,15 @@ The following are code-inspection findings requiring follow-up work.
 Use a Firebase emulator or an isolated test project and two clients. Do not
 declare these resolved based on the local model tests.
 
-### Puzzle completion — high priority
+### Puzzle completion — repaired
 
-The screen's achievement/completion paths accept any finished game as completion,
-as well as completion of a guided step. A puzzle loss or draw needs evaluation
-against that scenario's actual objective before unlocking progress. Existing
-scenario tests inspect metadata and generated moves; they do not replay every
-scripted sequence through its completion and failure paths.
+Square puzzle completion now requires an actual learner win within a counted
+move budget; a guided step, loss or draw cannot award it. Ten new square studies
+accept all legal attempts and verified alternate solutions. The two-move
+objectives are proved against every legal defense, with certificates checked
+by regression tests. These are composed application learning features, not
+additional official rules. See [PUZZLE_AUDIT.md](PUZZLE_AUDIT.md) for proof scope,
+content provenance, size/phase coverage and human-calibration limitations.
 
 ### AI strength and ratings — separate application work
 

@@ -32,6 +32,8 @@ class GameScenario {
   final PuzzleDifficulty? puzzleDifficulty;
   final String? hintText;
   final Duration? hintDelay;
+  final int puzzleMoveLimit;
+  final List<String> puzzleHints;
 
   const GameScenario({
     required this.id,
@@ -51,6 +53,8 @@ class GameScenario {
     this.puzzleDifficulty,
     this.hintText,
     this.hintDelay,
+    this.puzzleMoveLimit = 1,
+    this.puzzleHints = const [],
   });
 }
 
@@ -204,6 +208,4 @@ class GuidedMove {
     }
     return highlights;
   }
-
 }
-

@@ -1,0 +1,55 @@
+rules_version = '2';
+
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Online multiplayer games
+    match /games/{roomCode} {
+      // Anyone authenticated can read games (needed to check if room exists)
+      allow read: if request.auth != null;
+
+      // Anyone authenticated can create a new game
+      allow create: if request.auth != null
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.white.id == request.auth.uid;
+
+      // Players in the game can update it
+      allow update: if request.auth != null
+        && (
+          // You're the white player
+          resource.data.white.id == request.auth.uid
+          // Or you're the black player
+          || resource.data.black.id == request.auth.uid
+          // Or you're joining as black (black was null, now being set to you)
+          || (resource.data.black == null && request.resource.data.black.id == request.auth.uid)
+        );
+
+      // Only players in the game can delete it (optional, for cleanup)
+      allow delete: if request.auth != null
+        && (
+          resource.data.white.id == request.auth.uid
+          || resource.data.black.id == request.auth.uid
+        );
+    }
+
+    // User profiles/stats (if you add this later)
+    match /users/{odId} {
+      // Users can read any profile
+      allow read: if request.auth != null;
+      // Users can only write their own profile
+      allow write: if request.auth != null && request.auth.uid == odId;
+    }
+
+    // Achievements (if stored in Firestore)
+    match /achievements/{odId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == odId;
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

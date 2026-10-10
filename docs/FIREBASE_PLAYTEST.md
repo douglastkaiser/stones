@@ -1,8 +1,39 @@
 # Firebase preparation for multiplayer playtesting
 
-Project: `stones-9a6a0`. The main GitHub workflow publishes the browser app to
-GitHub Pages; it does not deploy Firebase rules. Firebase configuration and
+Project: `stones-9a6a0`. The manually triggered Deploy Main GitHub workflow
+publishes the browser app to GitHub Pages; pushing `main` alone does not run it
+and it does not deploy Firebase rules. Firebase configuration and
 credentials were not changed by this iteration.
+
+## Console verification (2026-10-09)
+
+Connected to the production project and saved the previously published policy
+in [FIRESTORE_BEFORE_2026_10_09.rules](FIRESTORE_BEFORE_2026_10_09.rules).
+That policy had square games, `/users` and `/achievements` blocks, but no Hex
+or rating/history permissions. The repository now preserves both existing
+profile/achievement blocks while adding the previously prepared game rules.
+
+Firebase's Rules Playground compiled the complete merged policy and confirmed:
+
+- Unauthenticated Hex room read: denied.
+- Authenticated Hex room-code read: allowed.
+- Square creation as a Black host with a Morocco board: allowed.
+- Hex creation with host human, remote human, AI, Morocco board/pieces: allowed.
+- Same Hex payload with an authenticated forged host: denied.
+
+These are simulations; no test document was written into the production database.
+Anonymous and Google sign-in are already enabled. The web app is registered
+with reCAPTCHA App Check. Authentication and enforcement were not changed.
+
+**Published on 2026-10-09 to `stones-9a6a0`.** After explicit approval of the
+exact payload, Firebase Console showed the new starred published version
+(`Today • 6:46 PM`) and no unpublished draft. The editor payload matched
+`firestore.rules` before publication. Commit/push itself does not publish rules.
+
+Shared Elo ratings/history were already denied in the deployed policy. Their
+current client implementation writes both players' ratings and global AI ratings;
+trustworthy shared rating updates need server authority. This deployment does
+not introduce permissive rating writes. Ordinary room play is a separate path.
 
 ## Required backend change
 
@@ -19,11 +50,10 @@ Publish the updated game authorization blocks in `firestore.rules`:
   manual document migration, new indexes, Storage assets or Cloud Functions
   are needed for this feature.
 
-First save and compare the currently published Firestore rules. The checked-in
-file has no `/ratings` or `/ratings/{id}/history` permissions, while the app's
-Elo provider uses those paths. If production already has policies for them or
-other collections, preserve those blocks when merging the changed game rules.
-Do not replace working production collection policies with the fallback deny.
+For future updates, save and compare the currently published policy again.
+Preserve any existing collection policies before merging changed game rules.
+The current rating boundary is described above; the fallback deny must not
+silently erase policies added in a later deployment.
 
 With Java and the Firebase CLI available, run the local authorization suite
 from the repository root before publishing:

@@ -1,5 +1,8 @@
 import '../models/piece.dart';
 import 'hex_game.dart';
+import 'hex_studies.dart';
+import 'hex_forcing_position.dart';
+import '../puzzles/certificates.dart';
 
 /// Learning positions are separate local sandboxes, never multiplayer rooms.
 class HexExercise {
@@ -10,7 +13,11 @@ class HexExercise {
       required this.hint,
       required this.initial,
       required this.solution,
-      this.puzzle = false});
+      this.puzzle = false,
+      this.moveLimit = 1,
+      this.hints = const [],
+      this.explanation = '',
+      this.metadata = ''});
   final String id;
   final String title;
   final String goal;
@@ -18,6 +25,10 @@ class HexExercise {
   final HexGame initial;
   final List<HexMove> solution;
   final bool puzzle;
+  final int moveLimit;
+  final List<String> hints;
+  final String explanation;
+  final String metadata;
   bool accepts(HexGame game, HexMove move, int step) {
     if (puzzle) {
       return HexRules.play(game, move) != null;
@@ -42,40 +53,22 @@ class HexExercise {
   }
 
   bool completed(HexGame result, int steps) => puzzle
-      ? result.finished && result.winner == initial.current
+      ? result.finished &&
+          result.winner == initial.current &&
+          steps > 0 &&
+          steps <= moveLimit
       : steps == solution.length;
 }
 
 HexGame _position(Map<HexCell, List<HexStone>> board,
         {HexSeat seat = HexSeat.ivory}) =>
-    HexGame.initial(starter: seat).copyWith(board: board, ply: 3);
+    hexStudyPosition(board, learner: seat);
 HexStone _flat(HexSeat seat) => HexStone(seat, PieceType.flat);
 HexGame _ivoryRoad() => _position({
       for (final q in [-2, -1, 1, 2]) HexCell(q, 0): [_flat(HexSeat.ivory)],
       const HexCell(-1, 1): [_flat(HexSeat.charcoal)],
       const HexCell(0, 1): [_flat(HexSeat.copper)],
     });
-HexGame _charcoalCrush() => _position({
-      for (final r in [-2, -1, 1, 2]) HexCell(0, r): [_flat(HexSeat.charcoal)],
-      const HexCell(0, 0): [const HexStone(HexSeat.ivory, PieceType.standing)],
-      const HexCell(1, 0): [
-        const HexStone(HexSeat.charcoal, PieceType.capstone)
-      ],
-    }, seat: HexSeat.charcoal);
-HexGame _copperCarry() => _position({
-      for (final cell in [
-        const HexCell(-1, -1),
-        const HexCell(-1, 0),
-        const HexCell(0, 0)
-      ])
-        cell: [_flat(HexSeat.copper)],
-      const HexCell(1, 1): [
-        _flat(HexSeat.copper),
-        const HexStone(HexSeat.copper, PieceType.capstone)
-      ],
-      const HexCell(0, 1): [const HexStone(HexSeat.ivory, PieceType.standing)],
-    }, seat: HexSeat.copper);
-
 final hexExercises = <HexExercise>[
   HexExercise(
       id: 'exchange',
@@ -131,34 +124,24 @@ final hexExercises = <HexExercise>[
       solution: [
         HexMove.spread(const HexCell(0, 0), HexDirection.east, [2, 1])
       ]),
-  HexExercise(
-      id: 'ivory-gap',
-      title: 'Ivory’s missing link',
+  for (var i = 0; i < hexStudies.length; i++)
+    HexExercise(
+      id: hexStudies[i].id,
+      title: '${i + 1}. ${hexStudies[i].title}',
       puzzle: true,
-      goal: 'Win for Ivory in one move.',
-      hint: 'Join the matching Ivory edges with an exposed flat or capstone.',
-      initial: _ivoryRoad(),
-      solution: [HexMove.place(const HexCell(0, 0), PieceType.flat)]),
-  HexExercise(
-      id: 'charcoal-wall',
-      title: 'Charcoal’s gateway',
-      puzzle: true,
-      goal: 'Win for Charcoal in one move.',
-      hint:
-          'The center wall breaks Charcoal’s road. A neighboring capstone can open it.',
-      initial: _charcoalCrush(),
+      initial: hexStudies[i].initial,
+      goal:
+          'Win as ${hexStudies[i].initial.current.label} within ${hexStudies[i].moves} of your moves. Both opponents defend between your turns.',
+      hint: hexStudies[i].hints.first,
+      hints: hexStudies[i].hints,
+      moveLimit: hexStudies[i].moves,
+      explanation: hexStudies[i].explanation,
+      metadata:
+          'Radius ${hexStudies[i].initial.radius} · ${hexStudies[i].phase} · ${hexStudies[i].difficulty}',
       solution: [
-        HexMove.spread(const HexCell(1, 0), HexDirection.west, [1])
-      ]),
-  HexExercise(
-      id: 'copper-cap',
-      title: 'Copper’s careful carry',
-      puzzle: true,
-      goal: 'Win for Copper in one move.',
-      hint:
-          'Keep the flat on the boundary. Carry only the capstone to the missing cell (1, 0).',
-      initial: _copperCarry(),
-      solution: [
-        HexMove.spread(const HexCell(1, 1), HexDirection.northWest, [1])
-      ]),
+        for (final key
+            in puzzleCertificates[hexStudies[i].id]!['sample'] as List<dynamic>)
+          HexForcingPosition.decode(key as String)
+      ],
+    ),
 ];

@@ -145,15 +145,16 @@ illegal move and cause honest clients to stop replay. A server-authoritative
 move function would be the next step for adversarial/rated online play. This
 experimental mode does not enter the normal rated queue.
 
-The new collection will remain denied by an older deployed ruleset. Review and
-deploy the updated rules before testing online hex rooms on production:
+The merged square/Hex policy was published to `stones-9a6a0` on 2026-10-09.
+See [Firebase preparation](FIREBASE_PLAYTEST.md) for the saved prior policy and
+Rules Playground checks. For future updates:
 
 ```sh
 firebase deploy --only firestore:rules --project stones-9a6a0
 ```
 
 Do not assume checked-in rules match the previously deployed rules. Review the
-deployed policy before replacing it, especially existing ratings access. This
+deployed policy before replacing it, especially existing ratings access.
 Pushing this code does not deploy backend rules or publish a new browser build;
 those are separate deployment steps.
 
@@ -197,7 +198,8 @@ The initial opt-in release playtest verified the setting starts off, enabling it
 the menu entry, two local humans can play with a third-seat AI, the AI completes
 the opening exchange and returns control, and a stack spread previews and
 confirms with correct turn rotation. Remote multiplayer was checked against the
-emulator; production rules have not been deployed.
+emulator. Production rules were subsequently published on 2026-10-09; live
+two-device play still needs verification.
 
 ## Follow-up playtesting
 
@@ -209,15 +211,18 @@ protocols, stronger tactical AI, and larger-board touch/keyboard accessibility.
 
 ## Hex learning and visuals
 
-`hex_exercises.dart` defines four interactive tutorials (opening exchange, six
-neighbors, assigned road edges, and a mixed stack spread ending in a capstone
-crush) and three one-move puzzles for Ivory, Charcoal and Copper. Solutions and
-failure paths use HexRules, with no separate teaching validator for legality.
-Tutorial objectives restrict accepted moves; puzzles accept legal attempts and
-award completion only for the learner's victory. Hint, Retry, preview/Confirm
-and Finish lesson controls support exploration. Completion persists under
-`hex_learning_completed_v1`; no square achievement or match state is changed.
-These are constructed teaching positions with fresh reserves, not match replays.
+Four interactive tutorials teach exchange, neighbors, assigned road edges and
+spread/crush. Seven original composed studies span radii 2–4, all learner seats,
+early play, middle game and flat-count endings. Deployed pieces are deducted
+from reserves in both lessons and studies. These are compositions, not match
+replays. Tutorial objectives guide input; puzzles accept all legal attempts.
+
+Completion requires a learner victory within the human-move budget. Two-move
+objectives survive every legal pair of opponent replies. Runtime uses verified
+response certificates, displays both defenses, supports progressive hints and
+Retry, and never runs the exhaustive authoring search on the UI thread. Progress
+persists separately under `hex_learning_completed_v1`; new study IDs cannot
+inherit old puzzle completions. See [PUZZLE_AUDIT.md](PUZZLE_AUDIT.md).
 
 The reusable `hex_board.dart` retains polygon hit areas and now uses the same
 five board/piece painters as square play. Copper keeps an independent visible

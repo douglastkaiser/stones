@@ -220,7 +220,7 @@ class _StatsSection extends StatelessWidget {
                   icon: Icons.extension,
                   label: 'Puzzles',
                   value:
-                      '${achievementState.completedPuzzles.length}/${AchievementState.allPuzzleIds.length}',
+                      '${achievementState.completedPuzzles.intersection(AchievementState.allPuzzleIds).length}/${AchievementState.allPuzzleIds.length}',
                   color: Colors.purple,
                 ),
               ),

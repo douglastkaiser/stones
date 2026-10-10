@@ -9,6 +9,8 @@ import 'package:stones/providers/achievements_provider.dart';
 import 'package:stones/providers/game_provider.dart';
 import 'package:stones/providers/scenario_provider.dart';
 import 'package:stones/services/ai/ai.dart';
+import 'package:stones/puzzles/certificates.dart';
+import 'package:stones/puzzles/square_forcing_position.dart';
 
 bool play(GameStateNotifier game, AIMove move) => switch (move) {
       AIPlacementMove() => game.placePiece(move.position, move.pieceType),
@@ -107,7 +109,8 @@ void main() {
     });
   }
 
-  for (final scenario in tutorialAndPuzzleLibrary) {
+  for (final scenario in tutorialAndPuzzleLibrary
+      .where((item) => item.type == ScenarioType.tutorial)) {
     test('${scenario.title}: prescribed first action is playable', () {
       final game = GameStateNotifier();
       addTearDown(game.dispose);
@@ -138,50 +141,44 @@ void main() {
     });
   }
 
-  test('all three multi-move puzzles reach their advertised road result', () {
-    for (final id in ['puzzle_10', 'puzzle_11', 'puzzle_12']) {
-      final scenario = tutorialAndPuzzleLibrary.firstWhere((s) => s.id == id);
+  test('every certified square solution agrees with the gameplay provider', () {
+    for (final scenario in tutorialAndPuzzleLibrary
+        .where((item) => item.type == ScenarioType.puzzle)) {
       final game = GameStateNotifier()..loadState(scenario.buildInitialState());
+      final progress = ScenarioStateNotifier()..startScenario(scenario);
       try {
-        expect(game.placePiece(scenario.guidedMove.target!, PieceType.flat),
-            isTrue);
-        expect(play(game, scenario.scriptedResponses.first), isTrue);
-        if (id == 'puzzle_10') {
-          expect(game.placePiece(const Position(3, 2), PieceType.flat), isTrue);
-        } else {
-          if (id == 'puzzle_11') {
-            expect(game.moveStack(const Position(2, 0), Direction.right, [1]),
-                isTrue);
+        for (final key
+            in puzzleCertificates[scenario.id]!['sample'] as List<dynamic>) {
+          final move = SquareForcingPosition.decode(key as String);
+          final human = game.state.currentPlayer ==
+              scenario.buildInitialState().currentPlayer;
+          expect(play(game, move), isTrue);
+          if (human) {
+            progress.recordPuzzleMove(move);
           } else {
-            expect(
-                game.placePiece(const Position(2, 1), PieceType.flat), isTrue);
-          }
-          expect(play(game, scenario.scriptedResponses[1]), isTrue);
-          if (id == 'puzzle_11') {
-            expect(
-                game.placePiece(const Position(4, 1), PieceType.flat), isTrue);
-          } else {
-            expect(
-                game.moveStack(const Position(2, 0), Direction.right, [1, 1]),
-                isTrue);
+            progress.advanceScript();
           }
         }
-        expect(game.state.result, GameResult.whiteWins, reason: id);
+        expect(progress.state.isSuccessful(game.state), isTrue,
+            reason: scenario.id);
       } finally {
         game.dispose();
+        progress.dispose();
       }
     }
   });
-
   test('puzzle losses and draws cannot award completion', () {
     for (final scenario in tutorialAndPuzzleLibrary
         .where((s) => s.type == ScenarioType.puzzle)) {
-      final progress =
-          ScenarioState(activeScenario: scenario, guidedStepComplete: true);
+      final progress = ScenarioState(
+          activeScenario: scenario, guidedStepComplete: true, puzzleMoves: 1);
       final initial = scenario.buildInitialState();
       expect(
           progress.isSuccessful(initial.copyWith(
-              result: GameResult.blackWins, phase: GamePhase.finished)),
+              result: initial.currentPlayer == PlayerColor.white
+                  ? GameResult.blackWins
+                  : GameResult.whiteWins,
+              phase: GamePhase.finished)),
           isFalse);
       expect(
           progress.isSuccessful(initial.copyWith(
@@ -189,11 +186,12 @@ void main() {
           isFalse);
       expect(
           progress.isSuccessful(initial.copyWith(
-              result: GameResult.whiteWins, phase: GamePhase.finished)),
+              result: initial.currentPlayer == PlayerColor.white
+                  ? GameResult.whiteWins
+                  : GameResult.blackWins,
+              phase: GamePhase.finished)),
           isTrue);
-      if (scenario.scriptedResponses.isNotEmpty) {
-        expect(progress.isSuccessful(initial), isFalse);
-      }
+      expect(progress.isSuccessful(initial), isFalse);
     }
   });
 

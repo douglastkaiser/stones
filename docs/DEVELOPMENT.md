@@ -38,7 +38,7 @@ UX improvements, browser trials, automated evidence and remaining product work.
 - `lib/providers/online_game_provider.dart`, online models/services: Firebase
   game sessions and notation replay. See the audit before changing synchronization.
 - `lib/models/scenarios/` and `lib/providers/scenario_provider.dart`: nine tutorials
-  and six puzzles, guided/scripted behavior, and progress hooks.
+  and ten verified square studies, tutorial guidance, puzzle budgets and progress hooks.
 - `firestore.rules`: checked-in backend access policy, not proof of deployed policy.
 
 ## Move lifecycle
@@ -133,3 +133,12 @@ AI uses completed iterative-deepening results with difficulty-specific budgets.
 See [Court Mode](COURT_MODE.md) for the optional square AI coaching contract,
 source customs, threat warnings, takeback semantics and verification. Court
 sessions are untimed, unrated practice; core move validation remains GameRules.
+
+## Verified puzzle studies
+
+Read [the puzzle audit](PUZZLE_AUDIT.md) before changing puzzle content. Original
+square/Hex study catalogs have exact supplies, full finite-horizon proofs and
+checked-in response certificates. Proof search is authoring/test work, never
+interactive UI work. Square puzzles use ScenarioState budgets and certified
+defenses; Hex keeps independent learning state and progress. Catalog replacement
+uses new IDs while preserving existing achievements and saved progress.

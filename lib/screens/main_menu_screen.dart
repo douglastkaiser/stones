@@ -337,8 +337,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     final scenarioState = ref.read(scenarioStateProvider);
 
     // Don't prompt for replace if: game is over, tutorial/puzzle is complete, or no game in progress
-    final isScenarioComplete =
-        scenarioState.guidedStepComplete || scenarioState.completionShown;
+    final isScenarioComplete = scenarioState.isSuccessful(gameState);
     final isGameInProgress = !gameState.isGameOver &&
         !isScenarioComplete &&
         (gameState.turnNumber > 1 ||
@@ -349,6 +348,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
       ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
         mode: GameMode.vsComputer,
         aiDifficulty: scenario.aiDifficulty,
+        vsComputerPlayerColor: scenario.buildInitialState().currentPlayer,
         scenario: scenario,
       );
       ref

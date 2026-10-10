@@ -278,6 +278,16 @@ service cloud.firestore {
         (hexJoin('0') || hexJoin('1') || hexJoin('2') || hexAppend());
     }
 
+    // Preserve the existing production profile and achievement policies.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    match /achievements/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // Deny all other database access by default
     match /{document=**} {
       allow read, write: if false;

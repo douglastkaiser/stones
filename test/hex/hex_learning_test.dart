@@ -6,30 +6,34 @@ import 'package:stones/hex/hex_board.dart';
 import 'package:stones/hex/hex_exercises.dart';
 import 'package:stones/hex/hex_game.dart';
 import 'package:stones/hex/hex_learning_screen.dart';
-import 'package:stones/models/piece.dart';
 
 void main() {
   for (final exercise in hexExercises) {
     test('${exercise.id} solution is legal and completes its objective', () {
       var game = exercise.initial;
       expect(game.finished, isFalse);
+      var humanSteps = 0;
       for (var i = 0; i < exercise.solution.length; i++) {
+        if (!exercise.puzzle || game.current == exercise.initial.current) {
+          humanSteps++;
+        }
         final move = exercise.solution[i];
         expect(exercise.accepts(game, move, i), isTrue);
         final result = HexRules.play(game, move);
         expect(result, isNotNull, reason: exercise.id);
         game = result!;
         if (i < exercise.solution.length - 1) {
-          expect(exercise.completed(game, i + 1), isFalse);
+          expect(exercise.completed(game, humanSteps), isFalse);
         }
       }
-      expect(exercise.completed(game, exercise.solution.length), isTrue);
+      expect(exercise.completed(game, humanSteps), isTrue);
       if (exercise.puzzle) expect(game.winner, exercise.initial.current);
     });
   }
   test('wrong puzzle moves and draws do not award completion', () {
     for (final exercise in hexExercises.where((item) => item.puzzle)) {
-      final move = HexMove.place(const HexCell(2, -2), PieceType.flat);
+      final move = HexRules.legalMoves(exercise.initial).firstWhere(
+          (move) => !HexRules.play(exercise.initial, move)!.finished);
       final result = HexRules.play(exercise.initial, move);
       expect(result, isNotNull);
       expect(exercise.completed(result!, 1), isFalse);
@@ -48,7 +52,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final exercise =
-          hexExercises.firstWhere((item) => item.id == 'ivory-gap');
+          hexExercises.firstWhere((item) => item.id == 'hex_study_01');
       await tester.pumpWidget(ProviderScope(
           child: MaterialApp(home: HexExerciseScreen(exercise: exercise))));
       Future<void> cell(HexCell pos) async {
@@ -70,15 +74,16 @@ void main() {
       }
 
       await cell(const HexCell(2, -2));
-      expect(find.text('Finish lesson'), findsNothing);
+      expect(find.text('Finish puzzle'), findsNothing);
       await button('Confirm');
-      expect(find.textContaining('did not win'), findsOneWidget);
-      expect(find.text('Finish lesson'), findsNothing);
+      expect(find.textContaining('No win within'), findsOneWidget);
+      expect(find.text('Finish puzzle'), findsNothing);
       await button('Retry');
+      await cell(const HexCell(-1, 0));
       await cell(const HexCell(0, 0));
       await button('Confirm');
       expect(find.textContaining('Complete!'), findsOneWidget);
-      expect(find.text('Finish lesson'), findsOneWidget);
+      expect(find.text('Finish puzzle'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     });
   }

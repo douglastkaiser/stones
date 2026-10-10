@@ -5,6 +5,9 @@ import '../models/piece.dart';
 import 'hex_board.dart';
 import 'hex_exercises.dart';
 import 'hex_game.dart';
+import 'hex_forcing_position.dart';
+import '../puzzles/certificates.dart';
+import '../widgets/puzzle_hints.dart';
 
 class HexLearningScreen extends StatefulWidget {
   const HexLearningScreen({super.key});
@@ -56,7 +59,7 @@ class _HexLearningScreenState extends State<HexLearningScreen> {
                         padding: const EdgeInsets.only(top: 24, bottom: 8),
                         child: Text(
                             puzzles
-                                ? 'One-move puzzles'
+                                ? 'Progressive tactical studies'
                                 : 'Interactive tutorials',
                             style: Theme.of(context).textTheme.titleLarge)),
                     for (final exercise
@@ -74,7 +77,8 @@ class _HexLearningScreenState extends State<HexLearningScreen> {
                                           ? 'Completed'
                                           : 'Not completed'),
                               title: Text(exercise.title),
-                              subtitle: Text(exercise.goal),
+                              subtitle: Text(
+                                  '${exercise.metadata.isEmpty ? "" : "${exercise.metadata}\n"}${exercise.goal}'),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () => _open(exercise))),
                   ],
@@ -169,13 +173,46 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
       _game = result;
       _steps++;
       _clear();
-      _done = widget.exercise.completed(result, _steps);
-      _attempted = widget.exercise.puzzle && !_done;
+      final responses = <String>[];
+      if (widget.exercise.puzzle &&
+          _steps == 1 &&
+          !_game.finished &&
+          widget.exercise.moveLimit > 1) {
+        final policies = puzzleCertificates[widget.exercise.id]!['replies']
+            as Map<String, dynamic>;
+        final keys =
+            policies[HexForcingPosition().moveKey(move)] as List<dynamic>?;
+        if (keys == null) {
+          _attempted = true;
+          _feedback = 'Puzzle response unavailable. Retry to reset.';
+          return;
+        }
+        for (final key in keys) {
+          if (_game.finished) break;
+          final reply = HexForcingPosition.decode(key as String);
+          final seat = _game.current;
+          final next = HexRules.play(_game, reply);
+          if (next == null) {
+            _attempted = true;
+            _feedback = 'Puzzle response unavailable. Retry to reset.';
+            return;
+          }
+          responses.add(
+              '${seat.label}: ${reply.type == null ? "spread from" : "place ${reply.type!.name} at"} (${reply.from})${reply.type == null ? " ${reply.direction!.name}, drops ${reply.drops.join(" → ")}" : ""}');
+          _game = next;
+        }
+      }
+      _done = widget.exercise.completed(_game, _steps);
+      _attempted = widget.exercise.puzzle &&
+          !_done &&
+          (_game.finished || _steps >= widget.exercise.moveLimit);
       _feedback = _done
-          ? 'Complete! You solved the objective.'
+          ? 'Complete! You solved the objective. ${widget.exercise.explanation}'
           : _attempted
-              ? 'That move did not win. Try again or reveal the hint.'
-              : 'Good. Next: ${_game.current.label} places ${_game.current.next.label}.';
+              ? 'No win within the move limit. Retry and try another idea.'
+              : widget.exercise.puzzle
+                  ? '${responses.join("\n")}\nYour turn: ${widget.exercise.moveLimit - _steps} move remaining.'
+                  : 'Good. Next: ${_game.current.label} places ${_game.current.next.label}.';
     });
   }
 
@@ -198,6 +235,9 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                       children: [
                         Text(exercise.goal,
                             style: Theme.of(context).textTheme.titleMedium),
+                        if (exercise.puzzle)
+                          Text(
+                              '${exercise.metadata} · $_steps / ${exercise.moveLimit} moves used'),
                         const SizedBox(height: 8),
                         Text(_done
                             ? 'Objective complete'
@@ -281,16 +321,21 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                             TextButton(
                                 onPressed: () => setState(_clear),
                                 child: const Text('Cancel')),
-                          OutlinedButton(
-                              onPressed: () => setState(() => _hint = !_hint),
-                              child: Text(_hint ? 'Hide hint' : 'Hint')),
+                          if (exercise.puzzle)
+                            PuzzleHints(hints: exercise.hints)
+                          else
+                            OutlinedButton(
+                                onPressed: () => setState(() => _hint = !_hint),
+                                child: Text(_hint ? 'Hide hint' : 'Hint')),
                           OutlinedButton(
                               onPressed: () => setState(_reset),
                               child: const Text('Retry')),
                           if (_done)
                             FilledButton(
                                 onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Finish lesson')),
+                                child: Text(exercise.puzzle
+                                    ? 'Finish puzzle'
+                                    : 'Finish lesson')),
                         ]),
                         if (_hint)
                           Padding(

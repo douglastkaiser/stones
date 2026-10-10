@@ -100,9 +100,10 @@ existing achievements, unlocks are client-local; backend shape validation is
 not a server-authoritative entitlement ledger.
 
 Checked-in Firestore rules accept known styles, preserve opponent styles during
-Hex joins, and freeze cosmetics during moves. Updated rules must be tested and
-deployed before production Hex rooms can send this metadata. Existing deployed
-rules may reject the new field; code changes alone do not deploy rules.
+Hex joins, and freeze cosmetics during moves. The merged policy was published
+on 2026-10-09 after Rules Playground checks; see
+[Firebase preparation](FIREBASE_PLAYTEST.md). Code changes alone do not deploy
+rules.
 
 The multiplayer iteration passed all 272 Flutter tests and a final 60-test
 focused run covering phone/desktop layouts, Hex controls, wire compatibility,

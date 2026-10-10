@@ -132,10 +132,10 @@ loading indicator from the accessibility tree.
 ## Deployment and remaining boundaries
 
 No new collection, query index, document migration or asset upload is needed.
-The updated game rules from the previous theme iteration still need deployment;
+The merged game rules were published on 2026-10-09;
 see [Firebase preparation](FIREBASE_PLAYTEST.md). Optional clock balance fields
 are additional move metadata allowed by the checked-in square move validator.
-Production policy must still be compared before deploying.
+Future deployments must compare and preserve the current production policy.
 
 Live close/reopen, multi-tab transaction races, network interruption and
 background phone behavior require a deployed backend and two independent

@@ -21,6 +21,7 @@ import 'theme/theme.dart';
 import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
 import 'widgets/game_help.dart';
+import 'widgets/puzzle_hints.dart';
 import 'widgets/match_theme_badge.dart';
 import 'widgets/procedural_painters.dart';
 import 'screens/main_menu_screen.dart';
@@ -323,6 +324,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _coachBusy = false;
 
   bool _courtRewinding = false;
+  int _scenarioEpoch = 0;
 
   String _courtExplanation =
       'Ask the coach for a suggested move and its effects. Takebacks return to your previous decision; repeat to go further back.';
@@ -472,6 +474,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       final clock = ref.read(chessClockProvider);
       if (ref.read(gameSessionProvider).mode != GameMode.online &&
           !ref.read(gameSessionProvider).isCourtMode &&
+          !ref.read(scenarioStateProvider).hasScenario &&
           ref.read(appSettingsProvider).chessClockEnabled &&
           clock.activePlayer != null &&
           !clock.isRunning &&
@@ -501,6 +504,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   /// Check if undo can be performed in current game state
   bool _canPerformUndo() {
     if (ref.read(aiThinkingProvider)) return false;
+    if (ref.read(scenarioStateProvider).activeScenario?.type ==
+        ScenarioType.puzzle) {
+      return false;
+    }
 
     final session = ref.read(gameSessionProvider);
     final gameState = ref.read(gameStateProvider);
@@ -846,10 +853,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   /// Start the next scenario without the "Replace current game" prompt
   void _startNextScenario(GameScenario scenario) {
+    _scenarioEpoch++;
+    ref.read(aiThinkingProvider.notifier).state = false;
+    ref.read(aiThinkingVisibleProvider.notifier).state = false;
     ref.read(scenarioStateProvider.notifier).startScenario(scenario);
     ref.read(gameSessionProvider.notifier).state = GameSessionConfig(
       mode: GameMode.vsComputer,
       aiDifficulty: scenario.aiDifficulty,
+      vsComputerPlayerColor: scenario.buildInitialState().currentPlayer,
       scenario: scenario,
     );
     ref
@@ -892,8 +903,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           }
         : const <PlayerColor, PieceStyleData>{};
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
-    final guidedMove =
-        scenarioState.guidedStepComplete ? null : activeScenario?.guidedMove;
+    final guidedMove = scenarioState.guidedStepComplete ||
+            activeScenario?.type == ScenarioType.puzzle
+        ? null
+        : activeScenario?.guidedMove;
     // Only show highlights for tutorials, not puzzles (puzzles should be ambiguous)
     final isPuzzleScenario = activeScenario?.type == ScenarioType.puzzle;
     final scenarioHighlights = (guidedMove != null && !isPuzzleScenario)
@@ -908,8 +921,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isRemoteTurn = isOnline && !isMyTurnLocally;
     final waitingForOpponent = isOnline && onlineState.waitingForOpponent;
     final canUndo = _canPerformUndo();
-    final inputLocked =
-        isAiTurn || isAiThinking || isRemoteTurn || waitingForOpponent;
+    final inputLocked = isAiTurn ||
+        isAiThinking ||
+        isRemoteTurn ||
+        waitingForOpponent ||
+        scenarioState.isFailed(gameState) ||
+        scenarioState.isSuccessful(gameState);
 
     // Listen for chess clock expiration to trigger game end
     ref.listen<ChessClockState>(chessClockProvider, (previous, next) {
@@ -1257,7 +1274,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             final isWideScreen = constraints.maxWidth > 700;
             final showClockEnabled =
                 ref.watch(appSettingsProvider).chessClockEnabled &&
-                    !session.isCourtMode;
+                    !session.isCourtMode &&
+                    activeScenario == null;
 
             // Board widget (reused in both layouts)
             final boardWidget = Container(
@@ -1409,7 +1427,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 8),
                                         child: _ScenarioInfoCard(
-                                            scenario: activeScenario),
+                                            scenario: activeScenario,
+                                            onRetry: () => _startNextScenario(
+                                                activeScenario)),
                                       ),
                                     if (gameState.isGameOver &&
                                         gameState.result != null)
@@ -1501,7 +1521,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 8),
                                   child: _ScenarioInfoCard(
-                                      scenario: activeScenario),
+                                      scenario: activeScenario,
+                                      onRetry: () =>
+                                          _startNextScenario(activeScenario)),
                                 ),
                               // Win banner (if game over)
                               if (gameState.isGameOver &&
@@ -2117,8 +2139,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.read(gameSessionProvider);
     final scenarioState = ref.read(scenarioStateProvider);
     final scenario = session.scenario ?? scenarioState.activeScenario;
-    final guidanceActive =
-        scenario != null && !scenarioState.guidedStepComplete;
+    final guidanceActive = scenario?.type == ScenarioType.tutorial &&
+        !scenarioState.guidedStepComplete;
+    if (scenarioState.isFailed(gameState) ||
+        scenarioState.isSuccessful(gameState)) {
+      return false;
+    }
     final color =
         gameState.isOpeningPhase ? gameState.opponent : gameState.currentPlayer;
     final soundManager = ref.read(soundManagerProvider);
@@ -2155,6 +2181,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final success = gameNotifier.placePiece(pos, type);
     _debugLog('_performPlacementMove: placePiece result=$success');
     if (success) {
+      if (scenario?.type == ScenarioType.puzzle &&
+          !_isAiTurn(session, gameState)) {
+        ref
+            .read(scenarioStateProvider.notifier)
+            .recordPuzzleMove(AIPlacementMove(pos, type));
+      }
       if (scenario != null &&
           guidanceActive &&
           (scenario.guidedMove.type == GuidedMoveType.placement ||
@@ -2206,8 +2238,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final session = ref.read(gameSessionProvider);
     final scenarioState = ref.read(scenarioStateProvider);
     final scenario = session.scenario ?? scenarioState.activeScenario;
-    final guidanceActive =
-        scenario != null && !scenarioState.guidedStepComplete;
+    final guidanceActive = scenario?.type == ScenarioType.tutorial &&
+        !scenarioState.guidedStepComplete;
+    if (scenarioState.isFailed(gameState) ||
+        scenarioState.isSuccessful(gameState)) {
+      return false;
+    }
     final stack = gameState.board.stackAt(from);
     final topPiece = stack.topPiece;
     Position? flattenedWallPos;
@@ -2247,6 +2283,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final success = gameNotifier.moveStack(from, dir, drops);
     if (success) {
+      if (scenario?.type == ScenarioType.puzzle &&
+          !_isAiTurn(session, gameState)) {
+        ref
+            .read(scenarioStateProvider.notifier)
+            .recordPuzzleMove(AIStackMove(from, dir, drops));
+      }
       if (scenario != null &&
           guidanceActive &&
           (scenario.guidedMove.type == GuidedMoveType.stackMove ||
@@ -2293,7 +2335,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _switchChessClock(WidgetRef ref) {
     final settings = ref.read(appSettingsProvider);
     if (!settings.chessClockEnabled ||
-        ref.read(gameSessionProvider).isCourtMode) {
+        ref.read(gameSessionProvider).isCourtMode ||
+        ref.read(scenarioStateProvider).hasScenario) {
       return;
     }
 
@@ -2314,6 +2357,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Future<void> _maybeTriggerAiTurn(GameState state) async {
+    final scenarioEpoch = _scenarioEpoch;
     final session = ref.read(gameSessionProvider);
     if (_courtRewinding ||
         session.mode != GameMode.vsComputer ||
@@ -2321,7 +2365,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return;
     }
 
-    if (ref.read(scenarioStateProvider).isSuccessful(state)) return;
+    if (ref.read(scenarioStateProvider).isSuccessful(state) ||
+        ref.read(scenarioStateProvider).isFailed(state)) {
+      return;
+    }
     if (state.currentPlayer != _aiPlayerColor(session)) return;
     if (ref.read(aiThinkingProvider)) return;
 
@@ -2331,7 +2378,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Start a timer to show the thinking indicator after 500ms
     // This avoids showing a spinner for quick moves
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted && ref.read(aiThinkingProvider)) {
+      if (mounted &&
+          scenarioEpoch == _scenarioEpoch &&
+          ref.read(aiThinkingProvider)) {
         ref.read(aiThinkingVisibleProvider.notifier).state = true;
       }
     });
@@ -2341,7 +2390,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       // Small delay before AI starts for better UX
       await Future.delayed(const Duration(milliseconds: 200));
 
-      if (!mounted) return;
+      if (!mounted || scenarioEpoch != _scenarioEpoch) return;
       final latestState = ref.read(gameStateProvider);
       final latestSession = ref.read(gameSessionProvider);
       if (latestSession.mode != GameMode.vsComputer ||
@@ -2349,7 +2398,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           latestState.currentPlayer != _aiPlayerColor(latestSession)) {
         return;
       }
-      if (ref.read(scenarioStateProvider).isSuccessful(latestState)) return;
+      if (ref.read(scenarioStateProvider).isSuccessful(latestState) ||
+          ref.read(scenarioStateProvider).isFailed(latestState)) {
+        return;
+      }
 
       final scenarioMove = ref.read(scenarioStateProvider).nextScriptedMove;
       if (scenarioMove != null) {
@@ -2361,6 +2413,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         }
       }
 
+      if (latestSession.scenario?.type == ScenarioType.puzzle) {
+        ref.read(scenarioStateProvider.notifier).failCertificate();
+        return;
+      }
       searchedState = latestState;
       final move = await selectStonesMove(
           latestState, latestSession.aiDifficulty,
@@ -2383,7 +2439,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.read(uiStateProvider.notifier).reset();
     } finally {
       // A departed screen must not touch its WidgetRef or unlock a newer AI turn.
-      if (mounted) {
+      if (mounted && scenarioEpoch == _scenarioEpoch) {
         ref.read(aiThinkingProvider.notifier).state = false;
         ref.read(aiThinkingVisibleProvider.notifier).state = false;
         if (searchedState != null &&
@@ -3366,14 +3422,17 @@ class _SidePieceButton extends StatelessWidget {
   }
 }
 
-class _ScenarioInfoCard extends StatelessWidget {
+class _ScenarioInfoCard extends ConsumerWidget {
   final GameScenario scenario;
+  final VoidCallback onRetry;
 
-  const _ScenarioInfoCard({required this.scenario});
+  const _ScenarioInfoCard({required this.scenario, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isPuzzle = scenario.type == ScenarioType.puzzle;
+    final progress = ref.watch(scenarioStateProvider);
+    final game = ref.watch(gameStateProvider);
     final accent = isPuzzle ? Colors.deepPurple : GameColors.boardFrameInner;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -3428,20 +3487,24 @@ class _ScenarioInfoCard extends StatelessWidget {
           if (isPuzzle) ...[
             const SizedBox(height: 8),
             Text(scenario.objective),
-            if (scenario.hintText != null)
+            Text(
+                '${progress.puzzleMoves} / ${scenario.puzzleMoveLimit} moves used · Untimed'),
+            if (progress.isFailed(game))
+              Semantics(
+                  liveRegion: true,
+                  child: Text(progress.certificateError
+                      ? 'Puzzle response unavailable. Retry to reset.'
+                      : game.isGameOver
+                          ? 'This attempt did not win. Retry and try another idea.'
+                          : 'Move limit reached without a win. Retry and try another idea.')),
+            Wrap(spacing: 8, children: [
+              if (scenario.puzzleHints.isNotEmpty)
+                PuzzleHints(hints: scenario.puzzleHints),
               TextButton.icon(
-                  onPressed: () => showDialog<void>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                              title: const Text('Puzzle hint'),
-                              content: Text(scenario.hintText!),
-                              actions: [
-                                TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Close'))
-                              ])),
-                  icon: const Icon(Icons.lightbulb_outline),
-                  label: const Text('Show hint')),
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry puzzle')),
+            ]),
           ],
           if (!isPuzzle && scenario.dialogue.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -5718,8 +5781,11 @@ class _BottomControls extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
           children: [
             _PieceTypeToggle(
               type: PieceType.flat,
@@ -5729,7 +5795,6 @@ class _BottomControls extends StatelessWidget {
                   ? () => onPieceTypeChanged(PieceType.flat)
                   : null,
             ),
-            const SizedBox(width: 6),
             _PieceTypeToggle(
               type: PieceType.standing,
               label: 'Wall',
@@ -5739,7 +5804,6 @@ class _BottomControls extends StatelessWidget {
                   ? () => onPieceTypeChanged(PieceType.standing)
                   : null,
             ),
-            const SizedBox(width: 6),
             _PieceTypeToggle(
               type: PieceType.capstone,
               isSelected: currentType == PieceType.capstone,
