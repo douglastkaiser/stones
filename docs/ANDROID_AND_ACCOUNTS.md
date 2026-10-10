@@ -53,7 +53,9 @@ guessing from checked-in JSON. See
 
 ## Android release process
 
-Android Release runs manually on main, using Flutter 3.47.7 and Java 17. It checks
+Android Release runs manually on main, using Flutter 3.47.7 and Java 17. Native builds use
+Gradle 8.14.3, Android Gradle Plugin 8.11.1 and Kotlin 2.2.20, meeting this
+Flutter SDK's minimum supported versions. It checks
 signing inputs, package/project identity, registered upload-key SHA-1 and native
 Google's required web OAuth client before building. Signing secrets are scoped
 to the steps that need them; the temporary keystore is removed on completion.
@@ -73,17 +75,21 @@ version code and commit and retained for 30 days. AABs cannot be installed direc
 
 Version code defaults to commit count. Set the workflow's `build_number` input to
 a positive code above the highest code already uploaded to Play Console when
-needed. CI also compiles a debug Android APK; this catches native/plugin build
-regressions that Flutter widget tests and web builds cannot detect.
+needed. CI also compiles and retains a debug Android APK for 14 days; this catches
+native/plugin build regressions that Flutter widget tests and web builds cannot
+detect. This is a test build signed with the runner's debug certificate, so it
+does not verify release Google sign-in and cannot update a release-signed install.
 
 The most recent existing Android Release run was successful on 2026-01-28
 ([run 21424203306](https://github.com/douglastkaiser/stones/actions/runs/21424203306)),
 before the recent gameplay upgrades. It does not validate this new code.
 
 No JDK, Android SDK or attached Android device was available locally during this
-audit. The new Android CI job and signed release workflow must run after these
-changes are pushed; a native compile, signing pass or successful device login
-must not be claimed based on Dart tests alone.
+audit. The updated native toolchain compiled successfully in GitHub CI
+([run 38056626172](https://github.com/douglastkaiser/stones/actions/runs/38056626172))
+and produced a downloadable debug APK. Signed release compilation remains
+blocked by the upload-key alias described below. Successful device login has
+not been verified; neither Dart tests nor a native compile prove it.
 
 ## Optional Play Games
 
@@ -125,7 +131,7 @@ Account tests cover restored identity, coalesced authentication, linking during
 matches, collisions, explicit switching, cancellation, sign-out protection,
 retries, disposal and stream errors. Widget tests cover 320px and 1000px layouts
 at 150% text scaling. Cloud-save tests cover AI/session/stack restoration,
-unsupported formats and corrupt dimensions. Six Python tests exercise signing
+unsupported formats and corrupt dimensions. Seven Python tests exercise signing
 preflight failures and check that passwords never enter logs or subprocess args.
 
 Before calling the login repair fully verified, trial these on the hosted site
@@ -145,9 +151,44 @@ Domain registration is verified in production; credential exchange on a user's
 device and Play Store certificate/SDK behavior still require these trials.
 
 Audit verification: all 433 Flutter tests passed; strict analysis reported no
-issues; release web build succeeded. All six Python preflight tests passed.
+issues; release web build succeeded. All seven Python preflight tests passed.
 Workflow YAML and embedded Python parsed successfully. Browser inspection
 confirmed the Account card initializes and fits 390px and 1366px viewports;
-final account/Settings/cloud-save regressions passed (31 tests). Native Android builds,
-Play Console signing identity and actual Google credential exchange are still
-unverified locally. See GitHub Actions for native builds and release artifacts.
+final account/Settings/cloud-save regressions passed (31 tests). Native Android debug compilation and artifact upload passed in GitHub CI.
+Play Console signing identity and actual Google credential exchange remain
+unverified. Web deployment and Pages publishing succeeded for f0ea735
+([deploy run 38056925287](https://github.com/douglastkaiser/stones/actions/runs/38056925287)).
+Browser verification encountered a redirect to www.douglastkaiser.com and
+automatic browser review denied that origin pending user confirmation. If it is
+the intended Stones origin, verify its Firebase authorized-domain entry too.
+
+## Release follow-up and future Play Store automation
+
+The signed release retry on 2026-10-10 stopped before compilation because
+`ANDROID_UPLOAD_KEY_ALIAS` does not identify a key in the configured keystore
+([run 38056923691](https://github.com/douglastkaiser/stones/actions/runs/38056923691)).
+Correct that GitHub Actions secret using the existing upload keystore's alias;
+do not generate a replacement key to bypass the failure. The preflight now
+classifies alias, store-password and format failures without printing tool output
+or private values. On a trusted machine with Java installed, run
+`keytool -list -keystore <existing-upload-keystore>` and enter its password at the
+prompt to inspect aliases. Keep these details out of chat and the repository.
+
+The current workflow builds downloadable APK/AAB artifacts; it does not publish
+to Google Play. Future CI publishing can be added after the following setup:
+
+1. Enable the Google Play Developer API in a Google Cloud project.
+2. Create a service account and invite its email through Play Console Users &
+   Permissions, granting access only to Stones and the required release track.
+3. Configure its authentication securely for GitHub Actions; never check a
+   service-account JSON key into this repository or send it through chat.
+4. Confirm the existing upload certificate and set a version code greater than
+   every version already uploaded to Play Console.
+5. Start with a manually triggered internal-testing upload of the signed AAB.
+   Verify installation and Google sign-in with Play's app-signing certificate.
+6. Add production promotion and a GitHub environment approval after the test
+   release is validated. Automatic builds and store publication are distinct.
+
+Google documents [service-account setup](https://developers.google.com/android-publisher/getting_started)
+and [release tracks](https://developers.google.com/android-publisher/tracks).
+No Play publishing credentials or permissions were created during this audit.
