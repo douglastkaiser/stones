@@ -80,15 +80,17 @@ native/plugin build regressions that Flutter widget tests and web builds cannot
 detect. This is a test build signed with the runner's debug certificate, so it
 does not verify release Google sign-in and cannot update a release-signed install.
 
-The most recent existing Android Release run was successful on 2026-01-28
-([run 21424203306](https://github.com/douglastkaiser/stones/actions/runs/21424203306)),
-before the recent gameplay upgrades. It does not validate this new code.
+The latest signed Android Release succeeded on 2026-10-10
+([run 38058148684](https://github.com/douglastkaiser/stones/actions/runs/38058148684)),
+producing code 385 from 7c87c54. See [the release record](releases/ANDROID_385.md)
+for artifacts, checksums, Play Console verification and rollout status.
 
 No JDK, Android SDK or attached Android device was available locally during this
 audit. The updated native toolchain compiled successfully in GitHub CI
 ([run 38056626172](https://github.com/douglastkaiser/stones/actions/runs/38056626172))
-and produced a downloadable debug APK. Signed release compilation remains
-blocked by the upload-key alias described below. Successful device login has
+and produced a downloadable debug APK. The signed release also passed on 7c87c54 after the preflight resolved the
+existing upload-key alias by its registered certificate. All four APK signatures
+matched the upload certificate in Play Console; a signed AAB was built too. Successful device login has
 not been verified; neither Dart tests nor a native compile prove it.
 
 ## Optional Play Games
@@ -182,7 +184,11 @@ or private values. On a trusted machine with Java installed, run
 prompt to inspect aliases. Keep these details out of chat and the repository.
 
 The current workflow builds downloadable APK/AAB artifacts; it does not publish
-to Google Play. Future CI publishing can be added after the following setup:
+to Google Play automatically. Version 385 was uploaded through Play Console and
+published to internal testing on 2026-10-10; Play confirms it is available to
+internal testers. No signing secret or private key was changed. This manual
+release demonstrates the signed build and store upload path; future automation
+still needs publishing credentials and permissions. Future CI publishing can be added after the following setup:
 
 1. Enable the Google Play Developer API in a Google Cloud project.
 2. Create a service account and invite its email through Play Console Users &
