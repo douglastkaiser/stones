@@ -121,7 +121,9 @@ void main() {
       final game = playing({
         const HexCell(0, 0): [cu, cap],
         const HexCell(1, 0): [wall],
-        const HexCell(-1, 0): [const HexStone(HexSeat.copper, PieceType.capstone)]
+        const HexCell(-1, 0): [
+          const HexStone(HexSeat.copper, PieceType.capstone)
+        ]
       });
       for (final drops in [
         <int>[],
@@ -167,9 +169,9 @@ void main() {
     });
   });
 
-  group('assigned roads and flat results', () {
+  group('shared roads and flat results', () {
     for (final seat in HexSeat.values) {
-      test('${seat.label} needs its own edge pair', () {
+      test('${seat.label} can complete an opposite pair', () {
         final board = <HexCell, List<HexStone>>{};
         for (var coordinate = -2; coordinate <= 2; coordinate++) {
           final cell = seat == HexSeat.charcoal
@@ -188,11 +190,11 @@ void main() {
         expect(result.reason, 'Road');
       });
     }
-    test('wrong pair, covered flats and walls do not form a road', () {
+    test('every pair wins, but covered flats and walls do not form a road', () {
       var game = playing({
         for (var r = -2; r <= 2; r++) HexCell(0, r): [i]
       });
-      expect(HexRules.road(game, HexSeat.ivory), isEmpty);
+      expect(HexRules.road(game, HexSeat.ivory), isNotEmpty);
       game = playing({
         for (var q = -2; q <= 2; q++) HexCell(q, 0): q == 0 ? [i, ch] : [i]
       });
@@ -291,7 +293,7 @@ void main() {
     });
   });
 
-  test('AI takes an immediate assigned-road win', () {
+  test('AI takes an immediate road win', () {
     final game = playing({
       for (var q = -2; q <= 1; q++) HexCell(q, 0): [i]
     });

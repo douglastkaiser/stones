@@ -77,10 +77,10 @@ numbers and ordering recommend a path without preventing revisits.
 | Hex | Radius | Learner | Phase | Moves | Winning / legal | Main challenge |
 |---|---:|---|---|---:|---:|---|
 | 1. A winding route | 2 | Ivory | Early | 1 | 4 / 67 | Bending capture routes; alternatives |
-| 2. A guarded passage | 2 | Charcoal | Middle | 1 | 1 / 44 | Crush on assigned axis |
+| 2. A guarded passage | 2 | Charcoal | Middle | 1 | 1 / 44 | Crush the blocked crossing |
 | 3. Layers of copper | 3 | Copper | Middle | 1 | 1 / 180 | Buried color and drop order |
 | 4. Across the court | 4 | Ivory | Middle | 1 | 1 / 384 | Four-piece mixed spread |
-| 5. After both opponents | 2 | Charcoal | Early | 2 | 2 / 58 | Three threats survive two replies |
+| 5. After both opponents | 2 | Charcoal | Early | 2 | 7 / 58 | Shared-pair threats survive two replies |
 | 6. Three ways through | 3 | Copper | Middle | 2 | 1 / 106 | Crush into three threats |
 | 7. One last distribution | 4 | Ivory | Endgame | 1 | 1 / 43 | Three-seat flat count |
 
@@ -160,3 +160,12 @@ Further quality work: human calibration, deeper full decision-tree policies,
 replay-backed match puzzles, a visual line viewer, and more diverse defensive
 motifs. Add fewer verified studies rather than padding the library with variations
 whose tactical claim has not been established.
+
+## Shared Hex goals, 2026-10-09
+
+All seven Hex studies were exhaustively re-proved with every color eligible for
+all three opposite-side pairs. Two-move studies still have no one-move solution
+and survive every legal reply from both opponents. Study 5 now has seven valid
+roots instead of two; the regenerated certificates accept them all. Other counts
+remain as listed above. New `hex_v2_study_*` IDs keep legacy completions separate.
+The square studies and their proof results are unchanged.

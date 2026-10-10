@@ -132,3 +132,17 @@ After the recovery iteration, validate with the same browser profile/account:
 No additional Firebase collection/index is introduced by recovery. See
 [performance and recovery](PERFORMANCE_AND_RECOVERY.md) for the contract and
 verification boundaries.
+
+## Shared Hex goals compatibility, 2026-10-09
+
+Published the one-line `version in [1, 2]` room-creation compatibility update
+to stones-9a6a0; the console's active revision is Today 9:02 PM. Compared the
+complete staged policy with the repository and the previous published policy;
+only the supported version predicate changed. Firebase compiled it successfully
+and the authenticated legacy-room creation simulation remained allowed.
+Authentication, room visibility, seat authority and immutable metadata restrictions
+are unchanged; existing rooms keep version 1. Dart replay/join/append tests cover
+both versions and attempted version changes. Emulator tests now use version 2
+and cover legacy support and immutable versions, but were not executed here
+because the Java/Firebase emulator runtime is unavailable. No production test
+documents were created. Browser proof: `build/firebase-hex-v2-published.png`.

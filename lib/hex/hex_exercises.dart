@@ -98,10 +98,10 @@ final hexExercises = <HexExercise>[
       ]),
   HexExercise(
       id: 'edges',
-      title: 'Your own opposite edges',
+      title: 'Any opposite sides',
       goal:
-          'Finish Ivory’s road between its matching marked edges by placing a flat at the center.',
-      hint: 'Ivory connects q = -2 to q = 2. Charcoal and Copper have different edge pairs. Walls do not join roads.',
+          'Finish Ivory’s road by placing a flat at the center. Any color can use any opposite pair.',
+      hint: 'Look for matching A, B or C side markers. This road joins A to A and C to C. Walls do not join roads.',
       initial: _ivoryRoad(),
       solution: [HexMove.place(const HexCell(0, 0), PieceType.flat)]),
   HexExercise(

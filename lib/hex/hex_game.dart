@@ -4,6 +4,20 @@ import '../models/piece.dart' show PieceType;
 /// GameState, Position and the square game's four-direction movement.
 enum HexSeat { ivory, charcoal, copper }
 
+/// The three opposite boundary pairs are shared by every color in version 2.
+enum HexAxis {
+  q,
+  r,
+  s;
+
+  int coordinate(HexCell cell) => switch (this) {
+        q => cell.q,
+        r => cell.r,
+        s => cell.s,
+      };
+  String get marker => ['A', 'B', 'C'][index];
+}
+
 extension HexSeatInfo on HexSeat {
   String get label => switch (this) {
         HexSeat.ivory => 'Ivory',
@@ -11,6 +25,15 @@ extension HexSeatInfo on HexSeat {
         HexSeat.copper => 'Copper',
       };
   HexSeat get next => HexSeat.values[(index + 1) % 3];
+
+  /// Screen directions for the fixed pointy-top board. A and B are opposite
+  /// goals, never the two colored fragments at a single corner.
+  String edgeName(bool positive) => switch (this) {
+        HexSeat.ivory => positive ? 'upper right' : 'lower left',
+        HexSeat.charcoal => positive ? 'bottom' : 'top',
+        HexSeat.copper => positive ? 'upper left' : 'lower right',
+      };
+  String get goalLabel => '${edgeName(false)} to ${edgeName(true)}';
   int axis(HexCell cell) => switch (this) {
         HexSeat.ivory => cell.q,
         HexSeat.charcoal => cell.r,
@@ -118,18 +141,23 @@ class HexGame {
     required List<HexReserve> reserves,
     this.ply = 0,
     this.starter = HexSeat.ivory,
+    this.rulesVersion = 2,
     this.finished = false,
     this.winner,
     this.reason,
   })  : board = Map.unmodifiable(board.map((cell, stack) =>
             MapEntry(cell, List<HexStone>.unmodifiable(stack)))),
         reserves = List.unmodifiable(reserves) {
-    if (radius < 2 || radius > 4 || reserves.length != 3) {
+    if (radius < 2 ||
+        radius > 4 ||
+        reserves.length != 3 ||
+        (rulesVersion != 1 && rulesVersion != 2)) {
       throw ArgumentError('Hex games require radius 2–4 and three reserves');
     }
   }
 
-  factory HexGame.initial({int radius = 2, HexSeat starter = HexSeat.ivory}) {
+  factory HexGame.initial(
+      {int radius = 2, HexSeat starter = HexSeat.ivory, int rulesVersion = 2}) {
     final (stones, caps) = switch (radius) {
       2 => (15, 1),
       3 => (25, 1),
@@ -138,12 +166,16 @@ class HexGame {
     };
     return HexGame(
         radius: radius,
+        rulesVersion: rulesVersion,
         board: const {},
         reserves: List.generate(3, (_) => HexReserve(stones, caps)),
         starter: starter);
   }
 
   final int radius;
+  final int rulesVersion;
+  Iterable<HexAxis> roadAxes(HexSeat seat) =>
+      rulesVersion == 1 ? [HexAxis.values[seat.index]] : HexAxis.values;
   final Map<HexCell, List<HexStone>> board;
   final List<HexReserve> reserves;
   final int ply;
@@ -178,6 +210,7 @@ class HexGame {
           String? reason}) =>
       HexGame(
           radius: radius,
+          rulesVersion: rulesVersion,
           board: board ?? this.board,
           reserves: reserves ?? this.reserves,
           ply: ply ?? this.ply,
@@ -253,18 +286,26 @@ class HexRules {
   }
 
   static Set<HexCell> road(HexGame game, HexSeat seat) {
+    for (final axis in game.roadAxes(seat)) {
+      final path = roadOnAxis(game, seat, axis);
+      if (path.isNotEmpty) return path;
+    }
+    return {};
+  }
+
+  static Set<HexCell> roadOnAxis(HexGame game, HexSeat seat, HexAxis axis) {
     bool controlled(HexCell cell) {
       final top = game.topAt(cell);
       return top != null && top.seat == seat && top.type != PieceType.standing;
     }
 
     final queue = game.cells
-        .where((c) => seat.axis(c) == -game.radius && controlled(c))
+        .where((c) => axis.coordinate(c) == -game.radius && controlled(c))
         .toList();
     final parents = <HexCell, HexCell?>{for (final c in queue) c: null};
     for (var index = 0; index < queue.length; index++) {
       final cell = queue[index];
-      if (seat.axis(cell) == game.radius) {
+      if (axis.coordinate(cell) == game.radius) {
         final path = <HexCell>{};
         HexCell? cursor = cell;
         while (cursor != null) {

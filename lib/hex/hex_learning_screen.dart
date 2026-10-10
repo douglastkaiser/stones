@@ -243,13 +243,16 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                             ? 'Objective complete'
                             : _attempted
                                 ? 'Retry to explore another move'
-                                : '${_game.current.label} · ${_game.opening ? 'place ${_game.current.next.label} flat' : 'connect your matching edges'}'),
+                                : '${_game.current.label} · ${_game.opening ? 'place ${_game.current.next.label} flat' : 'connect any opposite sides'}'),
                         const Text('I: Ivory · Ch: Charcoal · Cu: Copper'),
+                        const Text(
+                            'Every color can connect A to A, B to B, or C to C. Choose any opposite pair.'),
                         SizedBox(
                             height: MediaQuery.sizeOf(context)
                                 .width
                                 .clamp(260.0, 420.0),
                             child: HexBoard(
+                                goalSeat: exercise.initial.current,
                                 turnSeat: _game.current,
                                 preview: _planned != null,
                                 game: preview ?? _game,

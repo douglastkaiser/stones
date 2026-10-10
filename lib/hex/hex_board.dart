@@ -11,13 +11,17 @@ import 'hex_game.dart';
 
 const hexSeatColors = [Color(0xFFFFE3A0), Color(0xFF607D8B), Color(0xFFE68B54)];
 const hexSeatSymbols = ['I', 'Ch', 'Cu'];
+// Boundary colors identify shared pairs, independently of piece colors.
+const hexPairColors = [Color(0xFFDED3BA), Color(0xFFB8C8BE), Color(0xFFC7BED5)];
 
 /// Pointy-top axial geometry, shared by painting and hit-testing. Hex-shaped
 /// hit areas avoid selecting a neighboring cell through a bounding-box corner.
 class HexBoardGeometry {
   HexBoardGeometry(this.size, this.radius)
-      : unit = math.min(size.width / (math.sqrt(3) * (2 * radius + 1) + 1),
-            size.height / (3 * radius + 3));
+      : unit = math.max(
+            0,
+            math.min((size.width - 32) / (math.sqrt(3) * (2 * radius + 1) + 1),
+                (size.height - 24) / (3 * radius + 3)));
   final Size size;
   final int radius;
   final double unit;
@@ -46,6 +50,18 @@ class HexBoardGeometry {
     }
     return null;
   }
+
+  /// Label anchors are derived from the same boundary cells the road finder
+  /// uses, instead of inferring goals from painter/direction indices.
+  Offset goalAnchor(HexGame game, HexAxis axis, bool positive) {
+    final edge = game.cells.where(
+        (cell) => axis.coordinate(cell) == (positive ? radius : -radius));
+    final middle =
+        edge.map(center).reduce((a, b) => a + b) / edge.length.toDouble();
+    final outward = middle - Offset(size.width / 2, size.height / 2);
+    if (outward.distance == 0) return middle;
+    return middle + outward / outward.distance * (unit * 1.3);
+  }
 }
 
 class HexBoard extends ConsumerWidget {
@@ -53,6 +69,7 @@ class HexBoard extends ConsumerWidget {
       {super.key,
       required this.game,
       this.turnSeat,
+      this.goalSeat,
       this.preview = false,
       this.pieceStyles,
       this.boardTheme,
@@ -64,6 +81,7 @@ class HexBoard extends ConsumerWidget {
   final List<PieceStyle>? pieceStyles;
   final BoardTheme? boardTheme;
   final HexSeat? turnSeat;
+  final HexSeat? goalSeat;
   final bool preview;
   final HexCell? selected;
   final Set<HexCell> destinations;
@@ -76,7 +94,7 @@ class HexBoard extends ConsumerWidget {
         final geometry = HexBoardGeometry(size, game.radius);
         return Semantics(
           label:
-              'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${(turnSeat ?? game.current).label} to play.'}',
+              'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${(turnSeat ?? game.current).label} to play.'} ${game.rulesVersion == 1 ? 'Legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left.' : 'Every color may connect either A pair, B pair or C pair of opposite sides.'}',
           child: Stack(children: [
             RepaintBoundary(
                 child: CustomPaint(
@@ -92,6 +110,41 @@ class HexBoard extends ConsumerWidget {
                             : BoardThemeData.forTheme(boardTheme!),
                         ref.watch(currentPieceStyleProvider),
                         pieceStyles))),
+            for (final axis in HexAxis.values)
+              for (final positive in [false, true])
+                Positioned(
+                    left: geometry.goalAnchor(game, axis, positive).dx - 16,
+                    top: geometry.goalAnchor(game, axis, positive).dy - 9,
+                    width: 32,
+                    height: 18,
+                    child: IgnorePointer(
+                        child: Semantics(
+                            label: game.rulesVersion == 1
+                                ? '${HexSeat.values[axis.index].label} goal ${positive ? 'B' : 'A'}: ${HexSeat.values[axis.index].edgeName(positive)}'
+                                : 'Shared pair ${axis.marker}: ${HexSeat.values[axis.index].edgeName(positive)}; any color may connect it to its opposite side',
+                            child: ExcludeSemantics(
+                                child: Container(
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                        color: game.rulesVersion == 1
+                                            ? hexSeatColors[axis.index]
+                                            : hexPairColors[axis.index],
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                            color:
+                                                (game.rulesVersion == 1 && goalSeat?.index == axis.index)
+                                                    ? Colors.white
+                                                    : Colors.black54,
+                                            width:
+                                                (game.rulesVersion == 1 && goalSeat?.index == axis.index)
+                                                    ? 2
+                                                    : 1)),
+                                    child: Text(game.rulesVersion == 1 ? '${hexSeatSymbols[axis.index]} ${positive ? 'B' : 'A'}' : axis.marker,
+                                        textScaler: TextScaler.noScaling,
+                                        style: const TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold))))))),
             for (final cell in game.cells)
               Positioned(
                 left: geometry.center(cell).dx - geometry.unit,
@@ -178,8 +231,8 @@ class _HexPainter extends CustomPainter {
       for (final direction in HexDirection.values) {
         final neighbor = cell.step(direction);
         if (neighbor.inside(game.radius)) continue;
-        final sides = HexSeat.values
-            .where((seat) => seat.axis(neighbor).abs() > game.radius)
+        final sides = HexAxis.values
+            .where((axis) => axis.coordinate(neighbor).abs() > game.radius)
             .toList();
         final angle = -direction.index * math.pi / 3;
         final a = center +
@@ -196,7 +249,9 @@ class _HexPainter extends CustomPainter {
               Offset.lerp(a, b, (i + 1) / sides.length)!,
               Paint()
                 ..strokeWidth = math.max(3, unit * 0.12)
-                ..color = hexSeatColors[sides[i].index]);
+                ..color = game.rulesVersion == 1
+                    ? hexSeatColors[sides[i].index]
+                    : hexPairColors[sides[i].index]);
         }
       }
       if (selected == cell ||

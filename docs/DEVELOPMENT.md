@@ -12,6 +12,8 @@ discarded at the user's request before pushing the rules audit commit.
 
 The selectable three-player variant is isolated under `lib/hex/`; read
 [its rules and protocol contract](HEX_MODE.md) before changing it.
+The [Hex victory audit](HEX_VICTORY_AUDIT.md) explains the reported left-edge
+connection, shared opposite-side goals, legacy room compatibility, and independent adjudication checks.
 
 The [playability audit](PLAYABILITY_AUDIT.md) records player-journey questions,
 UX improvements, browser trials, automated evidence and remaining product work.

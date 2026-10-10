@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../models/piece.dart' show PieceType;
 
@@ -121,39 +122,62 @@ class HexAI {
                   : -100000.0);
     }
     final flats = HexRules.flatCounts(game);
-    final costs = HexSeat.values.map((seat) => _roadCost(game, seat)).toList();
+    final costs = HexSeat.values.map((seat) => roadCost(game, seat)).toList();
     return List.generate(3, (i) {
       final opponents = [costs[(i + 1) % 3], costs[(i + 2) % 3]];
       return flats[i] * 2 - costs[i] * 12 + opponents.reduce(min) * 3;
     });
   }
 
-  // Weighted shortest path between this seat's assigned edges. Buried colors
+  // Cheapest of the permitted opposite-side crossings. Buried colors
   // give no connection; walls/caps owned by others are expensive blockers.
-  static double _roadCost(HexGame game, HexSeat seat) {
-    double cost(HexCell cell) {
-      final top = game.topAt(cell);
-      if (top == null) return 1;
-      if (top.seat == seat && top.type != PieceType.standing) return 0;
-      return top.type == PieceType.flat ? 3 : 6;
-    }
+  @visibleForTesting
+  static double roadCost(HexGame game, HexSeat seat) {
+    return game
+        .roadAxes(seat)
+        .map((axis) => _axisCost(game, seat, axis))
+        .reduce(min);
+  }
 
-    final distances = <HexCell, double>{};
-    final remaining = game.cells.toSet();
-    for (final cell in remaining) {
-      distances[cell] = seat.axis(cell) == -game.radius ? cost(cell) : 1000;
+  static double _axisCost(HexGame game, HexSeat seat, HexAxis axis) {
+    // All weights are small nonnegative integers. Bucketed Dijkstra avoids
+    // repeatedly scanning every remaining cell for each of three shared pairs.
+    final costs = <HexCell, int>{};
+    for (final cell in game.cells) {
+      final top = game.topAt(cell);
+      costs[cell] = top == null
+          ? 1
+          : top.seat == seat && top.type != PieceType.standing
+              ? 0
+              : top.type == PieceType.flat
+                  ? 3
+                  : 6;
     }
-    while (remaining.isNotEmpty) {
-      final cell =
-          remaining.reduce((a, b) => distances[a]! < distances[b]! ? a : b);
-      final distance = distances[cell]!;
-      if (seat.axis(cell) == game.radius) return distance;
-      remaining.remove(cell);
-      for (final direction in HexDirection.values) {
-        final neighbor = cell.step(direction);
-        if (!remaining.contains(neighbor)) continue;
-        final next = distance + cost(neighbor);
-        if (next < distances[neighbor]!) distances[neighbor] = next;
+    final distances = <HexCell, int>{};
+    final buckets = List.generate(costs.length * 6 + 1, (_) => <HexCell>[]);
+    for (final cell in costs.keys) {
+      if (axis.coordinate(cell) == -game.radius) {
+        final distance = costs[cell]!;
+        distances[cell] = distance;
+        buckets[distance].add(cell);
+      }
+    }
+    for (var distance = 0; distance < buckets.length; distance++) {
+      final bucket = buckets[distance];
+      for (var n = 0; n < bucket.length; n++) {
+        final cell = bucket[n];
+        if (distances[cell] != distance) continue;
+        if (axis.coordinate(cell) == game.radius) return distance.toDouble();
+        for (final direction in HexDirection.values) {
+          final neighbor = cell.step(direction);
+          final cost = costs[neighbor];
+          if (cost == null) continue;
+          final next = distance + cost;
+          if (next < (distances[neighbor] ?? 1000)) {
+            distances[neighbor] = next;
+            buckets[next].add(neighbor);
+          }
+        }
       }
     }
     return 1000;

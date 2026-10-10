@@ -5,7 +5,7 @@ import { initializeHexEmulator, assertFails, assertSucceeds,
 
 let environment;
 const code = 'HABCDEF';
-const base = () => ({version: 1, code, host: 'host', radius: 2, starter: 0, ply: 0,
+const base = () => ({version: 2, code, host: 'host', radius: 2, starter: 0, ply: 0,
   kinds: {'0': 'localHuman', '1': 'remoteHuman', '2': 'ai'},
   owners: {'0': 'host', '1': null, '2': null}, moves: {}});
 const ref = (uid, room = code) => doc(environment.authenticatedContext(uid).firestore(), 'hexGames', room);
@@ -32,11 +32,19 @@ test('authenticated creator reserves exactly three seats; unauthenticated access
 });
 
 test('unsupported versions, bad radius, forged owner and extra seats rejected', async () => {
-  for (const data of [ {...base(), version: 2}, {...base(), radius: 5}, {...base(), host: 'intruder'},
+  for (const data of [ {...base(), version: 3}, {...base(), radius: 5}, {...base(), host: 'intruder'},
     {...base(), owners: {'0': 'host', '1': null, '2': null, '3': 'host'}},
     {...base(), owners: {'0': 'host', '1': 'forged', '2': null}} ]) {
     await assertFails(setDoc(ref('host'), data));
   }
+});
+
+test('both road-rule versions are accepted but cannot change after creation', async () => {
+  await assertSucceeds(setDoc(ref('host'), {...base(), version: 1}));
+  await assertFails(updateDoc(ref('host'), {version: 2}));
+  await assertSucceeds(updateDoc(ref('guest'), {'owners.1': 'guest'}));
+  await assertSucceeds(append('host', 0, placement(0)));
+  await assertFails(updateDoc(ref('host'), {version: 2, ply: 2, 'moves.1': placement(1,1,0)}));
 });
 
 test('room does not play until every remote human joins', async () => {

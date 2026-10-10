@@ -52,7 +52,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final exercise =
-          hexExercises.firstWhere((item) => item.id == 'hex_study_01');
+          hexExercises.firstWhere((item) => item.id == 'hex_v2_study_01');
       await tester.pumpWidget(ProviderScope(
           child: MaterialApp(home: HexExerciseScreen(exercise: exercise))));
       Future<void> cell(HexCell pos) async {

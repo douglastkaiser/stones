@@ -254,7 +254,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && code.matches('^H[A-Z]{6}$') &&
         request.resource.data.keys().hasOnly([
           'version', 'code', 'host', 'radius', 'starter', 'ply', 'kinds', 'owners', 'moves', 'pieceStyles', 'boardTheme'
-        ]) && request.resource.data.version == 1 &&
+        ]) && request.resource.data.version in [1, 2] &&
         request.resource.data.code == code && request.resource.data.host == request.auth.uid &&
         request.resource.data.radius is int && request.resource.data.radius >= 2 &&
         request.resource.data.radius <= 4 && request.resource.data.starter is int &&

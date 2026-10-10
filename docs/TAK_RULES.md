@@ -179,7 +179,10 @@ The five coordinated themes and renderer changes are application features; they
 do not alter square legality or outcomes. Hex is now discoverable by default
 and has separate interactive tutorials/puzzles. These teach the experimental
 HEX_MODE.md contract, not publisher Tak rules. Learning completion is separate
-from square achievements. See THEMES.md and HEX_MODE.md for the current design.
+from square achievements. New Hex games use version 2: every color can connect
+any opposite-side pair. Version-1 online rooms keep their original assigned
+goals. This variant change does not modify official square Tak. See THEMES.md
+and HEX_MODE.md for the current design.
 
 Online piece sets are also application metadata, independent of legality and
 move replay. Each color/seat brings a room-scoped style; opponents can see it

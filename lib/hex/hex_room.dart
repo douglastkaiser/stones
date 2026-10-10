@@ -10,6 +10,7 @@ class HexRoom {
       {required this.code,
       required this.host,
       required this.radius,
+      this.rulesVersion = 2,
       required List<HexSeatKind> kinds,
       required List<String?> owners,
       this.starter = HexSeat.ivory,
@@ -29,7 +30,8 @@ class HexRoom {
                   'drops': List<int>.unmodifiable(
                       (move['drops'] as List).cast<int>()),
                 }))) {
-    if (pieceStyles.length != 3 ||
+    if ((rulesVersion != 1 && rulesVersion != 2) ||
+        pieceStyles.length != 3 ||
         kinds.length != 3 ||
         owners.length != 3 ||
         host.isEmpty ||
@@ -48,6 +50,7 @@ class HexRoom {
   final String code;
   final String host;
   final int radius;
+  final int rulesVersion;
   final List<HexSeatKind> kinds;
   final List<PieceStyle> pieceStyles;
   final List<String?> owners;
@@ -68,7 +71,10 @@ class HexRoom {
           (kinds[game.current.index] == HexSeatKind.ai && host == uid));
 
   HexGame replay() {
-    return _replayFrom(HexGame.initial(radius: radius, starter: starter), 0);
+    return _replayFrom(
+        HexGame.initial(
+            radius: radius, starter: starter, rulesVersion: rulesVersion),
+        0);
   }
 
   /// Check every immutable prefix record but only simulate newly appended
@@ -77,6 +83,8 @@ class HexRoom {
     if (code != previous.code ||
         host != previous.host ||
         radius != previous.radius ||
+        rulesVersion != previous.rulesVersion ||
+        game.rulesVersion != rulesVersion ||
         starter != previous.starter ||
         boardTheme != previous.boardTheme ||
         !listEquals(kinds, previous.kinds) ||
@@ -123,6 +131,7 @@ class HexRoom {
         code: code,
         host: host,
         radius: radius,
+        rulesVersion: rulesVersion,
         kinds: kinds,
         owners: joined,
         pieceStyles: styles,
@@ -142,6 +151,7 @@ class HexRoom {
         code: code,
         host: host,
         radius: radius,
+        rulesVersion: rulesVersion,
         kinds: kinds,
         owners: owners,
         pieceStyles: pieceStyles,
@@ -151,7 +161,7 @@ class HexRoom {
   }
 
   Map<String, dynamic> toMap() => {
-        'version': 1,
+        'version': rulesVersion,
         'code': code,
         'host': host,
         'radius': radius,
@@ -165,7 +175,7 @@ class HexRoom {
       };
 
   factory HexRoom.fromMap(Map<String, dynamic> data) {
-    if (data['version'] != 1) {
+    if (data['version'] != 1 && data['version'] != 2) {
       throw const FormatException('Unsupported hex rules version');
     }
     final kinds = Map<String, dynamic>.from(data['kinds'] as Map);
@@ -183,6 +193,7 @@ class HexRoom {
         code: data['code'] as String,
         host: data['host'] as String,
         radius: data['radius'] as int,
+        rulesVersion: data['version'] as int,
         starter: HexSeat.values[data['starter'] as int],
         boardTheme: boardThemeFromWire(data['boardTheme']),
         kinds: List.generate(

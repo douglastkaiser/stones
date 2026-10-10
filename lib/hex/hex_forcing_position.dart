@@ -35,7 +35,7 @@ class HexForcingPosition extends ForcingPosition<HexGame, HexMove> {
   @override
   String key(HexGame state) {
     final buffer = StringBuffer(
-        '${state.radius}/${state.current.index}/${state.opening}/${state.finished}/');
+        '${state.rulesVersion}/${state.radius}/${state.current.index}/${state.opening}/${state.finished}/');
     for (final reserve in state.reserves) {
       buffer.write('${reserve.stones},${reserve.caps}/');
     }

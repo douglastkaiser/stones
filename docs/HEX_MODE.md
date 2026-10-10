@@ -14,12 +14,19 @@ Use a regular hexagon of hexagonal cells, with axial coordinates `(q,r)` and
 direction vector. The geometry follows the axial/cube construction documented
 in [Red Blob Games' hex grid guide](https://www.redblobgames.com/grids/hexagons/).
 
-There are three independent seats: Ivory, Charcoal, Copper. Each owns one pair
-of opposite boundaries: `q=±R`, `r=±R`, and `s=±R`, respectively. All three have
-the same edge length and crossing distance under 120-degree rotations. Cells at
-corners belong to both incident boundaries. The board paints each assigned
-boundary in its seat color. Giving seats fixed goals makes the third player's
-objective visible and keeps geometry symmetric.
+There are three independent seats: Ivory, Charcoal, Copper. **Every color may
+connect any of the three opposite boundary pairs**, `q=+/-R`, `r=+/-R` or `s=+/-R`.
+A single continuous road must reach both sides of one pair; reaching neighboring
+sides alone does not win. Corner cells belong to both incident boundaries.
+The shared pairs are marked A/A, B/B and C/C with colors independent of the
+pieces. All colors have identical objectives, including under board rotations.
+See [the screenshot and victory audit](HEX_VICTORY_AUDIT.md).
+
+New games use rules version 2. Existing version-1 online rooms retain their
+original assigned pairs (Ivory q, Charcoal r, Copper s), with colored A/B markers
+and a visible Legacy room notice. The immutable room version selects road
+validation, AI evaluation, replay and help text; saved moves are never
+reinterpreted under new rules. Square Tak is unchanged.
 
 Turns cycle Ivory → Charcoal → Copper. Setup chooses the starting seat. There
 are no teams, elimination, or automatic alliances. Kingmaking is possible in
@@ -57,16 +64,15 @@ two-cap dynamics before treating them as balanced.
    of any color only at the spread's final step. The flattened stone keeps its
    color. A standing stone cannot otherwise be rotated flat. A cap atop other
    carried stones does not make the entire stack eligible to crush a wall.
-5. Resolve roads only after the whole move. Connect your assigned opposite
+5. Resolve roads only after the whole move. Connect any opposite pair of
    boundaries through adjacent exposed flats/caps of your color. Walls and
    buried pieces do not connect. An opponent road exposed by your move wins for
    that opponent.
 6. General simultaneous-road policy: a mover with a road wins; if only one
    opponent has a road, that opponent wins; if both opponents have roads and
    the mover does not, draw. This avoids choosing an opponent by enum/seat order.
-   Fixed crossing goals constrain simultaneous paths geometrically; this policy
-   is defensive adjudication rather than a claim that every combination is
-   reachable in ordinary play.
+   Shared goals permit simultaneous parallel roads, so this policy is part of
+   normal adjudication, independent of seat or boundary-pair enumeration.
 7. Without a road, a full board or any seat's exhausted total reserve ends the
    match. Count only exposed flat stones of each color. A unique highest count
    wins; ties for highest draw the entire match, including two-way ties with a
@@ -109,13 +115,14 @@ inactive human's seat.
   play. `HexRules.play` validates atomically and adjudicates after the full move.
 - `hex_ai.dart`: bounded three-ply MaxN search through both opponents' turns,
   with four candidates per node and one score per independent seat. Evaluation
-  uses assigned-edge weighted path cost and exposed flats. Native computation
+  uses the cheapest permitted opposite-pair weighted path cost and exposed
+  flats. Bucketed Dijkstra avoids repeated whole-board scans. Native computation
   uses an isolate; browser search yields between root candidates. This is an
   initial AI, not a claim of tournament strength.
 - `hex_match_provider.dart`: local play, AI scheduling/cancellation, turn/input
   permissions, online acknowledgement, and subscriptions. Screen teardown
   cancels immediately and defers provider notification until after unmount.
-- `hex_room.dart`: immutable, version-1 room format and strict whole-log replay.
+- `hex_room.dart`: immutable, versioned room format (1 and 2) and strict whole-log replay.
   Moves carry explicit seat, coordinate, piece/direction, and drops. Invalid,
   out-of-turn, post-terminal, incomplete, or unsupported logs stop replay.
 - `hex_room_store.dart`: atomic Firebase transactions for create/join/append.
@@ -125,8 +132,8 @@ inactive human's seat.
 - `hex_screen.dart`: setup, colored boundary markers, polygon hit testing,
   carry selection, legal endpoint/drop-distribution choices, immutable preview,
   confirmation, room sharing, results, and rules help.
-- Settings/main menu changes persist and expose the flag, without switching an
-  active square game's state or replacing its matchmaking provider.
+- The main menu always exposes Hex. The stored legacy enable flag does not hide
+  it or switch an active square game's state or matchmaking provider.
 
 ## Backend contract and deployment
 
@@ -211,7 +218,7 @@ protocols, stronger tactical AI, and larger-board touch/keyboard accessibility.
 
 ## Hex learning and visuals
 
-Four interactive tutorials teach exchange, neighbors, assigned road edges and
+Four interactive tutorials teach exchange, neighbors, shared opposite sides and
 spread/crush. Seven original composed studies span radii 2–4, all learner seats,
 early play, middle game and flat-count endings. Deployed pieces are deducted
 from reserves in both lessons and studies. These are compositions, not match
@@ -226,14 +233,14 @@ inherit old puzzle completions. See [PUZZLE_AUDIT.md](PUZZLE_AUDIT.md).
 
 The reusable `hex_board.dart` retains polygon hit areas and now uses the same
 five board/piece painters as square play. Copper keeps an independent visible
-palette; seat symbols and assigned boundary markers remain. See THEMES.md for
+palette; seat symbols and shared boundary markers (assigned in legacy rooms) remain. See THEMES.md for
 visual design and migration details. Native screen-reader/device validation and
 human balance studies remain separate work.
 
 Online rooms additionally carry optional `pieceStyles` metadata by seat. The
 host chooses styles for local human and AI seats; remote humans publish theirs
 when reserving a seat. Rejoins and appended moves preserve all choices. Metadata
-is independent of the version-1 rules log; legacy rooms default to Classic. The
+is independent of the versioned rules log; legacy rooms default to Classic. The
 board renders each top stone using its owning seat's style, including previews,
 while every viewer uses the host's board material. Theme labels show samples
 and unlock requirements without granting rewards. Deploy the updated Firestore

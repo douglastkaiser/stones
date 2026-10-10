@@ -53,7 +53,7 @@ Study<HexGame> _study(
     learner = learner.next;
   }
   return Study(
-      'hex_study_${number.toString().padLeft(2, '0')}',
+      'hex_v2_study_${number.toString().padLeft(2, '0')}',
       title,
       phase,
       difficulty,
@@ -80,7 +80,7 @@ final hexStudies = <Study<HexGame>>[
       'Easy',
       1,
       [
-        'Trace Ivory’s q edges and look for captures that join the groups.',
+        'Trace the lower-left and upper-right sides and look for captures that join the groups.',
         'One solution carries one east from (-1, 0) onto (0, 0).'
       ],
       'Capturing the center completes a bending road. Several legal spreads work; each is accepted.'),
@@ -97,7 +97,7 @@ final hexStudies = <Study<HexGame>>[
       'Medium',
       1,
       [
-        'Charcoal’s r edges are interrupted by a wall.',
+        'The top-to-bottom route is interrupted by a wall.',
         'Move the capstone southwest from (1, -1) onto (0, 0).'
       ],
       'The lone capstone crushes the central wall and joins Charcoal’s r-axis road.',
@@ -115,7 +115,7 @@ final hexStudies = <Study<HexGame>>[
       'Hard',
       1,
       [
-        'Copper connects s edges. Inspect the source after pickup.',
+        'This Copper road can join the top and bottom sides. Inspect the source after pickup.',
         'Carry three southeast from (0, -1), dropping 2 then 1.'
       ],
       'Copper remains at the source, covers the first cell and crushes the second with the final lone capstone.',

@@ -17,7 +17,7 @@ import 'hex_match_provider.dart';
 import 'hex_room.dart';
 
 const hexRulesText =
-    '''Each color connects its own pair of matching edge markers. Only exposed flats and capstones connect roads. Cells touch along six edges.
+    '''Every color can connect any pair of opposite sides: A to A, B to B, or C to C. Use a continuous road of your exposed flats and capstones. Walls and buried pieces do not connect. Corner cells touch both incident sides; neighboring sides alone are not a win. Cells connect along six shared edges.
 
 Turns cycle Ivory → Charcoal → Copper, starting with the chosen seat. On each of the first three turns, place a flat of the next color. Then place your own piece on an empty cell, or move a stack you control.
 
@@ -29,12 +29,15 @@ Without a road, a full board or any exhausted total reserve ends the match. Most
 
 This is an experimental variant. Rotate the starting seat between matches. Three independent players can cooperate or compete; there are no teams or elimination. Clocks, ratings, achievements and square-game tutorials do not apply here.''';
 
-void _showRules(BuildContext context) {
+void _showRules(BuildContext context, {bool legacy = false}) {
   showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
             title: const Text('Three-player hex rules'),
-            content: const SingleChildScrollView(child: Text(hexRulesText)),
+            content: SingleChildScrollView(
+                child: Text(legacy
+                    ? 'This room uses legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left. Only your assigned pair wins.\n\n${hexRulesText.substring(hexRulesText.indexOf('Turns cycle'))}'
+                    : hexRulesText)),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -97,7 +100,7 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           const Text(
-              'Experimental hex variant. Each player connects their own matching edges. Choose any mix of human and AI seats. Matches do not award square-game achievements or ratings.'),
+              'Experimental hex variant. Every color can connect any pair of opposite sides. Choose any mix of human and AI seats. Matches do not award square-game achievements or ratings.'),
           const SizedBox(height: 16),
           OutlinedButton.icon(
               onPressed: () => Navigator.push<void>(context,
@@ -270,6 +273,9 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
     if (game == null) {
       return const Scaffold(body: Center(child: Text('No hex match loaded')));
     }
+    // A sole human's goal stays visible while either bot takes its turn.
+    final goalSeat =
+        match.controls.length == 1 ? match.controls.single : game.current;
     final spreads = _source == null
         ? <HexMove>[]
         : HexRules.spreads(game, _source!, pickup: _pickup).toList();
@@ -297,7 +303,8 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
               icon: Icon(match.paused ? Icons.play_arrow : Icons.pause),
               tooltip: match.paused ? 'Resume AI' : 'Pause AI'),
         IconButton(
-            onPressed: () => _showRules(context),
+            onPressed: () =>
+                _showRules(context, legacy: game.rulesVersion == 1),
             icon: const Icon(Icons.help_outline),
             tooltip: 'Hex rules'),
       ]),
@@ -306,7 +313,9 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
             MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
         return SingleChildScrollView(
             child: SizedBox(
-                height: math.max(constraints.maxHeight, 520 * textScale),
+                // Wrapped seats and goal instructions must not squeeze the
+                // board into an unusable strip. Short screens scroll instead.
+                height: math.max(constraints.maxHeight, 680 * textScale),
                 child: Column(children: [
                   if (match.room != null)
                     TextButton.icon(
@@ -348,7 +357,10 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                                   label: Text(
                                       '${seat.label}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
                                   side: BorderSide(
-                                      color: seat == game.current
+                                      color: seat ==
+                                              (game.finished
+                                                  ? game.winner
+                                                  : game.current)
                                           ? Theme.of(context)
                                               .colorScheme
                                               .primary
@@ -360,6 +372,14 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                   Text(status,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      child: Text(
+                          game.rulesVersion == 1
+                              ? 'Legacy room · ${goalSeat.label}: ${goalSeat.goalLabel}\nConnect ${hexSeatSymbols[goalSeat.index]} A to ${hexSeatSymbols[goalSeat.index]} B.'
+                              : 'Any color · A to A, B to B, or C to C\nConnect opposite sides with your exposed flats or caps.',
+                          textAlign: TextAlign.center)),
                   if (game.finished) ...[
                     Text(
                         'Exposed flats: ${HexSeat.values.map((seat) => '${seat.label} ${HexRules.flatCounts(game)[seat.index]}').join(' · ')}',
@@ -380,6 +400,7 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                       child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: HexBoard(
+                              goalSeat: goalSeat,
                               turnSeat: game.current,
                               pieceStyles: match.room?.pieceStyles,
                               boardTheme: match.room?.boardTheme,

@@ -13,6 +13,51 @@ HexRoom room(List<HexSeatKind> kinds) => HexRoom(
         .toList());
 
 void main() {
+  test('room replay uses its original rules; joins and moves preserve version',
+      () {
+    var match = room(List.filled(3, HexSeatKind.localHuman));
+    final cells = [
+      const HexCell(1, 0),
+      const HexCell(1, -1),
+      const HexCell(0, -2),
+      const HexCell(-1, -1),
+      const HexCell(2, -2),
+      const HexCell(2, -1),
+      const HexCell(-2, 0),
+      const HexCell(2, 0),
+      const HexCell(1, 1),
+      const HexCell(-2, 1),
+      const HexCell(0, 2),
+      const HexCell(-1, 2),
+      const HexCell(-2, 2),
+    ];
+    for (var n = 0; n < cells.length; n++) {
+      match = match.append(
+          'host',
+          n,
+          HexMove.place(cells[n],
+              n < 3 || n % 3 == 0 ? PieceType.flat : PieceType.standing));
+    }
+    expect(match.toMap()['version'], 2);
+    expect(match.replay().winner, HexSeat.ivory);
+    final legacy = HexRoom.fromMap({...match.toMap(), 'version': 1});
+    expect(legacy.replay().finished, isFalse);
+    expect(legacy.replay().rulesVersion, 1);
+    expect(() => match.replayAfter(legacy, legacy.replay()),
+        throwsFormatException);
+    final pending = HexRoom.fromMap({
+      ...room([HexSeatKind.localHuman, HexSeatKind.remoteHuman, HexSeatKind.ai])
+          .toMap(),
+      'version': 1,
+    });
+    final joined = pending.join('guest');
+    final moved = joined.append(
+        'host', 0, HexMove.place(const HexCell(0, 0), PieceType.flat));
+    expect(joined.toMap()['version'], 1);
+    expect(moved.toMap()['version'], 1);
+    expect(moved.replay().rulesVersion, 1);
+  });
+
   test('all 27 local/remote/AI seat compositions fill exactly three seats', () {
     for (final first in HexSeatKind.values) {
       for (final second in HexSeatKind.values) {
@@ -89,7 +134,7 @@ void main() {
     final decoded = HexRoom.fromMap(match.toMap());
     expect(decoded.replay().topAt(const HexCell(0, 0))!.seat, HexSeat.charcoal);
     expect(decoded.replay().ply, 1);
-    expect(() => HexRoom.fromMap({...match.toMap(), 'version': 2}),
+    expect(() => HexRoom.fromMap({...match.toMap(), 'version': 3}),
         throwsFormatException);
     expect(() => HexRoom.fromMap({...match.toMap(), 'ply': 2}),
         throwsFormatException);
