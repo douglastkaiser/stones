@@ -17,7 +17,7 @@ Improved Google account sign-in, mobile layouts and responsiveness.
   registered private-key certificate. Release preflight passed in GitHub CI.
 - Play Console upload-key SHA-1 matches the existing Firebase Android client:
   FA:63:FB:8F:BB:9B:27:F6:90:54:1B:E7:BC:11:62:AC:90:3A:30:CB.
-- Current published closed-testing bundle is version code 354. New code 385 is
+- At build time the published closed-testing bundle was version code 354. New code 385 is
   greater; no existing release/version is replaced in the bundle history.
 - Google Play production access is locked. The dashboard requires at least
   12 opted-in closed testers for 14 continuous days; currently three are shown.
@@ -65,6 +65,52 @@ upload key and cannot update an install signed with Play's different certificate
 
 Physical-device installation, Google sign-in, online room resumption and a short
 square/Hex play session remain the internal-testing trials. The older closed
-track was left in place. Internal testing does not satisfy Google's separate
+track was initially left in place. Internal testing does not satisfy Google's separate
 12-tester/14-day closed-testing prerequisite for production access.
+
+## Closed-testing promotion
+
+On 2026-10-10, the same signed bundle 385 was promoted from internal testing
+to the existing **Closed testing - Alpha** track, replacing 354 when approved.
+Play's preview reported Ready to release and no supported-device losses.
+The full rollout (100% of eligible closed testers) was saved and submitted.
+The track now explicitly reports **In review**. Automated checks run before
+Google's review; the new closed release is not yet available. Managed publishing
+is off, so an approved release will publish automatically. Google's confirmation
+says reviews typically complete within seven days but can take longer.
+
+- [Closed-test opt-in link](https://play.google.com/apps/testing/com.douglastkaiser.stones)
+- [Play Store listing](https://play.google.com/store/apps/details?id=com.douglastkaiser.stones)
+- [Closed release details](https://play.google.com/console/u/0/developers/5337506295675098460/app/4973099668503873920/tracks/4698915010481104074/releases/3/details)
+
+The existing **Stones Testing** email list remains selected (three users).
+Closed availability remains **United States**, including Play's seven associated
+locations. The link alone does not authorize new testers: add each friend's
+Google Play account email to that list first. No invitations were sent or new
+testers added. Friends outside this country selection require an availability
+update before they can install.
+
+### Friends testing checklist
+
+1. Add consenting friends' Google Play account emails to Stones Testing in the
+   Alpha track's Testers tab. Aim for 15–20 engaged testers to allow a buffer.
+2. Share the closed-test opt-in link above. Each friend must join with that same
+   Google account, then follow the link to install/update through Google Play.
+3. Anyone enrolled in internal testing must leave that test before opting into
+   closed testing. Internal enrollment does not count toward production access.
+4. After approval, confirm the installed build is 385. Trial Google sign-in,
+   square and Hex tutorials/puzzles, online joins and resumed games. Collect
+   device/Android version, reproduction steps and screenshots for failures.
+5. Keep at least 12 testers continuously opted in for 14 days and gather actual
+   usage and feedback. Check the Console's count rather than assuming everyone
+   invited has joined. Then apply for production access and explain testing,
+   fixes and readiness; meeting the count does not guarantee approval.
+
+Before a broad release, separately verify store declarations, privacy policy,
+Data safety and the account-deletion requirements against the app's actual
+behavior. This promotion does not certify those checks or a physical-device
+Google sign-in trial.
+
+Policy references: [testing tracks](https://support.google.com/googleplay/android-developer/answer/9845334?hl=en)
+and [production-access testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465?hl=en).
 

@@ -186,8 +186,12 @@ prompt to inspect aliases. Keep these details out of chat and the repository.
 The current workflow builds downloadable APK/AAB artifacts; it does not publish
 to Google Play automatically. Version 385 was uploaded through Play Console and
 published to internal testing on 2026-10-10; Play confirms it is available to
-internal testers. No signing secret or private key was changed. This manual
-release demonstrates the signed build and store upload path; future automation
+internal testers. No signing secret or private key was changed. The same signed
+build was subsequently promoted to Closed testing - Alpha and submitted for
+review; it is **in review**, with automatic publishing on approval. The existing
+three-user tester list and United States availability were retained. Enrollment
+instructions and release evidence are in [Android 385](releases/ANDROID_385.md).
+This manual release demonstrates the signed build and store upload path; future automation
 still needs publishing credentials and permissions. Future CI publishing can be added after the following setup:
 
 1. Enable the Google Play Developer API in a Google Cloud project.
