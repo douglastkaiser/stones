@@ -131,7 +131,7 @@ Account tests cover restored identity, coalesced authentication, linking during
 matches, collisions, explicit switching, cancellation, sign-out protection,
 retries, disposal and stream errors. Widget tests cover 320px and 1000px layouts
 at 150% text scaling. Cloud-save tests cover AI/session/stack restoration,
-unsupported formats and corrupt dimensions. Seven Python tests exercise signing
+unsupported formats and corrupt dimensions. Twelve Python tests exercise signing
 preflight failures and check that passwords never enter logs or subprocess args.
 
 Before calling the login repair fully verified, trial these on the hosted site
@@ -151,7 +151,7 @@ Domain registration is verified in production; credential exchange on a user's
 device and Play Store certificate/SDK behavior still require these trials.
 
 Audit verification: all 433 Flutter tests passed; strict analysis reported no
-issues; release web build succeeded. All seven Python preflight tests passed.
+issues; release web build succeeded. All twelve Python preflight tests passed.
 Workflow YAML and embedded Python parsed successfully. Browser inspection
 confirmed the Account card initializes and fits 390px and 1366px viewports;
 final account/Settings/cloud-save regressions passed (31 tests). Native Android debug compilation and artifact upload passed in GitHub CI.
@@ -167,8 +167,15 @@ the intended Stones origin, verify its Firebase authorized-domain entry too.
 The signed release retry on 2026-10-10 stopped before compilation because
 `ANDROID_UPLOAD_KEY_ALIAS` does not identify a key in the configured keystore
 ([run 38056923691](https://github.com/douglastkaiser/stones/actions/runs/38056923691)).
-Correct that GitHub Actions secret using the existing upload keystore's alias;
-do not generate a replacement key to bypass the failure. The preflight now
+The preflight can now recover an invalid alias only if the existing keystore
+contains exactly one private-key entry whose leaf SHA-1 matches this application's
+registered Android certificate. Trusted certificate entries, chain CA certificates,
+unknown keys and ambiguous matches are rejected. The resolved alias is masked and
+passed only within the runner to the signing step. Existing valid aliases still
+undergo the certificate check; a different configured certificate is not silently
+replaced. No keystore, password or GitHub credential is changed. If resolution
+fails, correct the secret using the existing upload keystore's alias; do not
+generate a replacement key to bypass the failure. The preflight now
 classifies alias, store-password and format failures without printing tool output
 or private values. On a trusted machine with Java installed, run
 `keytool -list -keystore <existing-upload-keystore>` and enter its password at the

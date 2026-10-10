@@ -92,10 +92,10 @@ jobs:
       - name: Build installable APKs and optional Play bundle
         env:
           ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
-          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
           ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
           INCLUDE_APPBUNDLE: ${{ inputs.include_appbundle }}
         run: |
+          export ANDROID_UPLOAD_KEY_ALIAS="$STONES_RESOLVED_UPLOAD_KEY_ALIAS"
           pgs=false
           if [[ -n "$STONES_PLAY_GAMES_APP_ID" ]]; then pgs=true; fi
           args=(--release --build-number="$VERSION_CODE" --build-name="$VERSION_NAME" --dart-define="STONES_PLAY_GAMES_ENABLED=$pgs" --dart-define-from-file=build/play-games-defines.json)

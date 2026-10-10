@@ -25,8 +25,8 @@ class ReleasePreflightTest(unittest.TestCase):
                              {'client_type': 3}],
         }]}
 
-    def run_preflight(self):
-        outputs = [subprocess.CompletedProcess([], 0, b'certificate'),
+    def run_preflight(self, outputs=None):
+        outputs = outputs or [subprocess.CompletedProcess([], 0, b'certificate'),
                    subprocess.CompletedProcess([], 0, b'SHA1: AA:BB\nSHA256: CC:DD')]
         log = io.StringIO()
         with patch.dict(os.environ, self.env, clear=True), \
@@ -70,9 +70,51 @@ class ReleasePreflightTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, 'numeric Play Games'):
             self.run_preflight()
 
+    def listing(self, alias='existing-private-key', fingerprint='AA:BB', kind='PrivateKeyEntry'):
+        return f'Alias name: {alias}\nEntry type: {kind}\nCertificate[1]:\nSHA1: {fingerprint}\n'
+
+    def test_recovers_missing_alias_only_from_registered_private_key(self):
+        run, output = self.run_preflight([
+            subprocess.CompletedProcess([], 1, b'Alias <bad> does not exist', b''),
+            subprocess.CompletedProcess([], 0, self.listing().encode(), b''),
+            subprocess.CompletedProcess([], 0, b'certificate', b''),
+            subprocess.CompletedProcess([], 0, b'SHA1: AA:BB\nSHA256: CC:DD', b''),
+        ])
+        self.assertIn('signing identity is unchanged', output)
+        self.assertNotIn('existing-private-key', output)
+        self.assertEqual(run.call_args_list[2].args[0][-1], 'existing-private-key')
+        self.assertNotIn('secret-store', str(run.call_args_list))
+
+    def test_recovery_rejects_unregistered_or_certificate_only_entries(self):
+        for listing in [self.listing(fingerprint='CC:DD'), self.listing(kind='trustedCertEntry')]:
+            with self.subTest(listing=listing), patch.object(subprocess, 'run', return_value=
+                    subprocess.CompletedProcess([], 0, listing.encode(), b'')):
+                with self.assertRaisesRegex(SystemExit, 'exactly one'):
+                    preflight.recover_alias(pathlib.Path('fixture'), {'aabb'})
+
+    def test_recovery_rejects_ambiguous_matching_keys(self):
+        listing = self.listing() + self.listing(alias='another-key')
+        with patch.object(subprocess, 'run', return_value=
+                subprocess.CompletedProcess([], 0, listing.encode(), b'')):
+            with self.assertRaisesRegex(SystemExit, 'exactly one'):
+                preflight.recover_alias(pathlib.Path('fixture'), {'aabb'})
+
+    def test_recovery_uses_leaf_fingerprint_not_chain_ca(self):
+        listing = self.listing(fingerprint='CC:DD') + 'Certificate[2]:\nSHA1: AA:BB\n'
+        with patch.object(subprocess, 'run', return_value=
+                subprocess.CompletedProcess([], 0, listing.encode(), b'')):
+            with self.assertRaisesRegex(SystemExit, 'exactly one'):
+                preflight.recover_alias(pathlib.Path('fixture'), {'aabb'})
+
+    def test_recovery_does_not_print_raw_keytool_errors(self):
+        with patch.object(subprocess, 'run', return_value=
+                subprocess.CompletedProcess([], 1, b'private-password', b'')):
+            with self.assertRaises(SystemExit) as failure:
+                preflight.recover_alias(pathlib.Path('fixture'), {'aabb'})
+        self.assertNotIn('private-password', str(failure.exception))
+
     def test_signing_errors_are_classified_without_exposing_raw_values(self):
         cases = [
-            (b'Alias <private-alias> does not exist', 'ANDROID_UPLOAD_KEY_ALIAS'),
             (b'Keystore password was incorrect: private-password', 'ANDROID_UPLOAD_STORE_PASSWORD'),
             (b'Invalid keystore format', 'ANDROID_UPLOAD_KEYSTORE_B64'),
         ]
