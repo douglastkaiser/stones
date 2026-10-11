@@ -102,4 +102,36 @@ void main() {
     terminal.dispose();
     await store.updates.close();
   });
+  test('timed recovery rejects missing clocks and incorrect seat banks',
+      () async {
+    final storage = MemoryMatchStorage();
+    final store = MemoryMatchRoomStore();
+    final host = MatchController(
+        storage: storage, authenticate: () async => 'host', store: () => store);
+    final config =
+        MatchConfig.defaults(BoardShape.square).copyWith(clockSeconds: 60);
+    await host.start(config);
+    storage.snapshot!.remove('clock');
+    await expectLater(host.resumeLocal(), throwsFormatException);
+    storage.snapshot!['clock'] = MatchClock.initial(config.copyWith(seats: [
+      const SeatConfig(SeatId.ivory),
+      const SeatConfig(SeatId.jade)
+    ])).toMap();
+    await expectLater(host.resumeLocal(), throwsFormatException);
+    host.pause(false);
+    expect(host.state.game, isNull);
+    final online = config.copyWith(seats: [
+      const SeatConfig(SeatId.ivory),
+      const SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]);
+    final room = MatchRoom(
+        code: 'UABCDEF',
+        host: 'host',
+        config: online,
+        owners: const {SeatId.ivory: 'host', SeatId.charcoal: 'guest'});
+    final missing = room.toMap()..remove('clock');
+    expect(() => MatchRoom.fromMap(missing), throwsFormatException);
+    host.dispose();
+    await store.updates.close();
+  });
 }

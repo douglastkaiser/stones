@@ -414,20 +414,16 @@ service cloud.firestore {
           after.diff(before).affectedKeys().hasOnly(['aiRunner', 'aiLeaseAt']) &&
           after.aiRunner == request.auth.uid && after.aiLeaseAt == request.time;
       }
-      function initialClockSeat(data, index) {
-        let id = data.config.seats[index].id;
-        return data.clock.bank[id] == data.config.clockSeconds * 1000 &&
-          data.clock.started[id] == null && data.clock.stopped[id] == null;
-      }
       function initialClock(data) {
         let n = data.config.seats.size();
         return data.config.get('clockSeconds', 0) == 0 ? data.clock == null :
           (data.clock is map && data.clock.keys().hasOnly(['bank', 'started', 'stopped']) &&
            data.clock.bank.keys().hasAll(data.owners.keys()) && data.clock.bank.size() == n &&
-           data.clock.started.keys().hasAll(data.owners.keys()) && data.clock.started.size() == n &&
-           data.clock.stopped.keys().hasAll(data.owners.keys()) && data.clock.stopped.size() == n &&
-           initialClockSeat(data, 0) && initialClockSeat(data, 1) &&
-           (n < 3 || initialClockSeat(data, 2)) && (n < 4 || initialClockSeat(data, 3)));
+           data.clock.started.keys() == data.clock.bank.keys() &&
+           data.clock.stopped.keys() == data.clock.bank.keys() &&
+           data.clock.bank.values().hasOnly([data.config.clockSeconds * 1000]) &&
+           data.clock.started.values().hasOnly([null]) &&
+           data.clock.stopped.values().hasOnly([null]));
       }
       function debitedBank(clock, seat) {
         let spent = clock.started[seat] == null ? duration.value(0, 'ms') : clock.stopped[seat] - clock.started[seat];

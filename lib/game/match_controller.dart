@@ -79,7 +79,7 @@ class MatchController extends StateNotifier<MatchSession> {
       this.completed,
       this.botDelay = const Duration(milliseconds: 250),
       Future<MatchMove?> Function(MatchState, BotLevel)? search})
-      : search = search ?? ((game, level) => selectMatchMove(game, level)),
+      : _searchOverride = search,
         super(const MatchSession());
   final LocalMatchStorage storage;
   final Future<String> Function() authenticate;
@@ -89,7 +89,15 @@ class MatchController extends StateNotifier<MatchSession> {
   final Set<String> _completionPending = {};
   final Set<String> _completionHandled = {};
   final Duration botDelay;
-  final Future<MatchMove?> Function(MatchState, BotLevel) search;
+  final Future<MatchMove?> Function(MatchState, BotLevel)? _searchOverride;
+  Future<MatchMove?> search(MatchState game, BotLevel level) {
+    if (_searchOverride != null) return _searchOverride!(game, level);
+    final epoch = _epoch;
+    final token = _searchToken;
+    return selectMatchMove(game, level,
+        cancelled: () => !mounted || epoch != _epoch || token != _searchToken);
+  }
+
   StreamSubscription<MatchRoomUpdate>? _subscription;
   Timer? _timer;
   Timer? _clockTimer;
@@ -200,6 +208,14 @@ class MatchController extends StateNotifier<MatchSession> {
     final clock = snapshot['clock'] == null
         ? null
         : MatchClock.fromMap(Map<String, dynamic>.from(snapshot['clock']));
+    if ((clock == null) != (config.clockSeconds == 0) ||
+        (clock != null &&
+            (clock.bank.length != config.ids.length ||
+                config.ids.any((id) => !clock.bank.containsKey(id)) ||
+                clock.bank.values
+                    .any((ms) => ms > config.clockSeconds * 1000)))) {
+      throw const FormatException('Saved clock does not match configuration');
+    }
     state = MatchSession(
         game: game, id: snapshot['id'] as String, paused: true, clock: clock);
     _watchClock();
@@ -527,7 +543,7 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   void pause(bool paused) {
-    if (!mounted) return;
+    if (!mounted || state.game == null) return;
     _searchToken++;
     _timer?.cancel();
     final clock = state.room != null

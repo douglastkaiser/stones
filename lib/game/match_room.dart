@@ -297,6 +297,9 @@ class MatchRoom {
     }
     final config =
         MatchConfig.fromMap(Map<String, dynamic>.from(map['config']));
+    if ((map['clock'] == null) != (config.clockSeconds == 0)) {
+      throw const FormatException('Room clock does not match configuration');
+    }
     final owners = Map<String, dynamic>.from(map['owners']);
     final styles = Map<String, dynamic>.from(map['styles']);
     return MatchRoom(
