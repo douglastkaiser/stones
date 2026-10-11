@@ -78,6 +78,7 @@ class MatchController extends StateNotifier<MatchSession> {
       this.remember,
       this.completed,
       this.botDelay = const Duration(milliseconds: 250),
+      this.networkTimeout = const Duration(seconds: 20),
       Future<MatchMove?> Function(MatchState, BotLevel)? search})
       : _searchOverride = search,
         super(const MatchSession());
@@ -89,6 +90,7 @@ class MatchController extends StateNotifier<MatchSession> {
   final Set<String> _completionPending = {};
   final Set<String> _completionHandled = {};
   final Duration botDelay;
+  final Duration networkTimeout;
   final Future<MatchMove?> Function(MatchState, BotLevel)? _searchOverride;
   Future<MatchMove?> search(MatchState game, BotLevel level) {
     if (_searchOverride != null) return _searchOverride!(game, level);
@@ -280,6 +282,92 @@ class MatchController extends StateNotifier<MatchSession> {
     });
   }
 
+  /// Reconcile against the server before unlocking a failed or uncertain write.
+  Future<bool> reconnect() async {
+    final room = state.room;
+    if (room == null || state.uid == null) return false;
+    final epoch = _epoch;
+    _searchToken++;
+    _timer?.cancel();
+    state = state.copyWith(busy: true, connected: false);
+    await _subscription?.cancel();
+    _subscription = null;
+    try {
+      final latest = await store().read(room.code).timeout(networkTimeout);
+      if (!mounted || epoch != _epoch) return false;
+      _awaitingPly = null;
+      _accept(latest);
+      _subscribe(room.code);
+      return true;
+    } catch (error) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            busy: false,
+            connected: false,
+            error:
+                'Could not reconnect. Your last confirmed board is saved: $error');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> resign(SeatId seat) async {
+    final game = state.game;
+    if (game == null ||
+        game.finished ||
+        !state.ready ||
+        state.busy ||
+        !state.connected ||
+        game.config.seat(seat).control == SeatControl.ai ||
+        (state.room != null && state.room!.owners[seat] != state.uid)) {
+      return false;
+    }
+    final epoch = _epoch;
+    _searchToken++;
+    _timer?.cancel();
+    state = state.copyWith(busy: true);
+    try {
+      if (state.room != null) {
+        await store()
+            .resign(state.room!.code, state.uid!, seat)
+            .timeout(networkTimeout);
+        final latest =
+            await store().read(state.room!.code).timeout(networkTimeout);
+        if (!mounted || epoch != _epoch) return true;
+        _accept(latest);
+      } else {
+        final result = game.config.seats.length == 2
+            ? MatchResult(game.config.next(seat), ResultReason.resignation)
+            : const MatchResult(null, ResultReason.abandoned);
+        final clock = state.clock?.frozen(DateTime.now());
+        await storage.write({
+          'id': state.id,
+          'config': game.config.toMap(),
+          'moves': _localMoves,
+          if (clock != null) 'clock': clock.toMap(),
+          'result': {
+            'winner': result.winner?.name,
+            'reason': result.reason.name
+          },
+        });
+        if (!mounted || epoch != _epoch) return true;
+        state = state.copyWith(
+            game: game.copyWith(result: result), clock: clock, busy: false);
+        _clockTimer?.cancel();
+        _notifyCompleted();
+      }
+      return true;
+    } catch (error) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            busy: false,
+            connected: state.room == null,
+            error: 'Ending the match could not be confirmed: $error');
+      }
+      return false;
+    }
+  }
+
   void _accept(MatchRoom room) {
     if (state.room != null && room.moves.length < state.room!.moves.length) {
       return;
@@ -367,7 +455,15 @@ class MatchController extends StateNotifier<MatchSession> {
                 : null);
       } else {
         _awaitingPly = game.ply + 1;
-        await store().submit(room.code, state.uid!, game.ply, move);
+        await store()
+            .submit(room.code, state.uid!, game.ply, move)
+            .timeout(networkTimeout);
+        // A committed transaction is not a delivered snapshot. Re-read if the
+        // listener has not acknowledged it, retaining the preview until then.
+        if (mounted && epoch == _epoch && _awaitingPly != null) {
+          final latest = await store().read(room.code).timeout(networkTimeout);
+          if (mounted && epoch == _epoch) _accept(latest);
+        }
       }
       if (!mounted || epoch != _epoch) return true;
       state = state.copyWith(busy: _awaitingPly != null);
@@ -378,7 +474,12 @@ class MatchController extends StateNotifier<MatchSession> {
       if (mounted && epoch == _epoch) {
         _localWritePending = false;
         _awaitingPly = null;
-        state = state.copyWith(busy: false, error: '$error');
+        state = state.copyWith(
+            busy: false,
+            connected: state.room == null,
+            error: state.room == null
+                ? '$error'
+                : 'Move confirmation interrupted. Reconnect before retrying: $error');
       }
       return false;
     }
@@ -440,7 +541,10 @@ class MatchController extends StateNotifier<MatchSession> {
     state = state.copyWith(busy: true);
     try {
       if (state.room != null) {
-        await store().expire(state.room!.code, state.uid!);
+        final code = state.room!.code;
+        await store().expire(code, state.uid!).timeout(networkTimeout);
+        final latest = await store().read(code).timeout(networkTimeout);
+        if (mounted && epoch == _epoch) _accept(latest);
       } else {
         final result = game.config.seats.length == 2
             ? MatchResult(game.config.next(game.current), ResultReason.time)

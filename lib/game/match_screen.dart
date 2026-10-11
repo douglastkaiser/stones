@@ -52,6 +52,35 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     if (confirm) unawaited(_confirm());
   }
 
+  Future<void> _resign(MatchSession match) async {
+    final game = match.game!;
+    final owned = game.config.seats
+        .where((s) =>
+            s.control != SeatControl.ai &&
+            (match.room == null || match.room!.owners[s.id] == match.uid))
+        .toList();
+    if (owned.isEmpty) return;
+    final seat = await showDialog<SeatId>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(game.config.seats.length == 2
+                    ? 'Resign?'
+                    : 'End this match?'),
+                content: Text(game.config.seats.length == 2
+                    ? 'The other player wins. Select the player resigning.'
+                    : 'This ends the match for everyone without a winner or win rewards.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Keep playing')),
+                  for (final player in owned)
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, player.id),
+                        child: Text('${player.id.label} resigns')),
+                ]));
+    if (seat != null && mounted) await _controller.resign(seat);
+  }
+
   void _help() => showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -103,12 +132,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             ? 'Waiting for online players'
             : !match.connected
                 ? 'Disconnected · your board is retained'
-                : match.paused &&
-                        game.config.seat(game.current).control == SeatControl.ai
-                    ? 'AI paused'
-                    : match.busy
-                        ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
-                        : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
+                : match.paused && match.clock != null && match.room == null
+                    ? 'Match paused'
+                    : match.paused &&
+                            game.config.seat(game.current).control ==
+                                SeatControl.ai
+                        ? 'AI paused'
+                        : match.busy
+                            ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
+                            : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
     return Scaffold(
         appBar: AppBar(
             title: Text(
@@ -117,6 +149,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             actions: [
+              if (match.room != null &&
+                  (!match.connected || match.error != null))
+                IconButton(
+                    tooltip: 'Reconnect',
+                    onPressed: match.busy ? null : _controller.reconnect,
+                    icon: const Icon(Icons.refresh)),
               if ((game.config.seats.any((s) => s.control == SeatControl.ai) ||
                       match.clock != null) &&
                   match.room == null)
@@ -159,6 +197,20 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                   tooltip: 'How to play',
                   onPressed: _help,
                   icon: const Icon(Icons.help_outline)),
+              if (widget.studyPanel == null &&
+                  !game.finished &&
+                  match.ready &&
+                  game.config.seats.any((s) =>
+                      s.control != SeatControl.ai &&
+                      (match.room == null ||
+                          match.room!.owners[s.id] == match.uid)))
+                IconButton(
+                    tooltip:
+                        game.config.seats.length == 2 ? 'Resign' : 'End match',
+                    onPressed: match.busy || !match.connected
+                        ? null
+                        : () => _resign(match),
+                    icon: const Icon(Icons.flag_outlined)),
             ]),
         body: LayoutBuilder(builder: (context, constraints) {
           final boardSide = math.min(
@@ -314,6 +366,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         const Text('Match complete'),
         Text(
             'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${e.key.label} ${e.value}').join(' · ')}'),
+        if (widget.studyPanel == null)
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Back to play selection')),
       ]);
     }
     if (!match.canPlay) {

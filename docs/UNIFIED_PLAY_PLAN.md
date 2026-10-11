@@ -297,6 +297,20 @@ timeout awards the opponent; a multiplayer timeout abandons the match without wi
 rewards. The clock label ticks independently of the board. Model/controller checks
 pass; the expanded timed-room emulator checks are still pending.
 
+Recovery checkpoint: the timed-room emulator suite passes after replacing
+repeated per-seat initial-clock checks with equivalent map key/value checks,
+avoiding Firestore's 1,000-expression ceiling for four-seat creation. Shared AI
+tactical regressions pass for every difficulty/shape/seat count and for the
+standard three-by-three forced fork. Web searches now receive cancellation from
+the controller. Timed local/room recovery rejects missing or mismatched clocks.
+Online submissions reconcile with a server read if the listener misses their
+acknowledgement; uncertain writes lock input until explicit reconnect. The shared
+screen exposes reconnect and resignation. Two-player resignation awards the
+opponent; multiplayer resignation abandons without a winner. These endings are
+durable across restart. The 51 focused controller/clock/screen checks and strict
+analysis pass. Broader search-strength, performance, compatibility cleanup and
+production release gates remain open.
+
 - Can someone start the requested mix without knowing an internal mode name?
 - Is board shape the main choice, with clear size and total player count?
 - Can they tell which humans share a device and which need an invitation?

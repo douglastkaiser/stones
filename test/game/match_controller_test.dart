@@ -28,6 +28,7 @@ class MemoryMatchRoomStore implements MatchRoomStore {
   MatchRoom? room;
   final updates = StreamController<MatchRoom>.broadcast(sync: true);
   bool publishOnSubmit = true;
+  Completer<MatchRoom>? pendingRead;
   @override
   Future<MatchRoom> create(String uid, MatchConfig config) async =>
       room = MatchRoom(code: 'UABCDEF', host: uid, config: config, owners: {
@@ -42,7 +43,8 @@ class MemoryMatchRoomStore implements MatchRoomStore {
   }
 
   @override
-  Future<MatchRoom> read(String code) async => room!;
+  Future<MatchRoom> read(String code) async =>
+      pendingRead == null ? room! : await pendingRead!.future;
   @override
   Future<MatchRoom> claimRunner(String code, String uid) async {
     room = room!.claimRunner(uid, DateTime.now());
@@ -85,6 +87,67 @@ MatchController controller(
         botDelay: Duration.zero);
 
 void main() {
+  test(
+      'an uncertain online acknowledgement reconciles without duplicating a move',
+      () async {
+    final store = MemoryMatchRoomStore()..publishOnSubmit = false;
+    final host = MatchController(
+        storage: MemoryMatchStorage(),
+        authenticate: () async => 'host',
+        store: () => store,
+        networkTimeout: const Duration(milliseconds: 20));
+    await host
+        .start(MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+      SeatConfig(SeatId.ivory),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]));
+    await store.join('UABCDEF', 'guest');
+    store.pendingRead = Completer<MatchRoom>();
+    final move = MatchMove.place(const Cell(0, 0), PieceType.flat);
+    expect(await host.play(move), isFalse);
+    expect(host.state.connected, isFalse);
+    expect(host.state.game!.ply, 0);
+    expect(store.room!.moves.length, 1);
+    expect(await host.play(move), isFalse);
+    store.pendingRead!.complete(store.room!);
+    store.pendingRead = null;
+    expect(await host.reconnect(), isTrue);
+    expect(host.state.game!.ply, 1);
+    expect(host.state.busy, isFalse);
+    expect(await host.play(move), isFalse);
+    expect(store.room!.moves.length, 1);
+    expect(await host.resign(SeatId.charcoal), isFalse);
+    expect(await host.resign(SeatId.ivory), isTrue);
+    expect(host.state.game!.result!.winner, SeatId.charcoal);
+    host.dispose();
+    await store.updates.close();
+  });
+  for (final shape in BoardShape.values) {
+    for (var count = 2; count <= 4; count++) {
+      test('$shape $count resignation saves the explicit ending across restart',
+          () async {
+        final storage = MemoryMatchStorage();
+        final store = MemoryMatchRoomStore();
+        final host = controller(storage, store);
+        await host.start(MatchConfig(
+            shape: shape,
+            size: shape == BoardShape.square ? 5 : 2,
+            seats: SeatId.values.take(count).map(SeatConfig.new).toList()));
+        expect(await host.resign(SeatId.ivory), isTrue);
+        expect(host.state.game!.result!.reason,
+            count == 2 ? ResultReason.resignation : ResultReason.abandoned);
+        expect(host.state.game!.result!.winner,
+            count == 2 ? SeatId.charcoal : null);
+        host.dispose();
+        final restored = controller(storage, store);
+        expect(await restored.resumeLocal(), isTrue);
+        expect(restored.state.game!.finished, isTrue);
+        expect(restored.state.canPlay, isFalse);
+        restored.dispose();
+        await store.updates.close();
+      });
+    }
+  }
   for (final shape in BoardShape.values) {
     test(
         'Court Mode on $shape hints, explains and durably takes back AI replies',
@@ -193,10 +256,16 @@ void main() {
     expect(host.state.canPlay, isTrue);
     final move = MatchMove.place(const Cell(0, 0), PieceType.flat);
     expect(await guest.play(move), isFalse);
-    expect(await host.play(move), isTrue);
+    store.pendingRead = Completer<MatchRoom>();
+    final submitted = host.play(move);
+    await Future<void>.delayed(Duration.zero);
     expect(host.state.busy, isTrue);
     expect(host.state.game!.ply, 0);
     expect(await host.play(move), isFalse);
+    store.pendingRead!.complete(store.room!);
+    expect(await submitted, isTrue);
+    expect(host.state.busy, isFalse);
+    store.pendingRead = null;
     store.updates.add(store.room!);
     expect(host.state.game!.ply, 1);
     expect(guest.state.game!.board, host.state.game!.board);
