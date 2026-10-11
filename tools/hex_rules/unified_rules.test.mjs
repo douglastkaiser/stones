@@ -1,7 +1,8 @@
 import {readFile} from 'node:fs/promises';
 import {before, after, beforeEach, test} from 'node:test';
 import {initializeHexEmulator, assertFails, assertSucceeds,
-  doc, setDoc, updateDoc, getDoc, collection, getDocs, updateWithServerTime} from './emulator_rest.mjs';
+  doc, setDoc, updateDoc, getDoc, collection, getDocs, updateWithServerTime, runTransaction} from './emulator_rest.mjs';
+import assert from 'node:assert/strict';
 
 let environment;
 const ids = ['ivory', 'charcoal', 'copper', 'jade'];
@@ -125,6 +126,30 @@ test('all 178 online seat combinations create, fill independently and authorize 
     }
   }
   if (index !== 178) throw new Error(`Unexpected online case count ${index}`);
+});
+
+test('concurrent guests claim distinct seats and stale move commits cannot both append', async () => {
+  await setDoc(ref('host'), base('hex', ['localHuman', 'onlineHuman', 'onlineHuman', 'onlineHuman']));
+  await Promise.all(['guest-a', 'guest-b', 'guest-c'].map(uid =>
+    runTransaction(uid, async tx => {
+      const snapshot = await tx.get(ref(uid));
+      const room = snapshot.data();
+      if (Object.values(room.owners).includes(uid)) return;
+      const seat = room.config.seats.find(s => s.control === 'onlineHuman' && room.owners[s.id] === null);
+      assert.ok(seat, 'A guest lost its available seat');
+      tx.update(ref(uid), {[`owners.${seat.id}`]: uid, [`styles.${seat.id}`]: 'morocco'});
+    })));
+  const joined = (await getDoc(ref('host'))).data();
+  assert.deepEqual(new Set(Object.values(joined.owners)), new Set(['host', 'guest-a', 'guest-b', 'guest-c']));
+  const attempts = await Promise.allSettled([0, 1].map(x =>
+    runTransaction('host', async tx => {
+      const snapshot = await tx.get(ref('host'));
+      // These are competing confirmations of the same turn, not two moves.
+      assert.equal(snapshot.data().moves.length, 0, 'The turn was already acknowledged');
+      tx.update(ref('host'), {moves: [placement('ivory', x, 0)]});
+    })));
+  assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal((await getDoc(ref('host'))).data().moves.length, 1);
 });
 
 test('malformed creation and public room enumeration are denied', async () => {

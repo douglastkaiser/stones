@@ -124,7 +124,10 @@ class MatchRoom {
           (config.seat(game.current).control == SeatControl.ai &&
               runsAI(uid, now ?? DateTime.now())));
 
-  MatchState replay() {
+  late final MatchState _replayed = _replay();
+  MatchState replay() => _replayed;
+
+  MatchState _replay() {
     var game = MatchState.initial(config);
     for (final recorded in moves) {
       game = _applyRecord(game, recorded);

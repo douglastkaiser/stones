@@ -46,6 +46,18 @@ only inserts `/matches`; all pre-existing collection policies match byte for
 byte after newline normalization. Production publication awaits the required
 action-time access-control approval; no new client deployment has occurred.
 
+Six complete mixed-difficulty AI trials passed through the production native
+isolate entry point: both shapes at two, three and four seats. Every move was
+legal, advanced exactly one turn, conserved every seat's supply, and reached a
+road or flat ending within the 150-move trial limit. All four AI levels were
+included; the six trials completed in 2 minutes 25 seconds locally. This is game
+integration evidence, not release-device frame timing or a balance claim.
+The 25 focused room/controller checks and strict analysis also pass after
+caching immutable room replay and retrying only confirmed join ownership races.
+A real-emulator concurrent-join/duplicate-confirmation regression has been added
+for the next CI policy run. Deploy Main now uses the same pinned Flutter version
+as CI and Android release builds.
+
 ## Product contract
 
 Home has two primary play buttons: **Square** and **Hex**. Either opens the same

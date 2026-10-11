@@ -97,22 +97,48 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
   }
 
   @override
-  Future<MatchRoom> join(String code, String uid) =>
-      firestore.runTransaction((tx) async {
-        final ref = _room(code);
-        final snapshot = await tx.get(ref);
-        if (!snapshot.exists) throw StateError('Room not found');
-        final room = _decode(snapshot.data()!);
-        room.replay();
-        final joined = room.join(uid, style);
-        if (!identical(joined, room)) {
-          tx.update(ref, {
-            'owners': joined.toMap()['owners'],
-            'styles': joined.toMap()['styles']
-          });
+  Future<MatchRoom> join(String code, String uid) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      Map<SeatId, String?>? observedOwners;
+      try {
+        return await firestore.runTransaction((tx) async {
+          final ref = _room(code);
+          final snapshot = await tx.get(ref);
+          if (!snapshot.exists) throw StateError('Room not found');
+          final room = _decode(snapshot.data()!);
+          observedOwners = room.owners;
+          room.replay();
+          final joined = room.join(uid, style);
+          if (!identical(joined, room)) {
+            tx.update(ref, {
+              'owners': joined.toMap()['owners'],
+              'styles': joined.toMap()['styles']
+            });
+          }
+          return joined;
+        });
+      } on FirebaseException catch (error) {
+        if (error.code != 'permission-denied' ||
+            observedOwners == null ||
+            attempt == 2) {
+          rethrow;
         }
-        return joined;
-      });
+        // Some rule evaluations reject a stale seat claim before the SDK
+        // reports contention. Retry only a confirmed ownership race, never an
+        // unchanged policy rejection. Rejoining an acknowledged seat is safe.
+        final latest = await read(code);
+        latest.replay();
+        if (identical(latest.join(uid, style), latest)) return latest;
+        if (latest.owners.entries
+            .every((entry) => observedOwners![entry.key] == entry.value)) {
+          rethrow;
+        }
+      }
+    }
+    throw StateError(
+        'The room changed while joining. Try its invitation again.');
+  }
+
   @override
   Future<MatchRoom> read(String code) async {
     final snapshot =
