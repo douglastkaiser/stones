@@ -1,8 +1,7 @@
 # Unified play expansion
 
-Prepared 2026-10-10. Status: implemented on main; release verification in progress.
-The deployed application still
-uses the existing two-player square and three-player Hex engines. This document
+Prepared 2026-10-10. Status: shared engine deployed on web; Android 403 submitted
+to closed testing. New play uses the unified two-to-four-seat engine. This document
 supersedes the target menu hierarchy in PLAY_SELECTION.md, not its record of what
 has already shipped. The user explicitly requests replacing the previous
 square/Hex architectural isolation with a shared engine. Legacy rules and saved
@@ -41,15 +40,32 @@ signature verification (run 38105834167). Its AAB ZIP digest matched the GitHub
 artifact digest; the extracted bundle SHA-256 is
 `48b6bb96fa06b3d3bdd8aac2be47ad43a5bdf5c64c75c4cdadcbb70380698f3c`.
 Deploy Main and Pages publication succeeded. Play Alpha version 403 is submitted
-and confirmed under Changes in review; quick checks are running and approval will
+and confirmed under Changes in review; quick checks completed and approval will
 automatically publish to existing testers. See [the release record](releases/ANDROID_403.md).
 Hosted-browser verification exposed cached startup JavaScript from the previous
 release. CI/deploy/preview now fingerprint the entrypoint and bootstrap by content;
 six regression checks cover existing asset references, changed-release URLs,
 fail-closed handling of an unknown Flutter layout, bounded retention of the two
 previous startup pairs, migration from the first fingerprinted release and
-rejection of invalid manifest paths. Hosted verification of
-this follow-up is in progress.
+rejection of invalid manifest paths. Final Deploy Main (38107875875) and Pages
+publication (38107968781) succeeded
+at 928b515. The hosted browser shows `v1.0.0+405.g928b515.d20261011`.
+A browser-created four-player Hex QA room used two local humans, one AI and one
+online human. A fresh anonymous REST guest joined; browser repeated-tap placement,
+the hosted AI turn and the remote human turn all confirmed. After host page reload,
+the saved-room shortcut restored exactly the three stones, reserves, Jade to play
+and seat assignments on the new deployment. The host resigned the QA room without
+awarding a winner. That adds one ended room and one QA identity to the six-room probe.
+The deployed startup ledger retains both current and previous fingerprinted pairs;
+all four referenced files returned HTTP 200. Final CI at 928b515 (38107847129)
+passed strict analysis, all 668 tests, release web with startup fingerprint checks
+and Android compilation. No game-source changes followed the signed Android build.
+The four-seat opening lesson was completed on the hosted 928b515 build: three
+repeated-tap placements followed by keyboard preview/confirmation for the fourth.
+Practice finished, completion feedback and Retry/Done all appeared correctly. The
+board remained at y=198 relative to its scroll content; focusing Confirm scrolled
+the parent 42 pixels (viewport y=156), so this is not evidence that browser focus
+never scrolls. The learning sandbox retained the online shortcut independently.
 Physical-device timing, large-board balance, per-account cloud progression and a
 secure rating service have no new qualification evidence. Existing local
 achievement/progress storage and earned unlocks are preserved; result attribution

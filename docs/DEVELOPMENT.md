@@ -4,8 +4,10 @@ The [unified play expansion plan](UNIFIED_PLAY_PLAN.md) records the architecture
 and execution evidence for one setup, seat-based engine, controls and room
 protocol for two to four players on Square or Hex. New play and learning now use
 `lib/game/`. Production `/matches` rules are published and passed six independent
-live API trials. Web deployment succeeded; startup cache verification is in
-progress. Android 403 is submitted to closed testing and awaits Google checks/review.
+live API trials. Web startup fingerprinting and bounded previous-release retention
+are deployed; a hosted four-seat mixed Hex room passed human/AI/remote turns and
+reload recovery. Android 403 is submitted to closed testing and awaits Google
+review; its automated quick checks passed.
 Check the plan and [release record](releases/ANDROID_403.md) for actual rollout evidence.
 
 The current shared path is `MatchSetupScreen` → `MatchController` →
@@ -171,3 +173,9 @@ checked-in response certificates. Proof search is authoring/test work, never
 interactive UI work. Square puzzles use ScenarioState budgets and certified
 defenses; Hex keeps independent learning state and progress. Catalog replacement
 uses new IDs while preserving existing achievements and saved progress.
+
+Web release preparation runs `scripts/prepare_web_release.py` after compilation
+in CI, deploy and previews. It fingerprints the JavaScript entrypoint and bootstrap
+without changing gameplay. Main deployment retains two previous startup pairs for
+cached HTML, with exact filename validation and bounded storage. The six Python
+checks run with `python -m unittest scripts.test_prepare_web_release`.

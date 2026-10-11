@@ -212,5 +212,5 @@ No Play publishing credentials or permissions were created during this audit.
 
 Version 403 (unified two-to-four-seat Square/Hex) was subsequently built, accepted
 by Play Console and submitted to the same Alpha closed track. Publishing overview
-confirms Changes in review; quick checks precede review and automatic publication
-on approval. See [Android 403](releases/ANDROID_403.md) for artifacts and checks.
+confirms Changes in review; quick checks completed successfully and publication
+is automatic on approval. See [Android 403](releases/ANDROID_403.md) for artifacts and checks.

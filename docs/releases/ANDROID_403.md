@@ -35,8 +35,8 @@ learning feedback and achievement attribution.
 The release was saved to the existing Alpha track with 100% rollout to its
 selected testers. The publishing overview listed exactly one new change:
 version 403. Submission was confirmed on 2026-10-10: Publishing overview shows **Changes in
-review** for version 403. Google quick checks are running; changes go to review
-after those succeed. Managed publishing is off, so approval publishes the update
+review** for version 403. Google quick checks completed, and the overview confirms “Your changes are now
+in review.” Managed publishing is off, so approval publishes the update
 automatically. It is not yet available on the Play Store. Existing tester/country
 settings were retained.
 
