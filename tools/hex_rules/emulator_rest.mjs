@@ -74,11 +74,17 @@ export async function updateDoc(ref, changes) {
 export async function updateWithServerTime(ref, changes, fieldPath) {
   const snapshot = await getDoc(ref);
   const value = merge(snapshot.data(), changes);
-  delete value[fieldPath];
+  const paths = Array.isArray(fieldPath) ? fieldPath : [fieldPath];
+  for (const path of paths) {
+    const keys = path.split('.');
+    let cursor = value;
+    for (const key of keys.slice(0, -1)) cursor = cursor[key];
+    delete cursor[keys.at(-1)];
+  }
   return request(`${documents}:commit`, 'POST', {writes: [{
     update: {name: `projects/${project}/databases/(default)/documents/${ref.path}`,
       fields: fields(value)},
-    updateTransforms: [{fieldPath, setToServerValue: 'REQUEST_TIME'}],
+    updateTransforms: paths.map(fieldPath => ({fieldPath, setToServerValue: 'REQUEST_TIME'})),
     currentDocument: {updateTime: snapshot.updateTime},
   }]}, ref.uid);
 }

@@ -287,6 +287,16 @@ new multiplayer tactical studies, compatibility cleanup, live backend publishing
 and the performance/release gate remain pending. No new production rules or
 web/app deployment has happened in this migration yet.
 
+Clock checkpoint: both shapes and two through four seats now share clock banks.
+Local clocks pause on leaving and checkpoint remaining time; terminal time results
+survive cold resume. Online clocks debit a completed run from its two acknowledged
+server timestamps when that seat next starts, rather than trusting a client's
+estimate of the current request time. Rules require server timestamps and enforce
+the active seat's deadline; any participant may claim a real timeout. A two-seat
+timeout awards the opponent; a multiplayer timeout abandons the match without win
+rewards. The clock label ticks independently of the board. Model/controller checks
+pass; the expanded timed-room emulator checks are still pending.
+
 - Can someone start the requested mix without knowing an internal mode name?
 - Is board shape the main choice, with clear size and total player count?
 - Can they tell which humans share a device and which need an invitation?

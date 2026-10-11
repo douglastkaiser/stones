@@ -13,7 +13,7 @@ const base = (shape = 'square', controls = ['localHuman', 'onlineHuman'], starte
     starter, profile: shape === 'square' && controls.length === 2 ? 'standardTak' : 'sharedRoads'},
   owners: Object.fromEntries(controls.map((control, i) => [ids[i], control === 'localHuman' ? 'host' : null])),
   styles: Object.fromEntries(controls.map((_, i) => [ids[i], 'standard'])),
-  boardTheme: 'morocco', moves: [], resigned: null, aiRunner: null, aiLeaseAt: null,
+  boardTheme: 'morocco', moves: [], resigned: null, aiRunner: null, aiLeaseAt: null, clock: null, timedOut: null,
 });
 const placement = (seat, x = 0, y = 0) => ({seat, x, y, type: 'flat', direction: null, drops: []});
 before(async () => {
@@ -23,6 +23,57 @@ before(async () => {
 });
 beforeEach(async () => environment.clearFirestore());
 after(async () => environment?.cleanup());
+
+const timed = (shape, count, seconds) => {
+  const data = base(shape, ['localHuman', ...Array(count - 1).fill('onlineHuman')]);
+  data.config.clockSeconds = seconds;
+  data.clock = {
+    bank: Object.fromEntries(ids.slice(0, count).map(id => [id, seconds * 1000])),
+    started: Object.fromEntries(ids.slice(0, count).map(id => [id, null])),
+    stopped: Object.fromEntries(ids.slice(0, count).map(id => [id, null])),
+  };
+  return data;
+};
+const timedMove = async (uid, move) => {
+  const before = (await getDoc(ref(uid))).data();
+  const n = before.config.seats.length;
+  const index = (ids.indexOf(before.config.starter) + before.moves.length) % n;
+  const current = before.config.seats[index].id;
+  const next = before.config.seats[(index + 1) % n].id;
+  const clock = structuredClone(before.clock);
+  if (clock.started[next] !== null) clock.bank[next] -= clock.stopped[next] - clock.started[next];
+  clock.stopped[next] = null;
+  return updateWithServerTime(ref(uid), {moves: [...before.moves, move], clock},
+      [`clock.stopped.${current}`, `clock.started.${next}`]);
+};
+
+test('timed rooms on both shapes debit server-acknowledged runs for every seat count', async () => {
+  for (const shape of ['square', 'hex']) {
+    for (const count of [2, 3, 4]) {
+      await environment.clearFirestore();
+      await assertSucceeds(setDoc(ref('host'), timed(shape, count, 60)));
+      for (let i = 1; i < count; i++) await assertSucceeds(updateDoc(ref(`guest-${i}`), {[`owners.${ids[i]}`]: `guest-${i}`}));
+      for (let ply = 0; ply < count * 2; ply++) {
+        const seat = ids[ply % count];
+        await assertSucceeds(timedMove(ply % count === 0 ? 'host' : `guest-${ply % count}`, placement(seat, ply % 3, Math.floor(ply / 3) - (shape === 'hex' ? 1 : 0))));
+      }
+      await assertFails(updateDoc(ref('host'), {'clock.bank.ivory': 60000}));
+      await assertFails(updateDoc(ref('host'), {'clock.started.ivory': new Date()}));
+    }
+  }
+});
+
+test('clock expiry needs a real server deadline and participant; late moves cannot win the race', async () => {
+  await assertSucceeds(setDoc(ref('host'), timed('square', 2, 1)));
+  await assertSucceeds(updateDoc(ref('guest'), {'owners.charcoal': 'guest'}));
+  await assertSucceeds(timedMove('host', placement('ivory')));
+  await assertFails(updateDoc(ref('host'), {timedOut: 'charcoal'}));
+  await new Promise(resolve => setTimeout(resolve, 1100));
+  await assertFails(timedMove('guest', placement('charcoal', 1, 0)));
+  await assertFails(updateDoc(ref('stranger'), {timedOut: 'charcoal'}));
+  await assertSucceeds(updateDoc(ref('host'), {timedOut: 'charcoal'}));
+  await assertFails(updateDoc(ref('guest'), {resigned: 'charcoal'}));
+});
 
 test('AI runner leases are exclusive, server-timed, renewable and recoverable by a guest', async () => {
   const data = base('hex', ['ai', 'onlineHuman', 'localHuman']);

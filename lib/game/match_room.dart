@@ -1,5 +1,6 @@
 import '../models/cosmetics.dart';
 import 'match_config.dart';
+import 'match_clock.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
 
@@ -16,7 +17,11 @@ class MatchRoom {
     this.resigned,
     this.aiRunner,
     this.aiLeaseAt,
-  })  : owners = Map.unmodifiable(owners),
+    MatchClock? clock,
+    this.timedOut,
+  })  : clock = clock ??
+            (config.clockSeconds > 0 ? MatchClock.initial(config) : null),
+        owners = Map.unmodifiable(owners),
         styles = Map.unmodifiable(
             styles ?? {for (final id in config.ids) id: PieceStyle.standard}),
         moves = List.unmodifiable(
@@ -33,7 +38,13 @@ class MatchRoom {
         config.ids.any(
             (id) => !owners.containsKey(id) || !this.styles.containsKey(id)) ||
         owners.values.any((uid) => uid != null && uid.isEmpty) ||
-        (resigned != null && !config.ids.contains(resigned))) {
+        (resigned != null && !config.ids.contains(resigned)) ||
+        (timedOut != null &&
+            (!config.ids.contains(timedOut) || resigned != null)) ||
+        ((this.clock == null) != (config.clockSeconds == 0)) ||
+        (this.clock != null &&
+            (this.clock!.bank.length != config.ids.length ||
+                config.ids.any((id) => !this.clock!.bank.containsKey(id))))) {
       throw const FormatException('Invalid unified room');
     }
     for (final seat in config.seats) {
@@ -70,6 +81,8 @@ class MatchRoom {
   final SeatId? resigned;
   final String? aiRunner;
   final DateTime? aiLeaseAt;
+  final MatchClock? clock;
+  final SeatId? timedOut;
   static const leaseDuration = Duration(seconds: 30);
   bool runnerActive(DateTime now) =>
       aiLeaseAt != null && now.isBefore(aiLeaseAt!.add(leaseDuration));
@@ -92,7 +105,9 @@ class MatchRoom {
         moves: moves,
         resigned: resigned,
         aiRunner: uid,
-        aiLeaseAt: now);
+        aiLeaseAt: now,
+        clock: clock,
+        timedOut: timedOut);
   }
 
   bool get ready => config.seats
@@ -102,6 +117,8 @@ class MatchRoom {
   bool canMove(String uid, MatchState game, {DateTime? now}) =>
       ready &&
       resigned == null &&
+      timedOut == null &&
+      !(clock?.expired(game.current, now ?? DateTime.now()) ?? false) &&
       !game.finished &&
       (owners[game.current] == uid ||
           (config.seat(game.current).control == SeatControl.ai &&
@@ -122,7 +139,8 @@ class MatchRoom {
         previous.boardTheme != boardTheme ||
         previous.moves.length != position.ply ||
         moves.length < previous.moves.length ||
-        (previous.resigned != null && previous.resigned != resigned)) {
+        (previous.resigned != null && previous.resigned != resigned) ||
+        (previous.timedOut != null && previous.timedOut != timedOut)) {
       throw const FormatException('Room configuration or history changed');
     }
     for (var i = 0; i < previous.moves.length; i++) {
@@ -137,7 +155,7 @@ class MatchRoom {
         throw const FormatException('Occupied seat identity or theme changed');
       }
     }
-    if (previous.resigned != null) return position;
+    if (previous.resigned != null || previous.timedOut != null) return position;
     var game = position;
     for (final record in moves.skip(previous.moves.length)) {
       game = _applyRecord(game, record);
@@ -155,14 +173,37 @@ class MatchRoom {
   }
 
   MatchState _termination(MatchState game) {
-    if (resigned == null) return game;
+    final endedSeat = resigned ?? timedOut;
+    if (endedSeat == null) return game;
     if (game.finished) {
       throw const FormatException('Resignation follows terminal move');
     }
     return game.copyWith(
         result: config.seats.length == 2
-            ? MatchResult(config.next(resigned!), ResultReason.resignation)
+            ? MatchResult(config.next(endedSeat),
+                timedOut == null ? ResultReason.resignation : ResultReason.time)
             : const MatchResult(null, ResultReason.abandoned));
+  }
+
+  MatchRoom expire(String uid, DateTime now) {
+    final game = replay();
+    if ((uid != host && !owners.values.contains(uid)) ||
+        game.finished ||
+        !(clock?.expired(game.current, now) ?? false)) {
+      throw StateError('No clock expiry to claim');
+    }
+    return MatchRoom(
+        code: code,
+        host: host,
+        config: config,
+        owners: owners,
+        styles: styles,
+        boardTheme: boardTheme,
+        moves: moves,
+        aiRunner: aiRunner,
+        aiLeaseAt: aiLeaseAt,
+        clock: clock,
+        timedOut: game.current);
   }
 
   MatchRoom join(String uid, PieceStyle style) {
@@ -185,7 +226,9 @@ class MatchRoom {
         boardTheme: boardTheme,
         moves: moves,
         aiRunner: aiRunner,
-        aiLeaseAt: aiLeaseAt);
+        aiLeaseAt: aiLeaseAt,
+        clock: clock,
+        timedOut: timedOut);
   }
 
   MatchRoom append(String uid, int expectedPly, MatchMove move,
@@ -205,7 +248,9 @@ class MatchRoom {
         boardTheme: boardTheme,
         moves: [...moves, move.toMap(game.current)],
         aiRunner: aiRunner,
-        aiLeaseAt: aiLeaseAt);
+        aiLeaseAt: aiLeaseAt,
+        clock: clock?.advance(
+            game.current, config.next(game.current), now ?? DateTime.now()));
   }
 
   MatchRoom resign(String uid, SeatId seat) {
@@ -222,7 +267,8 @@ class MatchRoom {
         moves: moves,
         resigned: seat,
         aiRunner: aiRunner,
-        aiLeaseAt: aiLeaseAt);
+        aiLeaseAt: aiLeaseAt,
+        clock: clock);
   }
 
   Map<String, dynamic> toMap() => {
@@ -241,6 +287,8 @@ class MatchRoom {
         'resigned': resigned?.name,
         'aiRunner': aiRunner,
         'aiLeaseAt': aiLeaseAt?.toUtc().toIso8601String(),
+        'clock': clock?.toMap(),
+        'timedOut': timedOut?.name,
       };
 
   factory MatchRoom.fromMap(Map<String, dynamic> map) {
@@ -267,6 +315,12 @@ class MatchRoom {
             ? null
             : SeatId.values.byName(map['resigned'] as String),
         aiRunner: map['aiRunner'] as String?,
+        clock: map['clock'] == null
+            ? null
+            : MatchClock.fromMap(Map<String, dynamic>.from(map['clock'])),
+        timedOut: map['timedOut'] == null
+            ? null
+            : SeatId.values.byName(map['timedOut'] as String),
         aiLeaseAt: map['aiLeaseAt'] == null
             ? null
             : DateTime.parse(map['aiLeaseAt'] as String));

@@ -51,6 +51,12 @@ class MemoryMatchRoomStore implements MatchRoomStore {
   }
 
   @override
+  Future<void> expire(String code, String uid) async {
+    room = room!.expire(uid, DateTime.now());
+    updates.add(room!);
+  }
+
+  @override
   Stream<MatchRoomUpdate> watch(String code) =>
       updates.stream.map(MatchRoomUpdate.new);
   @override

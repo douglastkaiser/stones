@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'match_ai.dart';
 import 'match_coaching.dart';
+import 'match_clock.dart';
 import 'match_config.dart';
 import 'match_room.dart';
 import 'match_room_store.dart';
@@ -21,6 +22,7 @@ class MatchSession {
       this.paused = false,
       this.explanation,
       this.inputLocked = false,
+      this.clock,
       this.error});
   final MatchState? game;
   final MatchRoom? room;
@@ -32,12 +34,15 @@ class MatchSession {
   final String? error;
   final String? explanation;
   final bool inputLocked;
+  final MatchClock? clock;
   bool get ready => game != null && (room?.ready ?? true);
   bool get canPlay =>
       ready &&
       connected &&
       !busy &&
       !inputLocked &&
+      !(clock?.expired(game!.current, DateTime.now()) ?? false) &&
+      !(clock != null && paused && room == null) &&
       !game!.finished &&
       game!.config.seat(game!.current).control != SeatControl.ai &&
       (room == null || room!.owners[game!.current] == uid);
@@ -49,6 +54,7 @@ class MatchSession {
           bool? paused,
           String? explanation,
           bool? inputLocked,
+          MatchClock? clock,
           String? error}) =>
       MatchSession(
           game: game ?? this.game,
@@ -60,6 +66,7 @@ class MatchSession {
           paused: paused ?? this.paused,
           explanation: explanation ?? this.explanation,
           inputLocked: inputLocked ?? this.inputLocked,
+          clock: clock ?? this.clock,
           error: error);
 }
 
@@ -85,6 +92,9 @@ class MatchController extends StateNotifier<MatchSession> {
   final Future<MatchMove?> Function(MatchState, BotLevel) search;
   StreamSubscription<MatchRoomUpdate>? _subscription;
   Timer? _timer;
+  Timer? _clockTimer;
+  bool _localWritePending = false;
+  bool _expiryPending = false;
   int _epoch = 0;
   int _searchToken = 0;
   int? _searchingPly;
@@ -97,6 +107,9 @@ class MatchController extends StateNotifier<MatchSession> {
     _epoch++;
     _searchToken++;
     _timer?.cancel();
+    _clockTimer?.cancel();
+    _localWritePending = false;
+    _expiryPending = false;
     unawaited(_subscription?.cancel());
     _subscription = null;
     _awaitingPly = null;
@@ -126,8 +139,11 @@ class MatchController extends StateNotifier<MatchSession> {
       _localMoves = [];
       final id =
           'local-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 30)}';
-      state =
-          MatchSession(game: MatchState.initial(config), id: id, busy: true);
+      state = MatchSession(
+          game: MatchState.initial(config),
+          id: id,
+          busy: true,
+          clock: config.clockSeconds > 0 ? MatchClock.initial(config) : null);
       try {
         await _save();
       } catch (error) {
@@ -138,6 +154,7 @@ class MatchController extends StateNotifier<MatchSession> {
       }
       if (!mounted || epoch != _epoch) return;
       state = state.copyWith(busy: false);
+      _watchClock();
       _schedule();
     }
   }
@@ -164,9 +181,28 @@ class MatchController extends StateNotifier<MatchSession> {
       if (next == null) throw const FormatException('Saved move is illegal');
       game = next;
     }
+    if (snapshot['result'] != null) {
+      final result = Map<String, dynamic>.from(snapshot['result']);
+      final reason = ResultReason.values.byName(result['reason'] as String);
+      if (game.finished ||
+          ![ResultReason.time, ResultReason.resignation, ResultReason.abandoned]
+              .contains(reason)) {
+        throw const FormatException('Invalid saved termination');
+      }
+      game = game.copyWith(
+          result: MatchResult(
+              result['winner'] == null
+                  ? null
+                  : SeatId.values.byName(result['winner'] as String),
+              reason));
+    }
     _localMoves = records;
-    state =
-        MatchSession(game: game, id: snapshot['id'] as String, paused: true);
+    final clock = snapshot['clock'] == null
+        ? null
+        : MatchClock.fromMap(Map<String, dynamic>.from(snapshot['clock']));
+    state = MatchSession(
+        game: game, id: snapshot['id'] as String, paused: true, clock: clock);
+    _watchClock();
     _notifyCompleted();
     return true;
   }
@@ -239,10 +275,12 @@ class MatchController extends StateNotifier<MatchSession> {
     state = state.copyWith(
         game: game,
         room: room,
+        clock: room.clock,
         connected: true,
         busy: _awaitingPly != null ||
             (_searchingToken == _searchToken && _searchingPly == game.ply));
     _notifyCompleted();
+    _watchClock();
     _schedule();
   }
 
@@ -273,6 +311,7 @@ class MatchController extends StateNotifier<MatchSession> {
         !state.ready ||
         !state.connected ||
         state.busy ||
+        (state.clock?.expired(game.current, DateTime.now()) ?? false) ||
         game.finished) {
       return false;
     }
@@ -291,16 +330,22 @@ class MatchController extends StateNotifier<MatchSession> {
     try {
       final room = state.room;
       if (room == null) {
+        _localWritePending = true;
         final records = [..._localMoves, move.toMap(game.current)];
+        final now = DateTime.now();
+        final clock = state.clock?.advance(game.current, result.current, now);
         await storage.write({
           'id': state.id,
           'config': game.config.toMap(),
           'moves': records,
+          if (clock != null) 'clock': clock.frozen(now).toMap(),
         });
         if (!mounted || epoch != _epoch) return true;
         _localMoves = records;
+        _localWritePending = false;
         state = state.copyWith(
             game: result,
+            clock: result.finished || state.paused ? clock?.frozen(now) : clock,
             explanation: game.config.court && bot
                 ? MatchCoaching.explain(game, move)
                 : null);
@@ -315,6 +360,7 @@ class MatchController extends StateNotifier<MatchSession> {
       return true;
     } catch (error) {
       if (mounted && epoch == _epoch) {
+        _localWritePending = false;
         _awaitingPly = null;
         state = state.copyWith(busy: false, error: '$error');
       }
@@ -326,7 +372,91 @@ class MatchController extends StateNotifier<MatchSession> {
         'id': state.id,
         'config': state.game!.config.toMap(),
         'moves': _localMoves,
+        if (state.clock != null)
+          'clock': state.clock!.frozen(DateTime.now()).toMap(),
+        if (state.game!.result != null &&
+            [
+              ResultReason.time,
+              ResultReason.resignation,
+              ResultReason.abandoned
+            ].contains(state.game!.result!.reason))
+          'result': {
+            'winner': state.game!.result!.winner?.name,
+            'reason': state.game!.result!.reason.name
+          },
       });
+
+  void _watchClock() {
+    _clockTimer?.cancel();
+    if (state.clock == null || state.game!.finished) return;
+    var ticks = 0;
+    _clockTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      if (!mounted || state.game == null || state.game!.finished) {
+        timer.cancel();
+        return;
+      }
+      if (state.room == null && state.paused) return;
+      if (state.clock!.expired(state.game!.current, DateTime.now()) &&
+          !_localWritePending &&
+          _awaitingPly == null) {
+        unawaited(_expireClock());
+      } else if (++ticks % 20 == 0 &&
+          state.room == null &&
+          !state.busy &&
+          !state.paused) {
+        unawaited(_save().catchError((Object error) {
+          if (mounted) {
+            state = state.copyWith(
+                error: 'Clock checkpoint could not be saved: $error');
+          }
+        }));
+      }
+    });
+  }
+
+  Future<void> _expireClock() async {
+    if (_expiryPending || state.game == null || !state.connected) return;
+    _expiryPending = true;
+    final epoch = _epoch;
+    final game = state.game!;
+    _searchToken++;
+    _timer?.cancel();
+    state = state.copyWith(busy: true);
+    try {
+      if (state.room != null) {
+        await store().expire(state.room!.code, state.uid!);
+      } else {
+        final result = game.config.seats.length == 2
+            ? MatchResult(game.config.next(game.current), ResultReason.time)
+            : const MatchResult(null, ResultReason.abandoned);
+        final clock = state.clock!.frozen(DateTime.now());
+        await storage.write({
+          'id': state.id,
+          'config': game.config.toMap(),
+          'moves': _localMoves,
+          'clock': clock.toMap(),
+          'result': {
+            'winner': result.winner?.name,
+            'reason': result.reason.name
+          }
+        });
+        if (mounted && epoch == _epoch) {
+          state = state.copyWith(
+              game: game.copyWith(result: result), clock: clock, busy: false);
+          _notifyCompleted();
+        }
+      }
+    } catch (error) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            busy: false,
+            paused: state.room == null,
+            error: 'Clock expiry awaits confirmation: $error');
+      }
+    } finally {
+      if (mounted && epoch == _epoch) _expiryPending = false;
+    }
+  }
 
   Future<MatchMove?> hint() async {
     final game = state.game;
@@ -400,7 +530,24 @@ class MatchController extends StateNotifier<MatchSession> {
     if (!mounted) return;
     _searchToken++;
     _timer?.cancel();
-    state = state.copyWith(paused: paused, busy: _awaitingPly != null);
+    final clock = state.room != null
+        ? state.clock
+        : paused
+            ? state.clock?.frozen(DateTime.now())
+            : state.game!.ply > 0
+                ? state.clock?.begin(state.game!.current, DateTime.now())
+                : state.clock;
+    state = state.copyWith(
+        paused: paused,
+        clock: clock,
+        busy: _awaitingPly != null || _localWritePending);
+    if (state.room == null && state.game != null && !_localWritePending) {
+      unawaited(_save().catchError((Object error) {
+        if (mounted) {
+          state = state.copyWith(error: 'Could not save paused clock: $error');
+        }
+      }));
+    }
     _schedule();
   }
 
@@ -424,6 +571,10 @@ class MatchController extends StateNotifier<MatchSession> {
 
   void _schedule() {
     _timer?.cancel();
+    if (state.game != null &&
+        (state.clock?.expired(state.game!.current, DateTime.now()) ?? false)) {
+      return;
+    }
     if (_leaseBusy) return;
     final room = state.room;
     if (room != null &&
@@ -513,6 +664,7 @@ class MatchController extends StateNotifier<MatchSession> {
     _epoch++;
     _searchToken++;
     _timer?.cancel();
+    _clockTimer?.cancel();
     unawaited(_subscription?.cancel());
     super.dispose();
   }

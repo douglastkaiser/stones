@@ -7,6 +7,7 @@ import '../models/piece.dart';
 import '../providers/cosmetics_provider.dart';
 import 'board_view.dart';
 import 'board_geometry.dart';
+import 'clock_label.dart';
 import 'match_config.dart';
 import 'match_controller.dart';
 import 'match_provider.dart';
@@ -116,10 +117,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             actions: [
-              if (game.config.seats.any((s) => s.control == SeatControl.ai) &&
+              if ((game.config.seats.any((s) => s.control == SeatControl.ai) ||
+                      match.clock != null) &&
                   match.room == null)
                 IconButton(
-                    tooltip: match.paused ? 'Resume AI' : 'Pause AI',
+                    tooltip: match.paused ? 'Resume match' : 'Pause match',
                     onPressed: () => _controller.pause(!match.paused),
                     icon: Icon(match.paused ? Icons.play_arrow : Icons.pause)),
               if (game.config.court) ...[
@@ -208,8 +210,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                         fontSize: 10))),
                                             const SizedBox(width: 6),
                                             Flexible(
-                                                child: Text(
-                                                    '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps')),
+                                                child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                  Text(
+                                                      '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps'),
+                                                  if (match.clock != null)
+                                                    ClockLabel(
+                                                        clock: match.clock!,
+                                                        seat: seat.id,
+                                                        finished:
+                                                            game.finished),
+                                                ])),
                                           ])),
                               ])))),
               SizedBox(

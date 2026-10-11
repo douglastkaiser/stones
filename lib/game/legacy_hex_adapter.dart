@@ -29,7 +29,9 @@ class LegacyHexAdapter {
       result: game.finished
           ? MatchResult(
               game.winner == null ? null : SeatId.values[game.winner!.index],
-              game.reason == 'road' ? ResultReason.road : ResultReason.flats)
+              game.reason?.toLowerCase().contains('road') == true
+                  ? ResultReason.road
+                  : ResultReason.flats)
           : null);
 
   static MatchMove move(HexMove move) => move.type != null

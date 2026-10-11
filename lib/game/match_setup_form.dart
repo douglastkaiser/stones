@@ -194,6 +194,34 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                   value: _config.court,
                   onChanged: (value) =>
                       _update(_config.copyWith(court: value))),
+            if (!_config.court) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                  key: ValueKey('clock-${_config.clockSeconds}'),
+                  isExpanded: true,
+                  initialValue: _config.clockSeconds,
+                  decoration:
+                      const InputDecoration(labelText: 'Clock per player'),
+                  items: [
+                    const DropdownMenuItem(value: 0, child: Text('Untimed')),
+                    for (final seconds in {
+                      ...[60, 180, 300, 600, 900, 1800, 3600],
+                      if (_config.clockSeconds > 0) _config.clockSeconds
+                    }.toList()
+                      ..sort())
+                      DropdownMenuItem(
+                          value: seconds,
+                          child: Text('${seconds ~/ 60} minutes')),
+                  ],
+                  onChanged: (seconds) {
+                    if (seconds != null) {
+                      _update(_config.copyWith(clockSeconds: seconds));
+                    }
+                  }),
+              if (_config.clockSeconds > 0)
+                const Text(
+                    'Clocks start after the first move. Closing an online game does not pause its clock. In a match with three or four players, timeout ends the match without a winner.'),
+            ],
             if (_error != null)
               Padding(
                   padding: const EdgeInsets.only(top: 12),

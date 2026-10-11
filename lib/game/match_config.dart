@@ -49,6 +49,7 @@ class MatchConfig {
     this.starter = SeatId.ivory,
     RulesProfile? profile,
     this.court = false,
+    this.clockSeconds = 0,
   })  : seats = List.unmodifiable(seats),
         profile = profile ??
             (shape == BoardShape.square && seats.length == 2
@@ -70,6 +71,11 @@ class MatchConfig {
             seats.length != 3 ||
             seats.any((seat) => seat.id == SeatId.jade))) {
       throw ArgumentError('Legacy Hex requires its original three identities');
+    }
+    if (clockSeconds < 0 ||
+        clockSeconds > 59940 ||
+        (court && clockSeconds != 0)) {
+      throw ArgumentError('Invalid clock or timed Court Mode');
     }
     if (court &&
         (online ||
@@ -95,6 +101,7 @@ class MatchConfig {
   final SeatId starter;
   final RulesProfile profile;
   final bool court;
+  final int clockSeconds;
   bool get online =>
       seats.any((seat) => seat.control == SeatControl.onlineHuman);
   late final List<SeatId> ids = List.unmodifiable(seats.map((seat) => seat.id));
@@ -112,6 +119,7 @@ class MatchConfig {
     List<SeatConfig>? seats,
     SeatId? starter,
     bool? court,
+    int? clockSeconds,
   }) {
     final newShape = shape ?? this.shape;
     final newSeats = seats ?? this.seats;
@@ -125,6 +133,8 @@ class MatchConfig {
                     ? (2 * this.size + 1).clamp(3, 8)
                     : ((this.size - 1) ~/ 2).clamp(2, 4)),
         seats: newSeats,
+        clockSeconds:
+            (court ?? this.court) ? 0 : clockSeconds ?? this.clockSeconds,
         court: (court ?? this.court) &&
             !newSeats.any((s) => s.control == SeatControl.onlineHuman) &&
             newSeats.any((s) => s.control == SeatControl.ai) &&
@@ -156,6 +166,7 @@ class MatchConfig {
         'starter': starter.name,
         'profile': profile.name,
         if (court) 'court': true,
+        if (clockSeconds > 0) 'clockSeconds': clockSeconds,
       };
 
   factory MatchConfig.fromMap(Map<String, dynamic> map) {
@@ -170,6 +181,7 @@ class MatchConfig {
             .toList(),
         starter: SeatId.values.byName(map['starter'] as String),
         court: map['court'] == true,
+        clockSeconds: map['clockSeconds'] as int? ?? 0,
         profile: RulesProfile.values.byName(map['profile'] as String));
   }
 }

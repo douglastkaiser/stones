@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/cosmetics.dart';
 import 'match_config.dart';
+import 'match_clock.dart';
 import 'match_room.dart';
 import 'match_state.dart';
 
@@ -22,6 +23,7 @@ abstract class MatchRoomStore {
   Future<void> submit(String code, String uid, int expectedPly, MatchMove move);
   Future<void> resign(String code, String uid, SeatId seat);
   Future<MatchRoom> claimRunner(String code, String uid);
+  Future<void> expire(String code, String uid);
 }
 
 class FirestoreMatchRoomStore implements MatchRoomStore {
@@ -38,7 +40,30 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
             ?.toDate()
             .toUtc()
             .toIso8601String(),
+        if (data['clock'] != null)
+          'clock': {
+            ...Map<String, dynamic>.from(data['clock']),
+            for (final field in ['started', 'stopped'])
+              field: Map<String, dynamic>.from(data['clock'][field]).map(
+                  (key, value) => MapEntry(
+                      key,
+                      (value as Timestamp?)
+                          ?.toDate()
+                          .toUtc()
+                          .toIso8601String())),
+          },
       });
+  Map<String, dynamic> _encodeClock(MatchClock clock) => {
+        'bank': {for (final e in clock.bank.entries) e.key.name: e.value},
+        'started': {
+          for (final e in clock.started.entries)
+            e.key.name: e.value == null ? null : Timestamp.fromDate(e.value!)
+        },
+        'stopped': {
+          for (final e in clock.stopped.entries)
+            e.key.name: e.value == null ? null : Timestamp.fromDate(e.value!)
+        },
+      };
   @override
   Future<MatchRoom> create(String uid, MatchConfig config) async {
     final random = Random.secure();
@@ -114,9 +139,18 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        final updated =
-            _decode(snapshot.data()!).append(uid, expectedPly, move);
-        tx.update(ref, {'moves': updated.moves});
+        final previous = _decode(snapshot.data()!);
+        final game = previous.replay();
+        final updated = previous.append(uid, expectedPly, move);
+        final clock =
+            updated.clock == null ? null : _encodeClock(updated.clock!);
+        if (clock != null) {
+          clock['stopped'][game.current.name] = FieldValue.serverTimestamp();
+          clock['started'][game.config.next(game.current).name] =
+              FieldValue.serverTimestamp();
+        }
+        tx.update(
+            ref, {'moves': updated.moves, if (clock != null) 'clock': clock});
       });
   @override
   Future<void> resign(String code, String uid, SeatId seat) =>
@@ -140,4 +174,14 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
     });
     return read(code);
   }
+
+  @override
+  Future<void> expire(String code, String uid) =>
+      firestore.runTransaction((tx) async {
+        final ref = _room(code);
+        final snapshot = await tx.get(ref);
+        if (!snapshot.exists) throw StateError('Room no longer exists');
+        final expired = _decode(snapshot.data()!).expire(uid, DateTime.now());
+        tx.update(ref, {'timedOut': expired.timedOut!.name});
+      });
 }
