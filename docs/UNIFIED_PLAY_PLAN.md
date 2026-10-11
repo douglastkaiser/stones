@@ -45,8 +45,10 @@ and confirmed under Changes in review; quick checks are running and approval wil
 automatically publish to existing testers. See [the release record](releases/ANDROID_403.md).
 Hosted-browser verification exposed cached startup JavaScript from the previous
 release. CI/deploy/preview now fingerprint the entrypoint and bootstrap by content;
-three regression checks cover existing asset references, changed-release URLs and
-fail-closed handling of an unknown Flutter build layout. Hosted verification of
+six regression checks cover existing asset references, changed-release URLs,
+fail-closed handling of an unknown Flutter layout, bounded retention of the two
+previous startup pairs, migration from the first fingerprinted release and
+rejection of invalid manifest paths. Hosted verification of
 this follow-up is in progress.
 Physical-device timing, large-board balance, per-account cloud progression and a
 secure rating service have no new qualification evidence. Existing local

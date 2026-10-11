@@ -77,6 +77,8 @@ jobs:
 
       - name: Preserve PR previews and update main build
         run: |
+          # Cached HTML may still name an earlier fingerprinted entrypoint.
+          python3 scripts/prepare_web_release.py --retain-previous build/web gh-pages-branch
           # Preserve the /pr/ directory if it exists
           if [ -d "gh-pages-branch/pr" ]; then
             mv gh-pages-branch/pr /tmp/pr-previews
