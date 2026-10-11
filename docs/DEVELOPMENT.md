@@ -1,11 +1,23 @@
 # Development map
 
-The [unified play expansion plan](UNIFIED_PLAY_PLAN.md) records the requested
-next architecture: one setup, seat-based engine, controls and room protocol for
-two to four players on Square or Hex. It is a planned replacement of the current
-isolation, not a claim that variable-seat gameplay is implemented yet.
+The [unified play expansion plan](UNIFIED_PLAY_PLAN.md) records the architecture
+and execution evidence for one setup, seat-based engine, controls and room
+protocol for two to four players on Square or Hex. New play and learning now use
+`lib/game/`. Production publishing and the final release gate remain pending;
+check that plan before treating a committed checkpoint as a deployed release.
 
-Updated 2026-10-09. Read [the Tak rules audit](TAK_RULES.md) before changing game
+The current shared path is `MatchSetupScreen` → `MatchController` →
+`MatchRules`/`MoveSelection` → `MatchScreen`/`BoardView`. `BoardGeometry` supplies
+topology; `MatchConfig` supplies seat order, controls, opening, size and optional
+Court/clock settings. `MatchRoomStore` owns transactional `/matches` sessions,
+server-confirmed clocks and recoverable AI runner leases. `MatchStorage` saves
+local history before exposing a move. `StudyController` uses the same shell in
+an isolated sandbox. `MatchCompleted` drives an idempotent achievement ledger.
+`room_navigation.dart` is the invitation/recovery dispatcher for new and old
+wire formats. Old providers/screens remain only for old session compatibility;
+`GameRules` and `HexRules` now forward validation/generation to `MatchRules`.
+
+Updated 2026-10-10. Read [the Tak rules audit](TAK_RULES.md) before changing game
 mechanics; it includes the prioritized follow-up findings.
 
 ## Repository and local state
@@ -15,8 +27,8 @@ The initial refresh fast-forwarded `main` to `b409e0273ca9d08d1b697513659cd93892
 The prior local formatting change in `android/app/google-services.json` was
 discarded at the user's request before pushing the rules audit commit.
 
-The selectable three-player variant is isolated under `lib/hex/`; read
-[its rules and protocol contract](HEX_MODE.md) before changing it.
+The legacy three-player models/codecs remain under `lib/hex/`; read
+[their rules and protocol contract](HEX_MODE.md) before changing compatibility.
 The [Hex victory audit](HEX_VICTORY_AUDIT.md) explains the reported left-edge
 connection, shared opposite-side goals, legacy room compatibility, and independent adjudication checks.
 

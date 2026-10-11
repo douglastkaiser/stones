@@ -326,6 +326,27 @@ interactive drop revision still provides other distributions. Tall-stack planner
 settings/replacement, responsive screen and strict analysis checks pass. No
 production deployment has occurred yet.
 
+Compatibility checkpoint: old square `GameRules` and Hex `HexRules` are now
+facades over the shared validator, move generator and scoring. The old square
+provider consumes shared road/flat results, removing its separate BFS. Adapters
+retain old colors, supplies, turn conventions, result labels and Hex v1 assigned
+goals. The previous independently implemented differential checks passed before
+this replacement; their current form verifies compatibility conversion rather
+than independence. Invitation entry and saved-room recovery use one dispatcher,
+including old six-letter Square and seven-letter H-prefixed Hex invitations.
+Legacy screens/controllers are retained for old online documents until their
+wire lifecycle can be fully adapted; new configurations never route through them.
+Focused official-rule/compatibility/certification and win/recovery checks pass.
+
+Release-mode browser evidence at 7e83417: four-player Hex setup, preview,
+repeat-tap placement and page-reload recovery retain the board, next turn and
+reserves. The board DOM rectangle remained x=173/y=198/498×498 through preview
+and acknowledgement. The browser's viewport override did not change its measured
+844×884 viewport, so those observations do not establish phone-browser layout;
+320/390-pixel and enlarged-text layouts have widget-test evidence. Release web
+build passed. Physical-device timings, live independent clients, final full
+regressions and production publishing are still pending.
+
 - Can someone start the requested mix without knowing an internal mode name?
 - Is board shape the main choice, with clear size and total player count?
 - Can they tell which humans share a device and which need an invitation?

@@ -1,3 +1,7 @@
+import '../game/legacy_square_adapter.dart';
+import '../game/match_config.dart';
+import '../game/match_rules.dart';
+import '../game/match_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
@@ -77,7 +81,8 @@ String stackMoveNotation(
 }
 
 /// Provider for move history
-final moveHistoryProvider = StateNotifierProvider<MoveHistoryNotifier, List<MoveRecord>>((ref) {
+final moveHistoryProvider =
+    StateNotifierProvider<MoveHistoryNotifier, List<MoveRecord>>((ref) {
   return MoveHistoryNotifier();
 });
 
@@ -171,8 +176,10 @@ class AnimationStateNotifier extends StateNotifier<AnimationState> {
     state = state.copyWith(lastEvent: PiecePlacedEvent(pos, type, color));
   }
 
-  void stackMoved(Position from, Direction dir, List<int> drops, List<Position> dropPositions) {
-    state = state.copyWith(lastEvent: StackMovedEvent(from, dir, drops, dropPositions));
+  void stackMoved(Position from, Direction dir, List<int> drops,
+      List<Position> dropPositions) {
+    state = state.copyWith(
+        lastEvent: StackMovedEvent(from, dir, drops, dropPositions));
   }
 
   void wallFlattened(Position pos) {
@@ -192,7 +199,8 @@ class AnimationStateNotifier extends StateNotifier<AnimationState> {
 }
 
 /// Provider for animation state
-final animationStateProvider = StateNotifierProvider<AnimationStateNotifier, AnimationState>((ref) {
+final animationStateProvider =
+    StateNotifierProvider<AnimationStateNotifier, AnimationState>((ref) {
   return AnimationStateNotifier();
 });
 
@@ -324,122 +332,31 @@ class GameStateNotifier extends StateNotifier<GameState> {
     );
   }
 
-  /// Check for win conditions (road win or flat win)
+  /// Legacy provider side effects consume the shared engine's complete result.
   void _checkWinCondition(PlayerColor lastMover) {
-    // Double road: the player who made the move wins. The turn has
-    // already advanced, so use the mover captured before the move.
-    final otherPlayer = lastMover == PlayerColor.white
-        ? PlayerColor.black
-        : PlayerColor.white;
-    for (final color in [lastMover, otherPlayer]) {
-      final roadPositions = _findRoad(color);
-      if (roadPositions != null) {
-        state = state.copyWith(
-          phase: GamePhase.finished,
-          result: color == PlayerColor.white
-              ? GameResult.whiteWins
-              : GameResult.blackWins,
-          winReason: WinReason.road,
-        );
-        onRoadWin?.call(roadPositions, color);
-        return;
-      }
-    }
-
-    final result = GameRules.flatResult(state);
-    if (result != null) {
-      state = state.copyWith(
+    final position = LegacySquareAdapter.read(state);
+    final ended = MatchRules.resolve(position, SeatId.values[lastMover.index]);
+    final result = ended.result;
+    if (result == null) return;
+    final winner =
+        result.winner == null ? null : PlayerColor.values[result.winner!.index];
+    state = state.copyWith(
         phase: GamePhase.finished,
-        result: result,
-        winReason: WinReason.flats,
-      );
+        result: winner == null
+            ? GameResult.draw
+            : winner == PlayerColor.white
+                ? GameResult.whiteWins
+                : GameResult.blackWins,
+        winReason: result.reason == ResultReason.road
+            ? WinReason.road
+            : WinReason.flats);
+    if (result.reason == ResultReason.road && winner != null) {
+      onRoadWin?.call(
+          MatchRules.road(ended, result.winner!)
+              .map((c) => Position(c.y, c.x))
+              .toSet(),
+          winner);
     }
-  }
-
-  /// Find a winning road for a player, returns the positions or null if no road
-  Set<Position>? _findRoad(PlayerColor color) {
-    final size = state.boardSize;
-
-    // Check horizontal road (left to right)
-    final leftEdge = <Position>[];
-    for (int r = 0; r < size; r++) {
-      final pos = Position(r, 0);
-      if (_controlsForRoad(pos, color)) {
-        leftEdge.add(pos);
-      }
-    }
-
-    for (final start in leftEdge) {
-      final path = _findPathToEdge(start, color, (p) => p.col == size - 1);
-      if (path != null) {
-        return path;
-      }
-    }
-
-    // Check vertical road (top to bottom)
-    final topEdge = <Position>[];
-    for (int c = 0; c < size; c++) {
-      final pos = Position(0, c);
-      if (_controlsForRoad(pos, color)) {
-        topEdge.add(pos);
-      }
-    }
-
-    for (final start in topEdge) {
-      final path = _findPathToEdge(start, color, (p) => p.row == size - 1);
-      if (path != null) {
-        return path;
-      }
-    }
-
-    return null;
-  }
-
-  /// Check if position is controlled by player for road purposes
-  /// (flat stones and capstones count, standing stones don't)
-  bool _controlsForRoad(Position pos, PlayerColor color) {
-    final top = state.board.stackAt(pos).topPiece;
-    if (top == null) return false;
-    if (top.color != color) return false;
-    return top.type != PieceType.standing;
-  }
-
-  /// BFS to find a path to the target edge, returns positions in path or null
-  Set<Position>? _findPathToEdge(
-    Position start,
-    PlayerColor color,
-    bool Function(Position) isTargetEdge,
-  ) {
-    final visited = <Position>{};
-    final parent = <Position, Position?>{};
-    final queue = [start];
-    parent[start] = null;
-
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      if (visited.contains(current)) continue;
-      visited.add(current);
-
-      if (isTargetEdge(current)) {
-        // Reconstruct path
-        final path = <Position>{};
-        Position? pos = current;
-        while (pos != null) {
-          path.add(pos);
-          pos = parent[pos];
-        }
-        return path;
-      }
-
-      for (final neighbor in current.adjacentPositions(state.boardSize)) {
-        if (!visited.contains(neighbor) && _controlsForRoad(neighbor, color)) {
-          queue.add(neighbor);
-          parent[neighbor] ??= current;
-        }
-      }
-    }
-
-    return null;
   }
 }
 

@@ -1,3 +1,7 @@
+import '../game/board_geometry.dart';
+import '../game/legacy_hex_adapter.dart';
+import '../game/match_config.dart';
+import '../game/match_rules.dart';
 import '../models/piece.dart' show PieceType;
 
 /// Experimental three-seat variant. Deliberately independent of PlayerColor,
@@ -220,205 +224,45 @@ class HexGame {
           reason: reason ?? this.reason);
 }
 
-/// Variant-only rule authority. Every move is atomic; adjudication happens once
-/// after the whole spread, never between drops.
+/// Compatibility facade for immutable three-seat legacy room formats.
+/// Shared MatchRules preserves version-one assigned and version-two shared goals.
 class HexRules {
   static HexGame? play(HexGame game, HexMove move) {
-    final moved = _apply(game, move);
-    return moved == null ? null : resolve(moved, game.current);
+    final next = MatchRules.play(
+        LegacyHexAdapter.read(game), LegacyHexAdapter.move(move));
+    return next == null ? null : LegacyHexAdapter.write(game, next);
   }
 
-  static HexGame? _apply(HexGame game, HexMove move) {
-    if (game.finished || !move.from.inside(game.radius)) return null;
-    final board = Map<HexCell, List<HexStone>>.from(game.board);
-    final reserves = List<HexReserve>.from(game.reserves);
-    if (move.type != null) {
-      if (game.stackAt(move.from).isNotEmpty ||
-          (game.opening && move.type != PieceType.flat)) {
-        return null;
-      }
-      final color = game.opening ? game.current.next : game.current;
-      if (!reserves[color.index].has(move.type!)) return null;
-      board[move.from] = [HexStone(color, move.type!)];
-      reserves[color.index] = reserves[color.index].use(move.type!);
-    } else {
-      if (game.opening ||
-          move.direction == null ||
-          move.drops.isEmpty ||
-          move.drops.any((drop) => drop <= 0)) {
-        return null;
-      }
-      final stack = game.stackAt(move.from);
-      if (stack.isEmpty || stack.last.seat != game.current) return null;
-      final carry = move.drops.fold<int>(0, (sum, drop) => sum + drop);
-      if (carry > game.carryLimit || carry > stack.length) return null;
-      final hand = stack.sublist(stack.length - carry);
-      final left = stack.sublist(0, stack.length - carry);
-      if (left.isEmpty) {
-        board.remove(move.from);
-      } else {
-        board[move.from] = left;
-      }
-      var cell = move.from;
-      var offset = 0;
-      for (final drop in move.drops) {
-        cell = cell.step(move.direction!);
-        if (!cell.inside(game.radius)) return null;
-        final target = List<HexStone>.from(board[cell] ?? const []);
-        if (target.isNotEmpty) {
-          if (target.last.type == PieceType.capstone) return null;
-          if (target.last.type == PieceType.standing) {
-            if (drop != 1 ||
-                offset != carry - 1 ||
-                hand[offset].type != PieceType.capstone) {
-              return null;
-            }
-            target[target.length - 1] =
-                HexStone(target.last.seat, PieceType.flat);
-          }
-        }
-        target.addAll(hand.sublist(offset, offset + drop));
-        board[cell] = target;
-        offset += drop;
-      }
-    }
-    return game.copyWith(board: board, reserves: reserves, ply: game.ply + 1);
-  }
-
-  static Set<HexCell> road(HexGame game, HexSeat seat) {
-    for (final axis in game.roadAxes(seat)) {
-      final path = roadOnAxis(game, seat, axis);
-      if (path.isNotEmpty) return path;
-    }
-    return {};
-  }
-
-  static Set<HexCell> roadOnAxis(HexGame game, HexSeat seat, HexAxis axis) {
-    bool controlled(HexCell cell) {
-      final top = game.topAt(cell);
-      return top != null && top.seat == seat && top.type != PieceType.standing;
-    }
-
-    final queue = game.cells
-        .where((c) => axis.coordinate(c) == -game.radius && controlled(c))
-        .toList();
-    final parents = <HexCell, HexCell?>{for (final c in queue) c: null};
-    for (var index = 0; index < queue.length; index++) {
-      final cell = queue[index];
-      if (axis.coordinate(cell) == game.radius) {
-        final path = <HexCell>{};
-        HexCell? cursor = cell;
-        while (cursor != null) {
-          path.add(cursor);
-          cursor = parents[cursor];
-        }
-        return path;
-      }
-      for (final direction in HexDirection.values) {
-        final next = cell.step(direction);
-        if (next.inside(game.radius) &&
-            !parents.containsKey(next) &&
-            controlled(next)) {
-          parents[next] = cell;
-          queue.add(next);
-        }
-      }
-    }
-    return {};
-  }
-
-  static HexGame resolve(HexGame game, HexSeat lastMover) {
-    if (game.finished) return game;
-    final roads =
-        HexSeat.values.where((seat) => road(game, seat).isNotEmpty).toList();
-    if (roads.isNotEmpty) {
-      final winner = roads.contains(lastMover)
-          ? lastMover
-          : roads.length == 1
-              ? roads.single
-              : null;
-      return game.copyWith(
-          finished: true,
-          winner: winner,
-          reason:
-              winner == null ? 'Simultaneous opponent roads — draw' : 'Road');
-    }
-    if (game.reserves.any((reserve) => reserve.total == 0) ||
-        game.cells.every((cell) => game.stackAt(cell).isNotEmpty)) {
-      final counts = flatCounts(game);
-      final highest = counts.reduce((a, b) => a > b ? a : b);
-      final leaders = HexSeat.values
-          .where((seat) => counts[seat.index] == highest)
-          .toList();
-      return game.copyWith(
-          finished: true,
-          winner: leaders.length == 1 ? leaders.single : null,
-          reason: leaders.length == 1 ? 'Flats' : 'Tied flats — draw');
-    }
-    return game;
-  }
-
+  static Set<HexCell> road(HexGame game, HexSeat seat) =>
+      MatchRules.road(LegacyHexAdapter.read(game), SeatId.values[seat.index])
+          .map((c) => HexCell(c.x, c.y))
+          .toSet();
+  static Set<HexCell> roadOnAxis(HexGame game, HexSeat seat, HexAxis axis) =>
+      MatchRules.roadOnAxis(LegacyHexAdapter.read(game),
+              SeatId.values[seat.index], axis.index)
+          .map((c) => HexCell(c.x, c.y))
+          .toSet();
+  static HexGame resolve(HexGame game, HexSeat lastMover) => game.finished
+      ? game
+      : LegacyHexAdapter.write(
+          game,
+          MatchRules.resolve(
+              LegacyHexAdapter.read(game), SeatId.values[lastMover.index]));
   static List<int> flatCounts(HexGame game) {
-    final counts = [0, 0, 0];
-    for (final cell in game.cells) {
-      final top = game.topAt(cell);
-      if (top?.type == PieceType.flat) counts[top!.seat.index]++;
-    }
-    return counts;
-  }
-
-  static Iterable<List<int>> _distributions(int count, int spaces) sync* {
-    if (spaces == 1) {
-      yield [count];
-      return;
-    }
-    for (var drop = 1; drop <= count - spaces + 1; drop++) {
-      for (final rest in _distributions(count - drop, spaces - 1)) {
-        yield [drop, ...rest];
-      }
-    }
+    final counts = MatchRules.flatCounts(LegacyHexAdapter.read(game));
+    return [
+      for (final seat in HexSeat.values) counts[SeatId.values[seat.index]]!
+    ];
   }
 
   static Iterable<HexMove> spreads(HexGame game, HexCell from,
-      {int? pickup, HexDirection? direction}) sync* {
-    final height = game.stackAt(from).length;
-    final maxCarry = height < game.carryLimit ? height : game.carryLimit;
-    if (game.finished ||
-        game.opening ||
-        game.topAt(from)?.seat != game.current) {
-      return;
-    }
-    for (final dir in direction == null ? HexDirection.values : [direction]) {
-      for (var count = pickup ?? 1; count <= (pickup ?? maxCarry); count++) {
-        if (count <= 0 || count > maxCarry) continue;
-        var cell = from;
-        for (var distance = 1; distance <= count; distance++) {
-          cell = cell.step(dir);
-          if (!cell.inside(game.radius) ||
-              game.topAt(cell)?.type == PieceType.capstone) {
-            break;
-          }
-          for (final drops in _distributions(count, distance)) {
-            final move = HexMove.spread(from, dir, drops);
-            if (_apply(game, move) != null) yield move;
-          }
-          if (game.topAt(cell)?.type == PieceType.standing) break;
-        }
-      }
-    }
-  }
-
-  static Iterable<HexMove> legalMoves(HexGame game) sync* {
-    if (game.finished) return;
-    for (final cell in game.cells) {
-      if (game.stackAt(cell).isEmpty) {
-        for (final type in game.opening ? [PieceType.flat] : PieceType.values) {
-          final move = HexMove.place(cell, type);
-          if (_apply(game, move) != null) yield move;
-        }
-      } else {
-        yield* spreads(game, cell);
-      }
-    }
-  }
+          {int? pickup, HexDirection? direction}) =>
+      MatchRules.spreads(LegacyHexAdapter.read(game), Cell(from.q, from.r),
+              pickup: pickup,
+              direction:
+                  direction == null ? null : Step.values[direction.index])
+          .map(LegacyHexAdapter.writeMove);
+  static Iterable<HexMove> legalMoves(HexGame game) =>
+      MatchRules.legalMoves(LegacyHexAdapter.read(game))
+          .map(LegacyHexAdapter.writeMove);
 }

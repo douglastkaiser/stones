@@ -3,14 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../hex/hex_match_provider.dart';
-import '../hex/hex_screen.dart';
-import '../game/match_provider.dart';
-import '../game/match_screen.dart';
-import '../providers/online_game_provider.dart';
 import '../providers/saved_rooms_provider.dart';
-import '../screens/game_screen.dart';
-import '../screens/online_lobby_screen.dart';
+import '../game/room_navigation.dart';
 
 /// Visible recovery entry point, without initializing Firebase on menu startup.
 class SavedOnlineGames extends ConsumerStatefulWidget {
@@ -46,40 +40,8 @@ class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames> {
       _error = null;
     });
     try {
-      ref.read(hexMatchProvider.notifier).leave();
-      ref.read(matchProvider.notifier).leave();
-      await ref.read(onlineGameProvider.notifier).leaveRoom();
-      if (!mounted) return;
-      Widget screen;
-      if (room.unified) {
-        await ref
-            .read(matchProvider.notifier)
-            .join(room.code, expectedUid: room.uid);
-        if (!mounted) return;
-        screen = const MatchScreen();
-      } else if (room.hex) {
-        await ref
-            .read(hexMatchProvider.notifier)
-            .join(room.code, expectedUid: room.uid);
-        if (!mounted) return;
-        final match = ref.read(hexMatchProvider);
-        if (match.error != null || match.game == null) {
-          throw StateError(match.error ?? 'Could not load this room.');
-        }
-        screen = const HexGameScreen();
-      } else {
-        await ref
-            .read(onlineGameProvider.notifier)
-            .joinGame(room.code, expectedUid: room.uid);
-        if (!mounted) return;
-        final online = ref.read(onlineGameProvider);
-        if (online.errorMessage != null || online.session == null) {
-          throw StateError(online.errorMessage ?? 'Could not load this room.');
-        }
-        screen = online.waitingForOpponent
-            ? const OnlineLobbyScreen()
-            : const GameScreen();
-      }
+      final screen =
+          await loadInvitedRoom(ref, room.code, expectedUid: room.uid);
       if (!mounted) return;
       await Navigator.push<void>(
           context, MaterialPageRoute(builder: (_) => screen));

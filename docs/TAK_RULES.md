@@ -4,6 +4,16 @@ Reviewed 2026-10-08 against the complete publisher rulebooks, not just a rules
 summary. This document records the implementation contract and remaining work;
 it is not a reproduction of either rulebook.
 
+2026-10-10 shared-engine migration: standard two-player Square retains this core
+contract. `MatchRules` now owns atomic validation for both shapes; the legacy
+`GameRules` API delegates through its square adapter, and the old square provider
+consumes shared road/flat adjudication. Variable-seat Square and Hex are explicit
+Stones variants under [the unified play contract](UNIFIED_PLAY_PLAN.md), not
+changes to official Tak. Seeded differential parity was established before
+replacing the old validators; current compatibility checks exercise the adapters
+and existing official-rule regressions. Court, clocks, online recovery and
+cosmetics remain application features. Publishing status is recorded in the plan.
+
 ## Sources and scope
 
 - [University Edition rules](https://crabfragmentlabs.com/s/UniversityRules.pdf),

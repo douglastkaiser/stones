@@ -6,6 +6,7 @@ import 'match_config.dart';
 import 'match_provider.dart';
 import 'match_screen.dart';
 import 'match_setup_form.dart';
+import 'room_navigation.dart';
 
 class MatchSetupScreen extends ConsumerStatefulWidget {
   const MatchSetupScreen({super.key, required this.shape});
@@ -76,10 +77,10 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
       _error = null;
     });
     try {
-      await ref.read(matchProvider.notifier).join(_code.text);
+      final screen = await loadInvitedRoom(ref, _code.text);
       if (!mounted) return;
-      await Navigator.push<void>(context,
-          MaterialPageRoute(builder: (context) => const MatchScreen()));
+      await Navigator.push<void>(
+          context, MaterialPageRoute(builder: (context) => screen));
     } catch (error) {
       if (mounted) setState(() => _error = '$error');
     } finally {
@@ -105,6 +106,7 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
                                 initialConfig: _initialConfig,
                                 onStart: (config) async {
                                   if (!await _allowNewLocal(config)) return;
+                                  await leaveLegacyRooms(ref);
                                   await ref
                                       .read(matchProvider.notifier)
                                       .start(config);
@@ -131,7 +133,7 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
                                     TextCapitalization.characters,
                                 inputFormatters: [
                                   FilteringTextInputFormatter.allow(
-                                      RegExp('[a-zA-Z]')),
+                                      RegExp('[a-zA-Z0-9]')),
                                   LengthLimitingTextInputFormatter(7)
                                 ],
                                 decoration: const InputDecoration(

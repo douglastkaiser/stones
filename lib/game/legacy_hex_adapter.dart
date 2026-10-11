@@ -43,4 +43,33 @@ class LegacyHexAdapter {
       ? HexMove.place(HexCell(move.from.x, move.from.y), move.type!)
       : HexMove.spread(HexCell(move.from.x, move.from.y),
           HexDirection.values[move.direction!.index], move.drops);
+
+  static HexGame write(HexGame original, MatchState state) => HexGame(
+      radius: original.radius,
+      rulesVersion: original.rulesVersion,
+      starter: original.starter,
+      ply: state.ply,
+      board: {
+        for (final e in state.board.entries)
+          HexCell(e.key.x, e.key.y): e.value
+              .map((p) => HexStone(HexSeat.values[p.seat.index], p.type))
+              .toList()
+      },
+      reserves: [
+        for (final id in state.config.ids)
+          HexReserve(state.reserves[id]!.stones, state.reserves[id]!.caps)
+      ],
+      finished: state.finished,
+      winner: state.result?.winner == null
+          ? null
+          : HexSeat.values[state.result!.winner!.index],
+      reason: state.result == null
+          ? null
+          : state.result!.reason == ResultReason.road
+              ? state.result!.draw
+                  ? 'Simultaneous opponent roads — draw'
+                  : 'Road'
+              : state.result!.draw
+                  ? 'Tied flats — draw'
+                  : 'Flats');
 }

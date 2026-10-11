@@ -1,5 +1,13 @@
 # Three-player Hex: variant contract and implementation
 
+This document preserves the original three-seat Hex v1/v2 contract for saved
+rooms. New Square/Hex play uses the shared two-to-four-seat engine under
+`lib/game/`, described in [the unified play contract](UNIFIED_PLAY_PLAN.md).
+Legacy HexRules forwards to that engine using the appropriate versioned profile;
+the original wire types and assigned-goal v1 semantics remain compatible. The
+menu descriptions below record the previously deployed client, not the new
+shared seat editor. Check the unified plan for release/deployment status.
+
 This is a Stones experiment, not an official Tak ruleset. Three-player Hex is
 always selectable from the main menu; it no longer requires a Settings switch.
 Square and Hex share a home board selector, followed by the same Vs Computer,

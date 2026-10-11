@@ -65,6 +65,15 @@ class LegacySquareAdapter {
     var board = original.board;
     for (final position in original.board.allPositions) {
       final stack = transformed.stackAt(Cell(position.col, position.row));
+      final previous = original.board.stackAt(position).pieces;
+      if (previous.length == stack.length &&
+          List.generate(
+              stack.length,
+              (i) =>
+                  previous[i].color.index == stack[i].seat.index &&
+                  previous[i].type == stack[i].type).every((same) => same)) {
+        continue;
+      }
       board = board.setStack(
           position,
           PieceStack(stack

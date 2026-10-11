@@ -144,16 +144,21 @@ class MatchRules {
                       : null,
               ResultReason.road));
     }
+    final flatEnding = flatResult(game);
+    return flatEnding == null ? game : game.copyWith(result: flatEnding);
+  }
+
+  /// Separate flat adjudication supports legacy callers that resolve roads first.
+  static MatchResult? flatResult(MatchState game) {
     if (game.reserves.values.any((reserve) => reserve.total == 0) ||
         game.board.length == game.geometry.cells.length) {
       final counts = flatCounts(game);
       final best = counts.values.reduce((a, b) => a > b ? a : b);
       final winners = counts.keys.where((id) => counts[id] == best).toList();
-      return game.copyWith(
-          result: MatchResult(
-              winners.length == 1 ? winners.single : null, ResultReason.flats));
+      return MatchResult(
+          winners.length == 1 ? winners.single : null, ResultReason.flats);
     }
-    return game;
+    return null;
   }
 
   static Iterable<List<int>> _distributions(int count, int spaces) sync* {
