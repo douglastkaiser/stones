@@ -58,6 +58,19 @@ A real-emulator concurrent-join/duplicate-confirmation regression has been added
 for the next CI policy run. Deploy Main now uses the same pinned Flutter version
 as CI and Android release builds.
 
+`tools/live_match_probe.mjs` is a manual production verification tool, excluded
+from CI and guarded by an explicit project environment value. Once the prepared
+policy is approved and published, it can authenticate four separate anonymous QA
+clients and create six isolated, finally resigned rooms. It checks both shapes
+and two to four seats, server clocks, owner themes/host board, AI lease ownership,
+rejected stranger/stale writes and cold reads. It never reads existing matches,
+prints credentials, changes policy or deletes data. REST/API evidence is distinct
+from independent browser/device trials. This probe is prepared, not yet executed.
+Signed Android APK/AAB preparation was dispatched against 6b4df4d; building an
+artifact does not publish it to the Play Store. Web, Android and CI now all pin
+Flutter 3.47.7. Physical-device interaction/latency and Play rollout remain separate
+gates requiring actual evidence.
+
 ## Product contract
 
 Home has two primary play buttons: **Square** and **Hex**. Either opens the same
