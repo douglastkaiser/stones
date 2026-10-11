@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../hex/hex_match_provider.dart';
+import '../game/match_provider.dart';
 import '../services/account_service.dart';
 import 'online_game_provider.dart';
 
@@ -155,4 +156,7 @@ final StateNotifierProvider<AccountController, AccountState> accountProvider =
         AccountController(ref.read(accountServiceProvider),
             hasActiveRoom: () =>
                 ref.read(onlineGameProvider).session != null ||
-                ref.read(hexMatchProvider).room != null));
+                ref.read(hexMatchProvider).room != null ||
+                ref.read(matchProvider).room != null ||
+                (ref.read(matchProvider).busy &&
+                    ref.read(matchProvider).game == null)));

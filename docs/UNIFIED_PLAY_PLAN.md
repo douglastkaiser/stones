@@ -261,6 +261,16 @@ protocol migration, not a dropdown-only patch.
 
 ## UX and performance acceptance questions
 
+Second execution checkpoint: the shared board and controller are implemented for
+both shapes and two through four seats. Widget checks cover mobile/desktop board
+stability, enlarged text, stack themes, and placement gestures. Local moves are
+saved before appearing on the board; room moves wait for server acknowledgement.
+Unified room bookmarks use the existing recovery list and account guard. The
+new `/matches` security policy is a draft, with a CI emulator suite covering all
+178 online seat configurations; it has not been published to production. Main
+menu replacement, AI host handoff, progression, learning, and release gates are
+still pending.
+
 - Can someone start the requested mix without knowing an internal mode name?
 - Is board shape the main choice, with clear size and total player count?
 - Can they tell which humans share a device and which need an invitation?

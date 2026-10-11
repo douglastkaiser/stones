@@ -6,11 +6,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// A local pointer, never an authority for seats or the board. Firebase owns
 /// the match; the saved identity must still own a seat when resuming.
 class SavedRoom {
-  const SavedRoom({required this.code, required this.uid, required this.hex});
+  const SavedRoom(
+      {required this.code,
+      required this.uid,
+      required this.hex,
+      this.unified = false});
   final String code;
   final String uid;
   final bool hex;
-  Map<String, dynamic> toMap() => {'code': code, 'uid': uid, 'hex': hex};
+  final bool unified;
+  Map<String, dynamic> toMap() =>
+      {'code': code, 'uid': uid, 'hex': hex, if (unified) 'unified': true};
 
   static SavedRoom? parse(Object? value) {
     if (value is! Map || value['uid'] is! String || value['hex'] is! bool) {
@@ -18,13 +24,19 @@ class SavedRoom {
     }
     final code = value['code'];
     final hex = value['hex'] as bool;
+    final unified = value['unified'] == true;
     if (code is! String ||
-        !(hex ? RegExp(r'^H[A-Z]{6}$') : RegExp(r'^[A-Z]{6}$'))
+        !(unified
+                ? RegExp(r'^U[A-Z]{6}$')
+                : hex
+                    ? RegExp(r'^H[A-Z]{6}$')
+                    : RegExp(r'^[A-Z]{6}$'))
             .hasMatch(code) ||
         (value['uid'] as String).isEmpty) {
       return null;
     }
-    return SavedRoom(code: code, uid: value['uid'] as String, hex: hex);
+    return SavedRoom(
+        code: code, uid: value['uid'] as String, hex: hex, unified: unified);
   }
 }
 

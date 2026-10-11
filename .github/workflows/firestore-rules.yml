@@ -1,0 +1,37 @@
+name: Firestore Rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - firestore.rules
+      - firebase.json
+      - tools/hex_rules/**
+      - .github/workflows/firestore-rules.yml
+  pull_request:
+    paths:
+      - firestore.rules
+      - firebase.json
+      - tools/hex_rules/**
+      - .github/workflows/firestore-rules.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authorization:
+    name: Legacy and unified room authorization
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Exercise real Firestore security rules on a local demo emulator
+        run: npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-stones-hex 'node --test --test-concurrency=1 tools/hex_rules/*.test.mjs'

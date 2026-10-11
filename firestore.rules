@@ -278,6 +278,141 @@ service cloud.firestore {
         (hexJoin('0') || hexJoin('1') || hexJoin('2') || hexAppend());
     }
 
+    // Unified Square/Hex rooms. Legacy /games and /hexGames keep their formats.
+    match /matches/{code} {
+      function validId(id) {
+        return id in ['ivory', 'charcoal', 'copper', 'jade'];
+      }
+      function validSeat(data, index, creating) {
+        let seat = data.config.seats[index];
+        let owner = data.owners[seat.id];
+        return seat.keys().hasAll(['id', 'control', 'level']) &&
+          seat.keys().hasOnly(['id', 'control', 'level']) && validId(seat.id) &&
+          seat.control in ['localHuman', 'onlineHuman', 'ai'] &&
+          seat.level in ['easy', 'medium', 'hard', 'expert'] &&
+          validPieceStyle(data.styles[seat.id]) &&
+          ((seat.control == 'localHuman' && owner == data.host) ||
+           (seat.control == 'ai' && owner == null) ||
+           (seat.control == 'onlineHuman' &&
+             (owner == null || (!creating && owner is string && owner.size() > 0 && owner != data.host)) &&
+             (!creating || data.styles[seat.id] == 'standard')));
+      }
+      function configShape(c) {
+        return c.keys().hasAll(['version', 'shape', 'size', 'seats', 'starter', 'profile']) &&
+          c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile']) &&
+          c.version == 1 && c.size is int &&
+          ((c.shape == 'square' && c.size >= 3 && c.size <= 8) ||
+           (c.shape == 'hex' && c.size >= 2 && c.size <= 4)) &&
+          c.seats is list && c.seats.size() >= 2 && c.seats.size() <= 4 &&
+          (c.profile == 'sharedRoads' ||
+           (c.profile == 'standardTak' && c.shape == 'square' && c.seats.size() == 2));
+      }
+      function validSeats(data, creating) {
+        let seats = data.config.seats;
+        let n = seats.size();
+        return data.owners is map && data.styles is map &&
+          data.owners.size() == n && data.styles.size() == n &&
+          validSeat(data, 0, creating) && validSeat(data, 1, creating) &&
+          (n < 3 || validSeat(data, 2, creating)) &&
+          (n < 4 || validSeat(data, 3, creating)) &&
+          seats[0].id != seats[1].id &&
+          (n < 3 || (seats[0].id != seats[2].id && seats[1].id != seats[2].id)) &&
+          (n < 4 || (seats[0].id != seats[3].id && seats[1].id != seats[3].id && seats[2].id != seats[3].id)) &&
+          (data.config.starter == seats[0].id || data.config.starter == seats[1].id ||
+           (n > 2 && data.config.starter == seats[2].id) || (n > 3 && data.config.starter == seats[3].id)) &&
+          (seats[0].control == 'onlineHuman' || seats[1].control == 'onlineHuman' ||
+           (n > 2 && seats[2].control == 'onlineHuman') || (n > 3 && seats[3].control == 'onlineHuman'));
+      }
+      function readySeat(data, index) {
+        let seat = data.config.seats[index];
+        return seat.control == 'ai' || data.owners[seat.id] != null;
+      }
+      function ready(data) {
+        return readySeat(data, 0) && readySeat(data, 1) &&
+          (data.config.seats.size() < 3 || readySeat(data, 2)) &&
+          (data.config.seats.size() < 4 || readySeat(data, 3));
+      }
+      function starterIndex(c) {
+        return c.starter == c.seats[0].id ? 0 : c.starter == c.seats[1].id ? 1 :
+          c.starter == c.seats[2].id ? 2 : 3;
+      }
+      function currentSeat(data) {
+        return data.config.seats[(starterIndex(data.config) + data.moves.size()) % data.config.seats.size()];
+      }
+      function vacantJoin(index) {
+        let before = resource.data;
+        let after = request.resource.data;
+        let seat = before.config.seats[index];
+        return before.resigned == null && before.moves.size() == 0 &&
+          seat.control == 'onlineHuman' && before.owners[seat.id] == null &&
+          after.owners[seat.id] == request.auth.uid && before.host != request.auth.uid &&
+          !(request.auth.uid in before.owners.values()) &&
+          after.diff(before).affectedKeys().hasOnly(['owners', 'styles']) &&
+          after.owners.diff(before.owners).affectedKeys().hasOnly([seat.id]) &&
+          after.styles.diff(before.styles).affectedKeys().hasOnly([seat.id]) &&
+          validSeats(after, false);
+      }
+      function dropAt(drops, index) {
+        return drops.size() > index ? drops[index] : 0;
+      }
+      function positiveDrop(drops, index, carry) {
+        return drops.size() <= index || (drops[index] is int && drops[index] > 0 && drops[index] <= carry);
+      }
+      function moveShape(move, data) {
+        let c = data.config;
+        let carry = c.shape == 'square' ? c.size : 2 * c.size + 1;
+        let drops = move.drops;
+        return move.keys().hasAll(['seat', 'x', 'y', 'type', 'direction', 'drops']) &&
+          move.keys().hasOnly(['seat', 'x', 'y', 'type', 'direction', 'drops']) &&
+          move.seat == currentSeat(data).id && move.x is int && move.y is int &&
+          ((c.shape == 'square' && move.x >= 0 && move.x < c.size && move.y >= 0 && move.y < c.size) ||
+           (c.shape == 'hex' && move.x >= -c.size && move.x <= c.size && move.y >= -c.size && move.y <= c.size &&
+             move.x + move.y >= -c.size && move.x + move.y <= c.size)) && drops is list &&
+          ((move.type in ['flat', 'standing', 'capstone'] && move.direction == null && drops.size() == 0 &&
+             (data.moves.size() >= c.seats.size() || move.type == 'flat')) ||
+           (move.type == null && data.moves.size() >= c.seats.size() &&
+            move.direction in ['east', 'northWest', 'west', 'southEast', 'northEast', 'southWest'] &&
+            (c.shape == 'hex' || move.direction in ['east', 'northWest', 'west', 'southEast']) &&
+            drops.size() > 0 && drops.size() <= carry &&
+            positiveDrop(drops, 0, carry) && positiveDrop(drops, 1, carry) && positiveDrop(drops, 2, carry) &&
+            positiveDrop(drops, 3, carry) && positiveDrop(drops, 4, carry) && positiveDrop(drops, 5, carry) &&
+            positiveDrop(drops, 6, carry) && positiveDrop(drops, 7, carry) && positiveDrop(drops, 8, carry) &&
+            dropAt(drops, 0) + dropAt(drops, 1) + dropAt(drops, 2) + dropAt(drops, 3) + dropAt(drops, 4) +
+              dropAt(drops, 5) + dropAt(drops, 6) + dropAt(drops, 7) + dropAt(drops, 8) <= carry));
+      }
+      function appendMove() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let seat = currentSeat(before);
+        let n = before.moves.size();
+        return before.resigned == null && ready(before) &&
+          (before.owners[seat.id] == request.auth.uid || (seat.control == 'ai' && before.host == request.auth.uid)) &&
+          after.diff(before).affectedKeys().hasOnly(['moves']) &&
+          after.moves is list && after.moves.size() == n + 1 &&
+          after.moves[0:n] == before.moves && moveShape(after.moves[n], before);
+      }
+      function resignSeat() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return before.resigned == null && ready(before) && validId(after.resigned) &&
+          before.owners[after.resigned] == request.auth.uid &&
+          after.diff(before).affectedKeys().hasOnly(['resigned']);
+      }
+      allow get: if isAuthenticated();
+      allow list, delete: if false;
+      allow create: if isAuthenticated() && code.matches('^U[A-Z]{6}$') &&
+        request.resource.data.keys().hasAll(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned']) &&
+        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned']) &&
+        request.resource.data.version == 1 && request.resource.data.code == code &&
+        request.resource.data.host == request.auth.uid && configShape(request.resource.data.config) &&
+        validSeats(request.resource.data, true) && validBoardTheme(request.resource.data.boardTheme) &&
+        request.resource.data.moves is list && request.resource.data.moves.size() == 0 && request.resource.data.resigned == null;
+      allow update: if isAuthenticated() &&
+        (vacantJoin(0) || vacantJoin(1) ||
+         (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
+         (resource.data.config.seats.size() > 3 && vacantJoin(3)) || appendMove() || resignSeat());
+    }
+
     // Preserve the existing production profile and achievement policies.
     match /users/{userId} {
       allow read: if isAuthenticated();

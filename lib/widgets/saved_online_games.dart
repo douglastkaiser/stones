@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../hex/hex_match_provider.dart';
 import '../hex/hex_screen.dart';
+import '../game/match_provider.dart';
+import '../game/match_screen.dart';
 import '../providers/online_game_provider.dart';
 import '../providers/saved_rooms_provider.dart';
 import '../screens/game_screen.dart';
@@ -45,10 +47,17 @@ class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames> {
     });
     try {
       ref.read(hexMatchProvider.notifier).leave();
+      ref.read(matchProvider.notifier).leave();
       await ref.read(onlineGameProvider.notifier).leaveRoom();
       if (!mounted) return;
       Widget screen;
-      if (room.hex) {
+      if (room.unified) {
+        await ref
+            .read(matchProvider.notifier)
+            .join(room.code, expectedUid: room.uid);
+        if (!mounted) return;
+        screen = const MatchScreen();
+      } else if (room.hex) {
         await ref
             .read(hexMatchProvider.notifier)
             .join(room.code, expectedUid: room.uid);
