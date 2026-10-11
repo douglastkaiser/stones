@@ -271,6 +271,22 @@ new `/matches` security policy is a draft, with a CI emulator suite covering all
 menu replacement, AI host handoff, progression, learning, and release gates are
 still pending.
 
+Third execution checkpoint: all 178 online mixes and exclusive, server-timed AI
+leases pass the real Firestore emulator policy suite. Home now opens one seat
+editor from its Square and Hex buttons; new play and both learning catalogs use
+the shared match board/controller/planner. Court hints, explanations and durable
+takebacks work on both shapes. All 17 existing puzzle certificates were
+independently re-proved using the shared engine, and their sample lines pass the
+new learning controller. Six opening-cycle lessons cover both shapes with two,
+three and four seats. Competitive win counting has a single-write ledger and
+stable result identity to prevent repeat awards after restart; shared-device
+guests, observers and assisted practice are excluded. Specialist AI unlocks are
+temporarily withheld for new matches pending search-strength parity validation.
+Existing unlocks and legacy learning completion IDs are retained. Clock parity,
+new multiplayer tactical studies, compatibility cleanup, live backend publishing
+and the performance/release gate remain pending. No new production rules or
+web/app deployment has happened in this migration yet.
+
 - Can someone start the requested mix without knowing an internal mode name?
 - Is board shape the main choice, with clear size and total player count?
 - Can they tell which humans share a device and which need an invitation?

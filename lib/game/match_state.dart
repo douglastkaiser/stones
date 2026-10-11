@@ -85,6 +85,13 @@ class MatchState {
   final Map<SeatId, Reserve> reserves;
   final int ply;
   final MatchResult? result;
+  MatchState._trusted(
+      {required this.config,
+      required this.geometry,
+      required this.board,
+      required this.reserves,
+      required this.ply,
+      required this.result});
   SeatId get current => config.turnAt(ply);
   bool get opening => ply < config.seats.length;
   bool get finished => result != null;
@@ -96,14 +103,31 @@ class MatchState {
     Map<SeatId, Reserve>? reserves,
     int? ply,
     MatchResult? result,
-  }) =>
-      MatchState(
+  }) {
+    final nextPly = ply ?? this.ply;
+    final nextResult = result ?? this.result;
+    if (board == null && reserves == null) {
+      if (nextPly < 0 ||
+          (nextResult?.winner != null &&
+              !this.reserves.containsKey(nextResult!.winner))) {
+        throw ArgumentError('Invalid turn or winner');
+      }
+      return MatchState._trusted(
           config: config,
           geometry: geometry,
-          board: board ?? this.board,
-          reserves: reserves ?? this.reserves,
-          ply: ply ?? this.ply,
-          result: result ?? this.result);
+          board: this.board,
+          reserves: this.reserves,
+          ply: nextPly,
+          result: nextResult);
+    }
+    return MatchState(
+        config: config,
+        geometry: geometry,
+        board: board ?? this.board,
+        reserves: reserves ?? this.reserves,
+        ply: nextPly,
+        result: nextResult);
+  }
 }
 
 class MatchMove {

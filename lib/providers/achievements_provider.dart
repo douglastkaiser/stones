@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,6 +15,7 @@ class AchievementKeys {
   static const String onlineWins = 'stats_online_wins';
   static const String completedTutorials = 'stats_completed_tutorials';
   static const String completedPuzzles = 'stats_completed_puzzles';
+  static const String winLedger = 'stats_win_ledger_v1';
 }
 
 /// Achievement state containing unlocked achievements and stats
@@ -47,7 +51,8 @@ class AchievementState {
       onlineWins: onlineWins ?? this.onlineWins,
       completedTutorials: completedTutorials ?? this.completedTutorials,
       completedPuzzles: completedPuzzles ?? this.completedPuzzles,
-      justUnlocked: clearJustUnlocked ? null : (justUnlocked ?? this.justUnlocked),
+      justUnlocked:
+          clearJustUnlocked ? null : (justUnlocked ?? this.justUnlocked),
     );
   }
 
@@ -79,6 +84,8 @@ class AchievementState {
 /// Notifier for achievement state with persistence
 class AchievementNotifier extends StateNotifier<AchievementState> {
   AchievementNotifier() : super(const AchievementState());
+  Future<void> _winWrites = Future.value();
+  Set<String> _recordedMatches = {};
 
   /// Load achievements from SharedPreferences
   Future<void> load() async {
@@ -94,12 +101,24 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     }
 
     // Load stats
-    final totalWins = prefs.getInt(AchievementKeys.totalWins) ?? 0;
-    final onlineWins = prefs.getInt(AchievementKeys.onlineWins) ?? 0;
+    var totalWins = prefs.getInt(AchievementKeys.totalWins) ?? 0;
+    var onlineWins = prefs.getInt(AchievementKeys.onlineWins) ?? 0;
+    final ledgerJson = prefs.getString(AchievementKeys.winLedger);
+    if (ledgerJson != null) {
+      final ledger = Map<String, dynamic>.from(jsonDecode(ledgerJson));
+      totalWins = ledger['totalWins'] as int;
+      onlineWins = ledger['onlineWins'] as int;
+      _recordedMatches = (ledger['matches'] as List).cast<String>().toSet();
+      unlockedSet.addAll((ledger['unlocks'] as List)
+          .cast<String>()
+          .map(AchievementType.values.byName));
+    }
 
     // Load completed scenarios
-    final tutorialsList = prefs.getStringList(AchievementKeys.completedTutorials) ?? [];
-    final puzzlesList = prefs.getStringList(AchievementKeys.completedPuzzles) ?? [];
+    final tutorialsList =
+        prefs.getStringList(AchievementKeys.completedTutorials) ?? [];
+    final puzzlesList =
+        prefs.getStringList(AchievementKeys.completedPuzzles) ?? [];
 
     state = AchievementState(
       unlockedAchievements: unlockedSet,
@@ -137,74 +156,75 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     required AIDifficulty? aiDifficulty,
     required bool byTime,
     required bool byFlats,
-  }) async {
+    String? matchId,
+  }) {
+    final result = Completer<List<AchievementType>>();
+    _winWrites = _winWrites.then((value) async {
+      try {
+        result.complete(await _recordWin(
+            isOnline: isOnline,
+            aiDifficulty: aiDifficulty,
+            byTime: byTime,
+            byFlats: byFlats,
+            matchId: matchId));
+      } catch (error, stack) {
+        result.completeError(error, stack);
+      }
+    });
+    return result.future;
+  }
+
+  Future<List<AchievementType>> _recordWin(
+      {required bool isOnline,
+      required AIDifficulty? aiDifficulty,
+      required bool byTime,
+      required bool byFlats,
+      String? matchId}) async {
+    if (matchId != null && _recordedMatches.contains(matchId)) return [];
     final prefs = await SharedPreferences.getInstance();
-    final newUnlocks = <AchievementType>[];
-
-    // Update total wins first
     final newTotalWins = state.totalWins + 1;
-    await prefs.setInt(AchievementKeys.totalWins, newTotalWins);
-
-    var newOnlineWins = state.onlineWins;
-    if (isOnline) {
-      newOnlineWins = state.onlineWins + 1;
-      await prefs.setInt(AchievementKeys.onlineWins, newOnlineWins);
-    }
-
-    // Update state with new win counts FIRST before checking achievements
+    final newOnlineWins = state.onlineWins + (isOnline ? 1 : 0);
+    final candidates = <AchievementType>{
+      if (isOnline) AchievementType.connected,
+      if (aiDifficulty != null)
+        switch (aiDifficulty) {
+          AIDifficulty.easy => AchievementType.firstSteps,
+          AIDifficulty.medium => AchievementType.competitor,
+          AIDifficulty.hard => AchievementType.strategist,
+          AIDifficulty.expert => AchievementType.grandmaster,
+        },
+      if (newTotalWins >= 10) AchievementType.dedicated,
+      if (newTotalWins >= 50) AchievementType.veteran,
+      if (byTime) AchievementType.clockManager,
+      if (byFlats) AchievementType.domination,
+    };
+    final newUnlocks =
+        candidates.difference(state.unlockedAchievements).toList();
+    final unlocks = {...state.unlockedAchievements, ...candidates};
+    final recorded = {..._recordedMatches, if (matchId != null) matchId};
+    // One durable write commits both counters and deduplication. A crash cannot
+    // grant a second win or lose an unlock between separate preference writes.
+    final saved = await prefs.setString(
+        AchievementKeys.winLedger,
+        jsonEncode({
+          'totalWins': newTotalWins,
+          'onlineWins': newOnlineWins,
+          'matches': recorded.toList(),
+          'unlocks': unlocks.map((a) => a.name).toList(),
+        }));
+    if (!saved) throw StateError('Win could not be saved');
+    _recordedMatches = recorded;
     state = state.copyWith(
-      totalWins: newTotalWins,
-      onlineWins: newOnlineWins,
-    );
-
-    // Now check for achievements (each unlock will trigger notification)
-
-    // Online win achievement
-    if (isOnline && !state.isUnlocked(AchievementType.connected)) {
-      if (await unlock(AchievementType.connected)) {
-        newUnlocks.add(AchievementType.connected);
-      }
+        totalWins: newTotalWins,
+        onlineWins: newOnlineWins,
+        unlockedAchievements: unlocks,
+        justUnlocked: newUnlocks.firstOrNull);
+    // Maintain the legacy keys for upgrades and existing integrations.
+    await prefs.setInt(AchievementKeys.totalWins, newTotalWins);
+    await prefs.setInt(AchievementKeys.onlineWins, newOnlineWins);
+    for (final type in newUnlocks) {
+      await prefs.setBool('${AchievementKeys.prefix}${type.name}', true);
     }
-
-    // AI difficulty achievements
-    if (aiDifficulty != null) {
-      final aiAchievement = switch (aiDifficulty) {
-        AIDifficulty.easy => AchievementType.firstSteps,
-        AIDifficulty.medium => AchievementType.competitor,
-        AIDifficulty.hard => AchievementType.strategist,
-        AIDifficulty.expert => AchievementType.grandmaster,
-      };
-      if (!state.isUnlocked(aiAchievement)) {
-        if (await unlock(aiAchievement)) {
-          newUnlocks.add(aiAchievement);
-        }
-      }
-    }
-
-    // Win count achievements
-    if (newTotalWins >= 10 && !state.isUnlocked(AchievementType.dedicated)) {
-      if (await unlock(AchievementType.dedicated)) {
-        newUnlocks.add(AchievementType.dedicated);
-      }
-    }
-    if (newTotalWins >= 50 && !state.isUnlocked(AchievementType.veteran)) {
-      if (await unlock(AchievementType.veteran)) {
-        newUnlocks.add(AchievementType.veteran);
-      }
-    }
-
-    // Win condition achievements
-    if (byTime && !state.isUnlocked(AchievementType.clockManager)) {
-      if (await unlock(AchievementType.clockManager)) {
-        newUnlocks.add(AchievementType.clockManager);
-      }
-    }
-    if (byFlats && !state.isUnlocked(AchievementType.domination)) {
-      if (await unlock(AchievementType.domination)) {
-        newUnlocks.add(AchievementType.domination);
-      }
-    }
-
     return newUnlocks;
   }
 
@@ -226,7 +246,8 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     state = state.copyWith(completedTutorials: newCompletedTutorials);
 
     // Check if all tutorials completed
-    if (state.allTutorialsCompleted && !state.isUnlocked(AchievementType.student)) {
+    if (state.allTutorialsCompleted &&
+        !state.isUnlocked(AchievementType.student)) {
       await unlock(AchievementType.student);
       newUnlocks.add(AchievementType.student);
     }
@@ -252,7 +273,8 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     state = state.copyWith(completedPuzzles: newCompletedPuzzles);
 
     // Check if all puzzles completed
-    if (state.allPuzzlesCompleted && !state.isUnlocked(AchievementType.puzzleSolver)) {
+    if (state.allPuzzlesCompleted &&
+        !state.isUnlocked(AchievementType.puzzleSolver)) {
       await unlock(AchievementType.puzzleSolver);
       newUnlocks.add(AchievementType.puzzleSolver);
     }
@@ -273,6 +295,8 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     await prefs.remove(AchievementKeys.onlineWins);
     await prefs.remove(AchievementKeys.completedTutorials);
     await prefs.remove(AchievementKeys.completedPuzzles);
+    await prefs.remove(AchievementKeys.winLedger);
+    _recordedMatches = {};
 
     state = const AchievementState();
   }

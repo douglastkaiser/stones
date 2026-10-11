@@ -40,7 +40,7 @@ class MoveSelection {
     }
     return {
       for (final direction in game.geometry.directions)
-        if (MatchRules.play(
+        if (MatchRules.apply(
                 game, MatchMove.spread(source!, direction, [carry])) !=
             null)
           source!.step(direction),
@@ -90,7 +90,7 @@ class MoveSelection {
       for (final direction in game.geometry.directions) {
         if (source!.step(direction) == cell) {
           final next = MatchMove.spread(source!, direction, [carry]);
-          adjacentOptions = MatchRules.play(game, next) == null ? [] : [next];
+          adjacentOptions = MatchRules.apply(game, next) == null ? [] : [next];
           break;
         }
       }
@@ -107,7 +107,7 @@ class MoveSelection {
     } else if (game.stackAt(cell).isEmpty && source == null) {
       final placement =
           MatchMove.place(cell, game.opening ? PieceType.flat : type);
-      if (MatchRules.play(game, placement) != null) {
+      if (MatchRules.apply(game, placement) != null) {
         clear();
         planned = placement;
       }
@@ -128,7 +128,7 @@ class MoveSelection {
         ? carry
         : math.min(game.geometry.carryLimit, game.stackAt(cell).length);
     final move = MatchMove.spread(cell, direction, [pickup]);
-    if (MatchRules.play(game, move) == null) return;
+    if (MatchRules.apply(game, move) == null) return;
     clear();
     source = cell;
     carry = pickup;
@@ -144,7 +144,7 @@ class MoveSelection {
       pendingDrop,
       move.drops.last - pendingDrop,
     ]);
-    return MatchRules.play(game, next) == null ? null : next;
+    return MatchRules.apply(game, next) == null ? null : next;
   }
 
   void continueMove(MatchState game) {
@@ -167,7 +167,7 @@ class MoveSelection {
     final last = drops.removeLast();
     drops[drops.length - 1] += last;
     final previous = MatchMove.spread(move.from, move.direction!, drops);
-    if (MatchRules.play(game, previous) != null) {
+    if (MatchRules.apply(game, previous) != null) {
       choices = [previous];
       choose(previous);
     }

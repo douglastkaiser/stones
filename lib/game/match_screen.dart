@@ -16,7 +16,9 @@ import 'move_selection.dart';
 import 'seat_appearance.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
-  const MatchScreen({super.key});
+  const MatchScreen({super.key, this.title, this.studyPanel});
+  final String? title;
+  final Widget? studyPanel;
   @override
   ConsumerState<MatchScreen> createState() => _MatchScreenState();
 }
@@ -109,7 +111,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     return Scaffold(
         appBar: AppBar(
             title: Text(
-                '${game.config.shape == BoardShape.square ? 'Square' : 'Hex'} · ${game.config.seats.length} players'),
+                widget.title ??
+                    '${game.config.shape == BoardShape.square ? 'Square' : 'Hex'} · ${game.config.seats.length} players',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
             actions: [
               if (game.config.seats.any((s) => s.control == SeatControl.ai) &&
                   match.room == null)
@@ -269,6 +274,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 Padding(
                     padding: const EdgeInsets.all(12),
                     child: Text(match.explanation!)),
+              if (widget.studyPanel != null) widget.studyPanel!,
             ]),
           )));
         }));

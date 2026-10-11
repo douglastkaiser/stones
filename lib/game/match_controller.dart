@@ -20,6 +20,7 @@ class MatchSession {
       this.connected = true,
       this.paused = false,
       this.explanation,
+      this.inputLocked = false,
       this.error});
   final MatchState? game;
   final MatchRoom? room;
@@ -30,11 +31,13 @@ class MatchSession {
   final bool paused;
   final String? error;
   final String? explanation;
+  final bool inputLocked;
   bool get ready => game != null && (room?.ready ?? true);
   bool get canPlay =>
       ready &&
       connected &&
       !busy &&
+      !inputLocked &&
       !game!.finished &&
       game!.config.seat(game!.current).control != SeatControl.ai &&
       (room == null || room!.owners[game!.current] == uid);
@@ -45,6 +48,7 @@ class MatchSession {
           bool? connected,
           bool? paused,
           String? explanation,
+          bool? inputLocked,
           String? error}) =>
       MatchSession(
           game: game ?? this.game,
@@ -55,6 +59,7 @@ class MatchSession {
           connected: connected ?? this.connected,
           paused: paused ?? this.paused,
           explanation: explanation ?? this.explanation,
+          inputLocked: inputLocked ?? this.inputLocked,
           error: error);
 }
 
@@ -64,6 +69,7 @@ class MatchController extends StateNotifier<MatchSession> {
       required this.authenticate,
       required this.store,
       this.remember,
+      this.completed,
       this.botDelay = const Duration(milliseconds: 250),
       Future<MatchMove?> Function(MatchState, BotLevel)? search})
       : search = search ?? ((game, level) => selectMatchMove(game, level)),
@@ -72,6 +78,9 @@ class MatchController extends StateNotifier<MatchSession> {
   final Future<String> Function() authenticate;
   final MatchRoomStore Function() store;
   final Future<void> Function(MatchRoom, String)? remember;
+  final Future<void> Function(MatchSession)? completed;
+  final Set<String> _completionPending = {};
+  final Set<String> _completionHandled = {};
   final Duration botDelay;
   final Future<MatchMove?> Function(MatchState, BotLevel) search;
   StreamSubscription<MatchRoomUpdate>? _subscription;
@@ -158,6 +167,7 @@ class MatchController extends StateNotifier<MatchSession> {
     _localMoves = records;
     state =
         MatchSession(game: game, id: snapshot['id'] as String, paused: true);
+    _notifyCompleted();
     return true;
   }
 
@@ -232,7 +242,29 @@ class MatchController extends StateNotifier<MatchSession> {
         connected: true,
         busy: _awaitingPly != null ||
             (_searchingToken == _searchToken && _searchingPly == game.ply));
+    _notifyCompleted();
     _schedule();
+  }
+
+  void _notifyCompleted() {
+    if (completed == null || state.game?.finished != true || state.id == null) {
+      return;
+    }
+    final key =
+        '${state.id}:${state.game!.ply}:${state.game!.result!.reason.name}';
+    if (_completionHandled.contains(key) || !_completionPending.add(key)) {
+      return;
+    }
+    final snapshot = state;
+    final epoch = _epoch;
+    unawaited(completed!(snapshot).then((value) {
+      _completionHandled.add(key);
+    }).catchError((Object error) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            error: 'Game saved; reward update needs a retry: $error');
+      }
+    }).whenComplete(() => _completionPending.remove(key)));
   }
 
   Future<bool> play(MatchMove move, {bool bot = false}) async {
@@ -279,6 +311,7 @@ class MatchController extends StateNotifier<MatchSession> {
       if (!mounted || epoch != _epoch) return true;
       state = state.copyWith(busy: _awaitingPly != null);
       _schedule();
+      _notifyCompleted();
       return true;
     } catch (error) {
       if (mounted && epoch == _epoch) {
