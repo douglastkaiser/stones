@@ -1,5 +1,10 @@
 # Development map
 
+The [unified play expansion plan](UNIFIED_PLAY_PLAN.md) records the requested
+next architecture: one setup, seat-based engine, controls and room protocol for
+two to four players on Square or Hex. It is a planned replacement of the current
+isolation, not a claim that variable-seat gameplay is implemented yet.
+
 Updated 2026-10-09. Read [the Tak rules audit](TAK_RULES.md) before changing game
 mechanics; it includes the prioritized follow-up findings.
 

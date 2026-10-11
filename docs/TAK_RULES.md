@@ -163,6 +163,13 @@ content provenance, size/phase coverage and human-calibration limitations.
 
 ### Maintenance
 
+The [unified play expansion](UNIFIED_PLAY_PLAN.md) introduces a shared seat-based
+domain for eventual two-to-four-player Square/Hex matches. The foundation is
+tested against legacy move application and Hex replay; existing gameplay still
+uses its current providers. Multiplayer square and variable-seat Hex are
+explicit Stones variants. They do not change the standard two-player Tak contract
+above, and existing rooms/puzzle certificates retain their original rules.
+
 Road traversal remains in both the provider and AI analysis. Keep their outcome
 tests aligned, or consolidate traversal in a later change. Optional multi-game
 scoring is not implemented; Elo is not a substitute for that scoring system.
