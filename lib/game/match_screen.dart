@@ -187,21 +187,24 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final winner = game.result?.winner;
     final road = winner == null ? <Cell>{} : MatchRules.road(game, winner);
     final scale = MediaQuery.textScalerOf(context).scale(1);
-    final status = game.finished
-        ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
-        : !match.ready
-            ? 'Waiting for online players'
-            : !match.connected
-                ? 'Disconnected · your board is retained'
-                : match.paused && match.clock != null && match.room == null
-                    ? 'Match paused'
-                    : match.paused &&
-                            game.config.seat(game.current).control ==
-                                SeatControl.ai
-                        ? 'AI paused'
-                        : match.busy
-                            ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
-                            : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
+    final practiceEnded = widget.studyPanel != null && match.inputLocked;
+    final status = practiceEnded
+        ? 'Practice finished'
+        : game.finished
+            ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
+            : !match.ready
+                ? 'Waiting for online players'
+                : !match.connected
+                    ? 'Disconnected · your board is retained'
+                    : match.paused && match.clock != null && match.room == null
+                        ? 'Match paused'
+                        : match.paused &&
+                                game.config.seat(game.current).control ==
+                                    SeatControl.ai
+                            ? 'AI paused'
+                            : match.busy
+                                ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
+                                : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
     return Scaffold(
         appBar: AppBar(
             title: Text(
@@ -401,11 +404,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     child: Text(match.error!,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.error))),
-              if (match.explanation != null)
+              if (match.explanation != null && !practiceEnded)
                 Padding(
                     padding: const EdgeInsets.all(12),
                     child: Text(match.explanation!)),
-              if (widget.studyPanel != null) widget.studyPanel!,
+              if (widget.studyPanel != null && !practiceEnded)
+                widget.studyPanel!,
             ]),
           )));
         }));
@@ -427,6 +431,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       ]);
 
   Widget _controls(MatchSession match, MatchState game) {
+    if (widget.studyPanel != null && match.inputLocked) {
+      return Column(children: [
+        if (match.explanation != null)
+          Text(match.explanation!, textAlign: TextAlign.center),
+        widget.studyPanel!,
+      ]);
+    }
     if (game.finished) {
       return Column(children: [
         const Text('Match complete'),

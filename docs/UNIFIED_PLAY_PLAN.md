@@ -1,11 +1,38 @@
 # Unified play expansion
 
-Prepared 2026-10-10. Status: implementation plan; the deployed application still
+Prepared 2026-10-10. Status: implemented on main; release verification in progress.
+The deployed application still
 uses the existing two-player square and three-player Hex engines. This document
 supersedes the target menu hierarchy in PLAY_SELECTION.md, not its record of what
 has already shipped. The user explicitly requests replacing the previous
 square/Hex architectural isolation with a shared engine. Legacy rules and saved
 rooms must remain interpretable throughout that replacement.
+
+## Current readiness
+
+Shared setup, rules, gestures, rendering, local/online controllers, AI, recovery,
+Court, clocks, progression attribution and learning are implemented on main.
+New play always takes the shared path; legacy wire lifecycle screens remain for
+pre-migration rooms. CI at 411cc4d passed 667 Flutter tests, strict analysis and
+release web compilation. All 25 real-emulator authorization tests passed,
+including concurrent claims and competing confirmations. Earlier checkpoint
+paragraphs below are historical, not the current checklist.
+
+The CI release web artifact was loaded at localhost and the four-seat Hex
+opening lesson completed through four repeated-tap placements. This exposed
+stale “to play”/“waiting” labels after success. The follow-up places learning
+feedback and Retry/Done in the reserved controls area, says “Practice finished”,
+and keeps the board anchored. All 20 shared-screen checks and strict analysis
+pass after that fix; its new CI run must finish before publishing.
+
+Production `/matches` publication is staged and awaits required action-time
+approval. Live API/browser multiplayer trials, web deployment and a closed-test
+Play update are not completed. A signed Android build of 6b4df4d is in progress,
+but predates the final learning-feedback change. Physical-device timing,
+large-board balance, per-account cloud progression and a secure rating service
+have no new qualification evidence. Existing local achievement/progress storage
+and earned unlocks are preserved; result attribution is checked by seat/UID.
+The committed manual live probe is prepared, not executed.
 
 ## Execution checkpoints
 

@@ -8,6 +8,8 @@ import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_provider.dart';
 import 'package:stones/game/match_screen.dart';
 import 'package:stones/game/match_state.dart';
+import 'package:stones/game/study_catalog.dart';
+import 'package:stones/game/study_screen.dart';
 import 'package:stones/models/cosmetics.dart';
 import 'package:stones/models/piece.dart';
 import 'package:stones/widgets/piece_stack_view.dart';
@@ -15,6 +17,39 @@ import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 void main() {
+  testWidgets('completed learning shows feedback and Done in stable controls',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final study = matchStudies
+        .firstWhere((study) => study.id == 'unified_v1_hex_exchange_4');
+    await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+            home: StudyScreen(study: study, onSolved: (study) async {}))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Let’s play'));
+    await tester.pumpAndSettle();
+    final board = find.byKey(const ValueKey('stable-board'));
+    final before = tester.getRect(board);
+    for (final cell in study.initial.geometry.cells.take(4)) {
+      final target = find.byKey(ValueKey('cell-${cell.x}-${cell.y}'));
+      await tester.tap(target);
+      await tester.pump();
+      await tester.tap(target);
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Practice finished'), findsOneWidget);
+    expect(find.text('Waiting for the current player.'), findsNothing);
+    expect(find.text('Ivory to play'), findsNothing);
+    expect(find.text('Done'), findsOneWidget);
+    expect(tester.getRect(board), before);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
   testWidgets('backgrounding pauses a local clock until explicit resume',
       (tester) async {
     final storage = MemoryMatchStorage();
