@@ -177,6 +177,10 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                 }),
             const SizedBox(height: 16),
             Text('$local local · $online online · $bots AI'),
+            if (local == 1 && bots > 0 && online == 0 && !_config.court)
+              Text(_config.profile == RulesProfile.standardTak
+                  ? 'Wins count toward general and AI difficulty achievements.'
+                  : 'Variant wins count toward general achievements. AI difficulty achievements use two-player Square games.'),
             if (local == 0)
               Text(online == 0
                   ? 'Watch the AIs play. You can pause the match.'

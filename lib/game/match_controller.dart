@@ -241,8 +241,8 @@ class MatchController extends StateNotifier<MatchSession> {
             'Use the original account or browser profile to resume');
       }
       final room = expectedUid == null
-          ? await store().join(normalized, uid)
-          : await store().read(normalized);
+          ? await store().join(normalized, uid).timeout(networkTimeout)
+          : await store().read(normalized).timeout(networkTimeout);
       if (room.host != uid && !room.owners.values.contains(uid)) {
         throw StateError('This identity does not own a seat');
       }
@@ -409,6 +409,22 @@ class MatchController extends StateNotifier<MatchSession> {
     }).whenComplete(() => _completionPending.remove(key)));
   }
 
+  bool get canRetryRewards {
+    if (completed == null || state.game?.finished != true || state.id == null) {
+      return false;
+    }
+    final key =
+        '${state.id}:${state.game!.ply}:${state.game!.result!.reason.name}';
+    return !_completionHandled.contains(key) &&
+        !_completionPending.contains(key);
+  }
+
+  void retryRewards() {
+    if (!canRetryRewards) return;
+    state = state.copyWith();
+    _notifyCompleted();
+  }
+
   Future<bool> play(MatchMove move, {bool bot = false}) async {
     final game = state.game;
     if (game == null ||
@@ -506,6 +522,7 @@ class MatchController extends StateNotifier<MatchSession> {
   void _watchClock() {
     _clockTimer?.cancel();
     if (state.clock == null || state.game!.finished) return;
+    final epoch = _epoch;
     var ticks = 0;
     _clockTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (!mounted || state.game == null || state.game!.finished) {
@@ -522,7 +539,7 @@ class MatchController extends StateNotifier<MatchSession> {
           !state.busy &&
           !state.paused) {
         unawaited(_save().catchError((Object error) {
-          if (mounted) {
+          if (mounted && epoch == _epoch) {
             state = state.copyWith(
                 error: 'Clock checkpoint could not be saved: $error');
           }
@@ -648,7 +665,8 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   void pause(bool paused) {
-    if (!mounted || state.game == null) return;
+    if (!mounted || state.game == null || state.game!.finished) return;
+    final epoch = _epoch;
     _searchToken++;
     _timer?.cancel();
     final clock = state.room != null
@@ -664,7 +682,7 @@ class MatchController extends StateNotifier<MatchSession> {
         busy: _awaitingPly != null || _localWritePending);
     if (state.room == null && state.game != null && !_localWritePending) {
       unawaited(_save().catchError((Object error) {
-        if (mounted) {
+        if (mounted && epoch == _epoch) {
           state = state.copyWith(error: 'Could not save paused clock: $error');
         }
       }));

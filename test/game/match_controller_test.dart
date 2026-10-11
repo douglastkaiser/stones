@@ -87,6 +87,64 @@ MatchController controller(
         botDelay: Duration.zero);
 
 void main() {
+  test('a failed reward update can retry once without replaying the result',
+      () async {
+    final storage = MemoryMatchStorage();
+    final store = MemoryMatchRoomStore();
+    var attempts = 0;
+    final host = MatchController(
+        storage: storage,
+        authenticate: () async => 'host',
+        store: () => store,
+        completed: (session) async {
+          attempts++;
+          if (attempts == 1) throw StateError('Rewards unavailable');
+        });
+    await host.start(MatchConfig.defaults(BoardShape.square));
+    await host.resign(SeatId.ivory);
+    await Future<void>.delayed(Duration.zero);
+    expect(host.state.error, contains('reward update needs a retry'));
+    expect(host.canRetryRewards, isTrue);
+    host.retryRewards();
+    host.retryRewards();
+    await Future<void>.delayed(Duration.zero);
+    expect(attempts, 2);
+    expect(host.state.error, isNull);
+    expect(host.canRetryRewards, isFalse);
+    expect(host.state.game!.result!.winner, SeatId.charcoal);
+    host.pause(false);
+    expect(host.state.clock, isNull);
+    host.dispose();
+    await store.updates.close();
+  });
+
+  test('a stalled room read times out and a later response cannot replace play',
+      () async {
+    final store = MemoryMatchRoomStore();
+    final config =
+        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+      SeatConfig(SeatId.ivory),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]);
+    await store.create('host', config);
+    store.pendingRead = Completer<MatchRoom>();
+    final host = MatchController(
+        storage: MemoryMatchStorage(),
+        authenticate: () async => 'host',
+        store: () => store,
+        networkTimeout: const Duration(milliseconds: 20));
+    await expectLater(host.join('UABCDEF', expectedUid: 'host'),
+        throwsA(isA<TimeoutException>()));
+    expect(host.state.busy, isFalse);
+    await host.start(MatchConfig.defaults(BoardShape.hex));
+    store.pendingRead!.complete(store.room!);
+    await Future<void>.delayed(Duration.zero);
+    expect(host.state.game!.config.shape, BoardShape.hex);
+    expect(host.state.room, isNull);
+    host.dispose();
+    await store.updates.close();
+  });
+
   test(
       'an uncertain online acknowledgement reconciles without duplicating a move',
       () async {

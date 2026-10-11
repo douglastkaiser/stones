@@ -57,7 +57,10 @@ class LegacyHexAdapter {
       },
       reserves: [
         for (final id in state.config.ids)
-          HexReserve(state.reserves[id]!.stones, state.reserves[id]!.caps)
+          state.reserves[id]!.stones == original.reserves[id.index].stones &&
+                  state.reserves[id]!.caps == original.reserves[id.index].caps
+              ? original.reserves[id.index]
+              : HexReserve(state.reserves[id]!.stones, state.reserves[id]!.caps)
       ],
       finished: state.finished,
       winner: state.result?.winner == null

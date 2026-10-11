@@ -81,6 +81,11 @@ class HexStone {
   const HexStone(this.seat, this.type);
   final HexSeat seat;
   final PieceType type;
+  @override
+  bool operator ==(Object other) =>
+      other is HexStone && seat == other.seat && type == other.type;
+  @override
+  int get hashCode => Object.hash(seat, type);
 }
 
 class HexReserve {

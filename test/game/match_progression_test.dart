@@ -11,6 +11,34 @@ import 'package:stones/services/ai/ai.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('specialist AI awards require a standard unassisted Square duel', () {
+    for (final level in BotLevel.values) {
+      for (final shape in BoardShape.values) {
+        for (var count = 2; count <= 4; count++) {
+          final config = MatchConfig(
+              shape: shape,
+              size: shape == BoardShape.square ? 5 : 2,
+              seats: [
+                const SeatConfig(SeatId.ivory),
+                for (final id in SeatId.values.skip(1).take(count - 1))
+                  SeatConfig(id, control: SeatControl.ai, level: level)
+              ]);
+          MatchCompleted event(MatchConfig value, SeatId? winner) =>
+              MatchCompleted(MatchSession(
+                  id: 'ai-duel',
+                  game: MatchState.initial(value).copyWith(
+                      result: MatchResult(winner, ResultReason.road))));
+          expect(event(config, SeatId.ivory).defeatedAILevel,
+              shape == BoardShape.square && count == 2 ? level : null);
+          expect(event(config, SeatId.charcoal).defeatedAILevel, isNull);
+          expect(event(config, null).defeatedAILevel, isNull);
+          expect(
+              event(config.copyWith(court: true), SeatId.ivory).defeatedAILevel,
+              isNull);
+        }
+      }
+    }
+  });
   test(
       'win ledger commits reward and counts once across concurrent replay and restart',
       () async {

@@ -4,6 +4,7 @@ import '../providers/account_provider.dart';
 import '../providers/achievements_provider.dart';
 import '../providers/cosmetics_provider.dart';
 import '../providers/saved_rooms_provider.dart';
+import '../services/ai/ai.dart';
 import 'match_config.dart';
 import 'match_completed.dart';
 import 'match_controller.dart';
@@ -34,9 +35,13 @@ final matchProvider = StateNotifierProvider<MatchController, MatchSession>(
             await ref.read(achievementProvider.notifier).recordWin(
                 matchId: event.id,
                 isOnline: event.online,
-                // Variant search strength needs validation before reusing the
-                // original specialist AI awards. Existing unlocks are retained.
-                aiDifficulty: null,
+                aiDifficulty: switch (event.defeatedAILevel) {
+                  BotLevel.easy => AIDifficulty.easy,
+                  BotLevel.medium => AIDifficulty.medium,
+                  BotLevel.hard => AIDifficulty.hard,
+                  BotLevel.expert => AIDifficulty.expert,
+                  null => null,
+                },
                 byTime: event.game.result!.reason == ResultReason.time,
                 byFlats: event.game.result!.reason == ResultReason.flats);
           },

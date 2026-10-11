@@ -50,25 +50,25 @@ const List<GameAchievement> achievements = [
   GameAchievement(
     type: AchievementType.firstSteps,
     name: 'First Steps',
-    description: 'Beat Easy AI',
+    description: 'Beat Easy AI in an unassisted two-player Square game',
     unlocksReward: 'Morocco theme',
   ),
   GameAchievement(
     type: AchievementType.competitor,
     name: 'Competitor',
-    description: 'Beat Medium AI',
+    description: 'Beat Medium AI in an unassisted two-player Square game',
     unlocksReward: 'Kyoto theme',
   ),
   GameAchievement(
     type: AchievementType.strategist,
     name: 'Strategist',
-    description: 'Beat Hard AI',
+    description: 'Beat Hard AI in an unassisted two-player Square game',
     unlocksReward: 'Slate theme',
   ),
   GameAchievement(
     type: AchievementType.grandmaster,
     name: 'Grandmaster',
-    description: 'Beat Expert AI',
+    description: 'Beat Expert AI in an unassisted two-player Square game',
     unlocksReward: 'Marble theme',
   ),
   GameAchievement(
@@ -80,12 +80,12 @@ const List<GameAchievement> achievements = [
   GameAchievement(
     type: AchievementType.dedicated,
     name: 'Dedicated',
-    description: 'Win 10 square games',
+    description: 'Win 10 unassisted games',
   ),
   GameAchievement(
     type: AchievementType.veteran,
     name: 'Veteran',
-    description: 'Win 50 square games',
+    description: 'Win 50 unassisted games',
     unlocksReward: 'Kyoto theme',
   ),
   GameAchievement(

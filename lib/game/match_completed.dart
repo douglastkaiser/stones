@@ -17,6 +17,23 @@ class MatchCompleted {
   final String? host;
   final Map<SeatId, String?>? owners;
   bool get online => owners != null;
+
+  /// Existing specialist unlocks describe standard, unassisted Square duels.
+  /// Multiplayer variants contribute general wins without borrowing that label.
+  BotLevel? get defeatedAILevel {
+    if (!eligibleWin ||
+        online ||
+        game.config.profile != RulesProfile.standardTak ||
+        game.config.shape != BoardShape.square ||
+        game.config.seats.length != 2) {
+      return null;
+    }
+    return game.config.seats
+        .where((seat) => seat.control == SeatControl.ai)
+        .firstOrNull
+        ?.level;
+  }
+
   bool get eligibleWin {
     final winner = game.result?.winner;
     if (winner == null ||

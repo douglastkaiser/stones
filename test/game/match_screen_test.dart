@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stones/game/board_view.dart';
+import 'package:stones/game/board_geometry.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_provider.dart';
@@ -14,6 +15,39 @@ import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 void main() {
+  testWidgets('backgrounding pauses a local clock until explicit resume',
+      (tester) async {
+    final storage = MemoryMatchStorage();
+    final store = MemoryMatchRoomStore();
+    final controller = MatchController(
+        storage: storage, authenticate: () async => 'host', store: () => store);
+    await controller.start(
+        MatchConfig.defaults(BoardShape.square).copyWith(clockSeconds: 60));
+    await controller.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
+    await tester.pumpWidget(ProviderScope(
+        overrides: [matchProvider.overrideWith((ref) => controller)],
+        child: const MaterialApp(home: MatchScreen())));
+    await tester.pump();
+    expect(controller.state.clock!.started[SeatId.charcoal], isNotNull);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(controller.state.paused, isTrue);
+    expect(
+        controller.state.clock!.started.values.every((v) => v == null), isTrue);
+    expect(controller.state.canPlay, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(controller.state.paused, isTrue);
+    await tester.tap(find.byTooltip('Resume match'));
+    await tester.pump();
+    expect(controller.state.canPlay, isTrue);
+    expect(controller.state.clock!.started[SeatId.charcoal], isNotNull);
+    expect(storage.snapshot!['moves'], hasLength(1));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await store.updates.close();
+  });
+
   for (final shape in BoardShape.values) {
     for (var count = 2; count <= 4; count++) {
       for (final size in [const Size(390, 844), const Size(1366, 900)]) {

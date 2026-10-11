@@ -26,12 +26,14 @@ class MatchScreen extends ConsumerStatefulWidget {
   ConsumerState<MatchScreen> createState() => _MatchScreenState();
 }
 
-class _MatchScreenState extends ConsumerState<MatchScreen> {
+class _MatchScreenState extends ConsumerState<MatchScreen>
+    with WidgetsBindingObserver {
   final _selection = MoveSelection();
   late MatchController _controller;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = ref.read(matchProvider.notifier);
     if (widget.objective != null) {
       WidgetsBinding.instance.addPostFrameCallback((time) {
@@ -54,8 +56,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.suspend();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if ((state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused ||
+            state == AppLifecycleState.detached) &&
+        ref.read(matchProvider).room == null) {
+      _controller.suspend();
+    }
   }
 
   Future<void> _confirm() async {
@@ -419,6 +432,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         const Text('Match complete'),
         Text(
             'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${e.key.label} ${e.value}').join(' · ')}'),
+        if (widget.studyPanel == null &&
+            match.error != null &&
+            ref.read(matchProvider.notifier).canRetryRewards)
+          TextButton.icon(
+              onPressed: ref.read(matchProvider.notifier).retryRewards,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry reward update')),
         if (widget.studyPanel == null)
           TextButton(
               onPressed: () => Navigator.pop(context),

@@ -26,6 +26,26 @@ rooms must remain interpretable throughout that replacement.
   menu replacement and progression. AI remains host-driven in the new room model;
   handoff leases are not implemented at this checkpoint. No backend rules changed.
 
+Recovery/progression follow-up: the full post-facade suite passed 651 checks and
+found six legacy Hex comparisons relying on stone identity. `HexStone` now has
+value equality, and unchanged reserves retain their original objects; all six
+spread directions pass again. The 83 focused compatibility/recovery/clock/screen
+checks pass, including uncertain acknowledgements and explicit reward retry.
+Room join/recovery has a bounded timeout; clock-save errors from a previous
+session cannot contaminate a later match. Finished clocks cannot be restarted.
+Local backgrounding pauses and checkpoints play until explicit resume; online
+clocks retain server authority. Standard unassisted two-player Square AI wins
+again earn the selected difficulty's existing award. Variants earn general wins,
+with eligibility explained in setup; specialist unlocks and prior earned flags
+remain intact. Tactical qualification covers immediate wins/defenses on both
+shapes and two to four seats plus standard Hard/Expert fork fixtures; it does
+not establish a calibrated Elo or equivalence to the old search's strength.
+
+The live Firestore policy was read and backed up. The staged repository update
+only inserts `/matches`; all pre-existing collection policies match byte for
+byte after newline normalization. Production publication awaits the required
+action-time access-control approval; no new client deployment has occurred.
+
 ## Product contract
 
 Home has two primary play buttons: **Square** and **Hex**. Either opens the same
