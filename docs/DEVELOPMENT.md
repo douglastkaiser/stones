@@ -3,8 +3,10 @@
 The [unified play expansion plan](UNIFIED_PLAY_PLAN.md) records the architecture
 and execution evidence for one setup, seat-based engine, controls and room
 protocol for two to four players on Square or Hex. New play and learning now use
-`lib/game/`. Production publishing and the final release gate remain pending;
-check that plan before treating a committed checkpoint as a deployed release.
+`lib/game/`. Production `/matches` rules are published and passed six independent
+live API trials. Web deployment succeeded; startup cache verification is in
+progress. Android 403 is submitted to closed testing and awaits Google checks/review.
+Check the plan and [release record](releases/ANDROID_403.md) for actual rollout evidence.
 
 The current shared path is `MatchSetupScreen` → `MatchController` →
 `MatchRules`/`MoveSelection` → `MatchScreen`/`BoardView`. `BoardGeometry` supplies

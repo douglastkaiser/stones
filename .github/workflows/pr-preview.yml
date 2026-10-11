@@ -46,6 +46,10 @@ jobs:
 
       - name: Build web for PR preview
         run: flutter build web --release --base-href "/stones/pr/${{ github.event.pull_request.number }}/"
+      - name: Fingerprint web startup assets
+        run: |
+          python3 -m unittest scripts.test_prepare_web_release
+          python3 scripts/prepare_web_release.py
 
       - name: Ensure privacy.html is included
         run: |

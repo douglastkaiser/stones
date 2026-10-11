@@ -209,3 +209,8 @@ still needs publishing credentials and permissions. Future CI publishing can be 
 Google documents [service-account setup](https://developers.google.com/android-publisher/getting_started)
 and [release tracks](https://developers.google.com/android-publisher/tracks).
 No Play publishing credentials or permissions were created during this audit.
+
+Version 403 (unified two-to-four-seat Square/Hex) was subsequently built, accepted
+by Play Console and submitted to the same Alpha closed track. Publishing overview
+confirms Changes in review; quick checks precede review and automatic publication
+on approval. See [Android 403](releases/ANDROID_403.md) for artifacts and checks.

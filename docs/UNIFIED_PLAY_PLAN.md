@@ -13,7 +13,7 @@ rooms must remain interpretable throughout that replacement.
 Shared setup, rules, gestures, rendering, local/online controllers, AI, recovery,
 Court, clocks, progression attribution and learning are implemented on main.
 New play always takes the shared path; legacy wire lifecycle screens remain for
-pre-migration rooms. CI at 411cc4d passed 667 Flutter tests, strict analysis and
+pre-migration rooms. CI at 6788062 passed 668 Flutter tests, strict analysis and
 release web compilation. All 25 real-emulator authorization tests passed,
 including concurrent claims and competing confirmations. Earlier checkpoint
 paragraphs below are historical, not the current checklist.
@@ -23,16 +23,35 @@ opening lesson completed through four repeated-tap placements. This exposed
 stale “to play”/“waiting” labels after success. The follow-up places learning
 feedback and Retry/Done in the reserved controls area, says “Practice finished”,
 and keeps the board anchored. All 20 shared-screen checks and strict analysis
-pass after that fix; its new CI run must finish before publishing.
+pass after that fix; its full CI and signed Android build also passed.
 
-Production `/matches` publication is staged and awaits required action-time
-approval. Live API/browser multiplayer trials, web deployment and a closed-test
-Play update are not completed. A signed Android build of 6b4df4d is in progress,
-but predates the final learning-feedback change. Physical-device timing,
-large-board balance, per-account cloud progression and a secure rating service
-have no new qualification evidence. Existing local achievement/progress storage
-and earned unlocks are preserved; result attribution is checked by seat/UID.
-The committed manual live probe is prepared, not executed.
+Production `/matches` rules were approved and published on 2026-10-10. The
+exact payload matched the staged repository file; all pre-existing collection
+policies remain byte-for-byte unchanged after newline normalization. The six
+isolated live REST trials passed: Square/Hex at two, three and four seats,
+independent anonymous clients, seat themes/host board, server clocks, AI lease
+authority, rejected stranger/stale writes, cold reads and durable resignation.
+The first probe preceded rule activation and was denied; the confirmed published
+version passed. Four QA identities and six ended QA rooms remain from the
+successful probe; four identities from the denied first attempt also remain.
+
+Deploy Main was dispatched at 6788062 (run 38107392289). Signed Android version
+403 from the same commit passed release preflight, strict analysis, tests and APK
+signature verification (run 38105834167). Its AAB ZIP digest matched the GitHub
+artifact digest; the extracted bundle SHA-256 is
+`48b6bb96fa06b3d3bdd8aac2be47ad43a5bdf5c64c75c4cdadcbb70380698f3c`.
+Deploy Main and Pages publication succeeded. Play Alpha version 403 is submitted
+and confirmed under Changes in review; quick checks are running and approval will
+automatically publish to existing testers. See [the release record](releases/ANDROID_403.md).
+Hosted-browser verification exposed cached startup JavaScript from the previous
+release. CI/deploy/preview now fingerprint the entrypoint and bootstrap by content;
+three regression checks cover existing asset references, changed-release URLs and
+fail-closed handling of an unknown Flutter build layout. Hosted verification of
+this follow-up is in progress.
+Physical-device timing, large-board balance, per-account cloud progression and a
+secure rating service have no new qualification evidence. Existing local
+achievement/progress storage and earned unlocks are preserved; result attribution
+is checked by seat/UID. REST evidence is distinct from browser/device trials.
 
 ## Execution checkpoints
 

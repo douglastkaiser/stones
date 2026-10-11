@@ -42,6 +42,11 @@ jobs:
       - name: Build web
         run: flutter build web --release --base-href "/stones/"
 
+      - name: Fingerprint web startup assets
+        run: |
+          python3 -m unittest scripts.test_prepare_web_release
+          python3 scripts/prepare_web_release.py
+
       - name: Ensure privacy.html is included
         run: |
           if [ -f "web/privacy.html" ] && [ ! -f "build/web/privacy.html" ]; then
