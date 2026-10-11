@@ -10,6 +10,31 @@ void main() {
   for (final level in BotLevel.values) {
     for (final shape in BoardShape.values) {
       for (var count = 2; count <= 4; count++) {
+        test('$level $shape $count prevents the next seat’s immediate road',
+            () async {
+          final config = MatchConfig(
+              shape: shape,
+              size: shape == BoardShape.square ? 5 : 2,
+              seats: SeatId.values.take(count).map(SeatConfig.new).toList(),
+              starter: SeatId.values[count - 1]);
+          final initial = MatchState.initial(config);
+          final game = initial.copyWith(ply: count, board: {
+            if (shape == BoardShape.square)
+              for (final x in [0, 1, 3, 4])
+                Cell(x, 2): const [Stone(SeatId.ivory, PieceType.flat)]
+            else
+              for (final x in [-2, -1, 1, 2])
+                Cell(x, 0): const [Stone(SeatId.ivory, PieceType.flat)],
+          });
+          final move =
+              await MatchAI(level, yieldDuringSearch: false).choose(game);
+          final next = MatchRules.play(game, move!)!;
+          expect(next.result?.winner, isNot(SeatId.ivory));
+          expect(
+              MatchRules.legalMoves(next).any((reply) =>
+                  MatchRules.play(next, reply)!.result?.winner == SeatId.ivory),
+              isFalse);
+        });
         test(
             '$level $shape $count takes a road win regardless of seat identity',
             () async {

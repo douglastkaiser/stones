@@ -4,6 +4,7 @@ import '../models/scenario.dart';
 import 'match_config.dart';
 import 'match_state.dart';
 import 'match_study.dart';
+import 'multiplayer_studies.dart';
 
 const hexLearningProgressKey = 'hex_learning_completed_v1';
 const unifiedLearningProgressKey = 'unified_learning_completed_v1';
@@ -31,4 +32,5 @@ final matchStudies = <MatchStudy>[
           ],
           explanation:
               'Every seat has now given its successor one flat. Normal play uses your own pieces.'),
+  ...multiplayerStudies,
 ];

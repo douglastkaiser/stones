@@ -42,10 +42,26 @@ class MatchAI {
       if (roots.isEmpty) return best;
       best = roots.first.$1;
       if (roots.first.$2.result?.winner == game.current) return best;
+      // MaxN's positional score alone can overlook another seat's imminent
+      // victory. Before pruning, retain moves that actually prevent the next
+      // player from winning in one, including stack spreads rather than only
+      // empty-cell road gaps.
+      var candidates = roots;
+      if (!game.opening &&
+          await _immediateWin(game.copyWith(ply: game.ply + 1), budget)) {
+        final safe = <(MatchMove, MatchState, double)>[];
+        for (final root in roots) {
+          if (root.$2.finished || !await _immediateWin(root.$2, budget)) {
+            safe.add(root);
+            if (safe.length == 1) best = root.$1;
+          }
+        }
+        if (safe.isNotEmpty) candidates = safe;
+      }
       for (var iteration = 1; iteration <= depth; iteration++) {
         MatchMove? iterationMove;
         var score = double.negativeInfinity;
-        for (final (move, next, _) in roots.take(branching)) {
+        for (final (move, next, _) in candidates.take(branching)) {
           final values = await _search(next, iteration - 1, budget);
           final value = _utility(game, values, game.current);
           if (value > score) {
@@ -61,6 +77,18 @@ class MatchAI {
       return null;
     }
     return best;
+  }
+
+  Future<bool> _immediateWin(MatchState game, SearchBudget budget) async {
+    if (game.finished) return false;
+    for (final move in MatchRules.legalMoves(game)) {
+      final pause = budget.pauseIfNeeded();
+      if (pause != null) await pause;
+      if (MatchRules.play(game, move)!.result?.winner == game.current) {
+        return true;
+      }
+    }
+    return false;
   }
 
   double _utility(MatchState game, Map<SeatId, double> scores, SeatId seat) =>

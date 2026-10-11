@@ -13,7 +13,8 @@ import 'package:stones/puzzles/forcing_search.dart';
 import 'package:stones/puzzles/square_forcing_position.dart';
 
 void main() {
-  for (final study in matchStudies.where((s) => s.puzzle)) {
+  for (final study in matchStudies
+      .where((s) => s.puzzle && !s.id.startsWith('unified_v1_'))) {
     test('${study.id}: shared engine proves the certified winning move set',
         () {
       final certificate = puzzleCertificates[study.id]!;

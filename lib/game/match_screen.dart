@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/piece.dart';
 import '../providers/cosmetics_provider.dart';
+import '../providers/settings_provider.dart';
+import '../services/sound_manager.dart';
 import 'board_view.dart';
 import 'board_geometry.dart';
 import 'clock_label.dart';
@@ -17,8 +19,8 @@ import 'move_selection.dart';
 import 'seat_appearance.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
-  const MatchScreen({super.key, this.title, this.studyPanel});
-  final String? title;
+  const MatchScreen({super.key, this.title, this.studyPanel, this.objective});
+  final String? title, objective;
   final Widget? studyPanel;
   @override
   ConsumerState<MatchScreen> createState() => _MatchScreenState();
@@ -31,7 +33,24 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   void initState() {
     super.initState();
     _controller = ref.read(matchProvider.notifier);
+    if (widget.objective != null) {
+      WidgetsBinding.instance.addPostFrameCallback((time) {
+        if (mounted) _objective();
+      });
+    }
   }
+
+  void _objective() => showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+              title: Text(widget.title ?? 'Objective'),
+              scrollable: true,
+              content: Text(widget.objective!),
+              actions: [
+                FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Let’s play'))
+              ]));
 
   @override
   void dispose() {
@@ -107,6 +126,35 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   Widget build(BuildContext context) {
     final match = ref.watch(matchProvider);
     final game = match.game;
+    ref.listen(matchProvider, (previous, next) {
+      final before = previous?.game;
+      final after = next.game;
+      if (before == null ||
+          after == null ||
+          previous?.id != next.id ||
+          after.ply != before.ply + 1 ||
+          ref.read(appSettingsProvider).isSoundMuted) {
+        return;
+      }
+      final sound = ref.read(soundManagerProvider);
+      final flattened = before.board.keys.any((cell) =>
+          before.topAt(cell)?.type == PieceType.standing &&
+          after.stackAt(cell).any((p) => p.type == PieceType.flat) &&
+          after.topAt(cell)?.type == PieceType.capstone);
+      final placed = after.reserves.entries
+          .any((e) => e.value.total < before.reserves[e.key]!.total);
+      final feedback = after.finished
+          ? sound.playWin()
+          : flattened
+              ? sound.playWallFlatten()
+              : placed
+                  ? sound.playThemedPiecePlace(next.room?.boardTheme ??
+                      ref.read(currentBoardThemeProvider).theme)
+                  : sound.playThemedStackMove(
+                      next.room?.styles[before.current] ??
+                          ref.read(currentPieceStyleProvider).style);
+      unawaited(feedback.catchError((Object _) {}));
+    });
     ref.listen(matchProvider.select((s) => s.game?.ply), (previous, next) {
       if (previous != next && mounted) setState(_selection.clear);
     });
@@ -197,6 +245,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                   tooltip: 'How to play',
                   onPressed: _help,
                   icon: const Icon(Icons.help_outline)),
+              if (widget.objective != null)
+                IconButton(
+                    tooltip: 'Lesson objective',
+                    onPressed: _objective,
+                    icon: const Icon(Icons.menu_book_outlined)),
               if (widget.studyPanel == null &&
                   !game.finished &&
                   match.ready &&

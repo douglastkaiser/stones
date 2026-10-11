@@ -10,13 +10,11 @@ class MoveSelection {
   int carry = 1;
   PieceType type = PieceType.flat;
   MatchMove? planned;
-  List<MatchMove> choices = [];
   int pendingDrop = 1;
 
   void clear() {
     source = null;
     planned = null;
-    choices = [];
     pendingDrop = 1;
   }
 
@@ -27,10 +25,6 @@ class MoveSelection {
     }
     return cell;
   }
-
-  List<MatchMove> spreads(MatchState game) => source == null
-      ? []
-      : MatchRules.spreads(game, source!, pickup: carry).toList();
 
   Set<Cell> destinations(MatchState game) {
     if (source == null) return {};
@@ -50,7 +44,6 @@ class MoveSelection {
   void setCarry(int value) {
     carry = value;
     planned = null;
-    choices = [];
     pendingDrop = 1;
   }
 
@@ -72,7 +65,6 @@ class MoveSelection {
     if (move?.direction != null) {
       if (cell == source) {
         planned = null;
-        choices = [];
       } else if (cell == end(move!).step(move.direction!)) {
         continueMove(game);
       }
@@ -95,10 +87,11 @@ class MoveSelection {
         }
       }
     }
-    final options = adjacentOptions ??
-        spreads(game).where((move) => end(move) == cell).toList();
+    // A distant tap has a predictable preview: one bottom stone per crossed
+    // cell, with the remainder at the destination. Checking at most the carry
+    // limit avoids enumerating exponentially many distributions in a gesture.
+    final options = adjacentOptions ?? _distantPreview(game, cell);
     if (options.isNotEmpty) {
-      choices = options;
       choose(options.first);
     } else if (!game.opening && game.topAt(cell)?.seat == game.current) {
       clear();
@@ -113,6 +106,22 @@ class MoveSelection {
       }
     }
     return false;
+  }
+
+  List<MatchMove> _distantPreview(MatchState game, Cell destination) {
+    if (source == null) return [];
+    for (final direction in game.geometry.directions) {
+      var cell = source!;
+      for (var distance = 1; distance <= carry; distance++) {
+        cell = cell.step(direction);
+        if (!game.geometry.contains(cell)) break;
+        if (cell != destination) continue;
+        final move = MatchMove.spread(source!, direction,
+            [for (var i = 1; i < distance; i++) 1, carry - distance + 1]);
+        return MatchRules.apply(game, move) == null ? [] : [move];
+      }
+    }
+    return [];
   }
 
   void swipe(MatchState game, Cell cell, Step direction) {
@@ -132,7 +141,6 @@ class MoveSelection {
     clear();
     source = cell;
     carry = pickup;
-    choices = [move];
     choose(move);
   }
 
@@ -150,7 +158,6 @@ class MoveSelection {
   void continueMove(MatchState game) {
     final next = continuation(game);
     if (next != null) {
-      choices = [next];
       choose(next);
     }
   }
@@ -160,7 +167,6 @@ class MoveSelection {
     if (move?.direction == null) return;
     if (move!.drops.length == 1) {
       planned = null;
-      choices = [];
       return;
     }
     final drops = move.drops.toList();
@@ -168,7 +174,6 @@ class MoveSelection {
     drops[drops.length - 1] += last;
     final previous = MatchMove.spread(move.from, move.direction!, drops);
     if (MatchRules.apply(game, previous) != null) {
-      choices = [previous];
       choose(previous);
     }
   }

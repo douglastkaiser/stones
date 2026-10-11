@@ -570,6 +570,7 @@ class MatchController extends StateNotifier<MatchSession> {
       if (mounted && epoch == _epoch) {
         state = state.copyWith(
             busy: false,
+            connected: state.room == null,
             paused: state.room == null,
             error: 'Clock expiry awaits confirmation: $error');
       }

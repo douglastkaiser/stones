@@ -56,4 +56,36 @@ void main() {
     selection.swipe(game, const Cell(1, 1), Step.northEast);
     expect(selection.planned, isNull);
   });
+  for (final shape in BoardShape.values) {
+    test(
+        '$shape distant taps preview a tall stack without distribution enumeration',
+        () {
+      final config = MatchConfig(
+          shape: shape,
+          size: shape == BoardShape.square ? 8 : 4,
+          seats: const [SeatConfig(SeatId.ivory), SeatConfig(SeatId.charcoal)]);
+      final initial = MatchState.initial(config);
+      final from =
+          shape == BoardShape.square ? const Cell(0, 0) : const Cell(-4, 0);
+      final game = initial.copyWith(ply: 2, board: {
+        from: List.generate(
+            30,
+            (i) => Stone(
+                i.isEven ? SeatId.charcoal : SeatId.ivory, PieceType.flat))
+      });
+      final selection = MoveSelection();
+      selection.tap(game, from);
+      final target =
+          shape == BoardShape.square ? const Cell(7, 0) : const Cell(4, 0);
+      selection.tap(game, target);
+      expect(MoveSelection.end(selection.planned!), target);
+      expect(
+          selection.planned!.drops,
+          shape == BoardShape.square
+              ? [1, 1, 1, 1, 1, 1, 2]
+              : [1, 1, 1, 1, 1, 1, 1, 2]);
+      expect(MatchRules.apply(game, selection.planned!), isNotNull);
+      expect(game.stackAt(from), hasLength(30));
+    });
+  }
 }

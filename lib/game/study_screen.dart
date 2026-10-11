@@ -16,8 +16,10 @@ class StudyScreen extends StatelessWidget {
             matchProvider.overrideWith(
                 (ref) => StudyController(study, onSolved: onSolved))
           ],
-          child:
-              MatchScreen(title: study.title, studyPanel: _StudyPanel(study)));
+          child: MatchScreen(
+              title: study.title,
+              objective: study.goal,
+              studyPanel: _StudyPanel(study)));
 }
 
 class _StudyPanel extends ConsumerWidget {

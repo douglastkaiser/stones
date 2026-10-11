@@ -311,6 +311,21 @@ durable across restart. The 51 focused controller/clock/screen checks and strict
 analysis pass. Broader search-strength, performance, compatibility cleanup and
 production release gates remain open.
 
+Learning/interaction checkpoint: the shared AI now screens actual legal immediate
+wins by the next seat before pruning root moves, avoiding a MaxN positional move
+that permits an immediate loss. All 50 road-win/block/fork checks pass. Eight new
+three/four-seat cap-delivery studies span Square 5/6 and Hex radius 2/3; exhaustive
+one-move proofs establish one winning spread per position, verify piece supplies,
+and reject incorrect shortcuts in the learning controller. They have separate
+versioned progress IDs. Existing 17 certificates still prove unchanged. Learning
+opens with the objective visible and offers an objective toolbar action. Setup
+uses saved board/clock preferences and asks before replacing an unfinished local
+save. Shared gameplay restores themed move/flatten/result sounds. Distant taps
+use a bounded straight-path preview rather than enumerating all distributions;
+interactive drop revision still provides other distributions. Tall-stack planner,
+settings/replacement, responsive screen and strict analysis checks pass. No
+production deployment has occurred yet.
+
 - Can someone start the requested mix without knowing an internal mode name?
 - Is board shape the main choice, with clear size and total player count?
 - Can they tell which humans share a device and which need an invitation?
