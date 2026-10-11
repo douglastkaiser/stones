@@ -5,13 +5,23 @@ import 'match_config.dart';
 import 'match_room.dart';
 import 'match_state.dart';
 
+/// Cached and pending snapshots report connectivity without advancing play.
+class MatchRoomUpdate {
+  const MatchRoomUpdate(this.room,
+      {this.confirmed = true, this.connected = true});
+  final MatchRoom? room;
+  final bool confirmed;
+  final bool connected;
+}
+
 abstract class MatchRoomStore {
   Future<MatchRoom> create(String uid, MatchConfig config);
   Future<MatchRoom> join(String code, String uid);
   Future<MatchRoom> read(String code);
-  Stream<MatchRoom> watch(String code);
+  Stream<MatchRoomUpdate> watch(String code);
   Future<void> submit(String code, String uid, int expectedPly, MatchMove move);
   Future<void> resign(String code, String uid, SeatId seat);
+  Future<MatchRoom> claimRunner(String code, String uid);
 }
 
 class FirestoreMatchRoomStore implements MatchRoomStore {
@@ -22,6 +32,13 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
   final BoardTheme theme;
   DocumentReference<Map<String, dynamic>> _room(String code) =>
       firestore.collection('matches').doc(code);
+  MatchRoom _decode(Map<String, dynamic> data) => MatchRoom.fromMap({
+        ...data,
+        'aiLeaseAt': (data['aiLeaseAt'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+      });
   @override
   Future<MatchRoom> create(String uid, MatchConfig config) async {
     final random = Random.secure();
@@ -60,7 +77,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room not found');
-        final room = MatchRoom.fromMap(snapshot.data()!);
+        final room = _decode(snapshot.data()!);
         room.replay();
         final joined = room.join(uid, style);
         if (!identical(joined, room)) {
@@ -76,18 +93,19 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
     final snapshot =
         await _room(code).get(const GetOptions(source: Source.server));
     if (!snapshot.exists) throw StateError('Room not found');
-    return MatchRoom.fromMap(snapshot.data()!);
+    return _decode(snapshot.data()!);
   }
 
   @override
-  Stream<MatchRoom> watch(String code) => _room(code)
-          .snapshots(includeMetadataChanges: true)
-          .where((snapshot) =>
-              !snapshot.metadata.isFromCache &&
-              !snapshot.metadata.hasPendingWrites)
-          .map((snapshot) {
+  Stream<MatchRoomUpdate> watch(String code) =>
+      _room(code).snapshots(includeMetadataChanges: true).map((snapshot) {
+        if (snapshot.metadata.isFromCache ||
+            snapshot.metadata.hasPendingWrites) {
+          return MatchRoomUpdate(null,
+              confirmed: false, connected: !snapshot.metadata.isFromCache);
+        }
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        return MatchRoom.fromMap(snapshot.data()!);
+        return MatchRoomUpdate(_decode(snapshot.data()!));
       });
   @override
   Future<void> submit(
@@ -97,7 +115,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
         final updated =
-            MatchRoom.fromMap(snapshot.data()!).append(uid, expectedPly, move);
+            _decode(snapshot.data()!).append(uid, expectedPly, move);
         tx.update(ref, {'moves': updated.moves});
       });
   @override
@@ -106,7 +124,20 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        final updated = MatchRoom.fromMap(snapshot.data()!).resign(uid, seat);
+        final updated = _decode(snapshot.data()!).resign(uid, seat);
         tx.update(ref, {'resigned': updated.resigned!.name});
       });
+  @override
+  Future<MatchRoom> claimRunner(String code, String uid) async {
+    await firestore.runTransaction((tx) async {
+      final ref = _room(code);
+      final snapshot = await tx.get(ref);
+      if (!snapshot.exists) throw StateError('Room no longer exists');
+      final room = _decode(snapshot.data()!);
+      room.claimRunner(uid, DateTime.now());
+      tx.update(
+          ref, {'aiRunner': uid, 'aiLeaseAt': FieldValue.serverTimestamp()});
+    });
+    return read(code);
+  }
 }

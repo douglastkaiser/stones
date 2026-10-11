@@ -32,6 +32,7 @@ async function request(url, method = 'GET', body, uid) {
   return raw ? JSON.parse(raw) : {};
 }
 function encode(value) {
+  if (value instanceof Date) return {timestampValue: value.toISOString()};
   if (value === null) return {nullValue: null};
   if (typeof value === 'string') return {stringValue: value};
   if (typeof value === 'number') return {integerValue: String(value)};
@@ -39,6 +40,7 @@ function encode(value) {
   return {mapValue: {fields: Object.fromEntries(Object.entries(value).map(([key, item]) => [key, encode(item)]))}};
 }
 function decode(value) {
+  if ('timestampValue' in value) return new Date(value.timestampValue);
   if ('nullValue' in value) return null;
   if ('stringValue' in value) return value.stringValue;
   if ('integerValue' in value) return Number(value.integerValue);
@@ -68,6 +70,17 @@ function merge(original, changes) {
 export async function updateDoc(ref, changes) {
   const snapshot = await getDoc(ref);
   return setDoc(ref, merge(snapshot.data(), changes));
+}
+export async function updateWithServerTime(ref, changes, fieldPath) {
+  const snapshot = await getDoc(ref);
+  const value = merge(snapshot.data(), changes);
+  delete value[fieldPath];
+  return request(`${documents}:commit`, 'POST', {writes: [{
+    update: {name: `projects/${project}/databases/(default)/documents/${ref.path}`,
+      fields: fields(value)},
+    updateTransforms: [{fieldPath, setToServerValue: 'REQUEST_TIME'}],
+    currentDocument: {updateTime: snapshot.updateTime},
+  }]}, ref.uid);
 }
 export async function runTransaction(uid, callback) {
   for (let attempt = 0; attempt < 10; attempt++) {

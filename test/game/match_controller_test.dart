@@ -43,7 +43,15 @@ class MemoryMatchRoomStore implements MatchRoomStore {
   @override
   Future<MatchRoom> read(String code) async => room!;
   @override
-  Stream<MatchRoom> watch(String code) => updates.stream;
+  Future<MatchRoom> claimRunner(String code, String uid) async {
+    room = room!.claimRunner(uid, DateTime.now());
+    updates.add(room!);
+    return room!;
+  }
+
+  @override
+  Stream<MatchRoomUpdate> watch(String code) =>
+      updates.stream.map(MatchRoomUpdate.new);
   @override
   Future<void> submit(
       String code, String uid, int expectedPly, MatchMove move) async {
@@ -70,7 +78,8 @@ MatchController controller(
         botDelay: Duration.zero);
 
 void main() {
-  test('failed saves neither expose an unsaved move nor strand setup', () async {
+  test('failed saves neither expose an unsaved move nor strand setup',
+      () async {
     final storage = MemoryMatchStorage()..failWrites = true;
     final store = MemoryMatchRoomStore();
     final host = controller(storage, store);
@@ -176,6 +185,7 @@ void main() {
     ]);
     await host.start(config);
     await store.join('UABCDEF', 'guest');
+    await store.claimRunner('UABCDEF', 'host');
     await host.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
     await Future<void>.delayed(const Duration(milliseconds: 10));
     expect(searches, 1);

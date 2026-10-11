@@ -14,6 +14,28 @@ MatchRoom room(MatchConfig config) =>
     });
 
 void main() {
+  test('AI lease expires and a guest can continue without the host', () {
+    final config = MatchConfig.defaults(BoardShape.hex).copyWith(seats: const [
+      SeatConfig(SeatId.ivory, control: SeatControl.ai),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman),
+      SeatConfig(SeatId.copper)
+    ]);
+    final now = DateTime.utc(2026, 10, 10);
+    final leased = room(config)
+        .join('guest', PieceStyle.standard)
+        .claimRunner('host', now);
+    expect(() => leased.claimRunner('guest', now), throwsStateError);
+    final move = MatchMove.place(const Cell(0, 0), PieceType.flat);
+    expect(() => leased.append('guest', 0, move, now: now), throwsStateError);
+    final expired = now.add(MatchRoom.leaseDuration);
+    expect(
+        () => leased.append('host', 0, move, now: expired), throwsStateError);
+    final taken = leased.claimRunner('guest', expired);
+    final continued = taken.append('guest', 0, move, now: expired);
+    expect(continued.replay().ply, 1);
+    expect(() => continued.claimRunner('stranger', expired), throwsStateError);
+    expect(continued.replayAfter(leased, leased.replay()).ply, 1);
+  });
   test(
       'every online mixture on both shapes joins, exchanges and cold/incremental replays',
       () {
@@ -39,6 +61,9 @@ void main() {
                 same(current));
           }
           expect(current.ready, isTrue);
+          if (config.seats.any((s) => s.control == SeatControl.ai)) {
+            current = current.claimRunner('host', DateTime.now());
+          }
           expect(
               current.controlledBy('host').length,
               config.seats

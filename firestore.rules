@@ -386,10 +386,12 @@ service cloud.firestore {
         let seat = currentSeat(before);
         let n = before.moves.size();
         return before.resigned == null && ready(before) &&
-          (before.owners[seat.id] == request.auth.uid || (seat.control == 'ai' && before.host == request.auth.uid)) &&
+          (before.owners[seat.id] == request.auth.uid ||
+           (seat.control == 'ai' && before.aiRunner == request.auth.uid &&
+            before.aiLeaseAt is timestamp && request.time < before.aiLeaseAt + duration.value(30, 's'))) &&
           after.diff(before).affectedKeys().hasOnly(['moves']) &&
           after.moves is list && after.moves.size() == n + 1 &&
-          after.moves[0:n] == before.moves && moveShape(after.moves[n], before);
+          after.moves == before.moves.concat([after.moves[n]]) && moveShape(after.moves[n], before);
       }
       function resignSeat() {
         let before = resource.data;
@@ -398,19 +400,37 @@ service cloud.firestore {
           before.owners[after.resigned] == request.auth.uid &&
           after.diff(before).affectedKeys().hasOnly(['resigned']);
       }
+      function runnerLease() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return before.resigned == null && ready(before) &&
+          (before.host == request.auth.uid || request.auth.uid in before.owners.values()) &&
+          (before.config.seats[0].control == 'ai' || before.config.seats[1].control == 'ai' ||
+           (before.config.seats.size() > 2 && before.config.seats[2].control == 'ai') ||
+           (before.config.seats.size() > 3 && before.config.seats[3].control == 'ai')) &&
+          (before.aiRunner == request.auth.uid || before.aiLeaseAt == null ||
+           request.time >= before.aiLeaseAt + duration.value(30, 's')) &&
+          after.diff(before).affectedKeys().hasOnly(['aiRunner', 'aiLeaseAt']) &&
+          after.aiRunner == request.auth.uid && after.aiLeaseAt == request.time;
+      }
       allow get: if isAuthenticated();
       allow list, delete: if false;
       allow create: if isAuthenticated() && code.matches('^U[A-Z]{6}$') &&
-        request.resource.data.keys().hasAll(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned']) &&
-        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned']) &&
+        request.resource.data.keys().hasAll(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt']) &&
+        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt']) &&
         request.resource.data.version == 1 && request.resource.data.code == code &&
         request.resource.data.host == request.auth.uid && configShape(request.resource.data.config) &&
         validSeats(request.resource.data, true) && validBoardTheme(request.resource.data.boardTheme) &&
-        request.resource.data.moves is list && request.resource.data.moves.size() == 0 && request.resource.data.resigned == null;
+        request.resource.data.moves is list && request.resource.data.moves.size() == 0 && request.resource.data.resigned == null &&
+        request.resource.data.aiRunner == null && request.resource.data.aiLeaseAt == null;
       allow update: if isAuthenticated() &&
-        (vacantJoin(0) || vacantJoin(1) ||
-         (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
-         (resource.data.config.seats.size() > 3 && vacantJoin(3)) || appendMove() || resignSeat());
+        ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles']) &&
+          (vacantJoin(0) || vacantJoin(1) ||
+           (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
+           (resource.data.config.seats.size() > 3 && vacantJoin(3)))) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves']) && appendMove()) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resigned']) && resignSeat()) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiRunner', 'aiLeaseAt']) && runnerLease()));
     }
 
     // Preserve the existing production profile and achievement policies.

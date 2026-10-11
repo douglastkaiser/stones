@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {before, after, beforeEach, test} from 'node:test';
 import {initializeHexEmulator, assertFails, assertSucceeds,
-  doc, setDoc, updateDoc, getDoc, collection, getDocs} from './emulator_rest.mjs';
+  doc, setDoc, updateDoc, getDoc, collection, getDocs, updateWithServerTime} from './emulator_rest.mjs';
 
 let environment;
 const ids = ['ivory', 'charcoal', 'copper', 'jade'];
@@ -13,7 +13,7 @@ const base = (shape = 'square', controls = ['localHuman', 'onlineHuman'], starte
     starter, profile: shape === 'square' && controls.length === 2 ? 'standardTak' : 'sharedRoads'},
   owners: Object.fromEntries(controls.map((control, i) => [ids[i], control === 'localHuman' ? 'host' : null])),
   styles: Object.fromEntries(controls.map((_, i) => [ids[i], 'standard'])),
-  boardTheme: 'morocco', moves: [], resigned: null,
+  boardTheme: 'morocco', moves: [], resigned: null, aiRunner: null, aiLeaseAt: null,
 });
 const placement = (seat, x = 0, y = 0) => ({seat, x, y, type: 'flat', direction: null, drops: []});
 before(async () => {
@@ -23,6 +23,23 @@ before(async () => {
 });
 beforeEach(async () => environment.clearFirestore());
 after(async () => environment?.cleanup());
+
+test('AI runner leases are exclusive, server-timed, renewable and recoverable by a guest', async () => {
+  const data = base('hex', ['ai', 'onlineHuman', 'localHuman']);
+  await assertSucceeds(setDoc(ref('host'), data));
+  await assertSucceeds(updateDoc(ref('guest'), {'owners.charcoal': 'guest'}));
+  await assertFails(updateWithServerTime(ref('stranger'), {aiRunner: 'stranger'}, 'aiLeaseAt'));
+  await assertFails(updateDoc(ref('host'), {aiRunner: 'host', aiLeaseAt: new Date(Date.now() + 600000)}));
+  await assertSucceeds(updateWithServerTime(ref('host'), {aiRunner: 'host'}, 'aiLeaseAt'));
+  await assertFails(updateWithServerTime(ref('guest'), {aiRunner: 'guest'}, 'aiLeaseAt'));
+  await assertFails(updateDoc(ref('guest'), {moves: [placement('ivory')]}));
+  await assertSucceeds(updateWithServerTime(ref('host'), {aiRunner: 'host'}, 'aiLeaseAt'));
+  await new Promise(resolve => setTimeout(resolve, 31000));
+  await assertFails(updateDoc(ref('host'), {moves: [placement('ivory')]}));
+  await assertSucceeds(updateWithServerTime(ref('guest'), {aiRunner: 'guest'}, 'aiLeaseAt'));
+  await assertFails(updateDoc(ref('host'), {moves: [placement('ivory')]}));
+  await assertSucceeds(updateDoc(ref('guest'), {moves: [placement('ivory')]}));
+});
 
 test('all 178 online seat combinations create, fill independently and authorize the whole exchange', async () => {
   let index = 0;
@@ -42,6 +59,9 @@ test('all 178 online seat combinations create, fill independently and authorize 
           await assertSucceeds(updateDoc(ref(uid, roomCode), {[`owners.${ids[i]}`]: uid, [`styles.${ids[i]}`]: 'kyoto'}));
           data.owners[ids[i]] = uid;
           data.styles[ids[i]] = 'kyoto';
+        }
+        if (controls.includes('ai')) {
+          await assertSucceeds(updateWithServerTime(ref('host', roomCode), {aiRunner: 'host'}, 'aiLeaseAt'));
         }
         for (let ply = 0; ply < count; ply++) {
           const seat = ids[(count - 1 + ply) % count];

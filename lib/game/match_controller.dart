@@ -69,13 +69,14 @@ class MatchController extends StateNotifier<MatchSession> {
   final Future<void> Function(MatchRoom, String)? remember;
   final Duration botDelay;
   final Future<MatchMove?> Function(MatchState, BotLevel) search;
-  StreamSubscription<MatchRoom>? _subscription;
+  StreamSubscription<MatchRoomUpdate>? _subscription;
   Timer? _timer;
   int _epoch = 0;
   int _searchToken = 0;
   int? _searchingPly;
   int? _searchingToken;
   int? _awaitingPly;
+  bool _leaseBusy = false;
   List<Map<String, dynamic>> _localMoves = [];
 
   void leave() {
@@ -85,6 +86,7 @@ class MatchController extends StateNotifier<MatchSession> {
     unawaited(_subscription?.cancel());
     _subscription = null;
     _awaitingPly = null;
+    _leaseBusy = false;
     if (mounted) state = const MatchSession();
   }
 
@@ -188,10 +190,18 @@ class MatchController extends StateNotifier<MatchSession> {
 
   void _subscribe(String code) {
     final epoch = _epoch;
-    _subscription = store().watch(code).listen((room) {
+    _subscription = store().watch(code).listen((update) {
       if (!mounted || epoch != _epoch) return;
+      if (!update.confirmed) {
+        if (!update.connected) {
+          _timer?.cancel();
+          _searchToken++;
+        }
+        state = state.copyWith(connected: update.connected);
+        return;
+      }
       try {
-        _accept(room);
+        _accept(update.room!);
       } catch (error) {
         state = state.copyWith(connected: false, busy: false, error: '$error');
       }
@@ -232,7 +242,9 @@ class MatchController extends StateNotifier<MatchSession> {
     final ai = game.config.seat(game.current).control == SeatControl.ai;
     if (bot != ai ||
         (!bot && !state.canPlay) ||
-        (bot && state.room != null && state.room!.host != state.uid)) {
+        (bot &&
+            state.room != null &&
+            !state.room!.runsAI(state.uid!, DateTime.now()))) {
       return false;
     }
     final result = MatchRules.play(game, move);
@@ -244,7 +256,9 @@ class MatchController extends StateNotifier<MatchSession> {
       if (room == null) {
         final records = [..._localMoves, move.toMap(game.current)];
         await storage.write({
-          'id': state.id, 'config': game.config.toMap(), 'moves': records,
+          'id': state.id,
+          'config': game.config.toMap(),
+          'moves': records,
         });
         if (!mounted || epoch != _epoch) return true;
         _localMoves = records;
@@ -296,10 +310,59 @@ class MatchController extends StateNotifier<MatchSession> {
       !state.busy &&
       !state.game!.finished &&
       state.game!.config.seat(state.game!.current).control == SeatControl.ai &&
-      (state.room == null || state.room!.host == state.uid);
+      (state.room == null || state.room!.runsAI(state.uid!, DateTime.now()));
 
   void _schedule() {
     _timer?.cancel();
+    if (_leaseBusy) return;
+    final room = state.room;
+    if (room != null &&
+        state.ready &&
+        state.connected &&
+        !state.paused &&
+        !state.busy &&
+        !state.game!.finished &&
+        state.game!.config.seat(state.game!.current).control ==
+            SeatControl.ai &&
+        (room.aiRunner != state.uid ||
+            room.aiLeaseAt == null ||
+            DateTime.now().isAfter(room.aiLeaseAt!
+                .add(MatchRoom.leaseDuration - const Duration(seconds: 5))))) {
+      final epoch = _epoch;
+      final token = ++_searchToken;
+      _timer = Timer(const Duration(seconds: 1), () async {
+        if (!mounted || epoch != _epoch || token != _searchToken) return;
+        if (room.runnerActive(DateTime.now()) && room.aiRunner != state.uid) {
+          _schedule();
+          return;
+        }
+        _leaseBusy = true;
+        try {
+          final claimed = await store().claimRunner(room.code, state.uid!);
+          if (mounted && epoch == _epoch && token == _searchToken)
+            _accept(claimed);
+        } catch (error) {
+          // A participant may have won the transaction. Re-read its lease.
+          try {
+            final latest = await store().read(room.code);
+            if (mounted && epoch == _epoch && token == _searchToken)
+              _accept(latest);
+          } catch (readError) {
+            if (mounted && epoch == _epoch) {
+              state = state.copyWith(
+                  connected: false,
+                  error: 'Reconnect to continue AI: $readError');
+            }
+          }
+        } finally {
+          if (mounted && epoch == _epoch) {
+            _leaseBusy = false;
+            _schedule();
+          }
+        }
+      });
+      return;
+    }
     if (!_botTurn) return;
     final epoch = _epoch;
     final token = ++_searchToken;

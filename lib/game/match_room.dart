@@ -14,6 +14,8 @@ class MatchRoom {
     this.boardTheme = BoardTheme.classicWood,
     List<Map<String, dynamic>> moves = const [],
     this.resigned,
+    this.aiRunner,
+    this.aiLeaseAt,
   })  : owners = Map.unmodifiable(owners),
         styles = Map.unmodifiable(
             styles ?? {for (final id in config.ids) id: PieceStyle.standard}),
@@ -50,6 +52,12 @@ class MatchRoom {
       throw const FormatException(
           'Online identities must occupy distinct seats');
     }
+    if ((aiRunner == null) != (aiLeaseAt == null) ||
+        (aiRunner != null &&
+            aiRunner != host &&
+            !owners.values.contains(aiRunner))) {
+      throw const FormatException('Invalid AI runner lease');
+    }
   }
 
   final String code;
@@ -60,16 +68,44 @@ class MatchRoom {
   final BoardTheme boardTheme;
   final List<Map<String, dynamic>> moves;
   final SeatId? resigned;
+  final String? aiRunner;
+  final DateTime? aiLeaseAt;
+  static const leaseDuration = Duration(seconds: 30);
+  bool runnerActive(DateTime now) =>
+      aiLeaseAt != null && now.isBefore(aiLeaseAt!.add(leaseDuration));
+  bool runsAI(String uid, DateTime now) => aiRunner == uid && runnerActive(now);
+  MatchRoom claimRunner(String uid, DateTime now) {
+    if (!ready ||
+        replay().finished ||
+        !config.seats.any((s) => s.control == SeatControl.ai) ||
+        (uid != host && !owners.values.contains(uid)) ||
+        (runnerActive(now) && aiRunner != uid)) {
+      throw StateError('AI lease is unavailable');
+    }
+    return MatchRoom(
+        code: code,
+        host: host,
+        config: config,
+        owners: owners,
+        styles: styles,
+        boardTheme: boardTheme,
+        moves: moves,
+        resigned: resigned,
+        aiRunner: uid,
+        aiLeaseAt: now);
+  }
+
   bool get ready => config.seats
       .every((s) => s.control == SeatControl.ai || owners[s.id] != null);
   Set<SeatId> controlledBy(String uid) =>
       config.ids.where((id) => owners[id] == uid).toSet();
-  bool canMove(String uid, MatchState game) =>
+  bool canMove(String uid, MatchState game, {DateTime? now}) =>
       ready &&
       resigned == null &&
       !game.finished &&
       (owners[game.current] == uid ||
-          (config.seat(game.current).control == SeatControl.ai && host == uid));
+          (config.seat(game.current).control == SeatControl.ai &&
+              runsAI(uid, now ?? DateTime.now())));
 
   MatchState replay() {
     var game = MatchState.initial(config);
@@ -147,13 +183,16 @@ class MatchRoom {
         owners: {...owners, seat.id: uid},
         styles: {...styles, seat.id: style},
         boardTheme: boardTheme,
-        moves: moves);
+        moves: moves,
+        aiRunner: aiRunner,
+        aiLeaseAt: aiLeaseAt);
   }
 
-  MatchRoom append(String uid, int expectedPly, MatchMove move) {
+  MatchRoom append(String uid, int expectedPly, MatchMove move,
+      {DateTime? now}) {
     final game = replay();
     if (game.ply != expectedPly ||
-        !canMove(uid, game) ||
+        !canMove(uid, game, now: now) ||
         MatchRules.play(game, move) == null) {
       throw StateError('Stale, unauthorized or illegal move');
     }
@@ -164,7 +203,9 @@ class MatchRoom {
         owners: owners,
         styles: styles,
         boardTheme: boardTheme,
-        moves: [...moves, move.toMap(game.current)]);
+        moves: [...moves, move.toMap(game.current)],
+        aiRunner: aiRunner,
+        aiLeaseAt: aiLeaseAt);
   }
 
   MatchRoom resign(String uid, SeatId seat) {
@@ -179,7 +220,9 @@ class MatchRoom {
         styles: styles,
         boardTheme: boardTheme,
         moves: moves,
-        resigned: seat);
+        resigned: seat,
+        aiRunner: aiRunner,
+        aiLeaseAt: aiLeaseAt);
   }
 
   Map<String, dynamic> toMap() => {
@@ -196,6 +239,8 @@ class MatchRoom {
         'boardTheme': boardTheme.name,
         'moves': moves,
         'resigned': resigned?.name,
+        'aiRunner': aiRunner,
+        'aiLeaseAt': aiLeaseAt?.toUtc().toIso8601String(),
       };
 
   factory MatchRoom.fromMap(Map<String, dynamic> map) {
@@ -220,7 +265,11 @@ class MatchRoom {
             .toList(),
         resigned: map['resigned'] == null
             ? null
-            : SeatId.values.byName(map['resigned'] as String));
+            : SeatId.values.byName(map['resigned'] as String),
+        aiRunner: map['aiRunner'] as String?,
+        aiLeaseAt: map['aiLeaseAt'] == null
+            ? null
+            : DateTime.parse(map['aiLeaseAt'] as String));
   }
 
   static bool _equal(Object? a, Object? b) {
