@@ -117,6 +117,37 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     tooltip: match.paused ? 'Resume AI' : 'Pause AI',
                     onPressed: () => _controller.pause(!match.paused),
                     icon: Icon(match.paused ? Icons.play_arrow : Icons.pause)),
+              if (game.config.court) ...[
+                IconButton(
+                    tooltip: 'Explain a suggested move',
+                    onPressed: !match.canPlay
+                        ? null
+                        : () async {
+                            final move = await _controller.hint();
+                            if (move != null && mounted) {
+                              setState(() {
+                                _selection.clear();
+                                _selection.planned = move;
+                                if (move.direction != null) {
+                                  _selection.source = move.from;
+                                  _selection.carry = move.carry;
+                                  _selection.pendingDrop = move.drops.last;
+                                }
+                              });
+                            }
+                          },
+                    icon: const Icon(Icons.lightbulb_outline)),
+                IconButton(
+                    tooltip: 'Take back your last move and AI replies',
+                    onPressed: match.busy
+                        ? null
+                        : () async {
+                            if (await _controller.takeBack() && mounted) {
+                              setState(_selection.clear);
+                            }
+                          },
+                    icon: const Icon(Icons.undo)),
+              ],
               IconButton(
                   tooltip: 'How to play',
                   onPressed: _help,
@@ -234,6 +265,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     child: Text(match.error!,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.error))),
+              if (match.explanation != null)
+                Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(match.explanation!)),
             ]),
           )));
         }));

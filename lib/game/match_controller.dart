@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'match_ai.dart';
+import 'match_coaching.dart';
 import 'match_config.dart';
 import 'match_room.dart';
 import 'match_room_store.dart';
@@ -18,6 +19,7 @@ class MatchSession {
       this.busy = false,
       this.connected = true,
       this.paused = false,
+      this.explanation,
       this.error});
   final MatchState? game;
   final MatchRoom? room;
@@ -27,6 +29,7 @@ class MatchSession {
   final bool connected;
   final bool paused;
   final String? error;
+  final String? explanation;
   bool get ready => game != null && (room?.ready ?? true);
   bool get canPlay =>
       ready &&
@@ -41,6 +44,7 @@ class MatchSession {
           bool? busy,
           bool? connected,
           bool? paused,
+          String? explanation,
           String? error}) =>
       MatchSession(
           game: game ?? this.game,
@@ -50,6 +54,7 @@ class MatchSession {
           busy: busy ?? this.busy,
           connected: connected ?? this.connected,
           paused: paused ?? this.paused,
+          explanation: explanation ?? this.explanation,
           error: error);
 }
 
@@ -262,7 +267,11 @@ class MatchController extends StateNotifier<MatchSession> {
         });
         if (!mounted || epoch != _epoch) return true;
         _localMoves = records;
-        state = state.copyWith(game: result);
+        state = state.copyWith(
+            game: result,
+            explanation: game.config.court && bot
+                ? MatchCoaching.explain(game, move)
+                : null);
       } else {
         _awaitingPly = game.ply + 1;
         await store().submit(room.code, state.uid!, game.ply, move);
@@ -285,6 +294,74 @@ class MatchController extends StateNotifier<MatchSession> {
         'config': state.game!.config.toMap(),
         'moves': _localMoves,
       });
+
+  Future<MatchMove?> hint() async {
+    final game = state.game;
+    if (game == null || !game.config.court || !state.canPlay) return null;
+    final epoch = _epoch;
+    final token = ++_searchToken;
+    state = state.copyWith(busy: true);
+    try {
+      final move = await search(game, BotLevel.hard);
+      if (!mounted || epoch != _epoch || token != _searchToken) return null;
+      state = state.copyWith(
+          busy: false,
+          explanation: move == null
+              ? 'No legal hint found.'
+              : MatchCoaching.explain(game, move));
+      return move;
+    } catch (error) {
+      if (mounted && epoch == _epoch && token == _searchToken) {
+        state = state.copyWith(busy: false, error: 'Hint unavailable: $error');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> takeBack() async {
+    final game = state.game;
+    if (game == null ||
+        !game.config.court ||
+        state.room != null ||
+        state.busy) {
+      return false;
+    }
+    final index = _localMoves.lastIndexWhere((move) =>
+        game.config
+            .seat(SeatId.values.byName(move['seat'] as String))
+            .control ==
+        SeatControl.localHuman);
+    if (index < 0) return false;
+    final epoch = _epoch;
+    _searchToken++;
+    _timer?.cancel();
+    final records = _localMoves.take(index).toList();
+    var restored = MatchState.initial(game.config);
+    for (final record in records) {
+      restored = MatchRules.play(restored, MatchMove.fromMap(record))!;
+    }
+    state = state.copyWith(busy: true);
+    try {
+      await storage.write(
+          {'id': state.id, 'config': game.config.toMap(), 'moves': records});
+      if (!mounted || epoch != _epoch) return false;
+      _localMoves = records;
+      state = state.copyWith(
+          game: restored,
+          busy: false,
+          paused: false,
+          explanation:
+              'Took back the last human move and the AI replies after it.');
+      _schedule();
+      return true;
+    } catch (error) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            busy: false, error: 'Takeback could not be saved: $error');
+      }
+      return false;
+    }
+  }
 
   void pause(bool paused) {
     if (!mounted) return;
@@ -339,14 +416,16 @@ class MatchController extends StateNotifier<MatchSession> {
         _leaseBusy = true;
         try {
           final claimed = await store().claimRunner(room.code, state.uid!);
-          if (mounted && epoch == _epoch && token == _searchToken)
+          if (mounted && epoch == _epoch && token == _searchToken) {
             _accept(claimed);
+          }
         } catch (error) {
           // A participant may have won the transaction. Re-read its lease.
           try {
             final latest = await store().read(room.code);
-            if (mounted && epoch == _epoch && token == _searchToken)
+            if (mounted && epoch == _epoch && token == _searchToken) {
               _accept(latest);
+            }
           } catch (readError) {
             if (mounted && epoch == _epoch) {
               state = state.copyWith(

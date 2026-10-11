@@ -350,7 +350,7 @@ service cloud.firestore {
           after.diff(before).affectedKeys().hasOnly(['owners', 'styles']) &&
           after.owners.diff(before.owners).affectedKeys().hasOnly([seat.id]) &&
           after.styles.diff(before.styles).affectedKeys().hasOnly([seat.id]) &&
-          validSeats(after, false);
+          validSeat(after, index, false);
       }
       function dropAt(drops, index) {
         return drops.size() > index ? drops[index] : 0;

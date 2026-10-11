@@ -5,6 +5,7 @@ import 'package:stones/game/board_geometry.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_room.dart';
+import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_room_store.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/game/match_storage.dart';
@@ -78,6 +79,43 @@ MatchController controller(
         botDelay: Duration.zero);
 
 void main() {
+  for (final shape in BoardShape.values) {
+    test(
+        'Court Mode on $shape hints, explains and durably takes back AI replies',
+        () async {
+      final storage = MemoryMatchStorage();
+      final store = MemoryMatchRoomStore();
+      final host = controller(storage, store,
+          search: (game, level) async =>
+              MatchRules.legalMoves(game).firstOrNull);
+      final defaults = MatchConfig.defaults(shape);
+      final config = defaults.copyWith(seats: [
+        defaults.seats.first,
+        for (final seat in defaults.seats.skip(1))
+          seat.copyWith(control: SeatControl.ai)
+      ], court: true);
+      await host.start(config);
+      final hint = await host.hint();
+      expect(hint, isNotNull);
+      expect(host.state.explanation, contains('opening'));
+      expect(host.state.game!.ply, 0);
+      expect(await host.play(hint!), isTrue);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(host.state.game!.ply, config.seats.length);
+      expect(host.state.explanation, contains('opening'));
+      final id = host.state.id;
+      expect(await host.takeBack(), isTrue);
+      expect(host.state.game!.ply, 0);
+      expect(host.state.id, id);
+      host.dispose();
+      final resumed = controller(storage, store);
+      expect(await resumed.resumeLocal(), isTrue);
+      expect(resumed.state.game!.config.court, isTrue);
+      expect(resumed.state.game!.board, isEmpty);
+      resumed.dispose();
+      await store.updates.close();
+    });
+  }
   test('failed saves neither expose an unsaved move nor strand setup',
       () async {
     final storage = MemoryMatchStorage()..failWrites = true;

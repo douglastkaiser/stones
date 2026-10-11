@@ -185,6 +185,15 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
               const Text('Local humans take turns on this device.'),
             if (online > 0)
               const Text('The match starts once every online seat is filled.'),
+            if (online == 0 && bots > 0 && local > 0)
+              SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Court Mode'),
+                  subtitle: const Text(
+                      'Hints, AI explanations and takebacks. Untimed practice; no awards.'),
+                  value: _config.court,
+                  onChanged: (value) =>
+                      _update(_config.copyWith(court: value))),
             if (_error != null)
               Padding(
                   padding: const EdgeInsets.only(top: 12),

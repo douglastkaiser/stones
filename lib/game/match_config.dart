@@ -48,6 +48,7 @@ class MatchConfig {
     required List<SeatConfig> seats,
     this.starter = SeatId.ivory,
     RulesProfile? profile,
+    this.court = false,
   })  : seats = List.unmodifiable(seats),
         profile = profile ??
             (shape == BoardShape.square && seats.length == 2
@@ -70,6 +71,12 @@ class MatchConfig {
             seats.any((seat) => seat.id == SeatId.jade))) {
       throw ArgumentError('Legacy Hex requires its original three identities');
     }
+    if (court &&
+        (online ||
+            !seats.any((s) => s.control == SeatControl.ai) ||
+            !seats.any((s) => s.control == SeatControl.localHuman))) {
+      throw ArgumentError('Court Mode requires offline humans and AI');
+    }
   }
 
   factory MatchConfig.defaults(BoardShape shape) => MatchConfig(
@@ -87,6 +94,7 @@ class MatchConfig {
   final List<SeatConfig> seats;
   final SeatId starter;
   final RulesProfile profile;
+  final bool court;
   bool get online =>
       seats.any((seat) => seat.control == SeatControl.onlineHuman);
   late final List<SeatId> ids = List.unmodifiable(seats.map((seat) => seat.id));
@@ -103,6 +111,7 @@ class MatchConfig {
     int? size,
     List<SeatConfig>? seats,
     SeatId? starter,
+    bool? court,
   }) {
     final newShape = shape ?? this.shape;
     final newSeats = seats ?? this.seats;
@@ -116,6 +125,10 @@ class MatchConfig {
                     ? (2 * this.size + 1).clamp(3, 8)
                     : ((this.size - 1) ~/ 2).clamp(2, 4)),
         seats: newSeats,
+        court: (court ?? this.court) &&
+            !newSeats.any((s) => s.control == SeatControl.onlineHuman) &&
+            newSeats.any((s) => s.control == SeatControl.ai) &&
+            newSeats.any((s) => s.control == SeatControl.localHuman),
         profile: newShape == this.shape && newSeats.length == this.seats.length
             ? profile
             : null,
@@ -142,6 +155,7 @@ class MatchConfig {
         'seats': seats.map((seat) => seat.toMap()).toList(),
         'starter': starter.name,
         'profile': profile.name,
+        if (court) 'court': true,
       };
 
   factory MatchConfig.fromMap(Map<String, dynamic> map) {
@@ -155,6 +169,7 @@ class MatchConfig {
             .map((seat) => SeatConfig.fromMap(Map<String, dynamic>.from(seat)))
             .toList(),
         starter: SeatId.values.byName(map['starter'] as String),
+        court: map['court'] == true,
         profile: RulesProfile.values.byName(map['profile'] as String));
   }
 }
