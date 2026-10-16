@@ -4,6 +4,11 @@ import 'match_clock.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
 
+/// A second device confirmed a turn before this client's transaction completed.
+class StaleMatchMove extends StateError {
+  StaleMatchMove() : super('Another move was confirmed first. Refreshing board.');
+}
+
 /// New unified room codec. Existing square/Hex rooms retain their own codecs.
 class MatchRoom {
   MatchRoom({
@@ -237,8 +242,8 @@ class MatchRoom {
   MatchRoom append(String uid, int expectedPly, MatchMove move,
       {DateTime? now}) {
     final game = replay();
-    if (game.ply != expectedPly ||
-        !canMove(uid, game, now: now) ||
+    if (game.ply != expectedPly) throw StaleMatchMove();
+    if (!canMove(uid, game, now: now) ||
         MatchRules.play(game, move) == null) {
       throw StateError('Stale, unauthorized or illegal move');
     }

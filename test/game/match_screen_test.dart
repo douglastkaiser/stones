@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:stones/game/board_geometry.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_provider.dart';
+import 'package:stones/game/match_room.dart';
 import 'package:stones/game/match_screen.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/game/study_catalog.dart';
@@ -17,6 +19,51 @@ import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 void main() {
+  testWidgets('resuming an online screen reconciles missed turns from the server',
+      (tester) async {
+    final store = MemoryMatchRoomStore();
+    var authentications = 0;
+    final controller = MatchController(
+        storage: MemoryMatchStorage(),
+        authenticate: () async {
+          authentications++;
+          return 'host';
+        },
+        store: () => store);
+    await controller.start(
+        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+      SeatConfig(SeatId.ivory),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]));
+    await store.join('UABCDEF', 'guest');
+    await controller.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
+    await tester.pumpWidget(ProviderScope(
+        overrides: [matchProvider.overrideWith((ref) => controller)],
+        child: const MaterialApp(home: MatchScreen())));
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(controller.state.paused, isFalse);
+    store.publishOnSubmit = false;
+    await store.submit('UABCDEF', 'guest', 1,
+        MatchMove.place(const Cell(1, 0), PieceType.flat));
+    expect(controller.state.game!.ply, 1);
+    store.pendingRead = Completer<MatchRoom>();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.text('Reconnecting · your board is retained'), findsOneWidget);
+    expect(controller.state.canPlay, isFalse);
+    store.pendingRead!.complete(store.room!);
+    await tester.pumpAndSettle();
+    expect(authentications, 2);
+    expect(controller.state.game!.ply, 2);
+    expect(controller.state.canPlay, isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await store.updates.close();
+  });
+
   testWidgets('a failed shortcut save shows the playable room code and warning',
       (tester) async {
     final store = MemoryMatchRoomStore();

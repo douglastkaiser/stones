@@ -63,6 +63,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        ref.read(matchProvider).room != null &&
+        ref.read(matchProvider).game?.finished != true) {
+      unawaited(_controller.reconnect());
+    }
     if ((state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused ||
             state == AppLifecycleState.detached) &&
@@ -194,17 +199,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
             : !match.ready
                 ? 'Waiting for online players'
-                : !match.connected
-                    ? 'Disconnected · your board is retained'
-                    : match.paused && match.clock != null && match.room == null
-                        ? 'Match paused'
-                        : match.paused &&
-                                game.config.seat(game.current).control ==
-                                    SeatControl.ai
-                            ? 'AI paused'
-                            : match.busy
-                                ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
-                                : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
+                : match.reconnecting
+                    ? 'Reconnecting · your board is retained'
+                    : !match.connected
+                        ? 'Disconnected · your board is retained'
+                        : match.paused && match.clock != null && match.room == null
+                            ? 'Match paused'
+                            : match.paused &&
+                                    game.config.seat(game.current).control ==
+                                        SeatControl.ai
+                                ? 'AI paused'
+                                : match.busy
+                                    ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
+                                    : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
     return Scaffold(
         appBar: AppBar(
             title: Text(

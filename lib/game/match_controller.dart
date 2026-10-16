@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'match_ai.dart';
 import 'match_coaching.dart';
@@ -19,6 +20,7 @@ class MatchSession {
       this.uid,
       this.busy = false,
       this.connected = true,
+      this.reconnecting = false,
       this.paused = false,
       this.explanation,
       this.inputLocked = false,
@@ -31,6 +33,7 @@ class MatchSession {
   final String? uid;
   final bool busy;
   final bool connected;
+  final bool reconnecting;
   final bool paused;
   final String? error;
   final String? shortcutWarning;
@@ -53,6 +56,7 @@ class MatchSession {
           MatchRoom? room,
           bool? busy,
           bool? connected,
+          bool? reconnecting,
           bool? paused,
           String? explanation,
           bool? inputLocked,
@@ -66,6 +70,7 @@ class MatchSession {
           uid: uid,
           busy: busy ?? this.busy,
           connected: connected ?? this.connected,
+          reconnecting: reconnecting ?? this.reconnecting,
           paused: paused ?? this.paused,
           explanation: explanation ?? this.explanation,
           inputLocked: inputLocked ?? this.inputLocked,
@@ -83,6 +88,14 @@ class MatchController extends StateNotifier<MatchSession> {
       this.completed,
       this.botDelay = const Duration(milliseconds: 250),
       this.networkTimeout = const Duration(seconds: 20),
+      this.recoveryDelays = const [
+        Duration(seconds: 1),
+        Duration(seconds: 2),
+        Duration(seconds: 4),
+        Duration(seconds: 8),
+        Duration(seconds: 16),
+        Duration(seconds: 30)
+      ],
       Future<MatchMove?> Function(MatchState, BotLevel)? search})
       : _searchOverride = search,
         super(const MatchSession());
@@ -95,6 +108,7 @@ class MatchController extends StateNotifier<MatchSession> {
   final Set<String> _completionHandled = {};
   final Duration botDelay;
   final Duration networkTimeout;
+  final List<Duration> recoveryDelays;
   final Future<MatchMove?> Function(MatchState, BotLevel)? _searchOverride;
   Future<MatchMove?> search(MatchState game, BotLevel level) {
     if (_searchOverride != null) return _searchOverride!(game, level);
@@ -107,6 +121,11 @@ class MatchController extends StateNotifier<MatchSession> {
   StreamSubscription<MatchRoomUpdate>? _subscription;
   Timer? _timer;
   Timer? _clockTimer;
+  Timer? _recoveryTimer;
+  Future<bool>? _reconnecting;
+  int _watchGeneration = 0;
+  int _recoveryAttempts = 0;
+  bool _canAutoRecover = false;
   bool _localWritePending = false;
   bool _expiryPending = false;
   int _epoch = 0;
@@ -122,10 +141,13 @@ class MatchController extends StateNotifier<MatchSession> {
     _searchToken++;
     _timer?.cancel();
     _clockTimer?.cancel();
+    _recoveryTimer?.cancel();
+    _recoveryAttempts = 0;
+    _canAutoRecover = false;
+    _reconnecting = null;
     _localWritePending = false;
     _expiryPending = false;
-    unawaited(_subscription?.cancel());
-    _subscription = null;
+    _stopWatching();
     _awaitingPly = null;
     _leaseBusy = false;
     if (mounted) state = const MatchSession();
@@ -279,49 +301,146 @@ class MatchController extends StateNotifier<MatchSession> {
 
   void _subscribe(String code) {
     final epoch = _epoch;
-    _subscription = store().watch(code).listen((update) {
-      if (!mounted || epoch != _epoch) return;
-      if (!update.confirmed) {
-        final cancelledSearch = !update.connected &&
-            _searchingToken == _searchToken &&
-            _searchingPly == state.game?.ply;
-        if (!update.connected) {
-          _timer?.cancel();
-          _searchToken++;
+    final generation = ++_watchGeneration;
+    bool current() =>
+        mounted && epoch == _epoch && generation == _watchGeneration;
+    try {
+      _subscription = store().watch(code).listen((update) {
+        if (!current()) return;
+        if (!update.confirmed) {
+          final cancelledSearch = !update.connected &&
+              _searchingToken == _searchToken &&
+              _searchingPly == state.game?.ply;
+          if (!update.connected) {
+            _timer?.cancel();
+            _searchToken++;
+          }
+          // Only a confirmed server snapshot may reconnect a retained board.
+          // Pending-write metadata can say "online" without confirming history.
+          state = state.copyWith(
+              connected: state.connected && update.connected,
+              busy: cancelledSearch && _awaitingPly == null ? false : null,
+              error: state.error);
+          if (!update.connected) _requestRecovery();
+          return;
         }
-        // Only a confirmed server snapshot may reconnect a retained board.
-        // Pending-write metadata can say "online" without confirming history.
-        state = state.copyWith(
-            connected: state.connected && update.connected,
-            busy: cancelledSearch && _awaitingPly == null ? false : null);
-        return;
-      }
-      try {
-        _accept(update.room!);
-      } catch (error) {
-        state = state.copyWith(connected: false, busy: false, error: '$error');
-      }
-    }, onError: (Object error) {
-      if (!mounted || epoch != _epoch) return;
-      _timer?.cancel();
-      _searchToken++;
-      state = state.copyWith(connected: false, busy: false, error: '$error');
+        try {
+          _accept(update.room!);
+        } catch (error) {
+          _disconnected(error);
+        }
+      }, onError: (Object error) {
+        if (current()) _disconnected(error);
+      }, onDone: () {
+        if (current() && state.game?.finished != true) _disconnected(null);
+      });
+    } catch (error) {
+      if (current()) _disconnected(error);
+    }
+  }
+
+  void _stopWatching() {
+    _watchGeneration++;
+    final previous = _subscription;
+    _subscription = null;
+    if (previous == null) return;
+    // Detach callbacks immediately. SDK cleanup must not prevent a fresh read.
+    try {
+      unawaited(previous
+          .cancel()
+          .timeout(networkTimeout)
+          .catchError((Object _) {}));
+    } catch (_) {}
+  }
+
+  bool _transient(Object error) =>
+      error is TimeoutException ||
+      error is StaleMatchMove ||
+      (error is FirebaseException &&
+          const [
+            'unavailable',
+            'deadline-exceeded',
+            'network-request-failed',
+            'aborted',
+            'cancelled'
+          ].contains(error.code));
+
+  void _disconnected(Object? error) {
+    _timer?.cancel();
+    _searchToken++;
+    state = state.copyWith(
+        connected: false,
+        busy: false,
+        reconnecting: false,
+        error: error == null ? 'Connection interrupted. Reconnecting…' : '$error');
+    _recoveryTimer?.cancel();
+    _canAutoRecover = error == null || _transient(error);
+    _queueRecovery();
+  }
+
+  void _requestRecovery([Object? error]) {
+    _canAutoRecover = error == null || _transient(error);
+    if (!_canAutoRecover) _recoveryTimer?.cancel();
+    _queueRecovery();
+  }
+
+  void _queueRecovery() {
+    if (!mounted ||
+        !_canAutoRecover ||
+        state.connected ||
+        state.room == null ||
+        state.game?.finished == true ||
+        _reconnecting != null ||
+        (_recoveryTimer?.isActive ?? false) ||
+        _recoveryAttempts >= recoveryDelays.length) {
+      return;
+    }
+    final epoch = _epoch;
+    final delay = recoveryDelays[_recoveryAttempts++];
+    _recoveryTimer = Timer(delay, () {
+      if (mounted && epoch == _epoch) unawaited(_connect());
     });
   }
 
+  Future<bool> _connect() {
+    if (_reconnecting != null) return _reconnecting!;
+    final epoch = _epoch;
+    late final Future<bool> operation;
+    operation = _reconnect().whenComplete(() {
+      if (identical(_reconnecting, operation)) {
+        _reconnecting = null;
+        if (mounted && epoch == _epoch) _queueRecovery();
+      }
+    });
+    return _reconnecting = operation;
+  }
+
   /// Reconcile against the server before unlocking a failed or uncertain write.
-  Future<bool> reconnect() async {
+  Future<bool> reconnect() {
+    _recoveryTimer?.cancel();
+    _recoveryAttempts = 0;
+    return _connect();
+  }
+
+  Future<bool> _reconnect() async {
     final room = state.room;
     if (room == null || state.uid == null) return false;
     final epoch = _epoch;
     _searchToken++;
     _timer?.cancel();
-    state = state.copyWith(busy: true, connected: false);
-    await _subscription?.cancel();
-    _subscription = null;
+    state = state.copyWith(busy: true, connected: false, reconnecting: true);
+    _stopWatching();
     try {
+      final uid = await authenticate().timeout(networkTimeout);
+      if (!mounted || epoch != _epoch) return false;
+      if (uid != state.uid) {
+        throw StateError('Return with the original account or browser profile.');
+      }
       final latest = await store().read(room.code).timeout(networkTimeout);
       if (!mounted || epoch != _epoch) return false;
+      if (latest.moves.length < room.moves.length) {
+        throw const FormatException('Server history is behind the confirmed board');
+      }
       _awaitingPly = null;
       _accept(latest);
       _subscribe(room.code);
@@ -331,8 +450,10 @@ class MatchController extends StateNotifier<MatchSession> {
         state = state.copyWith(
             busy: false,
             connected: false,
+            reconnecting: false,
             error:
                 'Could not reconnect. Your last confirmed board is saved: $error');
+        _requestRecovery(error);
       }
       return false;
     }
@@ -390,6 +511,7 @@ class MatchController extends StateNotifier<MatchSession> {
             busy: false,
             connected: state.room == null,
             error: 'Ending the match could not be confirmed: $error');
+        if (state.room != null) _requestRecovery(error);
       }
       return false;
     }
@@ -403,11 +525,15 @@ class MatchController extends StateNotifier<MatchSession> {
         ? room.replay()
         : room.replayAfter(state.room!, state.game!);
     if (_awaitingPly != null && game.ply >= _awaitingPly!) _awaitingPly = null;
+    _recoveryTimer?.cancel();
+    _recoveryAttempts = 0;
+    _canAutoRecover = false;
     state = state.copyWith(
         game: game,
         room: room,
         clock: room.clock,
         connected: true,
+        reconnecting: false,
         busy: _awaitingPly != null ||
             (_searchingToken == _searchToken && _searchingPly == game.ply));
     _notifyCompleted();
@@ -523,6 +649,7 @@ class MatchController extends StateNotifier<MatchSession> {
             error: state.room == null
                 ? '$error'
                 : 'Move confirmation interrupted. Reconnect before retrying: $error');
+        if (state.room != null) _requestRecovery(error);
       }
       return false;
     }
@@ -617,6 +744,7 @@ class MatchController extends StateNotifier<MatchSession> {
             connected: state.room == null,
             paused: state.room == null,
             error: 'Clock expiry awaits confirmation: $error');
+        if (state.room != null) _requestRecovery(error);
       }
     } finally {
       if (mounted && epoch == _epoch) _expiryPending = false;
@@ -722,7 +850,13 @@ class MatchController extends StateNotifier<MatchSession> {
     _timer?.cancel();
     final token = ++_searchToken;
     scheduleMicrotask(() {
-      if (mounted && token == _searchToken) pause(true);
+      if (!mounted || token != _searchToken) return;
+      if (state.room != null) {
+        // Leaving the screen detaches this client, never the durable room.
+        leave();
+      } else {
+        pause(true);
+      }
     });
   }
 
@@ -783,6 +917,7 @@ class MatchController extends StateNotifier<MatchSession> {
               state = state.copyWith(
                   connected: false,
                   error: 'Reconnect to continue AI: $readError');
+              _requestRecovery(readError);
             }
           }
         } finally {
@@ -833,7 +968,8 @@ class MatchController extends StateNotifier<MatchSession> {
     _searchToken++;
     _timer?.cancel();
     _clockTimer?.cancel();
-    unawaited(_subscription?.cancel());
+    _recoveryTimer?.cancel();
+    _stopWatching();
     super.dispose();
   }
 }
