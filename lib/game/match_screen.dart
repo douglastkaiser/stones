@@ -382,6 +382,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     child: Column(children: [
                       Text('Room ${match.room!.code}',
                           style: Theme.of(context).textTheme.titleMedium),
+                      if (match.shortcutWarning != null)
+                        Text(match.shortcutWarning!, textAlign: TextAlign.center),
                       TextButton.icon(
                           onPressed: () async {
                             await Clipboard.setData(

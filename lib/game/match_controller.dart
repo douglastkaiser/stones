@@ -23,6 +23,7 @@ class MatchSession {
       this.explanation,
       this.inputLocked = false,
       this.clock,
+      this.shortcutWarning,
       this.error});
   final MatchState? game;
   final MatchRoom? room;
@@ -32,6 +33,7 @@ class MatchSession {
   final bool connected;
   final bool paused;
   final String? error;
+  final String? shortcutWarning;
   final String? explanation;
   final bool inputLocked;
   final MatchClock? clock;
@@ -55,6 +57,7 @@ class MatchSession {
           String? explanation,
           bool? inputLocked,
           MatchClock? clock,
+          String? shortcutWarning,
           String? error}) =>
       MatchSession(
           game: game ?? this.game,
@@ -67,6 +70,7 @@ class MatchSession {
           explanation: explanation ?? this.explanation,
           inputLocked: inputLocked ?? this.inputLocked,
           clock: clock ?? this.clock,
+          shortcutWarning: shortcutWarning ?? this.shortcutWarning,
           error: error);
 }
 
@@ -133,14 +137,11 @@ class MatchController extends StateNotifier<MatchSession> {
     if (config.online) {
       state = const MatchSession(busy: true);
       try {
-        final uid = await authenticate();
+        final uid = await authenticate().timeout(networkTimeout);
         if (!mounted || epoch != _epoch) return;
-        final room = await store().create(uid, config);
-        await remember?.call(room, uid);
+        final room = await store().create(uid, config).timeout(networkTimeout);
         if (!mounted || epoch != _epoch) return;
-        state = MatchSession(id: room.code, uid: uid);
-        _accept(room);
-        _subscribe(room.code);
+        _openOnline(room, uid, epoch);
       } catch (error) {
         if (mounted && epoch == _epoch) state = MatchSession(error: '$error');
         rethrow;
@@ -234,7 +235,7 @@ class MatchController extends StateNotifier<MatchSession> {
       if (!RegExp(r'^U[A-Z]{6}$').hasMatch(normalized)) {
         throw StateError('Enter the seven-letter room code beginning with U');
       }
-      final uid = await authenticate();
+      final uid = await authenticate().timeout(networkTimeout);
       if (!mounted || epoch != _epoch) return;
       if (expectedUid != null && uid != expectedUid) {
         throw StateError(
@@ -246,14 +247,33 @@ class MatchController extends StateNotifier<MatchSession> {
       if (room.host != uid && !room.owners.values.contains(uid)) {
         throw StateError('This identity does not own a seat');
       }
-      await remember?.call(room, uid);
       if (!mounted || epoch != _epoch) return;
-      state = MatchSession(id: room.code, uid: uid);
-      _accept(room);
-      _subscribe(room.code);
+      _openOnline(room, uid, epoch);
     } catch (error) {
       if (mounted && epoch == _epoch) state = MatchSession(error: '$error');
       rethrow;
+    }
+  }
+
+  void _openOnline(MatchRoom room, String uid, int epoch) {
+    state = MatchSession(id: room.code, uid: uid);
+    _accept(room);
+    _subscribe(room.code);
+    // A local bookmark is a convenience, not authority over an online seat.
+    // Storage failures must not discard a successfully created/joined room.
+    unawaited(_rememberOnline(room, uid, epoch));
+  }
+
+  Future<void> _rememberOnline(MatchRoom room, String uid, int epoch) async {
+    try {
+      await remember?.call(room, uid).timeout(networkTimeout);
+    } catch (_) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            shortcutWarning:
+                'Could not save this room’s shortcut. Keep code ${room.code} '
+                'and return with the same account or browser profile.');
+      }
     }
   }
 
@@ -266,7 +286,9 @@ class MatchController extends StateNotifier<MatchSession> {
           _timer?.cancel();
           _searchToken++;
         }
-        state = state.copyWith(connected: update.connected);
+        // Only a confirmed server snapshot may reconnect a retained board.
+        // Pending-write metadata can say "online" without confirming history.
+        state = state.copyWith(connected: state.connected && update.connected);
         return;
       }
       try {
@@ -738,14 +760,16 @@ class MatchController extends StateNotifier<MatchSession> {
         }
         _leaseBusy = true;
         try {
-          final claimed = await store().claimRunner(room.code, state.uid!);
+          final claimed = await store()
+              .claimRunner(room.code, state.uid!)
+              .timeout(networkTimeout);
           if (mounted && epoch == _epoch && token == _searchToken) {
             _accept(claimed);
           }
         } catch (error) {
           // A participant may have won the transaction. Re-read its lease.
           try {
-            final latest = await store().read(room.code);
+            final latest = await store().read(room.code).timeout(networkTimeout);
             if (mounted && epoch == _epoch && token == _searchToken) {
               _accept(latest);
             }

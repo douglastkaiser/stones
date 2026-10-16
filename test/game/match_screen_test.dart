@@ -17,6 +17,35 @@ import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 void main() {
+  testWidgets('a failed shortcut save shows the playable room code and warning',
+      (tester) async {
+    final store = MemoryMatchRoomStore();
+    final controller = MatchController(
+        storage: MemoryMatchStorage(),
+        authenticate: () async => 'host',
+        store: () => store,
+        remember: (room, uid) async => throw StateError('Storage full'));
+    await controller.start(
+        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+      SeatConfig(SeatId.ivory),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]));
+    await store.join('UABCDEF', 'guest');
+    await tester.pumpWidget(ProviderScope(
+        overrides: [matchProvider.overrideWith((ref) => controller)],
+        child: const MaterialApp(home: MatchScreen())));
+    await tester.pumpAndSettle();
+    expect(controller.state.canPlay, isTrue);
+    expect(find.text('Room UABCDEF'), findsOneWidget);
+    expect(find.textContaining('Could not save this room’s shortcut.'),
+        findsOneWidget);
+    expect(find.text('Copy invitation code'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await store.updates.close();
+  });
+
   testWidgets('completed learning shows feedback and Done in stable controls',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);

@@ -8,6 +8,7 @@ import 'match_controller_test.dart' as fixtures;
 
 class FaultStore extends fixtures.MemoryMatchRoomStore {
   Completer<MatchRoom>? pendingCreate;
+  Completer<MatchRoom>? pendingClaim;
   final metadata = StreamController<MatchRoomUpdate>.broadcast(sync: true);
 
   @override
@@ -16,6 +17,10 @@ class FaultStore extends fixtures.MemoryMatchRoomStore {
 
   @override
   Stream<MatchRoomUpdate> watch(String code) => metadata.stream;
+
+  @override
+  Future<MatchRoom> claimRunner(String code, String uid) async =>
+      pendingClaim == null ? super.claimRunner(code, uid) : pendingClaim!.future;
 }
 
 MatchConfig onlineConfig(BoardShape shape) =>
@@ -70,6 +75,10 @@ void main() {
         expect(player.state.room!.code, 'UABCDEF');
         expect(player.state.game, isNotNull);
         expect(player.state.busy, isFalse);
+        await Future<void>.delayed(Duration.zero);
+        expect(player.state.shortcutWarning, contains('UABCDEF'));
+        store.metadata.add(MatchRoomUpdate(store.room));
+        expect(player.state.shortcutWarning, contains('UABCDEF'));
       });
     }
 
@@ -97,6 +106,73 @@ void main() {
       expect(host.state.game!.ply, 0);
     });
   }
+
+  test('a stalled bookmark cannot block a room and its warning survives updates',
+      () async {
+    final store = FaultStore();
+    final pending = Completer<void>();
+    final host = MatchController(
+        storage: fixtures.MemoryMatchStorage(),
+        authenticate: () async => 'host',
+        store: () => store,
+        remember: (room, uid) => pending.future,
+        networkTimeout: const Duration(milliseconds: 20));
+    await host.start(onlineConfig(BoardShape.square));
+    expect(host.state.room, isNotNull);
+    expect(host.state.busy, isFalse);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(host.state.shortcutWarning, contains('UABCDEF'));
+    host.dispose();
+    pending.complete();
+    await store.metadata.close();
+    await store.updates.close();
+  });
+
+  test('a late bookmark failure cannot contaminate the next match', () async {
+    final store = FaultStore();
+    final pending = Completer<void>();
+    final host = MatchController(
+        storage: fixtures.MemoryMatchStorage(),
+        authenticate: () async => 'host',
+        store: () => store,
+        remember: (room, uid) => pending.future);
+    await host.start(onlineConfig(BoardShape.square));
+    await host.start(MatchConfig.defaults(BoardShape.hex));
+    pending.completeError(StateError('Old shortcut failed'));
+    await Future<void>.delayed(Duration.zero);
+    expect(host.state.shortcutWarning, isNull);
+    expect(host.state.room, isNull);
+    expect(host.state.game!.config.shape, BoardShape.hex);
+    host.dispose();
+    await store.metadata.close();
+    await store.updates.close();
+  });
+
+  test('stalled AI lease and recovery reads offer reconnect instead of hanging',
+      () async {
+    final store = FaultStore();
+    final host = MatchController(
+        storage: fixtures.MemoryMatchStorage(),
+        authenticate: () async => 'host',
+        store: () => store,
+        networkTimeout: const Duration(milliseconds: 20));
+    await host.start(onlineConfig(BoardShape.square).copyWith(seats: const [
+      SeatConfig(SeatId.ivory, control: SeatControl.ai),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]));
+    await store.join('UABCDEF', 'guest');
+    store.pendingClaim = Completer<MatchRoom>();
+    store.pendingRead = Completer<MatchRoom>();
+    store.metadata.add(MatchRoomUpdate(store.room));
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    expect(host.state.connected, isFalse);
+    expect(host.state.error, contains('Reconnect to continue AI'));
+    host.dispose();
+    store.pendingClaim!.complete(store.room!);
+    store.pendingRead!.complete(store.room!);
+    await store.metadata.close();
+    await store.updates.close();
+  });
 
   for (final joining in [false, true]) {
     test('stalled authentication does not trap ${joining ? 'join' : 'create'}',
