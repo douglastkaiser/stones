@@ -132,6 +132,9 @@ Future<MatchController> ready(UnreliableStore store,
   await store.join('UABCDEF', 'guest');
   final host = player(store, 'host', authenticate: authenticate);
   await host.join('UABCDEF', expectedUid: 'host');
+  // Confirm startup before injecting an outage. Otherwise the queued initial
+  // snapshot legitimately reconnects the same stream after the injected error.
+  await Future<void>.delayed(Duration.zero);
   return host;
 }
 
@@ -441,6 +444,7 @@ void main() {
             await client.join('UABCDEF', expectedUid: uid);
             clients.add(client);
           }
+          await Future<void>.delayed(Duration.zero);
           final random = Random(1900 + count + shape.index);
           for (var ply = 0; ply < 40 && !store.room!.replay().finished; ply++) {
             if (ply % 7 == 0) {
