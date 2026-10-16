@@ -122,6 +122,7 @@ class MatchController extends StateNotifier<MatchSession> {
   Timer? _timer;
   Timer? _clockTimer;
   Timer? _recoveryTimer;
+  Timer? _watchConfirmationTimer;
   Future<bool>? _reconnecting;
   int _watchGeneration = 0;
   int _recoveryAttempts = 0;
@@ -304,6 +305,12 @@ class MatchController extends StateNotifier<MatchSession> {
     final generation = ++_watchGeneration;
     bool current() =>
         mounted && epoch == _epoch && generation == _watchGeneration;
+    _watchConfirmationTimer?.cancel();
+    _watchConfirmationTimer = Timer(networkTimeout, () {
+      if (current()) {
+        _disconnected(TimeoutException('Live updates could not be confirmed.'));
+      }
+    });
     try {
       _subscription = store().watch(code).listen((update) {
         if (!current()) return;
@@ -325,7 +332,7 @@ class MatchController extends StateNotifier<MatchSession> {
           return;
         }
         try {
-          _accept(update.room!);
+          _accept(update.room!, fromWatch: true);
         } catch (error) {
           _disconnected(error);
         }
@@ -340,6 +347,7 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   void _stopWatching() {
+    _watchConfirmationTimer?.cancel();
     _watchGeneration++;
     final previous = _subscription;
     _subscription = null;
@@ -366,6 +374,7 @@ class MatchController extends StateNotifier<MatchSession> {
           ].contains(error.code));
 
   void _disconnected(Object? error) {
+    _watchConfirmationTimer?.cancel();
     _timer?.cancel();
     _searchToken++;
     state = state.copyWith(
@@ -517,7 +526,7 @@ class MatchController extends StateNotifier<MatchSession> {
     }
   }
 
-  void _accept(MatchRoom room) {
+  void _accept(MatchRoom room, {bool fromWatch = false}) {
     if (state.room != null && room.moves.length < state.room!.moves.length) {
       return;
     }
@@ -526,7 +535,12 @@ class MatchController extends StateNotifier<MatchSession> {
         : room.replayAfter(state.room!, state.game!);
     if (_awaitingPly != null && game.ply >= _awaitingPly!) _awaitingPly = null;
     _recoveryTimer?.cancel();
-    _recoveryAttempts = 0;
+    // A successful one-off read does not prove the live subscription works.
+    // Reset backoff only after the replacement watch confirms a snapshot.
+    if (fromWatch) {
+      _watchConfirmationTimer?.cancel();
+      _recoveryAttempts = 0;
+    }
     _canAutoRecover = false;
     state = state.copyWith(
         game: game,

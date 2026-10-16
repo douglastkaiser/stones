@@ -243,6 +243,41 @@ void main() {
     await store.updates.close();
   });
 
+  test('working reads with a permanently broken watch cannot restart forever',
+      () async {
+    final store = UnreliableStore();
+    final host = await ready(store);
+    final before = store.reads;
+    store.watchFailure = FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
+    store.watches.single.done?.call();
+    await until(() => store.reads == before + retryDelays.length && !host.state.busy);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(store.reads, before + retryDelays.length);
+    expect(host.state.connected, isFalse);
+    store.watchFailure = null;
+    expect(await host.reconnect(), isTrue);
+    host.dispose();
+    await store.updates.close();
+  });
+
+  test('a watch that never confirms its first snapshot cannot silently stall',
+      () async {
+    final store = UnreliableStore();
+    final host = await ready(store);
+    final before = store.reads;
+    await until(() => !host.state.connected &&
+        !host.state.busy && store.reads == before + retryDelays.length);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(store.reads, before + retryDelays.length);
+    expect(await host.reconnect(), isTrue);
+    store.watches.last.data?.call(MatchRoomUpdate(store.room));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(host.state.connected, isTrue);
+    expect(store.reads, before + retryDelays.length + 1);
+    host.dispose();
+    await store.updates.close();
+  });
+
   test('a changed account cannot silently inherit an existing seat', () async {
     final store = UnreliableStore();
     var uid = 'host';
