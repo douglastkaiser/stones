@@ -74,16 +74,22 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
       ..sort((a, b) => state.progress(b).compareTo(state.progress(a)));
     final next = goals.firstOrNull;
     return Scaffold(
-        appBar: AppBar(title: const Text('Achievements', maxLines: 1, overflow: TextOverflow.ellipsis), actions: [
-          IconButton(
-              onPressed: _rules,
-              icon: const Icon(Icons.info_outline),
-              tooltip: 'Earning rules'),
-          IconButton(
-              tooltip: 'Use rewards', icon: const Icon(Icons.palette_outlined),
-              onPressed: () => Navigator.push<void>(context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-        ]),
+        appBar: AppBar(
+            title: const Text('Achievements',
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            actions: [
+              IconButton(
+                  onPressed: _rules,
+                  icon: const Icon(Icons.info_outline),
+                  tooltip: 'Earning rules'),
+              IconButton(
+                  tooltip: 'Use rewards',
+                  icon: const Icon(Icons.palette_outlined),
+                  onPressed: () => Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsScreen()))),
+            ]),
         body: SafeArea(
             child: Align(
                 alignment: Alignment.topCenter,
@@ -216,7 +222,8 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                               context,
                               MaterialPageRoute(
                                   builder: (_) => const LearningHub())),
-                          child: const Text('Explore tutorials & studies', textAlign: TextAlign.center)),
+                          child: const Text('Explore tutorials & studies',
+                              textAlign: TextAlign.center)),
                     ])))));
   }
 

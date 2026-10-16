@@ -21,12 +21,24 @@ MatchCompleted? legacyAchievementResult(
     int clockSeconds = 0}) {
   if (session.scenario != null ||
       session.isCourtMode ||
-      session.mode == GameMode.local) { return null; }
+      session.mode == GameMode.local) {
+    return null;
+  }
   final online = session.mode == GameMode.online;
-  if (online && (room == null || !room.hasOpponent ||
-      room.white!.id.isEmpty || room.black!.id.isEmpty || room.white!.id == room.black!.id)) { return null; }
+  if (online &&
+      (room == null ||
+          !room.hasOpponent ||
+          room.white!.id.isEmpty ||
+          room.black!.id.isEmpty ||
+          room.white!.id == room.black!.id)) {
+    return null;
+  }
   final creator = online ? SeatId.values[room!.creatorColor.index] : null;
-  final creatorId = !online ? null : creator == SeatId.ivory ? room!.white!.id : room!.black!.id;
+  final creatorId = !online
+      ? null
+      : creator == SeatId.ivory
+          ? room!.white!.id
+          : room!.black!.id;
   final human = SeatId.values[session.vsComputerPlayerColor.index];
   final config = MatchConfig(
       shape: BoardShape.square,
@@ -36,7 +48,9 @@ MatchCompleted? legacyAchievementResult(
         for (final id in [SeatId.ivory, SeatId.charcoal])
           SeatConfig(id,
               control: online
-                  ? id == creator ? SeatControl.localHuman : SeatControl.onlineHuman
+                  ? id == creator
+                      ? SeatControl.localHuman
+                      : SeatControl.onlineHuman
                   : id == human
                       ? SeatControl.localHuman
                       : SeatControl.ai,
@@ -97,6 +111,8 @@ MatchCompleted? legacyAchievementResult(
           game: game,
           room: online
               ? MatchRoom(
+                  // Attribution only; never written as a unified room. The
+                  // event retains the original legacy room's durable ID.
                   code: 'ULEGACY',
                   host: creatorId!,
                   config: config,

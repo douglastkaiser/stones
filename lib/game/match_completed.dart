@@ -74,7 +74,8 @@ class MatchCompleted {
   BotLevel? get oppositionLevel {
     final opponents =
         game.config.seats.where((s) => s.id != participant).toList();
-    if (opponents.isEmpty || opponents.any((s) => s.control != SeatControl.ai)) {
+    if (opponents.isEmpty ||
+        opponents.any((s) => s.control != SeatControl.ai)) {
       return null;
     }
     return opponents

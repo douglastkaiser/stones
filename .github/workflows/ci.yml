@@ -39,18 +39,6 @@ jobs:
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
-      - name: Format achievement qualification sources
-        run: |
-          git diff --name-only --diff-filter=ACMR origin/main...HEAD -- '*.dart' > /tmp/achievement-sources.txt
-          xargs -r dart format < /tmp/achievement-sources.txt
-          mkdir -p /tmp/achievement-formatted
-          while IFS= read -r source; do cp --parents "$source" /tmp/achievement-formatted/; done < /tmp/achievement-sources.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: achievement-formatted-sources
-          path: /tmp/achievement-formatted/
-          retention-days: 2
-
       - name: Run analyzer
         run: flutter analyze --fatal-infos
 

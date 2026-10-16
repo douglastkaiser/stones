@@ -42,9 +42,16 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Seasoned Rival'));
         await tester.pumpAndSettle();
-        expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('0 / 10 human opponents')), findsOneWidget);
+        expect(
+            find.descendant(
+                of: find.byType(BottomSheet),
+                matching: find.text('0 / 10 human opponents')),
+            findsOneWidget);
         expect(tester.takeException(), isNull);
-        Navigator.of(tester.element(find.descendant(of: find.byType(BottomSheet), matching: find.text('0 / 10 human opponents')))).pop();
+        Navigator.of(tester.element(find.descendant(
+                of: find.byType(BottomSheet),
+                matching: find.text('0 / 10 human opponents'))))
+            .pop();
         await tester.pumpAndSettle();
         await tester.pumpWidget(const SizedBox());
       });
@@ -62,7 +69,8 @@ void main() {
         container: container,
         child: const MaterialApp(home: AchievementsScreen())));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.widgetWithText(ChoiceChip, 'Earned'), 250);
+    await tester.scrollUntilVisible(
+        find.widgetWithText(ChoiceChip, 'Earned'), 250);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Earned'));
     await tester.pumpAndSettle();
     expect(find.text('1 challenges'), findsOneWidget);
