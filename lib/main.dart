@@ -61,25 +61,38 @@ class _StonesAppState extends ConsumerState<StonesApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final messenger = _messenger.currentState;
-      if (messenger == null) { _noticeScheduled = false; return; }
+      if (messenger == null) {
+        _noticeScheduled = false;
+        return;
+      }
       final awards = pending.map(GameAchievement.forType).toList();
       final points = awards.fold(0, (int sum, a) => sum + a.points);
-      messenger.showSnackBar(SnackBar(duration: const Duration(seconds: 6),
-        content: Text('${awards.first.name}${awards.length > 1 ? ' + ${awards.length - 1} more' : ''} · +$points achievement points'),
-        action: SnackBarAction(label: 'View', onPressed: () =>
-          _navigator.currentState?.push<void>(MaterialPageRoute(builder: (_) => const AchievementsScreen())))));
+      messenger.showSnackBar(SnackBar(
+          duration: const Duration(seconds: 6),
+          content: Text(
+              '${awards.first.name}${awards.length > 1 ? ' + ${awards.length - 1} more' : ''} · +$points achievement points'),
+          action: SnackBarAction(
+              label: 'View',
+              onPressed: () => _navigator.currentState?.push<void>(
+                  MaterialPageRoute(
+                      builder: (_) => const AchievementsScreen())))));
       unawaited(ref.read(soundManagerProvider).playAchievementUnlock());
       var acknowledged = false;
       try {
-        await ref.read(achievementProvider.notifier).acknowledgeUnlocks(pending);
+        await ref
+            .read(achievementProvider.notifier)
+            .acknowledgeUnlocks(pending);
         acknowledged = true;
-      } catch (_) { /* Undelivered acknowledgements remain in the durable queue. */ }
+      } catch (_) {
+        /* Undelivered acknowledgements remain in the durable queue. */
+      }
       _noticeScheduled = false;
       if (acknowledged && mounted) {
         _announceAwards(ref.read(achievementProvider).pending);
       }
     });
   }
+
   @override
   void initState() {
     super.initState();
@@ -91,7 +104,8 @@ class _StonesAppState extends ConsumerState<StonesApp> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
 
-    ref.listen(achievementProvider.select((s) => s.pending), (_, pending) => _announceAwards(pending));
+    ref.listen(achievementProvider.select((s) => s.pending),
+        (_, pending) => _announceAwards(pending));
     _announceAwards(ref.read(achievementProvider).pending);
     return MaterialApp(
       scaffoldMessengerKey: _messenger,
@@ -599,18 +613,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (!isScenarioGame && !notifier.achievementAssisted) {
       final oldRoom = onlineState.session;
       final localColor = session.mode == GameMode.online
-          ? onlineState.localColor ?? session.vsComputerPlayerColor : session.vsComputerPlayerColor;
+          ? onlineState.localColor ?? session.vsComputerPlayerColor
+          : session.vsComputerPlayerColor;
       final settings = ref.read(appSettingsProvider);
-      final event = legacyAchievementResult(state: gameState,
+      final event = legacyAchievementResult(
+          state: gameState,
           session: session.copyWith(vsComputerPlayerColor: localColor),
-          history: ref.read(moveHistoryProvider), matchId: notifier.achievementMatchId,
+          history: ref.read(moveHistoryProvider),
+          matchId: notifier.achievementMatchId,
           room: oldRoom,
-          clockSeconds: oldRoom?.chessClockEnabled == true ? oldRoom!.chessClockSeconds ?? 0 :
-              session.chessClockSecondsOverride ??
-              (settings.chessClockEnabled ? settings.chessClockSecondsForSize(gameState.boardSize) : 0));
+          clockSeconds: oldRoom?.chessClockEnabled == true
+              ? oldRoom!.chessClockSeconds ?? 0
+              : session.chessClockSecondsOverride ??
+                  (settings.chessClockEnabled
+                      ? settings.chessClockSecondsForSize(gameState.boardSize)
+                      : 0));
       if (event != null) {
-        try { await ref.read(achievementProvider.notifier).recordMatch(event); }
-        catch (error) { _debugLog('Achievement progress needs retry: $error'); }
+        try {
+          await ref.read(achievementProvider.notifier).recordMatch(event);
+        } catch (error) {
+          _debugLog('Achievement progress needs retry: $error');
+        }
       }
     }
 

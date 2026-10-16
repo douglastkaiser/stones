@@ -179,7 +179,9 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
             Text('$local local · $online online · $bots AI'),
             if (local == 1 && bots > 0 && online == 0 && !_config.court)
               Text(_config.profile == RulesProfile.standardTak
-                  ? (_config.size < 5 ? 'Small Square boards are practice for match achievements. Choose 5×5 or larger to earn AI tiers.' : 'Unassisted board wins advance the AI ladder. Stronger AI wins also count toward lower tiers.')
+                  ? (_config.size < 5
+                      ? 'Small Square boards are practice for match achievements. Choose 5×5 or larger to earn AI tiers.'
+                      : 'Unassisted board wins advance the AI ladder. Stronger AI wins also count toward lower tiers.')
                   : 'Square 5×5+ and all Hex sizes can earn match achievements. AI duel tiers use two-player Square; mastery challenges cover both shapes and more players.'),
             if (local == 0)
               Text(online == 0

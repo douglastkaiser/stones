@@ -90,7 +90,8 @@ class _LearningHubState extends ConsumerState<LearningHub> {
                                           MaterialPageRoute(
                                               builder: (context) => StudyScreen(
                                                   study: study,
-                                                  onSolved: (study) => _solved(study, false),
+                                                  onSolved: (study) =>
+                                                      _solved(study, false),
                                                   onResult: _solved))))),
                       ],
                     ])))));

@@ -354,10 +354,8 @@ class MatchController extends StateNotifier<MatchSession> {
     if (previous == null) return;
     // Detach callbacks immediately. SDK cleanup must not prevent a fresh read.
     try {
-      unawaited(previous
-          .cancel()
-          .timeout(networkTimeout)
-          .catchError((Object _) {}));
+      unawaited(
+          previous.cancel().timeout(networkTimeout).catchError((Object _) {}));
     } catch (_) {}
   }
 
@@ -381,7 +379,8 @@ class MatchController extends StateNotifier<MatchSession> {
         connected: false,
         busy: false,
         reconnecting: false,
-        error: error == null ? 'Connection interrupted. Reconnecting…' : '$error');
+        error:
+            error == null ? 'Connection interrupted. Reconnecting…' : '$error');
     _recoveryTimer?.cancel();
     _canAutoRecover = error == null || _transient(error);
     _queueRecovery();
@@ -443,12 +442,14 @@ class MatchController extends StateNotifier<MatchSession> {
       final uid = await authenticate().timeout(networkTimeout);
       if (!mounted || epoch != _epoch) return false;
       if (uid != state.uid) {
-        throw StateError('Return with the original account or browser profile.');
+        throw StateError(
+            'Return with the original account or browser profile.');
       }
       final latest = await store().read(room.code).timeout(networkTimeout);
       if (!mounted || epoch != _epoch) return false;
       if (latest.moves.length < room.moves.length) {
-        throw const FormatException('Server history is behind the confirmed board');
+        throw const FormatException(
+            'Server history is behind the confirmed board');
       }
       _awaitingPly = null;
       _accept(latest);
@@ -593,8 +594,8 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   /// Durable, confirmed records only; learning overrides do not award matches.
-  List<Map<String, dynamic>> get confirmedMoves => List.unmodifiable(
-      state.room?.moves ?? _localMoves);
+  List<Map<String, dynamic>> get confirmedMoves =>
+      List.unmodifiable(state.room?.moves ?? _localMoves);
 
   Future<bool> play(MatchMove move, {bool bot = false}) async {
     final game = state.game;
@@ -926,7 +927,8 @@ class MatchController extends StateNotifier<MatchSession> {
         } catch (error) {
           // A participant may have won the transaction. Re-read its lease.
           try {
-            final latest = await store().read(room.code).timeout(networkTimeout);
+            final latest =
+                await store().read(room.code).timeout(networkTimeout);
             if (mounted && epoch == _epoch && token == _searchToken) {
               _accept(latest);
             }

@@ -195,20 +195,33 @@ void main() {
     }
   });
 
-  test('learning achievements persist across both shapes without duplicate awards', () async {
+  test(
+      'learning achievements persist across both shapes without duplicate awards',
+      () async {
     SharedPreferences.setMockInitialValues({});
     final awards = AchievementNotifier();
     final restored = AchievementNotifier();
     addTearDown(awards.dispose);
     addTearDown(restored.dispose);
-    for (final id in AchievementState.allTutorialIds) { await awards.completeTutorial(id); }
-    for (final id in AchievementState.allPuzzleIds) { await awards.completePuzzle(id, unassisted: true); }
-    expect(awards.state.unlockedAchievements, containsAll([
-      AchievementType.student, AchievementType.puzzleSolver,
-      AchievementType.squareScholar, AchievementType.hexScholar, AchievementType.precision]));
+    for (final id in AchievementState.allTutorialIds) {
+      await awards.completeTutorial(id);
+    }
+    for (final id in AchievementState.allPuzzleIds) {
+      await awards.completePuzzle(id, unassisted: true);
+    }
+    expect(
+        awards.state.unlockedAchievements,
+        containsAll([
+          AchievementType.student,
+          AchievementType.puzzleSolver,
+          AchievementType.squareScholar,
+          AchievementType.hexScholar,
+          AchievementType.precision
+        ]));
     expect(await awards.unlock(AchievementType.student), isFalse);
     await restored.load();
-    expect(restored.state.unlockedAchievements, awards.state.unlockedAchievements);
+    expect(
+        restored.state.unlockedAchievements, awards.state.unlockedAchievements);
     expect(restored.state.allTutorialsCompleted, isTrue);
     expect(restored.state.allPuzzlesCompleted, isTrue);
     expect(restored.state.totalWins, 0);

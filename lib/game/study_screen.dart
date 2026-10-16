@@ -7,20 +7,22 @@ import 'match_study.dart';
 import 'study_controller.dart';
 
 class StudyScreen extends StatelessWidget {
-  const StudyScreen({super.key, required this.study, required this.onSolved, this.onResult});
+  const StudyScreen(
+      {super.key, required this.study, required this.onSolved, this.onResult});
   final MatchStudy study;
   final Future<void> Function(MatchStudy) onSolved;
   final Future<void> Function(MatchStudy, bool)? onResult;
   @override
   Widget build(BuildContext context) => ProviderScope(
           overrides: [
-            matchProvider.overrideWith(
-                (ref) {
-                  late final StudyController controller;
-                  controller = StudyController(study, onSolved: (study) =>
-                      onResult?.call(study, !controller.hintsUsed) ?? onSolved(study));
-                  return controller;
-                })
+            matchProvider.overrideWith((ref) {
+              late final StudyController controller;
+              controller = StudyController(study,
+                  onSolved: (study) =>
+                      onResult?.call(study, !controller.hintsUsed) ??
+                      onSolved(study));
+              return controller;
+            })
           ],
           child: MatchScreen(
               title: study.title,
@@ -42,17 +44,23 @@ class _StudyPanel extends ConsumerWidget {
           if (study.puzzle)
             Text('${controller.steps}/${study.moveLimit} learner moves'),
           Wrap(alignment: WrapAlignment.center, spacing: 12, children: [
-            if (study.hints.isNotEmpty) PuzzleHints(hints: study.hints, onRevealed: controller.markHintUsed),
+            if (study.hints.isNotEmpty)
+              PuzzleHints(
+                  hints: study.hints, onRevealed: controller.markHintUsed),
             TextButton.icon(
                 onPressed: controller.reset,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry')),
           ]),
           if (study.puzzle)
-            Text(controller.hintsUsed ? 'Hints used · completion still counts' : 'Unaided solve eligible'),
+            Text(controller.hintsUsed
+                ? 'Hints used · completion still counts'
+                : 'Unaided solve eligible'),
           if (controller.canRetryProgress)
-            TextButton.icon(onPressed: controller.retryProgress,
-              icon: const Icon(Icons.save_outlined), label: const Text('Retry saving progress')),
+            TextButton.icon(
+                onPressed: controller.retryProgress,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Retry saving progress')),
           if (controller.solved)
             FilledButton(
                 onPressed: () => Navigator.pop(context),

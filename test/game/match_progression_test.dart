@@ -48,7 +48,8 @@ void main() {
     });
     final awards = AchievementNotifier();
     await awards.load();
-    Future<List<AchievementType>> record() => awards.recordMatch(roadMatch(id: 'room', online: true));
+    Future<List<AchievementType>> record() =>
+        awards.recordMatch(roadMatch(id: 'room', online: true));
     await Future.wait([record(), record(), record()]);
     expect(awards.state.totalWins, 10);
     expect(awards.state.onlineWins, 1);
@@ -61,8 +62,7 @@ void main() {
     final fresh = AchievementNotifier();
     await fresh.load();
     expect(
-        await fresh.recordMatch(roadMatch(id: 'room', online: true)),
-        isEmpty);
+        await fresh.recordMatch(roadMatch(id: 'room', online: true)), isEmpty);
     expect(fresh.state.totalWins, 10);
     await fresh.resetAll();
     expect(fresh.state.totalWins, 0);

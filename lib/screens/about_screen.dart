@@ -152,9 +152,13 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'STONES',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : GameColors.titleColor,
+                            color:
+                                isDark ? Colors.white : GameColors.titleColor,
                             letterSpacing: 4,
                           ),
                     ),
@@ -339,9 +343,8 @@ class _LinkTile extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: isDark
-                  ? colorScheme.onSurfaceVariant
-                  : Colors.grey.shade400,
+              color:
+                  isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade400,
             ),
           ],
         ),
@@ -358,15 +361,20 @@ class _StonesIconPainter extends CustomPainter {
     final baseY = size.height * 0.75;
 
     // Draw stacked flat stones
-    _drawFlatStone(canvas, centerX, baseY, size.width * 0.6, GameColors.darkPiece, GameColors.darkPieceBorder);
-    _drawFlatStone(canvas, centerX, baseY - size.height * 0.12, size.width * 0.6, GameColors.lightPiece, GameColors.lightPieceBorder);
-    _drawFlatStone(canvas, centerX, baseY - size.height * 0.24, size.width * 0.6, GameColors.darkPiece, GameColors.darkPieceBorder);
+    _drawFlatStone(canvas, centerX, baseY, size.width * 0.6,
+        GameColors.darkPiece, GameColors.darkPieceBorder);
+    _drawFlatStone(canvas, centerX, baseY - size.height * 0.12,
+        size.width * 0.6, GameColors.lightPiece, GameColors.lightPieceBorder);
+    _drawFlatStone(canvas, centerX, baseY - size.height * 0.24,
+        size.width * 0.6, GameColors.darkPiece, GameColors.darkPieceBorder);
 
     // Draw capstone on top
-    _drawCapstone(canvas, centerX, baseY - size.height * 0.48, size.width * 0.18, GameColors.lightPiece, GameColors.lightPieceBorder);
+    _drawCapstone(canvas, centerX, baseY - size.height * 0.48,
+        size.width * 0.18, GameColors.lightPiece, GameColors.lightPieceBorder);
   }
 
-  void _drawFlatStone(Canvas canvas, double x, double y, double width, Color fill, Color border) {
+  void _drawFlatStone(Canvas canvas, double x, double y, double width,
+      Color fill, Color border) {
     final height = width * 0.2;
     final rect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(x, y), width: width, height: height),
@@ -391,7 +399,8 @@ class _StonesIconPainter extends CustomPainter {
     canvas.drawRRect(rect, borderPaint);
   }
 
-  void _drawCapstone(Canvas canvas, double x, double y, double radius, Color fill, Color border) {
+  void _drawCapstone(Canvas canvas, double x, double y, double radius,
+      Color fill, Color border) {
     // Shadow
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.25)

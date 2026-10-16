@@ -25,6 +25,7 @@ class StudyController extends MatchController {
     hintsUsed = true;
     state = state.copyWith(error: state.error);
   }
+
   bool get canRetryProgress => solved && !_rewarded;
   Future<void> retryProgress() async {
     if (!canRetryProgress) return;
@@ -33,9 +34,13 @@ class StudyController extends MatchController {
       _rewarded = true;
       if (mounted) state = state.copyWith();
     } catch (error) {
-      if (mounted) state = state.copyWith(error: 'Solved; progress could not be saved: $error');
+      if (mounted) {
+        state = state.copyWith(
+            error: 'Solved; progress could not be saved: $error');
+      }
     }
   }
+
   void reset() {
     steps = 0;
     solved = false;
