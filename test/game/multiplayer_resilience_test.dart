@@ -29,6 +29,8 @@ class ManualSubscription implements StreamSubscription<MatchRoomUpdate> {
 }
 
 class ManualWatch extends Stream<MatchRoomUpdate> {
+  ManualWatch(this.initial);
+  final MatchRoom? Function()? initial;
   final subscription = ManualSubscription();
   void Function(MatchRoomUpdate)? data;
   Function? error;
@@ -40,6 +42,9 @@ class ManualWatch extends Stream<MatchRoomUpdate> {
     data = onData;
     error = onError;
     done = onDone;
+    if (initial != null) {
+      scheduleMicrotask(() => onData?.call(MatchRoomUpdate(initial!())));
+    }
     return subscription;
   }
 }
@@ -49,6 +54,7 @@ class UnreliableStore extends fixtures.MemoryMatchRoomStore {
   Object? readFailure;
   Object? watchFailure;
   bool lostAcknowledgement = false;
+  bool silentWatch = false;
   int reads = 0;
   int submissions = 0;
   @override
@@ -60,7 +66,7 @@ class UnreliableStore extends fixtures.MemoryMatchRoomStore {
   @override
   Stream<MatchRoomUpdate> watch(String code) {
     if (watchFailure != null) throw watchFailure!;
-    final channel = ManualWatch();
+    final channel = ManualWatch(silentWatch ? null : () => room);
     watches.add(channel);
     return channel;
   }
@@ -263,6 +269,7 @@ void main() {
   test('a watch that never confirms its first snapshot cannot silently stall',
       () async {
     final store = UnreliableStore();
+    store.silentWatch = true;
     final host = await ready(store);
     final before = store.reads;
     await until(() => !host.state.connected &&
