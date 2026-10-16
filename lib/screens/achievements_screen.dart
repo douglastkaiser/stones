@@ -74,15 +74,15 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
       ..sort((a, b) => state.progress(b).compareTo(state.progress(a)));
     final next = goals.firstOrNull;
     return Scaffold(
-        appBar: AppBar(title: const Text('Achievements'), actions: [
+        appBar: AppBar(title: const Text('Achievements', maxLines: 1, overflow: TextOverflow.ellipsis), actions: [
           IconButton(
               onPressed: _rules,
               icon: const Icon(Icons.info_outline),
               tooltip: 'Earning rules'),
-          TextButton(
+          IconButton(
+              tooltip: 'Use rewards', icon: const Icon(Icons.palette_outlined),
               onPressed: () => Navigator.push<void>(context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
-              child: const Text('Use rewards')),
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()))),
         ]),
         body: SafeArea(
             child: Align(
@@ -211,13 +211,12 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                         ]);
                       }),
                       const SizedBox(height: 20),
-                      TextButton.icon(
+                      TextButton(
                           onPressed: () => Navigator.push<void>(
                               context,
                               MaterialPageRoute(
                                   builder: (_) => const LearningHub())),
-                          icon: const Icon(Icons.school_outlined),
-                          label: const Text('Explore tutorials & studies')),
+                          child: const Text('Explore tutorials & studies', textAlign: TextAlign.center)),
                     ])))));
   }
 

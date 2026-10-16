@@ -134,6 +134,10 @@ MatchCompleted roadMatch(
       game.result?.reason != ResultReason.road) {
     throw StateError('Test history did not end in Ivory road');
   }
+  var hash = 0;
+  for (final unit in id.codeUnits) { hash = (hash * 31 + unit) % 308915776; }
+  var encoded = hash;
+  final code = 'U${List.generate(6, (_) { final letter = String.fromCharCode(65 + encoded % 26); encoded ~/= 26; return letter; }).join()}';
   final owners = {
     for (var i = 0; i < count; i++)
       SeatId.values[i]: i == 0 ? 'player' : '$opponent-$i'
@@ -145,7 +149,7 @@ MatchCompleted roadMatch(
           uid: online ? 'player' : null,
           room: online
               ? MatchRoom(
-                  code: id,
+                  code: code,
                   host: 'player',
                   config: config,
                   owners: owners,

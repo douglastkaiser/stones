@@ -50,7 +50,8 @@ Early concessions and clock wins never earn specialist or board-craft credit.
 AI duel tiers use unassisted standard two-player Square games, size 5+, won by
 road or flat scoring. Easy/Medium/Hard/Expert targets are 3/5/10/12 victories.
 A stronger victory also advances lower tiers. Expert additionally requires two
-board sizes. Every AI opponent must meet a challenge's stated strength; one weak
+board sizes. An online-hosted AI duel follows the same strength criteria, but
+does not become an online-human win. Every AI opponent must meet a challenge's stated strength; one weak
 AI in a mixed table cannot masquerade as an all-Hard win.
 
 Board craft needs Medium+ AI or independently owned online opponents, with no

@@ -371,7 +371,7 @@ void main() {
     final event=roadMatch(online:true);
     final awards=AchievementNotifier();addTearDown(awards.dispose);
     for(final length in [2,8]) {
-      var room=MatchRoom(code:'resign-$length',host:'player',config:event.game.config,
+      var room=MatchRoom(code:length==2 ? 'UEARLYA' : 'ULATERA',host:'player',config:event.game.config,
         owners:event.owners!,moves:event.moves.take(length).toList());
       room=room.resign('opponent-1',SeatId.charcoal);
       await awards.recordMatch(MatchCompleted(MatchSession(id:room.code,uid:'player',room:room,
@@ -384,11 +384,12 @@ void main() {
   test('shared accounts, spectators and tiny Square boards cannot farm progress', () async {
     final awards=AchievementNotifier();addTearDown(awards.dispose);
     final event=roadMatch(online:true,count:3);
-    final room=MatchRoom(code:'shared',host:'player',config:event.game.config,
-      owners:const {SeatId.ivory:'player',SeatId.charcoal:'friend',SeatId.copper:'friend'},moves:event.moves);
+    final config=event.game.config.copyWith(seats:const [SeatConfig(SeatId.ivory), SeatConfig(SeatId.charcoal), SeatConfig(SeatId.copper,control:SeatControl.onlineHuman)]);
+    final room=MatchRoom(code:'USHARED',host:'player',config:config,
+      owners:const {SeatId.ivory:'player',SeatId.charcoal:'player',SeatId.copper:'friend'},moves:event.moves);
     await awards.recordMatch(MatchCompleted(MatchSession(id:'shared',uid:'player',room:room,
       game:room.replay()),moves:room.moves));
-    await awards.recordMatch(MatchCompleted(MatchSession(id:'observer',uid:'observer',room:event.online ? room : null,
+    await awards.recordMatch(MatchCompleted(MatchSession(id:'observer',uid:'observer',room:room,
       game:event.game),moves:event.moves));
     await awards.recordMatch(roadMatch(id:'tiny',size:3));
     expect(awards.state.totalWins,0);
@@ -417,6 +418,22 @@ void main() {
     final fresh=AchievementNotifier();addTearDown(fresh.dispose);await fresh.load();
     expect(fresh.state.unlockedAchievements,awards.state.unlockedAchievements);
     expect(fresh.state.points,awards.state.points);
+  });
+
+  test('an online-hosted AI duel earns the same AI progress without inventing a human online win', () async {
+    final base=roadMatch(level:BotLevel.expert);
+    final config=base.game.config.copyWith(seats:const [
+      SeatConfig(SeatId.ivory,control:SeatControl.onlineHuman),
+      SeatConfig(SeatId.charcoal,control:SeatControl.ai,level:BotLevel.expert)]);
+    final room=MatchRoom(code:'UHOSTAI',host:'observer',config:config,
+      owners:const {SeatId.ivory:'guest',SeatId.charcoal:null},moves:base.moves);
+    final event=MatchCompleted(MatchSession(id:room.code,uid:'guest',room:room,
+      game:room.replay()),moves:room.moves);
+    final awards=AchievementNotifier();addTearDown(awards.dispose);
+    await awards.recordMatch(event);
+    expect(awards.state.totalWins,1);expect(awards.state.onlineWins,0);
+    expect(awards.state.metrics['expertWins'],1);
+    expect(awards.state.metrics['hardStreak'],1);
   });
 
 }

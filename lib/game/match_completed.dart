@@ -20,11 +20,10 @@ class MatchCompleted {
   final Map<SeatId, String?>? owners;
   bool get online => owners != null;
 
-  /// Existing specialist unlocks describe standard, unassisted Square duels.
-  /// Multiplayer variants contribute general wins without borrowing that label.
+  /// AI duel tiers use standard, unassisted Square. Variant mastery has its
+  /// own metrics; where the AI runner is hosted does not alter its difficulty.
   BotLevel? get defeatedAILevel {
     if (!eligibleWin ||
-        online ||
         game.config.profile != RulesProfile.standardTak ||
         game.config.shape != BoardShape.square ||
         game.config.seats.length != 2) {
@@ -85,7 +84,6 @@ class MatchCompleted {
 
   bool get hardDuel =>
       participant != null &&
-      !online &&
       game.config.profile == RulesProfile.standardTak &&
       game.config.size >= 5 &&
       (oppositionLevel?.index ?? -1) >= BotLevel.hard.index;
@@ -96,6 +94,7 @@ class MatchCompleted {
     if (id == 'unattributed' ||
         participant == null ||
         !independentSeats ||
+        game.config.online != online ||
         !game.finished ||
         game.result?.reason == ResultReason.abandoned ||
         (game.config.shape == BoardShape.square && game.config.size < 5) ||

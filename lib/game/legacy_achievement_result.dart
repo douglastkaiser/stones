@@ -23,7 +23,10 @@ MatchCompleted? legacyAchievementResult(
       session.isCourtMode ||
       session.mode == GameMode.local) { return null; }
   final online = session.mode == GameMode.online;
-  if (online && room == null) return null;
+  if (online && (room == null || !room.hasOpponent ||
+      room.white!.id.isEmpty || room.black!.id.isEmpty || room.white!.id == room.black!.id)) { return null; }
+  final creator = online ? SeatId.values[room!.creatorColor.index] : null;
+  final creatorId = !online ? null : creator == SeatId.ivory ? room!.white!.id : room!.black!.id;
   final human = SeatId.values[session.vsComputerPlayerColor.index];
   final config = MatchConfig(
       shape: BoardShape.square,
@@ -33,7 +36,7 @@ MatchCompleted? legacyAchievementResult(
         for (final id in [SeatId.ivory, SeatId.charcoal])
           SeatConfig(id,
               control: online
-                  ? SeatControl.onlineHuman
+                  ? id == creator ? SeatControl.localHuman : SeatControl.onlineHuman
                   : id == human
                       ? SeatControl.localHuman
                       : SeatControl.ai,
@@ -94,8 +97,8 @@ MatchCompleted? legacyAchievementResult(
           game: game,
           room: online
               ? MatchRoom(
-                  code: room!.roomCode,
-                  host: room.white?.id ?? '',
+                  code: 'ULEGACY',
+                  host: creatorId!,
                   config: config,
                   owners: owners,
                   moves: moves)
