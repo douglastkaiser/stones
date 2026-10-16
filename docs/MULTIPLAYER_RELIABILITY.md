@@ -71,8 +71,9 @@ fixture only: it now supplies a realistic asynchronous initial snapshot, then
 waits for that snapshot before injecting an outage. The first fixture revision
 incorrectly injected faults before startup finished and failed five tests in
 38968246197; no application change was needed. Corrected source at 2a80658 passed
-strict analysis and all 715 tests in 38968912417. Application, dependency and
-workflow files are identical to the fully compiled 76e4c31 source.
+strict analysis, all 715 tests, release web compilation/startup checks and Android
+debug APK compilation in 38968912417. Application, dependency and workflow files
+are identical to the fully compiled 76e4c31 source.
 
 ### Remaining device qualification
 
@@ -126,6 +127,12 @@ and build evidence. These are distinct from a new two-device browser/Android
 playtest, which remains necessary to match an otherwise unspecified report.
 
 ## Publication
+
+The recovery follow-up was fast-forwarded and pushed to main at 5ddd473. Deploy
+Main 38969557117 succeeded. The public startup ledger now names
+`main.df4b8d74adf517e26b02.dart.js`; downloading that file confirmed the 5ddd473
+version, live-watch deadline, original-identity guard and reconnect status.
+Three startup pairs remain available. Pages publication 38969741592 succeeded.
 
 The repair was fast-forwarded and pushed to main at 6c23be5. Deploy Main
 38966080464 and Pages publication 38966258462 succeeded. The public startup
