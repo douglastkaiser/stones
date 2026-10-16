@@ -294,7 +294,7 @@ class MatchController extends StateNotifier<MatchSession> {
       if (mounted && epoch == _epoch) {
         state = state.copyWith(
             shortcutWarning:
-                'Could not save this room’s shortcut. Keep code ${room.code} '
+                'Could not save this roomâ€™s shortcut. Keep code ${room.code} '
                 'and return with the same account or browser profile.');
       }
     }
@@ -381,7 +381,7 @@ class MatchController extends StateNotifier<MatchSession> {
         connected: false,
         busy: false,
         reconnecting: false,
-        error: error == null ? 'Connection interrupted. Reconnecting…' : '$error');
+        error: error == null ? 'Connection interrupted. Reconnectingâ€¦' : '$error');
     _recoveryTimer?.cancel();
     _canAutoRecover = error == null || _transient(error);
     _queueRecovery();
@@ -591,6 +591,10 @@ class MatchController extends StateNotifier<MatchSession> {
     state = state.copyWith();
     _notifyCompleted();
   }
+
+  /// Durable, confirmed records only; learning overrides do not award matches.
+  List<Map<String, dynamic>> get confirmedMoves => List.unmodifiable(
+      state.room?.moves ?? _localMoves);
 
   Future<bool> play(MatchMove move, {bool bot = false}) async {
     final game = state.game;

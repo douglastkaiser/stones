@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 
 /// Starts with an idea; revealing a concrete move is always a separate action.
 class PuzzleHints extends StatelessWidget {
-  const PuzzleHints({super.key, required this.hints});
+  const PuzzleHints({super.key, required this.hints, this.onRevealed});
   final List<String> hints;
+  final VoidCallback? onRevealed;
   @override
   Widget build(BuildContext context) => TextButton.icon(
         icon: const Icon(Icons.lightbulb_outline),
         label: const Text('Hints'),
         onPressed: () {
+          onRevealed?.call();
           var revealed = 1;
           showDialog<void>(
               context: context,

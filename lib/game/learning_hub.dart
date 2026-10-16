@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/achievements_provider.dart';
 import 'match_config.dart';
 import 'match_study.dart';
@@ -15,40 +14,18 @@ class LearningHub extends ConsumerStatefulWidget {
 
 class _LearningHubState extends ConsumerState<LearningHub> {
   BoardShape _shape = BoardShape.square;
-  Set<String> _hexDone = {}, _unifiedDone = {};
   @override
   void initState() {
     super.initState();
-    _load();
+    ref.read(achievementProvider.notifier).load();
   }
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _hexDone = {...?prefs.getStringList(hexLearningProgressKey)};
-        _unifiedDone = {...?prefs.getStringList(unifiedLearningProgressKey)};
-      });
-    }
-  }
-
-  Future<void> _solved(MatchStudy study) async {
-    if (study.id.startsWith('unified_v1_') || study.legacyHex) {
-      final prefs = await SharedPreferences.getInstance();
-      final key =
-          study.legacyHex ? hexLearningProgressKey : unifiedLearningProgressKey;
-      final done = {...?prefs.getStringList(key), study.id};
-      if (!await prefs.setStringList(key, done.toList())) {
-        throw StateError('Progress storage unavailable');
-      }
-      await _load();
+  Future<void> _solved(MatchStudy study, bool unassisted) async {
+    final awards = ref.read(achievementProvider.notifier);
+    if (study.puzzle) {
+      await awards.completePuzzle(study.id, unassisted: unassisted);
     } else {
-      final awards = ref.read(achievementProvider.notifier);
-      if (study.puzzle) {
-        await awards.completePuzzle(study.id);
-      } else {
-        await awards.completeTutorial(study.id);
-      }
+      await awards.completeTutorial(study.id);
     }
   }
 
@@ -57,9 +34,7 @@ class _LearningHubState extends ConsumerState<LearningHub> {
     final awards = ref.watch(achievementProvider);
     final completed = {
       ...awards.completedTutorials,
-      ...awards.completedPuzzles,
-      ..._hexDone,
-      ..._unifiedDone
+      ...awards.completedPuzzles
     };
     return Scaffold(
         appBar: AppBar(title: const Text('Tutorials & Puzzles')),
@@ -102,7 +77,7 @@ class _LearningHubState extends ConsumerState<LearningHub> {
                                           : Icons.school_outlined),
                                   title: Text(study.title),
                                   subtitle: Text(
-                                      '${study.initial.config.seats.length} players · ${study.initial.config.size}${_shape == BoardShape.hex ? ' radius' : ' × ${study.initial.config.size}'}\n${study.goal}'),
+                                      '${study.initial.config.seats.length} players Â· ${study.initial.config.size}${_shape == BoardShape.hex ? ' radius' : ' Ã— ${study.initial.config.size}'}\n${study.goal}'),
                                   trailing: Icon(study.prerequisites
                                           .every(completed.contains)
                                       ? Icons.chevron_right
@@ -115,7 +90,8 @@ class _LearningHubState extends ConsumerState<LearningHub> {
                                           MaterialPageRoute(
                                               builder: (context) => StudyScreen(
                                                   study: study,
-                                                  onSolved: _solved))))),
+                                                  onSolved: (study) => _solved(study, false),
+                                                  onResult: _solved))))),
                       ],
                     ])))));
   }

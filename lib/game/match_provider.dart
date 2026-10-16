@@ -4,13 +4,11 @@ import '../providers/account_provider.dart';
 import '../providers/achievements_provider.dart';
 import '../providers/cosmetics_provider.dart';
 import '../providers/saved_rooms_provider.dart';
-import '../services/ai/ai.dart';
 import 'match_config.dart';
 import 'match_completed.dart';
 import 'match_controller.dart';
 import 'match_room_store.dart';
 import 'match_storage.dart';
-import 'match_state.dart';
 
 final localMatchStorageProvider =
     Provider<LocalMatchStorage>((ref) => PreferencesMatchStorage());
@@ -30,20 +28,9 @@ final matchProvider = StateNotifierProvider<MatchController, MatchSession>(
               (await ref.read(accountProvider.notifier).ensurePlayer()).uid,
           store: () => ref.read(matchRoomStoreProvider),
           completed: (session) async {
-            final event = MatchCompleted(session);
-            if (!event.eligibleWin) return;
-            await ref.read(achievementProvider.notifier).recordWin(
-                matchId: event.id,
-                isOnline: event.online,
-                aiDifficulty: switch (event.defeatedAILevel) {
-                  BotLevel.easy => AIDifficulty.easy,
-                  BotLevel.medium => AIDifficulty.medium,
-                  BotLevel.hard => AIDifficulty.hard,
-                  BotLevel.expert => AIDifficulty.expert,
-                  null => null,
-                },
-                byTime: event.game.result!.reason == ResultReason.time,
-                byFlats: event.game.result!.reason == ResultReason.flats);
+            final event = MatchCompleted(session,
+                moves: ref.read(matchProvider.notifier).confirmedMoves);
+            await ref.read(achievementProvider.notifier).recordMatch(event);
           },
           remember: (room, uid) => ref
               .read(savedRoomsProvider.notifier)

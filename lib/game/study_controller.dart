@@ -19,6 +19,23 @@ class StudyController extends MatchController {
   int steps = 0;
   bool solved = false, failed = false;
   bool _rewarded = false;
+  // Hints remain disclosed across Retry within the same visit.
+  bool hintsUsed = false;
+  void markHintUsed() {
+    hintsUsed = true;
+    state = state.copyWith(error: state.error);
+  }
+  bool get canRetryProgress => solved && !_rewarded;
+  Future<void> retryProgress() async {
+    if (!canRetryProgress) return;
+    try {
+      await onSolved?.call(study);
+      _rewarded = true;
+      if (mounted) state = state.copyWith();
+    } catch (error) {
+      if (mounted) state = state.copyWith(error: 'Solved; progress could not be saved: $error');
+    }
+  }
   void reset() {
     steps = 0;
     solved = false;
@@ -34,7 +51,7 @@ class StudyController extends MatchController {
     if (next == null) return false;
     if (!study.accepts(move, steps)) {
       state = state.copyWith(
-          error: 'Try the lesson’s objective. Your board has not changed.');
+          error: 'Try the lessonâ€™s objective. Your board has not changed.');
       return false;
     }
     steps++;
@@ -68,18 +85,8 @@ class StudyController extends MatchController {
                 ? 'No win within the move limit. Retry and try another idea.'
                 : study.puzzle
                     ? 'Your turn: ${study.moveLimit - steps} move remaining.'
-                    : 'Opening exchange: ${game.current.label} places ${game.config.next(game.current).label}’s flat.');
-    if (solved && !_rewarded) {
-      try {
-        await onSolved?.call(study);
-        _rewarded = true;
-      } catch (error) {
-        if (mounted) {
-          state = state.copyWith(
-              error: 'Solved; progress could not be saved: $error');
-        }
-      }
-    }
+                    : 'Opening exchange: ${game.current.label} places ${game.config.next(game.current).label}â€™s flat.');
+    if (solved) await retryProgress();
     return true;
   }
 }

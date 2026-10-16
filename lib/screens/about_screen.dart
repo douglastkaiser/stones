@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,6 +23,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
   int _iconTapCount = 0;
 
   void _onVersionTap() {
+    if (!kDebugMode) return;
     _versionTapCount++;
     if (_versionTapCount >= 7) {
       _versionTapCount = 0;
@@ -49,6 +50,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
   }
 
   void _onIconTap() {
+    if (!kDebugMode) return;
     _iconTapCount++;
     if (_iconTapCount >= 7) {
       _iconTapCount = 0;

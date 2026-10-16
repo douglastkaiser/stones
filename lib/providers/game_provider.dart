@@ -208,6 +208,9 @@ final animationStateProvider =
 class GameStateNotifier extends StateNotifier<GameState> {
   GameStateNotifier() : super(GameState.initial(5)); // Default 5x5
 
+  String achievementMatchId = 'legacy-${DateTime.now().microsecondsSinceEpoch}';
+  bool achievementAssisted = false;
+
   /// History of game states for undo functionality (stores state before each move)
   final List<GameState> _history = [];
 
@@ -226,6 +229,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
   /// Start a new game with the given board size
   void newGame(int boardSize) {
+    achievementMatchId = 'legacy-${DateTime.now().microsecondsSinceEpoch}';
+    achievementAssisted = false;
     _history.clear();
     _lastMoveRecord = null;
     state = GameState.initial(boardSize);
@@ -243,7 +248,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
   /// Undo the last move
   bool undo() {
     if (_history.isEmpty) return false;
-
+    achievementAssisted = true;
     state = _history.removeLast();
     _lastMoveRecord = null;
     onHistoryChanged?.call(_history.isNotEmpty);

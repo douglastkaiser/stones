@@ -27,6 +27,8 @@ import 'widgets/procedural_painters.dart';
 import 'widgets/piece_stack_view.dart';
 import 'widgets/board_cell_gestures.dart';
 import 'screens/main_menu_screen.dart';
+import 'screens/achievements_screen.dart';
+import 'game/legacy_achievement_result.dart';
 
 void _debugLog(String message) {
   if (!kDebugMode) return;
@@ -50,6 +52,28 @@ class StonesApp extends ConsumerStatefulWidget {
 }
 
 class _StonesAppState extends ConsumerState<StonesApp> {
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
+  final _navigator = GlobalKey<NavigatorState>();
+  bool _noticeScheduled = false;
+  void _announceAwards(List<AchievementType> pending) {
+    if (_noticeScheduled || pending.isEmpty) return;
+    _noticeScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final messenger = _messenger.currentState;
+      if (messenger == null) { _noticeScheduled = false; return; }
+      final awards = pending.map(GameAchievement.forType).toList();
+      final points = awards.fold(0, (int sum, a) => sum + a.points);
+      messenger.showSnackBar(SnackBar(duration: const Duration(seconds: 6),
+        content: Text('${awards.first.name}${awards.length > 1 ? ' + ${awards.length - 1} more' : ''} Â· +$points achievement points'),
+        action: SnackBarAction(label: 'View', onPressed: () =>
+          _navigator.currentState?.push<void>(MaterialPageRoute(builder: (_) => const AchievementsScreen())))));
+      unawaited(ref.read(soundManagerProvider).playAchievementUnlock());
+      try { await ref.read(achievementProvider.notifier).acknowledgeUnlocks(pending); }
+      catch (_) { /* Undelivered acknowledgements remain in the durable queue. */ }
+      _noticeScheduled = false;
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -61,7 +85,10 @@ class _StonesAppState extends ConsumerState<StonesApp> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
 
+    ref.listen(achievementProvider.select((s) => s.pending), (_, pending) => _announceAwards(pending));
     return MaterialApp(
+      scaffoldMessengerKey: _messenger,
+      navigatorKey: _navigator,
       title: 'Stones',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
@@ -380,7 +407,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       final play = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Coach’s suggestion'),
+          title: const Text('CoachÃ¢â‚¬â„¢s suggestion'),
           content: SingleChildScrollView(child: Text(explanation)),
           actions: [
             TextButton(
@@ -410,7 +437,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-              title: const Text('Court Mode · coach'),
+              title: const Text('Court Mode Ã‚Â· coach'),
               content: SingleChildScrollView(
                   child: Text([_courtWarning, _courtExplanation]
                       .where((text) => text.isNotEmpty)
@@ -526,21 +553,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     return true;
   }
 
-  Future<void> _showAchievementNotification(AchievementType type) async {
-    final achievement = GameAchievement.forType(type);
-
-    // Play unlock sound
-    unawaited(ref.read(soundManagerProvider).playAchievementUnlock());
-
-    // Queue awards so several unlocks never stack competing dialogs.
-    await showDialog<void>(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (dialogContext) =>
-          _AchievementUnlockDialog(achievement: achievement),
-    );
-  }
-
   @override
   void dispose() {
     _gameNotifier.onRoadWin = null;
@@ -575,71 +587,23 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final scenarioState = ref.read(scenarioStateProvider);
     final isScenarioGame =
         session.scenario != null || scenarioState.hasScenario;
-    final achievementNotifier = ref.read(achievementProvider.notifier);
-
-    // Debug logging
-    _debugLog('_checkAchievements called');
-    _debugLog('  gameState.result: ${gameState.result}');
-    _debugLog('  gameState.isGameOver: ${gameState.isGameOver}');
-    _debugLog('  session.mode: ${session.mode}');
-    _debugLog('  session.aiDifficulty: ${session.aiDifficulty}');
-    _debugLog('  isScenarioGame: $isScenarioGame');
-    _debugLog(
-        '  session.vsComputerPlayerColor: ${session.vsComputerPlayerColor}');
-
-    // Check if it's a win (not a draw)
-    final isWhiteWin = gameState.result == GameResult.whiteWins;
-    final isBlackWin = gameState.result == GameResult.blackWins;
-
-    // For vs computer mode, check if the human player won
-    final playerColor = session.vsComputerPlayerColor;
-    final playerWon = session.mode == GameMode.vsComputer &&
-        ((playerColor == PlayerColor.white && isWhiteWin) ||
-            (playerColor == PlayerColor.black && isBlackWin));
-
-    // For online mode, check if local player won
     final onlineState = ref.read(onlineGameProvider);
-    final onlinePlayerWon = session.mode == GameMode.online &&
-        ((onlineState.localColor == PlayerColor.white && isWhiteWin) ||
-            (onlineState.localColor == PlayerColor.black && isBlackWin));
-
-    // For local mode, any win counts
-    final localPlayerWon =
-        session.mode == GameMode.local && (isWhiteWin || isBlackWin);
-
-    _debugLog('  isWhiteWin: $isWhiteWin, isBlackWin: $isBlackWin');
-    _debugLog(
-        '  playerWon: $playerWon, onlinePlayerWon: $onlinePlayerWon, localPlayerWon: $localPlayerWon');
-
-    // Record the win and show notifications for any unlocked achievements
-    if (playerWon || onlinePlayerWon || localPlayerWon) {
-      if (isScenarioGame) {
-        _debugLog('  Skipping win achievements for scenario games');
-      } else {
-        _debugLog('  Recording win with aiDifficulty: ${session.aiDifficulty}');
-        final unlockedAchievements = await achievementNotifier.recordWin(
-          isOnline: session.mode == GameMode.online,
-          aiDifficulty: session.mode == GameMode.vsComputer && !isScenarioGame
-              ? session.aiDifficulty
-              : null,
-          byTime: gameState.winReason == WinReason.time,
-          byFlats: gameState.winReason == WinReason.flats,
-        );
-
-        _debugLog(
-            '  Unlocked ${unlockedAchievements.length} achievements: $unlockedAchievements');
-
-        // Show notification for each unlocked achievement
-        for (final achievementType in unlockedAchievements) {
-          _debugLog(
-              '  Showing notification for: $achievementType, mounted: $mounted');
-          if (mounted) {
-            await _showAchievementNotification(achievementType);
-          }
-        }
+    final notifier = ref.read(gameStateProvider.notifier);
+    if (!isScenarioGame && !notifier.achievementAssisted) {
+      final oldRoom = onlineState.session;
+      final localColor = onlineState.localColor ?? session.vsComputerPlayerColor;
+      final settings = ref.read(appSettingsProvider);
+      final event = legacyAchievementResult(state: gameState,
+          session: session.copyWith(vsComputerPlayerColor: localColor),
+          history: ref.read(moveHistoryProvider), matchId: notifier.achievementMatchId,
+          room: oldRoom,
+          clockSeconds: oldRoom?.chessClockEnabled == true ? oldRoom!.chessClockSeconds ?? 0 :
+              session.chessClockSecondsOverride ??
+              (settings.chessClockEnabled ? settings.chessClockSecondsForSize(gameState.boardSize) : 0));
+      if (event != null) {
+        try { await ref.read(achievementProvider.notifier).recordMatch(event); }
+        catch (error) { _debugLog('Achievement progress needs retry: $error'); }
       }
-    } else {
-      _debugLog('  No win detected, skipping achievement check');
     }
 
     // Update ELO ratings (skip for scenario/local games)
@@ -1141,8 +1105,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               _courtWarning.isNotEmpty
                                   ? _courtWarning
                                   : _courtExplanation.startsWith('AI move')
-                                      ? 'Court Mode · Why that AI move?'
-                                      : 'Court Mode · Untimed practice',
+                                      ? 'Court Mode Ã‚Â· Why that AI move?'
+                                      : 'Court Mode Ã‚Â· Untimed practice',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis),
                         )),
@@ -1153,7 +1117,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               ? _askCourtCoach
                               : null,
                           icon: const Icon(Icons.school_outlined),
-                          label: Text(_coachBusy ? 'Thinking…' : 'Ask coach'),
+                          label: Text(_coachBusy ? 'ThinkingÃ¢â‚¬Â¦' : 'Ask coach'),
                         ),
                       ])),
                 )
@@ -1179,7 +1143,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ? activeScenario.title
                   : session.mode == GameMode.vsComputer
                       ? session.isCourtMode
-                          ? 'Court · ${session.aiDifficulty.label} AI'
+                          ? 'Court Ã‚Â· ${session.aiDifficulty.label} AI'
                           : '${session.aiDifficulty.label} AI'
                       : isOnline
                           ? 'Online Game'
@@ -1188,7 +1152,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               overflow: TextOverflow.ellipsis),
           leading: IconButton(
             icon: const Icon(Icons.home),
-            tooltip: 'Home · resume this session',
+            tooltip: 'Home Ã‚Â· resume this session',
             onPressed: _navigateHome,
           ),
           actions: [
@@ -1603,7 +1567,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             onlineState.errorMessage == null)
                           const _OnlineStatusBanner(
                               message:
-                                  'Confirming saved state… Input resumes when the server responds.',
+                                  'Confirming saved stateÃ¢â‚¬Â¦ Input resumes when the server responds.',
                               icon: Icons.sync),
 
                         if (session.mode == GameMode.online &&
@@ -2555,7 +2519,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 children: [
                   for (int size = 3; size <= 8; size++)
                     ChoiceChip(
-                      label: Text('$size×$size'),
+                      label: Text('$sizeÃƒâ€”$size'),
                       selected: selectedSize == size,
                       onSelected: (_) => setState(() {
                         selectedSize = size;
@@ -2817,7 +2781,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     children: [
                       for (int size = 3; size <= 8; size++)
                         ChoiceChip(
-                          label: Text('$size×$size'),
+                          label: Text('$sizeÃƒâ€”$size'),
                           selected: selectedSize == size,
                           onSelected: (_) => setState(() {
                             selectedSize = size;
@@ -3208,11 +3172,11 @@ class _CompactTurnIndicator extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     String turnText =
-        '${isWhite ? 'Light' : 'Dark'} · Turn ${gameState.turnNumber}';
+        '${isWhite ? 'Light' : 'Dark'} Ã‚Â· Turn ${gameState.turnNumber}';
     if (onlineState?.localColor != null) {
       final isMyTurn = gameState.currentPlayer == onlineState!.localColor;
       turnText =
-          isMyTurn ? 'Your turn · ${gameState.turnNumber}' : 'Waiting...';
+          isMyTurn ? 'Your turn Ã‚Â· ${gameState.turnNumber}' : 'Waiting...';
     }
 
     return Container(
@@ -3463,7 +3427,7 @@ class _ScenarioInfoCard extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(scenario.objective),
             Text(
-                '${progress.puzzleMoves} / ${scenario.puzzleMoveLimit} moves used · Untimed'),
+                '${progress.puzzleMoves} / ${scenario.puzzleMoveLimit} moves used Ã‚Â· Untimed'),
             if (progress.isFailed(game))
               Semantics(
                   liveRegion: true,
@@ -4092,7 +4056,7 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
     final stack = _getPreviewStack();
     return StackInspection(
       label:
-          '${widget.label}${widget.inspectionStack == null ? '' : ' · before move'}',
+          '${widget.label}${widget.inspectionStack == null ? '' : ' Ã‚Â· before move'}',
       inspectionPieces: widget.inspectionStack == null
           ? null
           : [
@@ -4823,9 +4787,9 @@ class _BottomControls extends StatelessWidget {
     'Tip: Moving stacks lets you control the board faster.',
     'Tip: You can pick up to N pieces from a stack on an NxN board.',
     'Tip: The first two moves place your opponent\'s piece.',
-    'Tip: Watch for threats – one move from completing a road!',
+    'Tip: Watch for threats Ã¢â‚¬â€œ one move from completing a road!',
     'Tip: Press and hold on a stack to see all pieces.',
-    'Tip: Capstones are powerful but limited – use them wisely!',
+    'Tip: Capstones are powerful but limited Ã¢â‚¬â€œ use them wisely!',
     'Tip: Flats count for tie-breakers, so place them strategically.',
   ];
 
@@ -4983,7 +4947,7 @@ class _BottomControls extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Placing: $typeName · Tap cell to confirm, use sidebar to change type.',
+            'Placing: $typeName Ã‚Â· Tap cell to confirm, use sidebar to change type.',
             style: TextStyle(color: textColor, fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -5157,7 +5121,7 @@ class _BottomControls extends StatelessWidget {
       Text(
           drops.isEmpty
               ? 'Preview only. Drop bottom first; Confirm finishes the turn.'
-              : 'Planned drops: ${drops.join(' → ')}${remaining > 0 ? ' → $pending' : ''}. Board changes only on Confirm.',
+              : 'Planned drops: ${drops.join(' Ã¢â€ â€™ ')}${remaining > 0 ? ' Ã¢â€ â€™ $pending' : ''}. Board changes only on Confirm.',
           style: Theme.of(context).textTheme.bodySmall,
           textAlign: TextAlign.center),
     ]);
@@ -5630,195 +5594,5 @@ class VersionFooter extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-}
-
-/// Dialog shown when an achievement is unlocked
-class _AchievementUnlockDialog extends StatefulWidget {
-  final GameAchievement achievement;
-
-  const _AchievementUnlockDialog({required this.achievement});
-
-  @override
-  State<_AchievementUnlockDialog> createState() =>
-      _AchievementUnlockDialogState();
-}
-
-class _AchievementUnlockDialogState extends State<_AchievementUnlockDialog>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
-
-    _controller.forward();
-
-    // Auto-dismiss after 4 seconds
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: child,
-          ),
-        );
-      },
-      child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: 320,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF4A3728),
-                  Color(0xFF2C1810),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFD4AF37),
-                width: 3,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-                const BoxShadow(
-                  color: Colors.black54,
-                  blurRadius: 10,
-                  offset: Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                const Text(
-                  'ACHIEVEMENT UNLOCKED',
-                  style: TextStyle(
-                    color: Color(0xFFD4AF37),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Achievement name
-                Text(
-                  widget.achievement.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Achievement description
-                Text(
-                  widget.achievement.description,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 14,
-                  ),
-                ),
-
-                // Unlocked reward (if any)
-                if (widget.achievement.unlocksReward != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          color: Color(0xFFD4AF37),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            'Unlocked: ${widget.achievement.unlocksReward}',
-                            style: const TextStyle(
-                              color: Color(0xFFD4AF37),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 20),
-
-                // Dismiss button
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                  ),
-                  child: const Text('TAP TO DISMISS'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

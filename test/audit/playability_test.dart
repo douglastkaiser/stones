@@ -47,7 +47,7 @@ void main() {
 
   for (final difficulty in AIDifficulty.values) {
     for (final size in [3, 5, 8]) {
-      test('${difficulty.name} takes a road win on $size×$size', () async {
+      test('${difficulty.name} takes a road win on $sizeÃ—$size', () async {
         var board = Board.empty(size);
         for (var col = 0; col < size - 1; col++) {
           board = board.placePiece(Position(0, col),
@@ -65,7 +65,7 @@ void main() {
         expect(game.state.result, GameResult.whiteWins);
       });
     }
-    test('${difficulty.name} seeded complete 3×3 trial', () async {
+    test('${difficulty.name} seeded complete 3Ã—3 trial', () async {
       final game = GameStateNotifier();
       addTearDown(game.dispose);
       game.newGame(3);
@@ -195,34 +195,22 @@ void main() {
     }
   });
 
-  test('all eleven achievements unlock, persist, and do not duplicate',
-      () async {
+  test('learning achievements persist across both shapes without duplicate awards', () async {
     SharedPreferences.setMockInitialValues({});
     final awards = AchievementNotifier();
     final restored = AchievementNotifier();
     addTearDown(awards.dispose);
     addTearDown(restored.dispose);
-    for (var win = 0; win < 50; win++) {
-      await awards.recordWin(
-          isOnline: win == 0,
-          aiDifficulty: win < 4 ? AIDifficulty.values[win] : null,
-          byTime: win == 1,
-          byFlats: win == 2);
-    }
-    for (final id in AchievementState.allTutorialIds) {
-      await awards.completeTutorial(id);
-    }
-    for (final id in AchievementState.allPuzzleIds) {
-      await awards.completePuzzle(id);
-    }
-    expect(
-        awards.state.unlockedAchievements, containsAll(AchievementType.values));
+    for (final id in AchievementState.allTutorialIds) { await awards.completeTutorial(id); }
+    for (final id in AchievementState.allPuzzleIds) { await awards.completePuzzle(id, unassisted: true); }
+    expect(awards.state.unlockedAchievements, containsAll([
+      AchievementType.student, AchievementType.puzzleSolver,
+      AchievementType.squareScholar, AchievementType.hexScholar, AchievementType.precision]));
     expect(await awards.unlock(AchievementType.student), isFalse);
     await restored.load();
-    expect(restored.state.totalWins, 50);
-    expect(
-        restored.state.unlockedAchievements, awards.state.unlockedAchievements);
+    expect(restored.state.unlockedAchievements, awards.state.unlockedAchievements);
     expect(restored.state.allTutorialsCompleted, isTrue);
     expect(restored.state.allPuzzlesCompleted, isTrue);
+    expect(restored.state.totalWins, 0);
   });
 }

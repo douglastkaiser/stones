@@ -7,7 +7,7 @@ import 'package:stones/game/match_room.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/achievement.dart';
 import 'package:stones/providers/achievements_provider.dart';
-import 'package:stones/services/ai/ai.dart';
+import '../fixtures/achievement_matches.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -48,12 +48,7 @@ void main() {
     });
     final awards = AchievementNotifier();
     await awards.load();
-    Future<List<AchievementType>> record() => awards.recordWin(
-        matchId: 'room:17:road',
-        isOnline: true,
-        aiDifficulty: AIDifficulty.easy,
-        byTime: false,
-        byFlats: false);
+    Future<List<AchievementType>> record() => awards.recordMatch(roadMatch(id: 'room', online: true));
     await Future.wait([record(), record(), record()]);
     expect(awards.state.totalWins, 10);
     expect(awards.state.onlineWins, 1);
@@ -61,20 +56,12 @@ void main() {
         awards.state.unlockedAchievements,
         containsAll([
           AchievementType.student,
-          AchievementType.dedicated,
-          AchievementType.connected,
-          AchievementType.firstSteps,
         ]));
     awards.dispose();
     final fresh = AchievementNotifier();
     await fresh.load();
     expect(
-        await fresh.recordWin(
-            matchId: 'room:17:road',
-            isOnline: true,
-            aiDifficulty: null,
-            byTime: false,
-            byFlats: false),
+        await fresh.recordMatch(roadMatch(id: 'room', online: true)),
         isEmpty);
     expect(fresh.state.totalWins, 10);
     await fresh.resetAll();
@@ -125,7 +112,7 @@ void main() {
             uid: uid,
             game: MatchState.initial(config)
                 .copyWith(result: MatchResult(winner, ResultReason.road))));
-    expect(result(SeatId.ivory, 'host').eligibleWin, isTrue);
+    expect(result(SeatId.ivory, 'host').eligibleWin, isFalse);
     expect(result(SeatId.charcoal, 'host').eligibleWin, isFalse);
     expect(result(SeatId.copper, 'host').eligibleWin, isFalse);
     expect(result(SeatId.copper, 'guest').eligibleWin, isTrue);
