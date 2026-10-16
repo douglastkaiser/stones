@@ -50,8 +50,8 @@ Baseline CI run 38964360873 passed the original 668 tests and failed all ten
 new regressions, confirming the defects. The first repair at 25888f1 passed strict
 analysis and all 682 tests (run 38964619638). Final source at ac44483 passed strict
 analysis and all 685 tests in run 38965274544, including account retry and the
-AI-disconnect regression. Release web compilation also succeeded; its artifact
-upload and Android compilation are finishing. Promotion/deployment is next.
+AI-disconnect regression. That run also passed release web compilation/startup
+fingerprinting checks and Android APK compilation.
 
 The guarded production REST probe passed all six isolated trials on this date:
 Square and Hex with two, three and four seats, authenticated joins, themes,
@@ -64,3 +64,16 @@ Flutter SDK was no longer usable here. CI provides Flutter analysis, widget/mode
 tests
 and build evidence. These are distinct from a new two-device browser/Android
 playtest, which remains necessary to match an otherwise unspecified report.
+
+## Publication
+
+The repair was fast-forwarded and pushed to main at 6c23be5. Deploy Main
+38966080464 and Pages publication 38966258462 succeeded. The public startup
+ledger names `main.0bca85e7b6b983c54ef5.dart.js`; downloading that entrypoint
+confirmed the 6c23be5 version and new shortcut-warning text. Three startup pairs
+are retained for cached pages. Refresh the website before retesting.
+
+The shared Android code compiles with these fixes. This audit did not publish
+a new Play Store release; installed Android apps require a release containing
+the repaired shared code. No Firebase policy, configuration or signing changes
+were needed.
