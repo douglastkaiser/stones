@@ -35,6 +35,66 @@ seat mixture. The original room codecs and Firebase access policies are unchange
 
 ## Verification
 
+### Recovery qualification follow-up
+
+The follow-up adds bounded automatic recovery to the shared controller. Transient
+transport failures and stale-turn conflicts reconcile with authenticated server
+reads after 1, 2, 4, 8, 16 and 30 seconds. Requests have the existing 20-second
+deadline. The retry budget resets only when a live subscription confirms a
+snapshot; successful reads alone cannot sustain an endless broken-watch loop.
+A subscription that never produces its first server snapshot also times out.
+Permission, identity and history errors stop automatic retries. The retained
+board stays visible, and manual Reconnect starts a fresh retry budget.
+
+Recovery never resubmits an uncertain move. Concurrent reconnect requests share
+one operation. Subscription generations reject queued callbacks from previous
+watches, and failed or hanging cancellation cannot block a new server read.
+Reauthentication must return the original seat owner. Returning from the app's
+background performs server reconciliation; exiting the online game screen
+detaches the local session without deleting the room or relinquishing its seats.
+
+`test/game/multiplayer_resilience_test.dart` injects subscription errors, silent
+completion, missing first snapshots, failed/hung cancellation, lost successful
+acknowledgements, account changes and rewritten history. It races two devices on
+one seat and two guests claiming an expired AI runner. Twelve seeded multi-client
+trials cover both shapes with two, three and four seats, timed and untimed, with
+up to 40 turns each, connection loss and repeated cold rejoins. Each confirmed
+turn checks board, history length, next player, reserves and clock banks across
+clients. These are independent in-memory clients with room codec round trips;
+they are not physical devices or Firebase SDK transport qualification.
+The screen widget regression covers foreground recovery after missing a turn.
+
+Run 38967940253 at 76e4c31 passed strict analysis, all 715 tests, release web
+compilation/startup checks and Android debug APK compilation (including all
+12 Android release-preflight tests). Subsequent changes affect the fault-test
+fixture only: it now supplies a realistic asynchronous initial snapshot, then
+waits for that snapshot before injecting an outage. The first fixture revision
+incorrectly injected faults before startup finished and failed five tests in
+38968246197; no application change was needed. Corrected source at 2a80658 passed
+strict analysis and all 715 tests in 38968912417. Application, dependency and
+workflow files are identical to the fully compiled 76e4c31 source.
+
+### Remaining device qualification
+
+Before describing multiplayer as fully qualified, run independent browser and
+Android installations against the deployed release, recording versions, room
+codes and the action immediately before any failure:
+
+- Host/join both shapes, including four remote seats and a mixed human/AI game.
+- Switch Wi-Fi/mobile data and use airplane mode during a turn and while its
+  confirmation is pending. Confirm one move, retained previews and recovery.
+- Background, kill and reopen host and guest apps; return with the same identity.
+  Confirm history, seats, cosmetics and clocks, including elapsed offline time.
+- Close the AI runner and let another participant take over after lease expiry.
+- Open one seat on two devices and attempt the same turn concurrently.
+- Reopen an invitation from a cold start, test a full room and try a different
+  identity. No existing seat may be silently reassigned.
+- Test the previous installed Android/web release alongside the new web release.
+  Shared protocol compatibility is required, while client recovery improvements
+  only take effect after that client updates.
+
+### Initial repair evidence
+
 `test/game/multiplayer_recovery_regression_test.dart` exercises stalled creation
 on both shapes, stalled authentication during create/join, failing bookmarks
 during create/join, hanging bookmarks, late warning isolation, metadata ordering,
