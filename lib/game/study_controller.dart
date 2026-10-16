@@ -51,7 +51,7 @@ class StudyController extends MatchController {
     if (next == null) return false;
     if (!study.accepts(move, steps)) {
       state = state.copyWith(
-          error: 'Try the lessonâ€™s objective. Your board has not changed.');
+          error: 'Try the lesson’s objective. Your board has not changed.');
       return false;
     }
     steps++;
@@ -85,7 +85,7 @@ class StudyController extends MatchController {
                 ? 'No win within the move limit. Retry and try another idea.'
                 : study.puzzle
                     ? 'Your turn: ${study.moveLimit - steps} move remaining.'
-                    : 'Opening exchange: ${game.current.label} places ${game.config.next(game.current).label}â€™s flat.');
+                    : 'Opening exchange: ${game.current.label} places ${game.config.next(game.current).label}’s flat.');
     if (solved) await retryProgress();
     return true;
   }

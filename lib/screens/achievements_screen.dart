@@ -21,8 +21,8 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     ref.read(achievementProvider.notifier).load();
   }
   void _rules() => showModalBottomSheet<void>(context: context, isScrollControlled: true,
-    showDragHandle: true, builder: (context) => SafeArea(child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24), child: const Column(
+    showDragHandle: true, builder: (context) => const SafeArea(child: SingleChildScrollView(
+      padding: const EdgeInsets.all(24), child: Column(
         mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Earning achievements', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),

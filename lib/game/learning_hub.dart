@@ -77,7 +77,7 @@ class _LearningHubState extends ConsumerState<LearningHub> {
                                           : Icons.school_outlined),
                                   title: Text(study.title),
                                   subtitle: Text(
-                                      '${study.initial.config.seats.length} players Â· ${study.initial.config.size}${_shape == BoardShape.hex ? ' radius' : ' Ã— ${study.initial.config.size}'}\n${study.goal}'),
+                                      '${study.initial.config.seats.length} players · ${study.initial.config.size}${_shape == BoardShape.hex ? ' radius' : ' × ${study.initial.config.size}'}\n${study.goal}'),
                                   trailing: Icon(study.prerequisites
                                           .every(completed.contains)
                                       ? Icons.chevron_right

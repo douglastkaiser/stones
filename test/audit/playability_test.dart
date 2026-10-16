@@ -47,7 +47,7 @@ void main() {
 
   for (final difficulty in AIDifficulty.values) {
     for (final size in [3, 5, 8]) {
-      test('${difficulty.name} takes a road win on $sizeÃ—$size', () async {
+      test('${difficulty.name} takes a road win on $size×$size', () async {
         var board = Board.empty(size);
         for (var col = 0; col < size - 1; col++) {
           board = board.placePiece(Position(0, col),
@@ -65,7 +65,7 @@ void main() {
         expect(game.state.result, GameResult.whiteWins);
       });
     }
-    test('${difficulty.name} seeded complete 3Ã—3 trial', () async {
+    test('${difficulty.name} seeded complete 3×3 trial', () async {
       final game = GameStateNotifier();
       addTearDown(game.dispose);
       game.newGame(3);

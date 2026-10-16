@@ -21,7 +21,8 @@ final matchRoomStoreProvider = Provider<MatchRoomStore>((ref) =>
         style: ref.watch(shareablePieceStyleProvider),
         theme: ref.watch(shareableBoardThemeProvider)));
 
-final matchProvider = StateNotifierProvider<MatchController, MatchSession>(
+final StateNotifierProvider<MatchController, MatchSession> matchProvider =
+    StateNotifierProvider<MatchController, MatchSession>(
     (ref) => MatchController(
           storage: ref.read(localMatchStorageProvider),
           authenticate: () async =>

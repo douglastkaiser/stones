@@ -294,7 +294,7 @@ class MatchController extends StateNotifier<MatchSession> {
       if (mounted && epoch == _epoch) {
         state = state.copyWith(
             shortcutWarning:
-                'Could not save this roomâ€™s shortcut. Keep code ${room.code} '
+                'Could not save this room’s shortcut. Keep code ${room.code} '
                 'and return with the same account or browser profile.');
       }
     }
@@ -381,7 +381,7 @@ class MatchController extends StateNotifier<MatchSession> {
         connected: false,
         busy: false,
         reconnecting: false,
-        error: error == null ? 'Connection interrupted. Reconnectingâ€¦' : '$error');
+        error: error == null ? 'Connection interrupted. Reconnecting…' : '$error');
     _recoveryTimer?.cancel();
     _canAutoRecover = error == null || _transient(error);
     _queueRecovery();

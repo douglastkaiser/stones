@@ -52,7 +52,7 @@ class _StudyPanel extends ConsumerWidget {
             Text(controller.hintsUsed ? 'Hints used · completion still counts' : 'Unaided solve eligible'),
           if (controller.canRetryProgress)
             TextButton.icon(onPressed: controller.retryProgress,
-              icon: const Icon(Icons.save_outlined), child: const Text('Retry saving progress')),
+              icon: const Icon(Icons.save_outlined), label: const Text('Retry saving progress')),
           if (controller.solved)
             FilledButton(
                 onPressed: () => Navigator.pop(context),

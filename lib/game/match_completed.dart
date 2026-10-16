@@ -86,7 +86,7 @@ class MatchCompleted {
     if (id == 'unattributed' || participant == null || !independentSeats ||
         !game.finished || game.result?.reason == ResultReason.abandoned ||
         (game.config.shape == BoardShape.square && game.config.size < 5) ||
-        moves.length != game.ply || moves.isEmpty) return null;
+        moves.length != game.ply || moves.isEmpty) { return null; }
     var replay = MatchState.initial(game.config);
     MatchState? beforeLast;
     MatchMove? lastMove;
@@ -107,7 +107,8 @@ class MatchCompleted {
           return e.value.length != other.length ||
               List.generate(other.length, (i) => e.value[i] != other[i]).any((x) => x);
         }) || (boardWin && (replay.result?.winner != game.result?.winner ||
-            replay.result?.reason != game.result?.reason))) return null;
+            replay.result?.reason != game.result?.reason))) { return null; }
+    if (!boardWin && replay.finished) return null;
     final wins = eligibleWin && (boardWin ||
         (online && game.ply >= game.config.seats.length * 4));
     final metrics = <String, int>{};

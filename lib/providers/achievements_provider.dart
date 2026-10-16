@@ -97,13 +97,14 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   final Future<SharedPreferences> Function() _preferences;
   Future<void> _writes = Future.value();
   Set<String> _matches = {};
+  Set<String> _unknownUnlocks = {};
   Future<T> _queue<T>(Future<T> Function() action) {
     final result = Completer<T>();
     _writes = _writes.then((_) async {
       try { result.complete(await action()); }
       catch (error, stack) {
-        if (mounted) state = state.copyWith(storageError:
-            'Progress could not be saved or loaded. Retry; your saved data has not been replaced.');
+        if (mounted) { state = state.copyWith(storageError:
+            'Progress could not be saved or loaded. Retry; your saved data has not been replaced.'); }
         result.completeError(error, stack);
       }
     });
@@ -121,8 +122,8 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   Future<void> load() => _queue(() async {
     try { await _read(); }
     catch (_) {
-      if (mounted) state = state.copyWith(storageError:
-          'Progress could not be loaded. Retry; your saved data has not been replaced.');
+      if (mounted) { state = state.copyWith(storageError:
+          'Progress could not be loaded. Retry; your saved data has not been replaced.'); }
     }
   });
 
@@ -139,7 +140,8 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       }
       final dates = Map<String,dynamic>.from(data['earnedAt'] as Map? ?? {});
       _matches = _strings(data['matches']);
-      if (mounted) state = AchievementState(loaded: true,
+      _unknownUnlocks = _strings(data['unlocks']).difference(AchievementType.values.map((a) => a.name).toSet());
+      if (mounted) { state = AchievementState(loaded: true,
         metrics: Map<String,dynamic>.from(data['metrics']).map((k,v) => MapEntry(k,_count(v))),
         tags: Map<String,dynamic>.from(data['tags'] as Map? ?? {}).map((k,v) => MapEntry(k,_strings(v))),
         unlockedAchievements: _types(data['unlocks']),
@@ -149,7 +151,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
         unaidedPuzzles: _strings(data['unaided']),
         earnedAt: {for (final type in AchievementType.values)
           if (dates[type.name] is String && DateTime.tryParse(dates[type.name]) != null)
-            type: DateTime.parse(dates[type.name])});
+            type: DateTime.parse(dates[type.name])}); }
       return;
     }
     // Legacy unlocks stay earned, even where new requirements are harder.
@@ -165,6 +167,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       }
       wins = _count(data['totalWins']); online = _count(data['onlineWins']);
       legacy.addAll(_types(data['unlocks']));
+      _unknownUnlocks = _strings(data['unlocks']).difference(AchievementType.values.map((a) => a.name).toSet());
       _matches = _strings(data['matches']).map(_matchKey).toSet();
     }
     final lessons = {...?prefs.getStringList(AchievementKeys.completedTutorials)};
@@ -173,9 +176,9 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       ...?prefs.getStringList(unifiedLearningProgressKey)};
     lessons.addAll(other.intersection(AchievementState.allTutorialIds));
     puzzles.addAll(other.intersection(AchievementState.allPuzzleIds));
-    if (mounted) state = AchievementState(loaded: true, legacyUnlocks: legacy,
+    if (mounted) { state = AchievementState(loaded: true, legacyUnlocks: legacy,
       unlockedAchievements: legacy, metrics: {'wins': _count(wins), 'onlineWins': _count(online)},
-      completedTutorials: lessons, completedPuzzles: puzzles);
+      completedTutorials: lessons, completedPuzzles: puzzles); }
   }
 
   Future<List<AchievementType>> _commit(AchievementState next, Set<String> matches,
@@ -192,7 +195,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       'version': 2, 'metrics': next.metrics,
       'tags': next.tags.map((k,v) => MapEntry(k,v.toList())),
       'matches': matches.toList(),
-      'unlocks': next.unlockedAchievements.map((a) => a.name).toList(),
+      'unlocks': {...next.unlockedAchievements.map((a) => a.name), ..._unknownUnlocks}.toList(),
       'legacyUnlocks': next.legacyUnlocks.map((a) => a.name).toList(),
       'earnedAt': next.earnedAt.map((k,v) => MapEntry(k.name,v.toIso8601String())),
       'pending': next.pending.map((a) => a.name).toList(),
@@ -234,7 +237,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     final known = puzzle ? AchievementState.allPuzzleIds : AchievementState.allTutorialIds;
     if (!known.contains(id)) return [];
     if (puzzle ? state.completedPuzzles.contains(id) && (!clean || state.unaidedPuzzles.contains(id)) :
-        state.completedTutorials.contains(id)) return [];
+        state.completedTutorials.contains(id)) { return []; }
     return _commit(state.copyWith(
       completedTutorials: {...state.completedTutorials, if (!puzzle) id},
       completedPuzzles: {...state.completedPuzzles, if (puzzle) id},
@@ -254,9 +257,10 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     await _commit(state.copyWith(pending: state.pending.where((a) => !types.contains(a)).toList()),
         _matches, evaluate: false);
   });
-  void clearJustUnlocked() { unawaited(acknowledgeUnlocks(state.pending)); }
+  void clearJustUnlocked() { unawaited(acknowledgeUnlocks(state.pending).catchError((Object _) {})); }
   Future<void> resetAll() => _queue(() async {
     // The new authoritative save shadows legacy keys, even if cleanup fails.
+    _unknownUnlocks = {};
     await _commit(const AchievementState(loaded: true), {}, evaluate: false);
   });
 }

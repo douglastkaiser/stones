@@ -65,13 +65,19 @@ class _StonesAppState extends ConsumerState<StonesApp> {
       final awards = pending.map(GameAchievement.forType).toList();
       final points = awards.fold(0, (int sum, a) => sum + a.points);
       messenger.showSnackBar(SnackBar(duration: const Duration(seconds: 6),
-        content: Text('${awards.first.name}${awards.length > 1 ? ' + ${awards.length - 1} more' : ''} Â· +$points achievement points'),
+        content: Text('${awards.first.name}${awards.length > 1 ? ' + ${awards.length - 1} more' : ''} · +$points achievement points'),
         action: SnackBarAction(label: 'View', onPressed: () =>
           _navigator.currentState?.push<void>(MaterialPageRoute(builder: (_) => const AchievementsScreen())))));
       unawaited(ref.read(soundManagerProvider).playAchievementUnlock());
-      try { await ref.read(achievementProvider.notifier).acknowledgeUnlocks(pending); }
-      catch (_) { /* Undelivered acknowledgements remain in the durable queue. */ }
+      var acknowledged = false;
+      try {
+        await ref.read(achievementProvider.notifier).acknowledgeUnlocks(pending);
+        acknowledged = true;
+      } catch (_) { /* Undelivered acknowledgements remain in the durable queue. */ }
       _noticeScheduled = false;
+      if (acknowledged && mounted) {
+        _announceAwards(ref.read(achievementProvider).pending);
+      }
     });
   }
   @override
@@ -86,6 +92,7 @@ class _StonesAppState extends ConsumerState<StonesApp> {
     final settings = ref.watch(appSettingsProvider);
 
     ref.listen(achievementProvider.select((s) => s.pending), (_, pending) => _announceAwards(pending));
+    _announceAwards(ref.read(achievementProvider).pending);
     return MaterialApp(
       scaffoldMessengerKey: _messenger,
       navigatorKey: _navigator,
@@ -407,7 +414,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       final play = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('CoachÃ¢â‚¬â„¢s suggestion'),
+          title: const Text('Coach’s suggestion'),
           content: SingleChildScrollView(child: Text(explanation)),
           actions: [
             TextButton(
@@ -437,7 +444,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-              title: const Text('Court Mode Ã‚Â· coach'),
+              title: const Text('Court Mode · coach'),
               content: SingleChildScrollView(
                   child: Text([_courtWarning, _courtExplanation]
                       .where((text) => text.isNotEmpty)
@@ -591,7 +598,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final notifier = ref.read(gameStateProvider.notifier);
     if (!isScenarioGame && !notifier.achievementAssisted) {
       final oldRoom = onlineState.session;
-      final localColor = onlineState.localColor ?? session.vsComputerPlayerColor;
+      final localColor = session.mode == GameMode.online
+          ? onlineState.localColor ?? session.vsComputerPlayerColor : session.vsComputerPlayerColor;
       final settings = ref.read(appSettingsProvider);
       final event = legacyAchievementResult(state: gameState,
           session: session.copyWith(vsComputerPlayerColor: localColor),
@@ -1105,8 +1113,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               _courtWarning.isNotEmpty
                                   ? _courtWarning
                                   : _courtExplanation.startsWith('AI move')
-                                      ? 'Court Mode Ã‚Â· Why that AI move?'
-                                      : 'Court Mode Ã‚Â· Untimed practice',
+                                      ? 'Court Mode · Why that AI move?'
+                                      : 'Court Mode · Untimed practice',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis),
                         )),
@@ -1117,7 +1125,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               ? _askCourtCoach
                               : null,
                           icon: const Icon(Icons.school_outlined),
-                          label: Text(_coachBusy ? 'ThinkingÃ¢â‚¬Â¦' : 'Ask coach'),
+                          label: Text(_coachBusy ? 'Thinking…' : 'Ask coach'),
                         ),
                       ])),
                 )
@@ -1143,7 +1151,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ? activeScenario.title
                   : session.mode == GameMode.vsComputer
                       ? session.isCourtMode
-                          ? 'Court Ã‚Â· ${session.aiDifficulty.label} AI'
+                          ? 'Court · ${session.aiDifficulty.label} AI'
                           : '${session.aiDifficulty.label} AI'
                       : isOnline
                           ? 'Online Game'
@@ -1152,7 +1160,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               overflow: TextOverflow.ellipsis),
           leading: IconButton(
             icon: const Icon(Icons.home),
-            tooltip: 'Home Ã‚Â· resume this session',
+            tooltip: 'Home · resume this session',
             onPressed: _navigateHome,
           ),
           actions: [
@@ -1567,7 +1575,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             onlineState.errorMessage == null)
                           const _OnlineStatusBanner(
                               message:
-                                  'Confirming saved stateÃ¢â‚¬Â¦ Input resumes when the server responds.',
+                                  'Confirming saved state… Input resumes when the server responds.',
                               icon: Icons.sync),
 
                         if (session.mode == GameMode.online &&
@@ -2519,7 +2527,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 children: [
                   for (int size = 3; size <= 8; size++)
                     ChoiceChip(
-                      label: Text('$sizeÃƒâ€”$size'),
+                      label: Text('$size×$size'),
                       selected: selectedSize == size,
                       onSelected: (_) => setState(() {
                         selectedSize = size;
@@ -2781,7 +2789,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     children: [
                       for (int size = 3; size <= 8; size++)
                         ChoiceChip(
-                          label: Text('$sizeÃƒâ€”$size'),
+                          label: Text('$size×$size'),
                           selected: selectedSize == size,
                           onSelected: (_) => setState(() {
                             selectedSize = size;
@@ -3172,11 +3180,11 @@ class _CompactTurnIndicator extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     String turnText =
-        '${isWhite ? 'Light' : 'Dark'} Ã‚Â· Turn ${gameState.turnNumber}';
+        '${isWhite ? 'Light' : 'Dark'} · Turn ${gameState.turnNumber}';
     if (onlineState?.localColor != null) {
       final isMyTurn = gameState.currentPlayer == onlineState!.localColor;
       turnText =
-          isMyTurn ? 'Your turn Ã‚Â· ${gameState.turnNumber}' : 'Waiting...';
+          isMyTurn ? 'Your turn · ${gameState.turnNumber}' : 'Waiting...';
     }
 
     return Container(
@@ -3427,7 +3435,7 @@ class _ScenarioInfoCard extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(scenario.objective),
             Text(
-                '${progress.puzzleMoves} / ${scenario.puzzleMoveLimit} moves used Ã‚Â· Untimed'),
+                '${progress.puzzleMoves} / ${scenario.puzzleMoveLimit} moves used · Untimed'),
             if (progress.isFailed(game))
               Semantics(
                   liveRegion: true,
@@ -4056,7 +4064,7 @@ class _CellInteractionLayerState extends State<_CellInteractionLayer> {
     final stack = _getPreviewStack();
     return StackInspection(
       label:
-          '${widget.label}${widget.inspectionStack == null ? '' : ' Ã‚Â· before move'}',
+          '${widget.label}${widget.inspectionStack == null ? '' : ' · before move'}',
       inspectionPieces: widget.inspectionStack == null
           ? null
           : [
@@ -4787,9 +4795,9 @@ class _BottomControls extends StatelessWidget {
     'Tip: Moving stacks lets you control the board faster.',
     'Tip: You can pick up to N pieces from a stack on an NxN board.',
     'Tip: The first two moves place your opponent\'s piece.',
-    'Tip: Watch for threats Ã¢â‚¬â€œ one move from completing a road!',
+    'Tip: Watch for threats – one move from completing a road!',
     'Tip: Press and hold on a stack to see all pieces.',
-    'Tip: Capstones are powerful but limited Ã¢â‚¬â€œ use them wisely!',
+    'Tip: Capstones are powerful but limited – use them wisely!',
     'Tip: Flats count for tie-breakers, so place them strategically.',
   ];
 
@@ -4947,7 +4955,7 @@ class _BottomControls extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Placing: $typeName Ã‚Â· Tap cell to confirm, use sidebar to change type.',
+            'Placing: $typeName · Tap cell to confirm, use sidebar to change type.',
             style: TextStyle(color: textColor, fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -5121,7 +5129,7 @@ class _BottomControls extends StatelessWidget {
       Text(
           drops.isEmpty
               ? 'Preview only. Drop bottom first; Confirm finishes the turn.'
-              : 'Planned drops: ${drops.join(' Ã¢â€ â€™ ')}${remaining > 0 ? ' Ã¢â€ â€™ $pending' : ''}. Board changes only on Confirm.',
+              : 'Planned drops: ${drops.join(' → ')}${remaining > 0 ? ' → $pending' : ''}. Board changes only on Confirm.',
           style: Theme.of(context).textTheme.bodySmall,
           textAlign: TextAlign.center),
     ]);
