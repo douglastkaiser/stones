@@ -19,6 +19,7 @@ MatchCompleted roadMatch(
     bool court = false,
     bool capstone = false,
     bool crush = false,
+    bool longSpread = false,
     int clockSeconds = 0,
     String opponent = 'opponent',
     List<BotLevel>? levels}) {
@@ -50,7 +51,27 @@ MatchCompleted roadMatch(
     game = next;
   }
 
-  if (crush) {
+  if (longSpread) {
+    play(MatchMove.place(const Cell(4,4),PieceType.flat));
+    play(MatchMove.place(const Cell(0,0),PieceType.flat));
+    final moves = [
+      MatchMove.place(const Cell(1,0),PieceType.flat),
+      MatchMove.place(const Cell(3,0),PieceType.flat),
+      MatchMove.place(const Cell(4,0),PieceType.flat),
+      MatchMove.place(const Cell(2,3),PieceType.flat),
+      MatchMove.place(const Cell(2,4),PieceType.flat),
+      MatchMove.spread(const Cell(2,4),Step.northWest,[1]),
+      MatchMove.place(const Cell(1,3),PieceType.capstone),
+      MatchMove.spread(const Cell(1,3),Step.east,[1]),
+      MatchMove.spread(const Cell(2,3),Step.northWest,[1,1,1]),
+    ];
+    final targets = [const Cell(0,1),const Cell(1,1),const Cell(3,1),const Cell(4,1),
+      const Cell(0,2),const Cell(1,2),const Cell(3,2),const Cell(4,2)];
+    for(var i=0;i<moves.length;i++) {
+      play(moves[i]);
+      if (!game.finished) { play(MatchMove.place(targets[i],PieceType.standing)); }
+    }
+  } else if (crush) {
     if (shape != BoardShape.square || count != 2 || config.size != 5) {
       throw ArgumentError('Crush fixture');
     }
@@ -131,4 +152,23 @@ MatchCompleted roadMatch(
                   moves: records)
               : null),
       moves: records);
+}
+
+MatchCompleted drawnHardDuel({String id = 'drawn-duel', bool flatWin = false}) {
+  final config = MatchConfig(shape: BoardShape.square, size: 5, seats: const [
+    SeatConfig(SeatId.ivory), SeatConfig(SeatId.charcoal, control: SeatControl.ai, level: BotLevel.hard)]);
+  var game = MatchState.initial(config);
+  final moves = <Map<String,dynamic>>[];
+  while (!game.finished) {
+    final color = game.opening ? config.next(game.current) : game.current;
+    final cell = game.geometry.cells.firstWhere((c) => game.stackAt(c).isEmpty &&
+        (c.x+c.y)%2 == color.index);
+    final move = MatchMove.place(cell, (cell == const Cell(2,2) || (flatWin && cell == const Cell(1,2))) ? PieceType.standing : PieceType.flat);
+    moves.add(move.toMap(game.current));
+    final next = MatchRules.play(game,move);
+    if (next == null) { throw StateError('Invalid draw fixture'); }
+    game = next;
+  }
+  if (flatWin ? game.result?.winner != SeatId.ivory : game.result?.draw != true) { throw StateError('Flat fixture has wrong result'); }
+  return MatchCompleted(MatchSession(id:id,game:game),moves:moves);
 }

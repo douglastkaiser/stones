@@ -1,5 +1,8 @@
 # Development map
 
+The [achievement progression audit](ACHIEVEMENTS.md) records the 25-goal mastery
+ladder, replay evidence, unified learning, save migration and qualification.
+
 The [2026-10-16 multiplayer reliability audit](MULTIPLAYER_RELIABILITY.md)
 records startup deadlines, nonblocking shortcut storage, bounded automatic
 recovery, subscription and identity guards, multi-client fault qualification,

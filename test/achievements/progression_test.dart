@@ -5,6 +5,7 @@ import 'package:stones/game/match_completed.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_state.dart';
+import 'package:stones/game/match_room.dart';
 import 'package:stones/game/study_catalog.dart';
 import 'package:stones/models/achievement.dart';
 import 'package:stones/providers/achievements_provider.dart';
@@ -358,4 +359,64 @@ void main() {
     expect(again.state.totalWins, 0);
     expect(again.state.unlockedAchievements, isEmpty);
   });
+  test('a verified draw resets the hard-duel streak without adding wins', () async {
+    final awards=AchievementNotifier();addTearDown(awards.dispose);
+    await awards.recordMatch(roadMatch());
+    await awards.recordMatch(drawnHardDuel());
+    expect(awards.state.metrics['hardStreak'],0);
+    expect(awards.state.metrics['bestHardStreak'],1);
+    expect(awards.state.totalWins,1);
+  });
+  test('online resignations count only after four cycles and never grant board craft', () async {
+    final event=roadMatch(online:true);
+    final awards=AchievementNotifier();addTearDown(awards.dispose);
+    for(final length in [2,8]) {
+      var room=MatchRoom(code:'resign-$length',host:'player',config:event.game.config,
+        owners:event.owners!,moves:event.moves.take(length).toList());
+      room=room.resign('opponent-1',SeatId.charcoal);
+      await awards.recordMatch(MatchCompleted(MatchSession(id:room.code,uid:'player',room:room,
+        game:room.replay()),moves:room.moves));
+      expect(awards.state.totalWins,length==2 ? 0 : 1);
+    }
+    expect(awards.state.onlineWins,1);
+    expect(awards.state.metrics['roadWins'],isNull);
+  });
+  test('shared accounts, spectators and tiny Square boards cannot farm progress', () async {
+    final awards=AchievementNotifier();addTearDown(awards.dispose);
+    final event=roadMatch(online:true,count:3);
+    final room=MatchRoom(code:'shared',host:'player',config:event.game.config,
+      owners:const {SeatId.ivory:'player',SeatId.charcoal:'friend',SeatId.copper:'friend'},moves:event.moves);
+    await awards.recordMatch(MatchCompleted(MatchSession(id:'shared',uid:'player',room:room,
+      game:room.replay()),moves:room.moves));
+    await awards.recordMatch(MatchCompleted(MatchSession(id:'observer',uid:'observer',room:event.online ? room : null,
+      game:event.game),moves:event.moves));
+    await awards.recordMatch(roadMatch(id:'tiny',size:3));
+    expect(awards.state.totalWins,0);
+  });
+
+  test('every achievement is reachable through verified games and known learning completions', () async {
+    final awards=AchievementNotifier();addTearDown(awards.dispose);
+    var id=0;
+    Future<void> win(MatchCompleted event) async { await awards.recordMatch(event); }
+    for(var i=0;i<12;i++) { await win(roadMatch(id:'all-${id++}',level:BotLevel.expert,size:i==11 ? 6 : 5)); }
+    for(var i=0;i<5;i++) { await win(roadMatch(id:'all-${id++}',clockSeconds:60)); }
+    for(var i=0;i<10;i++) { await win(drawnHardDuel(id:'all-${id++}',flatWin:true)); }
+    for(var count=3;count<=4;count++) {
+      for(var i=0;i<5;i++) { await win(roadMatch(id:'all-${id++}',shape:BoardShape.hex,count:count)); }
+    }
+    for(var i=0;i<5;i++) { await win(roadMatch(id:'all-${id++}',size:7)); }
+    for(var i=0;i<5;i++) { await win(roadMatch(id:'all-${id++}',crush:true)); }
+    for(var i=0;i<5;i++) { await win(roadMatch(id:'all-${id++}',longSpread:true)); }
+    for(var i=0;i<25;i++) { await win(roadMatch(id:'all-${id++}',online:true,opponent:'friend-${i%10}')); }
+    while(awards.state.totalWins<100) { await win(roadMatch(id:'all-${id++}')); }
+    for(final lesson in AchievementState.allTutorialIds) { await awards.completeTutorial(lesson); }
+    for(final puzzle in AchievementState.allPuzzleIds) { await awards.completePuzzle(puzzle,unassisted:true); }
+    expect(awards.state.unlockedAchievements,AchievementType.values.toSet());
+    expect(awards.state.earnedAt.length,25);
+    expect(awards.state.rank,'Legend');
+    final fresh=AchievementNotifier();addTearDown(fresh.dispose);await fresh.load();
+    expect(fresh.state.unlockedAchievements,awards.state.unlockedAchievements);
+    expect(fresh.state.points,awards.state.points);
+  });
+
 }
