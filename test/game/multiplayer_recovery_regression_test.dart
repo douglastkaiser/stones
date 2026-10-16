@@ -4,6 +4,7 @@ import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_room.dart';
 import 'package:stones/game/match_room_store.dart';
+import 'package:stones/game/match_state.dart';
 import 'match_controller_test.dart' as fixtures;
 
 class FaultStore extends fixtures.MemoryMatchRoomStore {
@@ -143,6 +144,35 @@ void main() {
     expect(host.state.shortcutWarning, isNull);
     expect(host.state.room, isNull);
     expect(host.state.game!.config.shape, BoardShape.hex);
+    host.dispose();
+    await store.metadata.close();
+    await store.updates.close();
+  });
+
+  test('disconnecting during AI search keeps manual reconnect available',
+      () async {
+    final store = FaultStore();
+    final pending = Completer<MatchMove?>();
+    final config = onlineConfig(BoardShape.square).copyWith(seats: const [
+      SeatConfig(SeatId.ivory, control: SeatControl.ai),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]);
+    await store.create('host', config);
+    await store.join('UABCDEF', 'guest');
+    await store.claimRunner('UABCDEF', 'host');
+    final host = fixtures.controller(fixtures.MemoryMatchStorage(), store,
+        search: (game, level) => pending.future);
+    await host.join('UABCDEF', expectedUid: 'host');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(host.state.busy, isTrue);
+    store.metadata.add(
+        const MatchRoomUpdate(null, confirmed: false, connected: false));
+    expect(host.state.busy, isFalse);
+    expect(host.state.connected, isFalse);
+    pending.complete(null);
+    await Future<void>.delayed(Duration.zero);
+    expect(host.state.busy, isFalse);
+    expect(await host.reconnect(), isTrue);
     host.dispose();
     await store.metadata.close();
     await store.updates.close();

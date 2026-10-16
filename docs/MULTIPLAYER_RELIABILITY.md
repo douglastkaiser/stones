@@ -25,6 +25,10 @@ that particular attempt.
   after a disconnected event, before a server snapshot confirmed its history.
   Unconfirmed events can now disconnect but cannot reconnect. A confirmed room
   update or explicit server reconciliation restores play.
+- Disconnecting while AI search was running cancelled that search without
+  clearing its busy state. That also disabled the manual Reconnect button.
+  Cancelling an active search now releases busy unless a move still awaits
+  acknowledgement; a regression checks recovery before a new server event.
 
 The shared controller fixes apply to new Square and Hex rooms with any supported
 seat mixture. The original room codecs and Firebase access policies are unchanged.

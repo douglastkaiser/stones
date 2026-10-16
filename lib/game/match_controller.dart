@@ -282,13 +282,18 @@ class MatchController extends StateNotifier<MatchSession> {
     _subscription = store().watch(code).listen((update) {
       if (!mounted || epoch != _epoch) return;
       if (!update.confirmed) {
+        final cancelledSearch = !update.connected &&
+            _searchingToken == _searchToken &&
+            _searchingPly == state.game?.ply;
         if (!update.connected) {
           _timer?.cancel();
           _searchToken++;
         }
         // Only a confirmed server snapshot may reconnect a retained board.
         // Pending-write metadata can say "online" without confirming history.
-        state = state.copyWith(connected: state.connected && update.connected);
+        state = state.copyWith(
+            connected: state.connected && update.connected,
+            busy: cancelledSearch && _awaitingPly == null ? false : null);
         return;
       }
       try {
