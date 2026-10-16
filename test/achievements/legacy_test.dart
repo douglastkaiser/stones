@@ -1,14 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stones/game/legacy_achievement_result.dart';
 import 'package:stones/game/legacy_square_adapter.dart';
-import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/game_state.dart';
 import 'package:stones/models/board.dart';
 import 'package:stones/models/online_game.dart';
 import 'package:stones/models/piece.dart';
-import 'package:stones/models/player.dart';
 import 'package:stones/providers/game_provider.dart';
 import 'package:stones/providers/game_session_provider.dart';
 import 'package:stones/services/ai/ai.dart';

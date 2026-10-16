@@ -73,7 +73,7 @@ void main() {
         find.widgetWithText(ChoiceChip, 'Earned'), 250);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Earned'));
     await tester.pumpAndSettle();
-    expect(find.text('1 challenges'), findsOneWidget);
+    expect(find.text('1 challenge'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('First Steps'), 250);
     expect(find.text('Previously earned · retained'), findsNothing);
     await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'In progress'));

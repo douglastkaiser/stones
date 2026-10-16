@@ -57,6 +57,8 @@ class AchievementState {
   bool get allTutorialsCompleted =>
       completedTutorials.containsAll(allTutorialIds);
   bool get allPuzzlesCompleted => completedPuzzles.containsAll(allPuzzleIds);
+  bool get readyToRecognize => achievements.any((a) => !isUnlocked(a.type) &&
+      a.requirements.every((r) => target(r) > 0 && value(r.metric) >= target(r)));
   int get points => achievements
       .where((a) => isUnlocked(a.type))
       .fold(0, (sum, a) => sum + a.points);
@@ -158,6 +160,14 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
         for (final name in _strings(value))
           ...AchievementType.values.where((type) => type.name == name)
       };
+  static bool _stringList(Object? value) =>
+      value is List && value.every((item) => item is String);
+  static bool _counterMap(Object? value) => value is Map && value.entries.every((e) =>
+      e.key is String && e.value is int && e.value >= 0);
+  static bool _tagMap(Object? value) => value is Map && value.entries.every((e) =>
+      e.key is String && _stringList(e.value));
+  static bool _dateMap(Object? value) => value is Map && value.entries.every((e) =>
+      e.key is String && e.value is String && DateTime.tryParse(e.value) != null);
   static int _count(Object? value) => value is int && value >= 0 ? value : 0;
   static String _matchKey(String value) => value.replaceFirst(
       RegExp(r':\d+:(road|flats|time|resignation|abandoned)$'), '');
@@ -165,6 +175,9 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   Future<void> load() => _queue(() async {
         try {
           await _read();
+          if (state.readyToRecognize) {
+            await _commit(state, _matches);
+          }
         } catch (_) {
           if (mounted) {
             state = state.copyWith(
@@ -180,12 +193,15 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     final encoded = prefs.getString(AchievementKeys.progression);
     if (encoded != null) {
       final data = Map<String, dynamic>.from(jsonDecode(encoded));
-      if (data['version'] != 2 ||
-          data['metrics'] is! Map ||
-          data['matches'] is! List ||
-          data['unlocks'] is! List ||
-          data['tutorials'] is! List ||
-          data['puzzles'] is! List) {
+      if (data['version'] != 2 || !_counterMap(data['metrics']) ||
+          !_stringList(data['matches']) || !_stringList(data['unlocks']) ||
+          !_stringList(data['tutorials']) || !_stringList(data['puzzles']) ||
+          (data['tags'] != null && !_tagMap(data['tags'])) ||
+          (data['earnedAt'] != null && !_dateMap(data['earnedAt'])) ||
+          (data['legacyUnlocks'] != null && !_stringList(data['legacyUnlocks'])) ||
+          (data['pending'] != null && !_stringList(data['pending'])) ||
+          (data['unaided'] != null && (!_stringList(data['unaided']) ||
+              !_strings(data['puzzles']).containsAll(_strings(data['unaided']))))) {
         throw const FormatException(
             'Unsupported or incomplete progression save');
       }

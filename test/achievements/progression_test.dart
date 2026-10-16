@@ -176,7 +176,7 @@ void main() {
     expect(fresh.state.totalWins, 1);
     final changed = MatchCompleted(
         MatchSession(
-          id: 'stable-room',
+          id: event.id,
           game: event.game.copyWith(
               result:
                   const MatchResult(SeatId.ivory, ResultReason.resignation)),
@@ -510,4 +510,40 @@ void main() {
     expect(awards.state.metrics['expertWins'], 1);
     expect(awards.state.metrics['hardStreak'], 1);
   });
+  test('migration recognizes completed learning without requiring another activity', () async {
+    SharedPreferences.setMockInitialValues({
+      AchievementKeys.completedPuzzles:AchievementState.allPuzzleIds.toList(),
+    });
+    final awards=AchievementNotifier();addTearDown(awards.dispose);
+    await awards.load();
+    expect(awards.state.unlockedAchievements,containsAll([
+      AchievementType.squareScholar,AchievementType.hexScholar,AchievementType.puzzleSolver]));
+    expect(awards.state.isUnlocked(AchievementType.precision),isFalse);
+    final original=awards.state.earnedAt;
+    await awards.load();expect(awards.state.earnedAt,original);
+    expect(awards.state.pending.length,3);
+    final fresh=AchievementNotifier();addTearDown(fresh.dispose);await fresh.load();
+    expect(fresh.state.pending.length,3);
+    expect(fresh.state.earnedAt,original);
+  });
+
+  test('structurally corrupt v2 evidence cannot silently lose deduplication or counters', () async {
+    final seed=AchievementNotifier();await seed.recordMatch(roadMatch());seed.dispose();
+    final prefs=await SharedPreferences.getInstance();
+    final valid=jsonDecode(prefs.getString(AchievementKeys.progression)!) as Map<String,dynamic>;
+    for(final mutation in [
+      <String,dynamic>{'matches':[42]},
+      <String,dynamic>{'metrics':{'wins':'1'}},
+      <String,dynamic>{'tags':{'opponents':'wrong'}},
+      <String,dynamic>{'unaided':['never-completed']},
+    ]) {
+      final payload=jsonEncode({...valid,...mutation});
+      await prefs.setString(AchievementKeys.progression,payload);
+      final awards=AchievementNotifier();await awards.load();
+      expect(awards.state.loaded,isFalse);expect(awards.state.storageError,isNotNull);
+      await expectLater(awards.recordMatch(roadMatch(id:'another')),throwsA(anything));
+      expect(prefs.getString(AchievementKeys.progression),payload);awards.dispose();
+    }
+  });
+
 }

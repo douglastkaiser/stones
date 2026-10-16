@@ -78,7 +78,9 @@ all earned flags/dates and pending notices. A failed commit retains the previous
 save and visible counts. Malformed/unsupported saves are not overwritten; the
 screen exposes a load retry. The old v1 win ledger, flags, Square learning,
 Hex learning and unified learning keys migrate without inventing missing
-specialist history. Unknown unlock names survive a subsequent save.
+specialist history. Startup recognizes newly introduced achievements supported
+by known saved learning IDs or general counters, without requiring another game
+or solve. Unknown unlock names survive a subsequent save.
 
 Previously earned achievements and all five paired cosmetic sets remain earned,
 even where requirements increased. They are marked Previously earned; no

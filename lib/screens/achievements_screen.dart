@@ -110,14 +110,13 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                                       Text(state.storageError!,
                                           style:
                                               TextStyle(color: colors.error)),
-                                      if (!state.loaded)
+                                      if (!state.loaded || state.readyToRecognize)
                                         TextButton(
                                             onPressed: ref
                                                 .read(achievementProvider
                                                     .notifier)
                                                 .load,
-                                            child: const Text(
-                                                'Retry loading progress')),
+                                            child: Text(state.loaded ? 'Retry recognizing achievements' : 'Retry loading progress')),
                                     ]))),
                       Card(
                           color: colors.primaryContainer,
@@ -147,10 +146,10 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                                     const SizedBox(height: 16),
                                     Wrap(spacing: 16, runSpacing: 8, children: [
                                       Text(
-                                          '${state.totalWins} qualifying wins'),
-                                      Text('${state.onlineWins} online wins'),
+                                          '${state.totalWins} qualifying ${state.totalWins == 1 ? 'win' : 'wins'}'),
+                                      Text('${state.onlineWins} online ${state.onlineWins == 1 ? 'win' : 'wins'}'),
                                       Text(
-                                          '${state.metrics['hardStreak'] ?? 0} current Hard+ streak'),
+                                          'Hard+ streak: ${state.metrics['hardStreak'] ?? 0}'),
                                     ]),
                                   ]))),
                       const SizedBox(height: 12),
@@ -193,7 +192,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                                   setState(() => _filter = filter)),
                       ]),
                       const SizedBox(height: 16),
-                      Text('${visible.length} challenges',
+                      Text('${visible.length} ${visible.length == 1 ? 'challenge' : 'challenges'}',
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 12),
                       if (visible.isEmpty)
