@@ -164,7 +164,9 @@ void main() {
     store.pendingClaim = Completer<MatchRoom>();
     store.pendingRead = Completer<MatchRoom>();
     store.metadata.add(MatchRoomUpdate(store.room));
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    for (var attempt = 0; attempt < 60 && host.state.connected; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     expect(host.state.connected, isFalse);
     expect(host.state.error, contains('Reconnect to continue AI'));
     host.dispose();

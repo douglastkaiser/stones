@@ -1,5 +1,9 @@
 # Development map
 
+The [2026-10-16 multiplayer reliability audit](MULTIPLAYER_RELIABILITY.md)
+records startup deadlines, nonblocking shortcut storage, confirmed reconnect
+handling, regression evidence and current rollout status.
+
 The [unified play expansion plan](UNIFIED_PLAY_PLAN.md) records the architecture
 and execution evidence for one setup, seat-based engine, controls and room
 protocol for two to four players on Square or Hex. New play and learning now use

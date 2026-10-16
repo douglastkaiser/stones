@@ -29,7 +29,12 @@ class AccountController extends StateNotifier<AccountState> {
   Future<AccountIdentity>? _guest;
   StreamSubscription<AccountIdentity?>? _subscription;
 
-  Future<void> initialize() => _initialization ??= _initialize();
+  Future<void> initialize() =>
+      _initialization ??= _initialize().whenComplete(() {
+        // Share in-flight work and successful initialization, but let the next
+        // create/join attempt recover from a temporary bootstrap failure.
+        if (!mounted || !state.ready) _initialization = null;
+      });
   Future<void> _initialize() async {
     try {
       await service.initialize().timeout(const Duration(seconds: 20));

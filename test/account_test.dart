@@ -108,6 +108,32 @@ void main() {
     await pending;
   });
 
+  test('multiplayer retries bootstrap without a trip to account settings',
+      () async {
+    service.failure = FirebaseAuthException(code: 'network-request-failed');
+    await expectLater(controller.ensurePlayer(), throwsStateError);
+    expect(controller.state.ready, isFalse);
+    service.failure = null;
+    final players = await Future.wait(
+        [controller.ensurePlayer(), controller.ensurePlayer()]);
+    expect(players.map((player) => player.uid), ['guest', 'guest']);
+    expect(service.initializations, 2);
+    expect(service.guestCalls, 1);
+    expect(controller.state.ready, isTrue);
+    expect(controller.state.error, isNull);
+  });
+
+  test('Google sign-in retries after an earlier bootstrap failure', () async {
+    service.failure = FirebaseAuthException(code: 'network-request-failed');
+    await controller.initialize();
+    service.failure = null;
+    await controller.signInGoogle();
+    expect(service.initializations, 2);
+    expect(service.googleCalls, 1);
+    expect(controller.state.identity?.uid, 'google');
+    expect(controller.state.error, isNull);
+  });
+
   test('auth stream removes stale identity and handles errors', () async {
     await controller.ensurePlayer();
     service.events.add(null);
