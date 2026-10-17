@@ -11,7 +11,7 @@ android/key.properties
 # Python helper caches
 __pycache__/
 
-# Server engine is compiled from shared Dart sources during qualification/deploy.
+# Legacy local qualification artifacts; the app no longer deploys a server engine.
 functions/node_modules/
 functions/engine.js*
 functions/engine.js.deps

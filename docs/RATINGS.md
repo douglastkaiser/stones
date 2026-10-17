@@ -150,3 +150,37 @@ account deletion/rename propagation or retention cleanup is implemented here.
 - `lib/providers/elo_provider.dart`: identity-safe bounded read state.
 - `test/ratings/`: model, replay, identity, responsiveness and display regressions.
 - `tools/hex_rules/spark_ratings.test.mjs`: real database adversarial transactions.
+
+
+## Qualification evidence and publication handoff (2026-10-17)
+
+Source `c0ed867` passed all 776 Flutter tests, strict analysis with no issues,
+release web build, and Android debug APK build in
+[CI 39000326913](https://github.com/douglastkaiser/stones/actions/runs/39000326913).
+The final rules at `01b15ac` passed all 77 real Firestore emulator authorization
+checks in [run 39000275972](https://github.com/douglastkaiser/stones/actions/runs/39000275972).
+Those rules are unchanged in `c0ed867`. The suite covers every supported shape,
+size and 2/3/4-player count; clock-pool isolation; every AI difficulty; Hex AI;
+exact math; final-voter atomic settlement; stale totals; duplicate sources;
+unauthorized/anonymous/partial writes; private evidence and old-room key setup.
+No physical-device or production rating trial is claimed by these checks.
+
+The console still uses Spark. Two required collection-scoped player indexes were
+created without changing access controls: `isAi ASC, established ASC, rating DESC`
+(index `CICAgOjXh4EK`, observed Enabled) and the corresponding `rating ASC` index
+(`CICAgJiUpoMK`, creation accepted, last observed Building). There were no existing
+manual indexes to replace. The optional `ratingResults.moves` automatic-index
+exemption is checked into the deployment configuration; the console returned an
+error saving it and it was cancelled. It is an optimization, not an eligibility
+or integrity requirement. Do not describe it as deployed until verified.
+
+The exact committed rules were staged as unpublished changes in the console.
+The Firebase tab subsequently crashed during screenshot capture. Production
+access rules were not published. Publishing broadens access to the new ratings
+namespace, so browser automation requires action-time confirmation; a request
+identifying `stones-9a6a0` and the exact `01b15ac` payload is pending. Restage from
+that commit if the console draft was lost. After approval: publish, verify the
+index is enabled, run live multi-account/reconnect/duplicate trials, then promote
+the qualified client to main and deploy. Keep private room/evidence IDs out of
+public trial reports. No billing change, Cloud Functions deployment or automatic
+Play Store release is authorized by this handoff.
