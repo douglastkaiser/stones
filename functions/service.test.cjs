@@ -43,6 +43,7 @@ test('unauthenticated and anonymous users cannot request calibration',async()=>{
 });
 test('server returns same evidence on retry and rejects changed history or illegality',async()=>{
  db.data.clear();
+ db.data.set('ratingPools/square-5-2-standardTak-open/players/alice',{...R.fresh('alice','Alice','square-5-2-standardTak-open'),gamesPlayed:10});
  const first=await prefix([]);
  assert.deepEqual(await prefix([]),first);
  assert.equal(db.data.get(`ratingLimits/${R.hash(['alice',new Date().toISOString().slice(0,10)])}`).moves,1);
@@ -73,4 +74,37 @@ test('server trigger excludes guests and illegal histories and deduplicates term
 });
 test('hash ignores JSON object order, preserving Firestore evidence semantics',()=>{
  assert.equal(R.hash({config:{a:1,b:2},moves:[{x:1,y:2}]}),R.hash({moves:[{y:2,x:1}],config:{b:2,a:1}}));
+});
+
+test('a complete server AI duel calibrates exactly once without altering the human; daily repeats excluded',async()=>{
+ db.data.clear();
+ const pool='square-3-2-standardTak-open';
+ const human={...R.fresh('alice','Alice',pool),gamesPlayed:10};
+ db.data.set(`ratingPools/${pool}/players/alice`,human);
+ const cfg={...config,size:3};
+ const simulate=async id=>{
+   const moves=[];
+   for(let turn=0;turn<100;turn++) {
+     const position=JSON.parse(await globalThis.stonesEngine(JSON.stringify({config:cfg,moves})));
+     if(position.finished)return moves;
+     let move;
+     if(position.current==='ivory') ({move}=await service.ratingBotMove({auth:auth('alice'),data:{id,config:cfg,moves}}));
+     else {
+       const searchConfig={...cfg,seats:cfg.seats.map(s=>({...s,control:'ai'}))};
+       ({move}=JSON.parse(await globalThis.stonesEngine(JSON.stringify({action:'bot',config:searchConfig,moves}))));
+     }
+     moves.push(move);
+   }
+   throw Error('Simulation did not finish');
+ };
+ const moves=await simulate('verified-1');
+ const request={auth:auth('alice'),data:{id:'verified-1',config:cfg,moves}};
+ assert.equal((await service.completeCalibration(request)).status,'recorded');
+ assert.equal((await service.completeCalibration(request)).status,'recorded');
+ const botKey=`ratingPools/${pool}/players/ai_${R.ENGINE}_easy`;
+ assert.equal(db.data.get(botKey).gamesPlayed,1);
+ assert.deepEqual(db.data.get(`ratingPools/${pool}/players/alice`),human);
+ const nextMoves=await simulate('verified-2');
+ assert.equal((await service.completeCalibration({auth:auth('alice'),data:{id:'verified-2',config:cfg,moves:nextMoves}})).status,'practice');
+ assert.equal(db.data.get(botKey).gamesPlayed,1);
 });

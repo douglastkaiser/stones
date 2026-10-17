@@ -28,7 +28,7 @@ Old data cannot be promoted into a trusted competitive ladder.
 - All entities start from the same neutral prior. Fewer than ten games is
   provisional; no games means Unrated. Competitive human rank excludes bots and
   provisional players and uses competition ranking (equal ratings share rank).
-- AI does not award human competitive points. AI calibration must be attributed
+- AI does not award human competitive points. Untimed AI duel calibration must be attributed
   to a particular engine revision and use server-generated moves, actual outcomes
   and established human opponents in the corresponding pool. No assumed
   difficulty-to-Elo mapping. An empty sample is explicitly Uncalibrated.
@@ -115,3 +115,5 @@ AI calibration does not infer strength from a difficulty name and needs real
 established opponents before it becomes useful. Account deletion/profile rename
 handling and long-term evidence retention need an operator policy before wide
 public rollout. History is bounded to the most recent 100 entries in the client.
+
+Timed AI games remain practice: local pauseable clocks cannot establish trustworthy timed bot strength. Online AI calibration is also finalized by the room trigger, so closing the client after the final move does not lose that sample. Offline completed local saves replay completion when resumed.

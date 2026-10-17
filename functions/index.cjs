@@ -40,7 +40,7 @@ exports.ratingBotMove = onCall(options, async request => {
   const uid = signed(request);
   const {id, config, moves} = request.data;
   if (!Array.isArray(moves) || moves.length > 4096 || !Array.isArray(config?.seats) ||
-      config.seats.length !== 2 || config.seats.filter(s => s.control === 'ai').length !== 1 || config.court) {
+      config.seats.length !== 2 || config.seats.filter(s => s.control === 'ai').length !== 1 || config.court || config.clockSeconds) {
     throw new HttpsError('invalid-argument', 'Calibration requires an unassisted duel');
   }
   if (config.seats.some(s => s.control === 'onlineHuman')) {
@@ -49,6 +49,12 @@ exports.ratingBotMove = onCall(options, async request => {
     if (!room || !Object.values(room.owners).includes(uid) || R.hash(room.config) !== R.hash(config) || R.hash(room.moves) !== R.hash(moves)) {
       throw new HttpsError('permission-denied', 'Room changed or belongs to another player');
     }
+  }
+  const position = await engine({config, moves});
+  if (position.finished) throw new HttpsError('failed-precondition', 'Game already finished');
+  const humanRating = (await playerRef(position.pool, uid).get()).data();
+  if (!humanRating || humanRating.gamesPlayed < 10) {
+    throw new HttpsError('failed-precondition', 'Play 10 competitive games in this ladder before calibrating AI. Continue as practice.');
   }
   const key = sessionKey(uid, id);
   const ref = db.doc(`calibrationSessions/${key}`);
@@ -84,7 +90,7 @@ exports.ratingBotMove = onCall(options, async request => {
   return result;
 });
 
-exports.completeCalibration = onCall(options, async request => {
+async function completeCalibration(request) {
   const uid = signed(request);
   const {id, config, moves} = request.data;
   const key = sessionKey(uid, id);
@@ -131,16 +137,31 @@ exports.completeCalibration = onCall(options, async request => {
     tx.set(receipt, {pool: result.pool, match: id, engineVersion: R.ENGINE, createdAt: Date.now()});
     return {status: 'recorded', rating: updated.rating};
   });
-});
+}
+exports.completeCalibration = onCall(options, completeCalibration);
 
 exports.rateCompletedMatch = onDocumentWritten({...options, document: 'matches/{code}', retry: true}, async event => {
   const room = event.data.after.data();
-  if (!room || !room.config?.seats?.every(s => s.control !== 'ai')) return;
+  if (!room || !room.config?.seats) return;
   let result;
   try { result = await engine(roomInput(room)); } catch (error) {
     console.warn('Unrated invalid room', event.params.code, error.message); return;
   }
   if (!result.finished) return;
+  if (room.config.seats.some(s => s.control === 'ai')) {
+    const humans = room.config.seats.filter(s => s.control !== 'ai');
+    if (room.config.seats.length !== 2 || humans.length !== 1) return;
+    const uid = room.owners[humans[0].id];
+    if (!uid) return;
+    try {
+      await account(uid);
+      await completeCalibration({auth: {uid, token: {firebase: {sign_in_provider: 'custom'}}},
+        data: {id: room.code, config: room.config, moves: room.moves}});
+    } catch (error) {
+      if (!['permission-denied','failed-precondition','auth/user-not-found'].includes(error.code)) throw error;
+    }
+    return;
+  }
   // Early concessions do not establish competitive strength.
   if (['resignation','time'].includes(result.reason) && result.ply < room.config.seats.length * 4) return;
   let identities;

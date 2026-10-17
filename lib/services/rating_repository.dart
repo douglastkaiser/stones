@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import '../models/elo_rating.dart';
 import '../game/match_config.dart';
@@ -52,8 +53,9 @@ class FirebaseRatingRepository implements RatingRepository {
   Future<Map<String, dynamic>> _call(String name, Map<String, dynamic> payload) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.isAnonymous) { throw StateError('Sign in with Google to use ratings.'); }
-    final token = await user.getIdToken();
-    final response = await http.post(Uri.https('us-central1-stones-9a6a0.cloudfunctions.net', '/$name'),
+    final token = await user.getIdToken().timeout(const Duration(seconds: 5));
+    final project = Firebase.app().options.projectId;
+    final response = await http.post(Uri.https('us-central1-$project.cloudfunctions.net', '/$name'),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
         body: jsonEncode({'data': payload})).timeout(const Duration(seconds: 5));
     final data = jsonDecode(response.body) as Map<String, dynamic>;

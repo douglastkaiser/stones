@@ -30,7 +30,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         'Only completed online games between distinct signed-in accounts affect human ratings. '
         'Local games, Court Mode, learning and AI games do not. Early concessions are unrated. '
         'In multiplayer, the winner beats each rival; losing rivals tie each other. A draw ties every pair.\n\n'
-        'AI benchmarks use server-generated moves and actual results against established human players. '
+        'AI benchmarks use untimed server-generated moves and actual results against established human players. '
         'Calibration needs 30 games and 10 distinct opponents, counting at most one sample per person per day. '
         'Each engine revision starts a new sample. A question mark means provisional or still calibrating. '
         'These are Stones ratings, not chess ratings. Player display names and competitive statistics are public.'))));
@@ -91,7 +91,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 ChoiceChip(label: const Text('AI benchmarks'), selected: _bots, onSelected: (_) => setState(() => _bots = true)),
               ]),
               const SizedBox(height: 12),
-              if (_bots && pool.players != 2) const Text('AI benchmarks use two-player duels. Choose 2 players.')
+              if (_bots && (pool.players != 2 || pool.clock != 'open')) const Text('AI benchmarks use untimed two-player duels. Choose 2 players and Untimed.')
               else if (_bots) ...[
                 const Text('Measured from play · ? means still calibrating. AI games do not change your competitive rating.'),
                 for (final bot in bots) _entry(bot, null, state.uid),

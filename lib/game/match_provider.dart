@@ -36,7 +36,7 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                 final identity = ref.read(accountProvider).identity;
                 final session = ref.read(matchProvider);
                 final canCalibrate = identity != null && !identity.guest &&
-                    !game.config.court && game.config.seats.length == 2 &&
+                    !game.config.court && game.config.clockSeconds == 0 && game.config.seats.length == 2 &&
                     game.config.seats.where((s) => s.control == SeatControl.ai).length == 1;
                 if (canCalibrate && session.id != null &&
                     DateTime.now().isAfter(ref.read(calibrationRetryAfterProvider))) {
@@ -46,14 +46,14 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                         ref.read(matchProvider.notifier).confirmedMoves);
                     if (!active || ref.read(matchProvider).id != session.id) return move;
                     ref.read(calibrationStatusProvider.notifier).state =
-                        'AI calibration uses verified server moves; human rating is unchanged.';
+                        (session.id!, 'AI calibration uses verified server moves; human rating is unchanged.');
                     return move;
                   } catch (_) {
                     if (!active) return null;
                     ref.read(calibrationRetryAfterProvider.notifier).state =
                         DateTime.now().add(const Duration(minutes: 2));
                     ref.read(calibrationStatusProvider.notifier).state =
-                        'Practice · AI calibration service unavailable';
+                        (session.id!, 'Practice · AI calibration service unavailable');
                   }
                 }
                 return selectMatchMove(game, level);
@@ -72,10 +72,10 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                     [ResultReason.road, ResultReason.flats].contains(event.game.result?.reason)) {
                   unawaited(ref.read(ratingRepositoryProvider).completeCalibration(
                       event.id, event.game.config, event.moves).then((message) {
-                    if (active && ref.read(matchProvider).id == event.id) { ref.read(calibrationStatusProvider.notifier).state = message; }
+                    if (active && ref.read(matchProvider).id == event.id) { ref.read(calibrationStatusProvider.notifier).state = (event.id, message); }
                   }).catchError((Object error) {
                     if (active && ref.read(matchProvider).id == event.id) { ref.read(calibrationStatusProvider.notifier).state =
-                        'Practice · this result could not calibrate the AI'; }
+                        (event.id, 'Practice · this result could not calibrate the AI'); }
                   }));
                 }
                 await achievementWrite;
@@ -90,5 +90,5 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
             );
         });
 
-final calibrationStatusProvider = StateProvider<String?>((ref) => null);
+final calibrationStatusProvider = StateProvider<(String, String)?>((ref) => null);
 final calibrationRetryAfterProvider = StateProvider<DateTime>((ref) => DateTime.fromMillisecondsSinceEpoch(0));

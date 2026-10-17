@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/piece.dart';
 import '../providers/cosmetics_provider.dart';
+import '../providers/elo_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/sound_manager.dart';
 import 'board_view.dart';
@@ -191,6 +192,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         };
     final boardTheme =
         match.room?.boardTheme ?? ref.watch(currentBoardThemeProvider).theme;
+    final calibration = ref.watch(calibrationStatusProvider);
+    final calibrationMessage = calibration?.$1 == match.id ? calibration?.$2 : null;
     final winner = game.result?.winner;
     final road = winner == null ? <Cell>{} : MatchRules.road(game, winner);
     final scale = MediaQuery.textScalerOf(context).scale(1);
@@ -392,9 +395,23 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           padding: const EdgeInsets.all(8),
                           child: _controls(match, game)))),
               if (widget.studyPanel == null && game.config.seats.any((s) => s.control == SeatControl.ai) &&
-                  ref.watch(calibrationStatusProvider) != null)
+                  calibrationMessage != null)
                 Padding(padding: const EdgeInsets.all(12),
-                    child: Text(ref.watch(calibrationStatusProvider)!, textAlign: TextAlign.center)),
+                    child: Column(children: [
+                      Text(calibrationMessage!, textAlign: TextAlign.center),
+                      if (game.finished && calibrationMessage.contains('could not'))
+                        TextButton(onPressed: () async {
+                          try {
+                            final message = await ref.read(ratingRepositoryProvider).completeCalibration(
+                                match.id!, game.config, _controller.confirmedMoves);
+                            if (mounted && ref.read(matchProvider).id == match.id) {
+                              ref.read(calibrationStatusProvider.notifier).state = (match.id!, message);
+                            }
+                          } catch (_) {
+                            // Retain the visible failure and the retry action.
+                          }
+                        }, child: const Text('Retry AI calibration')),
+                    ])),
               if (match.room != null)
                 Padding(
                     padding: const EdgeInsets.all(12),

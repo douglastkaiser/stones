@@ -9,6 +9,8 @@ import 'package:stones/game/match_provider.dart';
 import 'package:stones/game/match_setup_screen.dart';
 import 'package:stones/game/match_screen.dart';
 import 'package:stones/services/sound_manager.dart';
+import 'package:stones/providers/account_provider.dart';
+import '../support/fake_account_service.dart';
 import '../game/match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
@@ -37,6 +39,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
           overrides: [
             soundManagerProvider.overrideWithValue(_SilentSound()),
+            accountServiceProvider.overrideWithValue(FakeAccount()),
             localMatchStorageProvider.overrideWithValue(storage),
             matchProvider.overrideWith((ref) => controller),
           ],
@@ -85,3 +88,4 @@ void main() {
     });
   }
 }
+

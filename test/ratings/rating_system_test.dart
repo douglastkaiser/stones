@@ -122,10 +122,18 @@ void main() {
             home:const LeaderboardScreen())));
         await tester.pumpAndSettle();
         expect(tester.takeException(),isNull);
-        await tester.scrollUntilVisible(find.text('AI benchmarks'),300);
+        Future<void> reveal(Finder finder) async {
+          for (var i = 0; i < 20; i++) {
+            final y = tester.getCenter(finder).dy;
+            if (y > 100 && y < size.height - 80) return;
+            await tester.drag(find.byType(ListView), Offset(0, y > size.height - 80 ? -250 : 250));
+            await tester.pumpAndSettle();
+          }
+        }
+        await reveal(find.text('AI benchmarks'));
         await tester.tap(find.text('AI benchmarks'));
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(find.text('Easy AI'),200);
+        await reveal(find.text('Easy AI'));
         expect(find.text('Uncalibrated'),findsWidgets);
         expect(tester.takeException(),isNull);
       });
