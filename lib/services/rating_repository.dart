@@ -97,7 +97,7 @@ class FirebaseRatingRepository implements RatingRepository {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.isAnonymous) return 'Sign in to record ratings';
     final evidence = RatingEvidence.verify(session, moves, user.uid);
-    if (evidence == null) return 'Practice Ã‚Â· this game is not eligible for ratings';
+    if (evidence == null) return 'Practice Ãƒâ€šÃ‚Â· this game is not eligible for ratings';
     if (evidence.humans.length == 1) {
       return _sampleAI(session, evidence, moves, user.uid).timeout(const Duration(seconds: 15));
     }
@@ -138,7 +138,9 @@ class FirebaseRatingRepository implements RatingRepository {
       }
     }
     if (RatingEvidence.verify(MatchSession(game: room.replay(), room: room, id: room.code, uid: uid),
-        room.moves, uid) == null) throw StateError('Room result is not eligible');
+        room.moves, uid) == null) {
+      throw StateError('Room result is not eligible');
+    }
     final votes = <Map<String, dynamic>>[];
     for (final id in e.humans) {
       votes.add(id == uid ? {'ply': e.game.ply, 'winner': e.winner, 'name': name} :
@@ -187,7 +189,7 @@ class FirebaseRatingRepository implements RatingRepository {
     if ((await tx.get(receiptRef)).exists) return 'AI community estimate recorded';
     final anchor = (await tx.get(_players(e.pool).doc(uid))).data();
     if ((anchor?['gamesPlayed'] as int? ?? 0) < 10) {
-      return 'Practice Ã‚Â· play 10 competitive games in this ladder before contributing AI estimates';
+      return 'Practice Ãƒâ€šÃ‚Â· play 10 competitive games in this ladder before contributing AI estimates';
     }
     final botRef = _players(e.pool).doc(bot);
     final before = (await tx.get(botRef)).data() ?? {};
@@ -195,7 +197,7 @@ class FirebaseRatingRepository implements RatingRepository {
     final limit = (await tx.get(limitRef)).data();
     final last = limit?['at'] as Timestamp?;
     if (last != null && DateTime.now().difference(last.toDate()) < const Duration(hours: 24)) {
-      return 'Practice Ã‚Â· one AI sample per opponent and ladder every 24 hours';
+      return 'Practice Ãƒâ€šÃ‚Â· one AI sample per opponent and ladder every 24 hours';
     }
     final opponentRef = botRef.collection('opponents').doc(uid);
     final opponent = await tx.get(opponentRef);
@@ -214,7 +216,7 @@ class FirebaseRatingRepository implements RatingRepository {
     data.addAll({'engineVersion': RatingEvidence.engine, 'aiDifficulty': level,
       'opponents': (before['opponents'] as int? ?? 0) + (opponent.exists ? 0 : 1)});
     _write(tx, e.pool, bot, data, score, 'Established player');
-    return 'AI community estimate recorded Ã‚Â· human rating unchanged';
+    return 'AI community estimate recorded Ãƒâ€šÃ‚Â· human rating unchanged';
   });
 
   Map<String, dynamic> _record(Map<String, dynamic> before, String pool, String name,

@@ -130,3 +130,26 @@ test('AI spoofed engine, points, actor and omitted quota/opponent records fail',
  for(const edit of [w=>{w[0].update.fields.engine.stringValue='fake';},w=>{w.find(item=>item.update.name.endsWith('/players/'+bot)).update.fields.rating.integerValue='5000';},w=>{w[0].update.fields.actor.stringValue='bob';},w=>{w.splice(1,1);},w=>{w.splice(2,1);},w=>{w.find(item=>item.update.name.endsWith('/players/'+bot)).update.fields.opponents.integerValue='100';}]) {const w=structuredClone(good);edit(w);await reject(commit(w));}
  await accept(commit(good));
 });
+
+test('the last vote and settlement can share one atomic transaction',async()=>{
+ const r=room(4);await seed(`matches/${code}`,r);
+ const users=Object.values(r.owners);
+ for(const uid of users.slice(0,3)) await accept(put(`matches/${code}/ratingVotes/${uid}`,{ply:4,winner:0,name:uid},uid));
+ const s={users,pool:'square-5-4-sharedRoads-open'};
+ await accept(commit([write(`matches/${code}/ratingVotes/dan`,{ply:4,winner:0,name:'dan'}),...resultWrites(s)],'dan'));
+ r.moves.push({...r.moves[0]});await reject(put(`matches/${code}`,r,'alice'));
+});
+test('two valid settlements based on stale totals cannot erase one another',async()=>{
+ const s=await setup();const first=resultWrites(s);await accept(commit(first));
+ const other='UBBBBBB';const otherKey=hash(other);const r=room();r.code=other;await seed(`matches/${other}`,r);
+ for(const uid of s.users) await accept(put(`matches/${other}/ratingVotes/${uid}`,{ply:2,winner:0,name:uid},uid));
+ const stale=JSON.parse(JSON.stringify(first).replaceAll(humanKey,otherKey).replaceAll(code,other));
+ await reject(commit(stale));
+});
+test('an AI source cannot be counted again under a new receipt after its cooldown',async()=>{
+ await aiSetup();const first=aiWrites();await accept(commit(first));
+ await seed('ratingLimits/alice_'+pool+'_easy',{lastResult:hash('alice_local-1'),at:new Date(Date.now()-25*3600000)});
+ const before={rating:Number(first.find(w=>w.update.name.endsWith('/players/'+bot)).update.fields.rating.integerValue),gamesPlayed:1,wins:1,losses:0,draws:0,opponents:1};
+ const duplicate=JSON.parse(JSON.stringify(aiWrites('local-1',before,true)).replaceAll(hash('alice_local-1'),hash('different')));
+ await reject(commit(duplicate));
+});

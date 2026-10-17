@@ -16,7 +16,8 @@ class RatingEvidence {
   static RatingEvidence? verify(MatchSession session,
       List<Map<String, dynamic>> moves, String uid) {
     final game = session.game;
-    if (game == null || !game.finished || game.config.court ||
+    if (session.id == null || game == null || !game.finished || game.config.court ||
+        game.config.profile == RulesProfile.legacyHex ||
         game.result!.reason == ResultReason.abandoned ||
         moves.length != game.ply || moves.length < game.config.seats.length) {
       return null;
@@ -49,7 +50,9 @@ class RatingEvidence {
     if (ai.isNotEmpty) {
       // Community estimates use natural, untimed duels, never concessions/Court.
       if (game.config.seats.length != 2 || ai.length != 1 ||
-          game.config.clockSeconds != 0 || replay.result == null) return null;
+          game.config.clockSeconds != 0 || replay.result == null) {
+        return null;
+      }
       final human = game.config.seats.firstWhere((s) => s.control != SeatControl.ai);
       if (room != null && room.owners[human.id] != uid) return null;
       return RatingEvidence._(game, [uid],

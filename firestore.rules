@@ -633,6 +633,9 @@ service cloud.firestore {
         data.keys().hasAll(['pool', 'displayName', 'rating', 'gamesPlayed', 'wins', 'losses', 'draws', 'isAi', 'established', 'opponents', 'lastResult', 'lastUpdated']) &&
         data.keys().hasOnly(['pool', 'displayName', 'rating', 'gamesPlayed', 'wins', 'losses', 'draws', 'isAi', 'established', 'opponents', 'lastResult', 'lastUpdated', 'aiDifficulty', 'engineVersion']) &&
         data.pool == pool && data.lastUpdated == request.time && data.rating is int &&
+        data.gamesPlayed is int && data.wins is int && data.losses is int && data.draws is int &&
+        data.opponents is int && data.isAi is bool && data.established is bool &&
+        data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 60 &&
         data.gamesPlayed == before.gamesPlayed + 1 &&
         data.wins == before.wins + (score == 1 ? 1 : 0) &&
         data.losses == before.losses + (score == 0 ? 1 : 0) &&

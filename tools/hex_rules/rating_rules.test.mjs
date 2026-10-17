@@ -8,7 +8,7 @@ before(async()=>{environment=await initializeHexEmulator({projectId:'demo-stones
   firestore:{rules:await readFile(new URL('../../firestore.rules',import.meta.url),'utf8')}});});
 beforeEach(async()=>{
  await environment.clearFirestore();
- for(const path of [`${base}/players/alice`,`${base}/players/alice/history/game`,`${base}/standings/alice`]) {
+ for(const path of [`${base}/players/alice`,`${base}/players/alice/history/game`,`${base}/players/bob`]) {
    const address=process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8088';
    assert.match(address,/^(127\.0\.0\.1|localhost):\d+$/);
    const response=await fetch(`http://${address}/v1/projects/demo-stones-hex/databases/(default)/documents/${path}`,
@@ -24,10 +24,10 @@ const reference=(uid,path)=>{const parts=path.split('/');return doc(uid,parts.sl
 test('public competition reads work without a Firebase identity',async()=>{
   await assertSucceeds(getDoc(reference(db(),`${base}/players/alice`)));
   await assertSucceeds(getDoc(reference(db(),`${base}/players/alice/history/game`)));
-  await assertSucceeds(getDocs(collection(db(),`${base}/standings`)));
+  await assertSucceeds(getDocs(collection(db(),`${base}/players`)));
 });
 test('even the named player cannot forge their rank or bot strength',async()=>{
-  for(const path of [`${base}/players/alice`,`${base}/players/ai_easy`,`${base}/standings/alice`,`${base}/players/alice/history/game`]) {
+  for(const path of [`${base}/players/alice`,`${base}/players/ai_easy`,`${base}/players/bob`,`${base}/players/alice/history/game`]) {
     await assertFails(setDoc(reference(signed(),path),{rating:9999,gamesPlayed:100}));
     await assertFails(setDoc(reference(db(),path),{rating:9999,gamesPlayed:100}));
   }

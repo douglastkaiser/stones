@@ -39,6 +39,22 @@ jobs:
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
+      - name: Format rating implementation
+        run: dart format lib/game/rating_evidence.dart lib/game/match_provider.dart lib/game/match_room_store.dart lib/game/match_screen.dart lib/game/match_setup_form.dart lib/screens/leaderboard_screen.dart lib/services/rating_repository.dart test/ratings
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formatted-rating-sources
+          path: |
+            lib/game/rating_evidence.dart
+            lib/game/match_provider.dart
+            lib/game/match_room_store.dart
+            lib/game/match_screen.dart
+            lib/game/match_setup_form.dart
+            lib/screens/leaderboard_screen.dart
+            lib/services/rating_repository.dart
+            test/ratings
+          retention-days: 1
+
       - name: Run analyzer
         run: flutter analyze --fatal-infos
 
