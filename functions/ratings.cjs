@@ -54,9 +54,9 @@ async function recordHumanResult(db, room, result, identities, now) {
       const player = updated[i];
       tx.set(refs[i], player);
       if (player.established) tx.set(db.doc(`ratingPools/${result.pool}/standings/${player.id}`), player);
-      tx.set(refs[i].collection('history').doc(room.code), {
+      tx.set(refs[i].collection('history').doc(hash(room.code)), {
         rating: player.rating, timestamp: now, opponentName: players.filter(p => p.id !== player.id).map(p => p.displayName).join(', '),
-        score: winningId === null ? 0.5 : winningId === player.id ? 1 : 0, match: room.code,
+        score: winningId === null ? 0.5 : winningId === player.id ? 1 : 0,
       });
     }
     tx.set(receipt, {pool: result.pool, match: room.code, createdAt: now});

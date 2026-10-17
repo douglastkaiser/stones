@@ -71,6 +71,12 @@ test('duplicate deliveries and concurrent distinct games update exactly once', a
   assert.equal(db.data.get(`ratingPools/${result.pool}/players/bob`).losses,3);
   assert.equal([...db.data.keys()].filter(k=>k.startsWith('ratingReceipts/')).length,3);
   assert.equal([...db.data.keys()].filter(k=>k.includes('/history/')).length,6);
+  for (const [path, entry] of db.data) {
+    if (path.includes('/history/')) {
+      assert.match(path.split('/').at(-1), /^[a-f0-9]{64}$/);
+      assert(!('match' in entry));
+    }
+  }
 });
 test('failed commit changes neither rating nor history nor receipt; retry works', async () => {
   const db = new FakeDB(); db.fail = true;
