@@ -67,6 +67,17 @@ class QuietRatingSound extends SoundManager {
 }
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  test('a stalled leaderboard reaches a visible bounded failure', () async {
+    final repo = FakeRatings()..pending = Completer<List<EloRating>>();
+    final controller = EloController(repo,
+        requestTimeout: const Duration(milliseconds: 1));
+    await controller.fetchLeaderboard();
+    expect(controller.state.loading, isFalse);
+    expect(controller.state.errorMessage, isNotNull);
+    expect(controller.state.personalLabel, 'Rating unavailable');
+    repo.pending!.complete([]);
+    controller.dispose();
+  });
   test('refresh updates standing even when the personal rating is unchanged', () async {
     final repo = FakeRatings();
     final controller = EloController(repo)..bind('alice', guest: false);

@@ -68,7 +68,7 @@ class _AccountCardState extends ConsumerState<AccountCard> {
               if (signedIn && user.email != null) Text(user.email!),
               if (signedIn) ...[
                 Text(
-                    '${ref.watch(eloProvider).selectedPool.label} · ${ref.watch(eloProvider).localPlayerRating?.ratingLabel ?? "Unrated"}'),
+                    '${ref.watch(eloProvider).selectedPool.label} · ${ref.watch(eloProvider).personalLabel}'),
                 TextButton.icon(
                     onPressed: () => Navigator.push<void>(
                         context,

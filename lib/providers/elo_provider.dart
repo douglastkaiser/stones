@@ -24,14 +24,19 @@ class EloState {
   final String? uid;
   final int? rank;
   RatingPool get selectedPool => pool ?? RatingPool.standard;
+  String get personalLabel => localPlayerRating?.ratingLabel ??
+      (errorMessage == null ? 'Unrated' : 'Rating unavailable');
 }
 
 /// No client can submit scores or edit another player's totals. The backend
 /// observes confirmed rooms; this controller only reads account-scoped results.
 class EloController extends StateNotifier<EloState> {
-  EloController(this.repository, {this.bootstrap}) : super(const EloState());
+  EloController(this.repository,
+      {this.bootstrap, this.requestTimeout = const Duration(seconds: 8)})
+      : super(const EloState());
   final RatingRepository repository;
   final Future<void> Function()? bootstrap;
+  final Duration requestTimeout;
   StreamSubscription<EloRating?>? _subscription;
   int _generation = 0;
   int _request = 0;
@@ -68,7 +73,7 @@ class EloController extends StateNotifier<EloState> {
             loading: state.loading);
         if (rating == null || rating.provisional) return;
         try {
-          final rank = await repository.rank(pool.id, rating.rating);
+          final rank = await repository.rank(pool.id, rating.rating).timeout(requestTimeout);
           if (mounted &&
               generation == _generation &&
               identical(state.localPlayerRating, rating)) {
@@ -126,7 +131,7 @@ class EloController extends StateNotifier<EloState> {
         loading: true);
     try {
       final values = await Future.wait(
-          [repository.leaders(pool.id), repository.bots(pool.id)]);
+          [repository.leaders(pool.id), repository.bots(pool.id)]).timeout(requestTimeout);
       if (!mounted || generation != _generation || request != _request) return;
       final leaders = values[0]
         ..sort((a, b) {
@@ -135,7 +140,7 @@ class EloController extends StateNotifier<EloState> {
         });
       final personal = state.localPlayerRating;
       final rank = personal != null && !personal.provisional
-          ? await repository.rank(pool.id, personal.rating)
+          ? await repository.rank(pool.id, personal.rating).timeout(requestTimeout)
           : null;
       if (!mounted || generation != _generation || request != _request) return;
       state = EloState(
@@ -155,7 +160,7 @@ class EloController extends StateNotifier<EloState> {
 
   Future<List<EloHistoryEntry>> fetchRatingHistory(String playerId,
           {String? pool}) =>
-      repository.history(pool ?? state.selectedPool.id, playerId);
+      repository.history(pool ?? state.selectedPool.id, playerId).timeout(requestTimeout);
   @override
   void dispose() {
     _generation++;

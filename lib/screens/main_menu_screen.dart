@@ -142,7 +142,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                         child: _PlayerChip(
                       displayName: account.name ?? 'Player',
                       ratingLabel:
-                          '${ratingState.selectedPool.shape.name} ${ratingState.selectedPool.size} · ${ratingState.localPlayerRating?.ratingLabel ?? "Unrated"}${ratingState.rank == null ? "" : " · #${ratingState.rank}"}',
+                          '${ratingState.selectedPool.shape.name} ${ratingState.selectedPool.size} · ${ratingState.personalLabel}${ratingState.rank == null ? "" : " · #${ratingState.rank}"}',
                     )),
                   // Right side icons
                   Row(
