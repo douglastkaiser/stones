@@ -130,3 +130,5 @@ an actual complete server-generated AI duel, idempotent completion and the
 per-opponent daily limit. This is emulator/model evidence, not a claim of a
 production deployment. Full Flutter and final build results will be recorded
 once the final candidate completes qualification.
+
+Legacy room codecs still decode old rating metadata for compatibility, but the app no longer advertises client-supplied legacy snapshots as trustworthy ranks or awards points for compatibility sessions.

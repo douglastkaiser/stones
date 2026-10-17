@@ -13,7 +13,6 @@ import '../firebase_options.dart';
 import '../models/models.dart';
 import 'chess_clock_provider.dart';
 import 'cosmetics_provider.dart';
-import 'elo_provider.dart';
 import 'game_provider.dart';
 import 'game_session_provider.dart';
 import '../services/services.dart';
@@ -660,8 +659,6 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
 
   Future<void> _listenToRoom(String roomCode,
       {required PlayerColor localColor}) async {
-    // Ratings sync belongs to authenticated online play, not offline startup.
-    unawaited(_ref.read(eloProvider.notifier).initialize());
     _debugLog(
         '_listenToRoom() called: roomCode=$roomCode, localColor=$localColor');
     await _subscription?.cancel();
@@ -794,13 +791,10 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     }
     // Sanitize display name for security
     displayName = OnlineGamePlayer.sanitize(displayName);
-    // Include ELO rating if available
-    final eloState = _ref.read(eloProvider);
-    final rating = eloState.localPlayerRating?.rating;
+    // Legacy rooms are unrated; client-supplied rating snapshots are not trusted.
     return OnlineGamePlayer(
         id: user.uid,
         displayName: displayName,
-        rating: rating,
         pieceStyle: _ref.read(shareablePieceStyleProvider));
   }
 
