@@ -215,5 +215,31 @@ for repeatable verification. Full competitive settlement with distinct real
 Google accounts and real community AI samples still needs a human play test;
 those scenarios are covered in the emulator but not claimed as production trials.
 The optional move-evidence index exemption remains configured but unapplied after
-the console save error. It does not block the feature. The qualified client is
-being promoted to main for the web deployment; deployment result follows below.
+the console save error. It does not block the feature. The qualified client was promoted to main as `abbc262`; deployment evidence follows below.
+
+
+## Web release completed (2026-10-17)
+
+Main was fast-forwarded and pushed to `abbc262`. Its app, Android, dependency,
+Firebase policy and deployment sources are identical to qualified `c0ed867`;
+only audit evidence and the manual production probe were added afterwards.
+[Deploy Main 39054797531](https://github.com/douglastkaiser/stones/actions/runs/39054797531)
+and [Pages publication 39054916646](https://github.com/douglastkaiser/stones/actions/runs/39054916646)
+both completed successfully. The site is live at
+https://www.douglastkaiser.com/stones/ (the GitHub Pages address redirects there).
+
+HTTP checks verified hosted HTML/manifest/bootstrap agreement, the compiled
+asset SHA-256 filename, and embedded build identity `abbc262`. Current startup
+assets are `flutter_bootstrap.d79be656aac029f5ef11.js` and
+`main.9af5473e04e2605e15d0.dart.js`. Both preceding startup pairs remain reachable
+for cached pages. The visible menu shows `v1.0.0+454.gabbc262.d20261017`.
+A real hosted browser trial opened Competition successfully, loaded the fresh
+human ladder without a permission/index error, and showed every AI difficulty as
+Uncalibrated with zero games rather than an invented rating. Google-account
+competitive outcomes and populated AI estimates still require real playtesting.
+
+The machine briefly ran out of disk/virtual memory during Git publication.
+Only generated Flutter `build/test_cache`, `build/unit_test_assets` and
+`.dart_tool/flutter_build` caches inside the verified workspace were removed
+(about 98 MB). Source, APKs, screenshots and remote attachments were preserved.
+No Android Play Store publication, billing-plan upgrade or cloud AI was performed.
