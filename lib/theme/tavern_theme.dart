@@ -86,16 +86,13 @@ class TavernPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
+    return Material(
+      color: scheme.surface,
+      elevation: 3,
+      shadowColor: const Color(0x30000000),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outline.withValues(alpha: .30)),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x18000000), blurRadius: 24, offset: Offset(0, 8))
-        ],
-      ),
+        side: BorderSide(color: scheme.outline.withValues(alpha: .30))),
       child: Padding(padding: EdgeInsets.all(padding), child: child),
     );
   }

@@ -11,6 +11,7 @@ on:
       - 'test/design_preview_test.dart'
       - 'tools/shared_performance_probe_test.dart'
       - '.github/workflows/finishing-preview.yml'
+      - 'web/design_preview.html'
 
 permissions:
   contents: write
@@ -47,6 +48,12 @@ jobs:
       - name: Build isolated preview
         run: |
           ./scripts/generate_version.sh
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          template = Path('web/design_preview.html').read_text(encoding='utf-8')
+          Path('web/index.html').write_text(template.replace('__STONES_PREVIEW_COMMIT__', os.environ['GITHUB_SHA']), encoding='utf-8')
+          PY
           flutter build web --release --target lib/design_preview.dart --base-href /stones/pr/finishing/
           python3 scripts/prepare_web_release.py
           python3 scripts/release_baseline.py --output build/qa/finishing/source-baseline.json

@@ -11,6 +11,7 @@ import 'game/move_selection.dart';
 import 'game/seat_appearance.dart';
 import 'models/piece.dart';
 import 'theme/tavern_theme.dart';
+import 'version.dart';
 
 enum PreviewPage { home, setup, table, result }
 
@@ -119,6 +120,8 @@ class _PreviewHomeState extends State<_PreviewHome> {
   String _clock = 'No clock';
   final _controls = <SeatId, SeatControl>{};
   String get _shapeName => _shape == BoardShape.square ? 'Square' : 'Hex';
+  String get _finishLabel => _game.result?.winner == null
+      ? 'A drawn game' : '${_game.result!.winner!.label} wins';
 
   void _open(PreviewPage page, {BoardShape? shape}) => setState(() {
         if (shape != null) {
@@ -188,27 +191,31 @@ class _PreviewHomeState extends State<_PreviewHome> {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             spacing: 16,
                             children: [
-                              Text('DESIGN PREVIEW · Your games are untouched',
+                              Text('DESIGN PREVIEW · Sample tables only',
                                   style:
                                       Theme.of(context).textTheme.labelSmall),
-                              TextButton.icon(
+                              if (narrow) IconButton(
+                                tooltip: 'Switch light and dark',
+                                onPressed: widget.onTheme,
+                                icon: const Icon(Icons.contrast, size: 18))
+                              else TextButton.icon(
                                   onPressed: widget.onTheme,
                                   icon: const Icon(Icons.contrast, size: 18),
                                   label: const Text('Light / dark')),
                             ])),
                     Row(children: [
-                      TextButton(
+                      Expanded(child: Align(alignment: Alignment.centerLeft,
+                        child: TextButton(
                           onPressed: () => _open(PreviewPage.home),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             const Icon(Icons.layers_outlined, size: 28),
                             const SizedBox(width: 10),
-                            Text('STONES',
+                            Flexible(child: FittedBox(child: Text('STONES',
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleLarge
-                                    ?.copyWith(letterSpacing: 4)),
-                          ])),
-                      const Spacer(),
+                                    ?.copyWith(letterSpacing: 4)))),
+                          ])))),
                       if (!narrow)
                         TextButton(
                             onPressed: () => _sampleList('Learn the game', [
@@ -238,7 +245,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                               ]),
                           icon: const Icon(Icons.person_outline)),
                     ]),
-                    const SizedBox(height: 28),
+                    SizedBox(height: _page == PreviewPage.table ? 12 : 28),
                     switch (_page) {
                       PreviewPage.home => _home(narrow),
                       PreviewPage.setup => _setup(),
@@ -249,7 +256,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                     Center(
                         child: Padding(
                             padding: const EdgeInsets.only(bottom: 24),
-                            child: Text('A quiet table. A beautiful game.',
+                            child: Text('A quiet table. A beautiful game. · ${AppVersion.commitHash}',
                                 style: Theme.of(context).textTheme.bodySmall))),
                   ]),
             ),
@@ -462,8 +469,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                     key: const ValueKey('preview-advanced'),
                     tilePadding: EdgeInsets.zero,
                     title: const Text('Table settings'),
-                    subtitle:
-                        const Text('Board size, clock and optional coaching'),
+                    subtitle: const Text('Clock and optional coaching'),
                     initiallyExpanded: _advanced,
                     onExpansionChanged: (value) =>
                         setState(() => _advanced = value),
@@ -513,8 +519,9 @@ class _PreviewHomeState extends State<_PreviewHome> {
           color: SeatAppearance.marker(seat),
           border: Border.all(color: const Color(0xFF5C614F))),
       child: Text(seat.symbol,
-          style: const TextStyle(
-              color: Color(0xFF14271D),
+          style: TextStyle(
+              color: seat == SeatId.charcoal
+                  ? const Color(0xFFFFF8E8) : const Color(0xFF14271D),
               fontSize: 12,
               fontWeight: FontWeight.bold)));
 
@@ -585,7 +592,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _eyebrow(_game.finished ? 'A road well played' : 'Make your move'),
           const SizedBox(height: 12),
-          Text(_game.finished ? 'Ivory wins' : '${_game.current.label} to play',
+          Text(_game.finished ? _finishLabel : '${_game.current.label} to play',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 12),
           ConstrainedBox(
@@ -657,14 +664,23 @@ class _PreviewHomeState extends State<_PreviewHome> {
           style: Theme.of(context).textTheme.bodySmall),
     ]);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _back('Leave the sample table'),
-      const SizedBox(height: 8),
-      Text('An evening game', style: Theme.of(context).textTheme.headlineLarge),
-      const SizedBox(height: 8),
-      Text(
-          '$_shapeName · ${_shape == BoardShape.square ? '5 × 5' : '19 cells'} · Sample position'),
-      const SizedBox(height: 24),
-      if (narrow) ...[board, const SizedBox(height: 24), controls] else
+      if (narrow) Padding(padding: const EdgeInsets.only(bottom: 16),
+        child: Row(children: [
+          IconButton(tooltip: 'Leave the sample table',
+            onPressed: () => _open(PreviewPage.home), icon: const Icon(Icons.arrow_back)),
+          Expanded(child: Text('$_shapeName · Sample table',
+            style: Theme.of(context).textTheme.titleLarge)),
+        ]))
+      else ...[
+        _back('Leave the sample table'),
+        const SizedBox(height: 8),
+        Text('An evening game', style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 8),
+        Text('$_shapeName · ${_shape == BoardShape.square ? '5 × 5' : '19 cells'} · Sample position'),
+        const SizedBox(height: 24),
+      ],
+      if (narrow) ...[board, const SizedBox(height: 16), _compactControls()]
+      else
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(flex: 3, child: board),
           const SizedBox(width: 32),
@@ -673,22 +689,59 @@ class _PreviewHomeState extends State<_PreviewHome> {
     ]);
   }
 
+  Widget _compactControls() => TavernPanel(padding: 16,
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(child: Text(_game.finished ? _finishLabel : '${_game.current.label} to play',
+          style: Theme.of(context).textTheme.titleLarge)),
+        IconButton(tooltip: 'How to move', onPressed: () => _sampleList('At the table',
+          ['Tap an empty cell to preview a stone; tap again to place it.',
+            'Tap your stack, then a destination. Confirm to move.',
+            'Hold a stack to inspect the stones inside.']),
+          icon: const Icon(Icons.help_outline)),
+      ]),
+      if (!_game.finished) Wrap(spacing: 8, runSpacing: 4, children: [
+        for (final type in PieceType.values) ChoiceChip(
+          label: Text(switch (type) {PieceType.flat => 'Flat',
+            PieceType.standing => 'Wall', PieceType.capstone => 'Capstone'}),
+          selected: _selection.type == type,
+          onSelected: (_) => setState(() {
+            _selection.clear(); _selection.type = type;
+          })),
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(child: FilledButton(onPressed: _selection.planned == null ? null : _confirm,
+          child: const Text('Confirm move'))),
+        const SizedBox(width: 8),
+        TextButton(onPressed: () => setState(_selection.clear), child: const Text('Cancel')),
+      ]),
+      const SizedBox(height: 8),
+      Text(_selection.source != null ? 'Carry ${_selection.carry}. Choose a destination.'
+          : 'Tap to preview. Hold a stack to look inside.',
+        style: Theme.of(context).textTheme.bodySmall),
+      TextButton(onPressed: () => _open(PreviewPage.result),
+        child: const Text('Preview a finished game')),
+    ]));
+
   Widget _result(bool narrow) => Center(
           child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
         child: Column(children: [
           _eyebrow('A road well played'),
           const SizedBox(height: 12),
-          Text('Ivory connects the road.',
+          Text(_game.result?.reason == ResultReason.road && _game.result?.winner != null
+              ? '${_game.result!.winner!.label} connects the road.' : _finishLabel,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineLarge),
           const SizedBox(height: 12),
-          const Text('One continuous road. Two opposite edges.',
+          Text(_game.result?.reason == ResultReason.road
+              ? 'One continuous road. Two opposite edges.' : 'The final position determines the result.',
               textAlign: TextAlign.center),
           const SizedBox(height: 24),
           SizedBox(
               width: narrow ? double.infinity : 460,
-              child: _boardScene(previewPosition(_shape, _players, won: true))),
+              child: _boardScene(_game)),
           const SizedBox(height: 28),
           TavernPanel(
               padding: 20,
@@ -706,8 +759,6 @@ class _PreviewHomeState extends State<_PreviewHome> {
                     const SizedBox(height: 8),
                     OutlinedButton(
                         onPressed: () => setState(() {
-                              _game =
-                                  previewPosition(_shape, _players, won: true);
                               _selection.clear();
                               _page = PreviewPage.table;
                             }),
