@@ -26,7 +26,8 @@ class FirebaseRatingRepository implements RatingRepository {
   @override
   Stream<EloRating?> watchPlayer(String pool, String uid) => _players(pool)
       .doc(uid)
-      .snapshots()
+      .snapshots(includeMetadataChanges: true)
+      .where((doc) => !doc.metadata.isFromCache || doc.exists)
       .map((doc) => doc.exists ? EloRating.fromMap(doc.id, doc.data()!) : null);
   @override
   Future<List<EloRating>> leaders(String pool) async {
