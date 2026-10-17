@@ -124,12 +124,22 @@ Timed AI games remain practice: local pauseable clocks cannot establish trustwor
 The real Firestore emulator suite passed all 29 authorization tests in
 [run 38995362862](https://github.com/douglastkaiser/stones/actions/runs/38995362862),
 including public read-only competition access, forged-rating rejection and
-private receipt/proof/quota denial. The compiled shared rules/AI plus rating
-processor and service authorization passed all 17 backend tests. These include
-an actual complete server-generated AI duel, idempotent completion and the
-per-opponent daily limit. This is emulator/model evidence, not a claim of a
-production deployment. Full Flutter and final build results will be recorded
-once the final candidate completes qualification.
+private receipt/proof/quota denial.
+
+Final source `8f7e002` passed strict analysis (no issues), all 772 Flutter tests,
+all 19 compiled-engine/backend tests and the release web build in
+[CI 38996812589](https://github.com/douglastkaiser/stones/actions/runs/38996812589).
+Backend trials include a complete server-generated AI duel, idempotent completion,
+the daily sampling limit, rated concessions after both players move, and valid
+shared-device games being excluded without repeat-trigger failures.
+
+The Android debug APK passed in
+[CI 38996559509](https://github.com/douglastkaiser/stones/actions/runs/38996559509)
+at `b76c9a2`; all client sources, Android configuration and dependencies are
+identical between that commit and `8f7e002` (only the backend hotseat exclusion
+and its test changed). The later same-client Android rebuild is additional CI
+verification. These are build/widget/model/emulator results; no physical device
+installation or production rating trial is claimed.
 
 Legacy room codecs still decode old rating metadata for compatibility, but the app no longer advertises client-supplied legacy snapshots as trustworthy ranks or awards points for compatibility sessions.
 
@@ -155,3 +165,25 @@ calibration completion has a retry action; receipts make repeat submissions safe
 Public rating histories use opaque IDs and omit room invitation codes.
 
 Duel concessions become rated as soon as both players have moved. A longer grace period would permit rating dodging; incomplete starts remain unrated. Three/four-player abandoned sessions still follow their existing no-winner rules and do not award Elo.
+
+
+## Source map and handoff
+
+- `lib/game/rating_pool.dart`: independent ladder identity and labels.
+- `lib/models/elo_rating.dart`: account/AI display, provisional state, tied rank.
+- `lib/providers/elo_provider.dart`: identity-safe read state and bounded refresh.
+- `lib/services/rating_repository.dart`: Firestore reads and authenticated callable protocol.
+- `lib/widgets/player_rating_label.dart`: shared seat/account-facing rating text.
+- `lib/screens/leaderboard_screen.dart` and `player_detail_screen.dart`: competition, calibration, stats/history and responsive layout.
+- `lib/game/match_ai_engine.dart`: the existing AI extracted verbatim into a pure Dart module; Flutter scheduling stays in `match_ai.dart`.
+- `tools/ratings/engine.dart`: compiled Node bridge to the same rules and AI.
+- `functions/index.cjs`: authenticated AI evidence and completed-room triggers.
+- `functions/ratings.cjs`: atomic receipts, normalized Elo and calibration math.
+- `test/ratings`, `functions/*.test.cjs`, `tools/hex_rules/rating_rules.test.mjs`: regression layers.
+
+Work is committed on `codex/rating-system-audit`. Main, live rules and the public
+site were not changed by this audit. The outstanding user decision is enabling
+Blaze billing; after that, authenticate deployment tooling, publish the backend
+and scoped read-only rating policy, perform the production trials above, then
+promote/deploy the client and prepare an Android release. There is deliberately
+no fake successful leaderboard while that backend is unavailable.
