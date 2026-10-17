@@ -27,7 +27,10 @@ final matchRoomStoreProvider = Provider<MatchRoomStore>((ref) =>
 
 final StateNotifierProvider<MatchController, MatchSession> matchProvider =
     StateNotifierProvider<MatchController, MatchSession>(
-        (ref) => MatchController(
+        (ref) {
+          var active = true;
+          ref.onDispose(() => active = false);
+          return MatchController(
               storage: ref.read(localMatchStorageProvider),
               search: (game, level) async {
                 final identity = ref.read(accountProvider).identity;
@@ -41,10 +44,12 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                     final move = await ref.read(ratingRepositoryProvider).botMove(
                         session.id!, game.config,
                         ref.read(matchProvider.notifier).confirmedMoves);
+                    if (!active || ref.read(matchProvider).id != session.id) return move;
                     ref.read(calibrationStatusProvider.notifier).state =
                         'AI calibration uses verified server moves; human rating is unchanged.';
                     return move;
                   } catch (_) {
+                    if (!active) return null;
                     ref.read(calibrationRetryAfterProvider.notifier).state =
                         DateTime.now().add(const Duration(minutes: 2));
                     ref.read(calibrationStatusProvider.notifier).state =
@@ -59,7 +64,7 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
               completed: (session) async {
                 final event = MatchCompleted(session,
                     moves: ref.read(matchProvider.notifier).confirmedMoves);
-                await ref.read(achievementProvider.notifier).recordMatch(event);
+                final achievementWrite = ref.read(achievementProvider.notifier).recordMatch(event);
                 final identity = ref.read(accountProvider).identity;
                 if (identity != null && !identity.guest && !event.game.config.court &&
                     event.game.config.seats.length == 2 &&
@@ -67,12 +72,13 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                     [ResultReason.road, ResultReason.flats].contains(event.game.result?.reason)) {
                   unawaited(ref.read(ratingRepositoryProvider).completeCalibration(
                       event.id, event.game.config, event.moves).then((message) {
-                    ref.read(calibrationStatusProvider.notifier).state = message;
+                    if (active && ref.read(matchProvider).id == event.id) { ref.read(calibrationStatusProvider.notifier).state = message; }
                   }).catchError((Object error) {
-                    ref.read(calibrationStatusProvider.notifier).state =
-                        'Practice · this result could not calibrate the AI';
+                    if (active && ref.read(matchProvider).id == event.id) { ref.read(calibrationStatusProvider.notifier).state =
+                        'Practice · this result could not calibrate the AI'; }
                   }));
                 }
+                await achievementWrite;
               },
               remember: (room, uid) => ref
                   .read(savedRoomsProvider.notifier)
@@ -81,7 +87,8 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                       uid: uid,
                       hex: room.config.shape == BoardShape.hex,
                       unified: true)),
-            ));
+            );
+        });
 
 final calibrationStatusProvider = StateProvider<String?>((ref) => null);
 final calibrationRetryAfterProvider = StateProvider<DateTime>((ref) => DateTime.fromMillisecondsSinceEpoch(0));

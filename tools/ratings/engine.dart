@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:js_interop';
-import '../../lib/game/match_ai_engine.dart';
-import '../../lib/game/match_config.dart';
-import '../../lib/game/match_rules.dart';
-import '../../lib/game/match_state.dart';
-import '../../lib/game/rating_pool.dart';
+import 'package:stones/game/match_ai_engine.dart';
+import 'package:stones/game/match_config.dart';
+import 'package:stones/game/match_rules.dart';
+import 'package:stones/game/match_state.dart';
+import 'package:stones/game/rating_pool.dart';
 
 @JS('stonesEngine')
 external set engine(JSFunction value);

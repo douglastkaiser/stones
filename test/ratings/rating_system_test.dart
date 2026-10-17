@@ -21,7 +21,7 @@ class FakeRatings implements RatingRepository {
   @override
   Future<List<EloRating>> leaders(String pool) async {
     if (fail) throw StateError('offline');
-    return pending?.future ?? values;
+    return pending != null ? await pending!.future : values;
   }
   @override
   Future<List<EloRating>> bots(String pool) async => [];

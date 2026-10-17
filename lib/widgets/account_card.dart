@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/account_provider.dart';
+import '../providers/elo_provider.dart';
+import '../screens/leaderboard_screen.dart';
 
 class AccountCard extends ConsumerStatefulWidget {
   const AccountCard({super.key});
@@ -64,6 +66,12 @@ class _AccountCardState extends ConsumerState<AccountCard> {
                           : 'Your Stones account',
                   style: Theme.of(context).textTheme.titleMedium),
               if (signedIn && user.email != null) Text(user.email!),
+              if (signedIn) ...[
+                Text('${ref.watch(eloProvider).selectedPool.label} · ${ref.watch(eloProvider).localPlayerRating?.ratingLabel ?? "Unrated"}'),
+                TextButton.icon(onPressed: () => Navigator.push<void>(context,
+                    MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
+                    icon: const Icon(Icons.leaderboard_outlined), label: const Text('Rating and standing')),
+              ],
               const SizedBox(height: 8),
               Text(signedIn
                   ? 'Use this account on another device to rejoin your online rooms by code. Achievements, unlocked themes and settings currently save on each device.'

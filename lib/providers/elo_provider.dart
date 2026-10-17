@@ -60,10 +60,10 @@ class EloController extends StateNotifier<EloState> {
               loading: state.loading, errorMessage: state.errorMessage, rank: rank);
         }
       } catch (_) {
-        if (mounted && generation == _generation) _error('Your rank could not be refreshed. Try again.');
+        if (mounted && generation == _generation) { _error('Your rank could not be refreshed. Try again.'); }
       }
     }, onError: (Object error) {
-      if (mounted && generation == _generation) _error('Ratings could not be loaded. Check your connection and retry.');
+      if (mounted && generation == _generation) { _error('Ratings could not be loaded. Check your connection and retry.'); }
     });
   }
   void _error(String message) {
@@ -74,6 +74,7 @@ class EloController extends StateNotifier<EloState> {
   Future<void> fetchLeaderboard() async {
     await initialize();
     if (!mounted) return;
+    if (state.errorMessage != null) selectPool(state.selectedPool);
     final generation = _generation;
     final request = ++_request;
     final pool = state.selectedPool;

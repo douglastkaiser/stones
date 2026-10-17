@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -379,12 +378,10 @@ class _LogoPainter extends CustomPainter {
 
 class _PlayerChip extends StatelessWidget {
   final String displayName;
-  final String? iconImage;
   final String? ratingLabel;
 
   const _PlayerChip({
     required this.displayName,
-    this.iconImage,
     this.ratingLabel,
   });
 
@@ -392,13 +389,6 @@ class _PlayerChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
-
-    ImageProvider? avatar;
-    if (iconImage != null) {
-      try {
-        avatar = MemoryImage(base64Decode(iconImage!));
-      } catch (_) {}
-    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -418,13 +408,10 @@ class _PlayerChip extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundImage: avatar,
-            child: avatar == null
-                ? Text(
+            child: Text(
                     displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
                     style: const TextStyle(color: Colors.white),
-                  )
-                : null,
+                  ),
           ),
           const SizedBox(width: 8),
           Flexible(child: Column(

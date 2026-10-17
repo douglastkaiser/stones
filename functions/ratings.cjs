@@ -3,7 +3,9 @@ const crypto = require('node:crypto');
 const ENGINE = 'shared-search-v1';
 const prior = 1200;
 const provisionalGames = 10;
-const hash = value => crypto.createHash('sha256').update(JSON.stringify(value) ?? 'undefined').digest('hex');
+const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object'
+  ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+const hash = value => crypto.createHash('sha256').update(JSON.stringify(canonical(value)) ?? 'undefined').digest('hex');
 const evidenceId = (code, ply) => hash([code, ply]);
 function fresh(id, displayName, pool, isAi = false, level = null) {
   return {id, displayName, pool, rating: prior, gamesPlayed: 0, wins: 0,

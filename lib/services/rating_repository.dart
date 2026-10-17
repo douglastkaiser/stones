@@ -51,11 +51,11 @@ class FirebaseRatingRepository implements RatingRepository {
   }
   Future<Map<String, dynamic>> _call(String name, Map<String, dynamic> payload) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.isAnonymous) throw StateError('Sign in with Google to use ratings.');
+    if (user == null || user.isAnonymous) { throw StateError('Sign in with Google to use ratings.'); }
     final token = await user.getIdToken();
     final response = await http.post(Uri.https('us-central1-stones-9a6a0.cloudfunctions.net', '/$name'),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'data': payload})).timeout(const Duration(seconds: 12));
+        body: jsonEncode({'data': payload})).timeout(const Duration(seconds: 5));
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200 || data['error'] != null) {
       throw StateError('Rating service unavailable. This game remains playable as practice.');

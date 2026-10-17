@@ -32,9 +32,9 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     setState(() => _loading = true);
     try {
       final history = await ref.read(eloProvider.notifier).fetchRatingHistory(widget.player.id, pool: widget.player.pool);
-      if (mounted) setState(() { _history = history; _loading = false; _error = null; });
+      if (mounted) { setState(() { _history = history; _loading = false; _error = null; }); }
     } catch (_) {
-      if (mounted) setState(() { _loading = false; _error = 'History unavailable. Please retry.'; });
+      if (mounted) { setState(() { _loading = false; _error = 'History unavailable. Please retry.'; }); }
     }
   }
 
@@ -307,9 +307,9 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   }
 
   Color _ratingColor(int rating, bool isDark) {
-    if (rating >= 1800) return isDark ? Colors.purple.shade300 : Colors.purple.shade700;
-    if (rating >= 1500) return isDark ? Colors.amber.shade300 : Colors.amber.shade800;
-    if (rating >= 1200) return isDark ? Colors.blue.shade300 : Colors.blue.shade700;
+    if (rating >= 1800) { return isDark ? Colors.purple.shade300 : Colors.purple.shade700; }
+    if (rating >= 1500) { return isDark ? Colors.amber.shade300 : Colors.amber.shade800; }
+    if (rating >= 1200) { return isDark ? Colors.blue.shade300 : Colors.blue.shade700; }
     return isDark ? Colors.grey.shade400 : Colors.grey.shade700;
   }
 }

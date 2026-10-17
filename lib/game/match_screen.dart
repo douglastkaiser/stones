@@ -388,6 +388,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: _controls(match, game)))),
+              if (widget.studyPanel == null && game.config.seats.any((s) => s.control == SeatControl.ai) &&
+                  ref.watch(calibrationStatusProvider) != null)
+                Padding(padding: const EdgeInsets.all(12),
+                    child: Text(ref.watch(calibrationStatusProvider)!, textAlign: TextAlign.center)),
               if (match.room != null)
                 Padding(
                     padding: const EdgeInsets.all(12),
