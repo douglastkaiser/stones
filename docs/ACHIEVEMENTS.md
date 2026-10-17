@@ -114,3 +114,9 @@ release web and Android builds passed. The normal CI workflow is unchanged.
 
 Physical Android/browser trials remain distinct from Flutter widget/model tests.
 Play Store users require a new Android release containing the shared client changes.
+
+
+Publication: main `0a7c05c` was built by [Deploy Main 38993885310](https://github.com/douglastkaiser/stones/actions/runs/38993885310).
+The public startup ledger serves `main.d6b358c305a5918a954c.dart.js`; fetching that
+bundle confirmed the deployed commit, new achievement names and v2 progression key.
+The corresponding Pages publication is [38993974893](https://github.com/douglastkaiser/stones/actions/runs/38993974893).
