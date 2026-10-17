@@ -95,6 +95,26 @@ void main() {
     }
   }
 
+  testWidgets('home examples explain a real road and stack without changing setup',
+      (tester) async {
+    await tester.pumpWidget(const DesignPreviewApp());
+    await tester.pumpAndSettle();
+    final road = tester.widget<BoardView>(find.byType(BoardView));
+    expect(road.game.result?.winner, SeatId.ivory);
+    await tester.ensureVisible(find.text('The stack'));
+    await tester.tap(find.text('The stack'));
+    await tester.pumpAndSettle();
+    final stack = tester.widget<BoardView>(find.byType(BoardView));
+    expect(stack.game.finished, isFalse);
+    expect(find.textContaining('The top stone controls'), findsOneWidget);
+    await tester.ensureVisible(find.text('The road'));
+    await tester.tap(find.text('The road'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<BoardView>(find.byType(BoardView)).game.result?.winner,
+        SeatId.ivory);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('mobile board stays fixed when move controls change',
       (tester) async {
     tester.view.physicalSize = const Size(390, 1000);

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// Candidate design tokens. Production adopts these only after visual review.
@@ -6,16 +5,16 @@ class TavernTheme {
   static ThemeData build(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF355D49),
+      seedColor: const Color(0xFF995433),
       brightness: brightness,
     ).copyWith(
-      primary: dark ? const Color(0xFFE4BC77) : const Color(0xFF315540),
-      onPrimary: dark ? const Color(0xFF272015) : const Color(0xFFFFF8E8),
-      surface: dark ? const Color(0xFF202B25) : const Color(0xFFF7F1E4),
-      onSurface: dark ? const Color(0xFFF3E9D5) : const Color(0xFF263A2E),
+      primary: dark ? const Color(0xFFF0B782) : const Color(0xFF88401F),
+      onPrimary: dark ? const Color(0xFF302015) : const Color(0xFFFFF8E8),
+      surface: dark ? const Color(0xFF292522) : const Color(0xFFF7F1E4),
+      onSurface: dark ? const Color(0xFFF3E9D5) : const Color(0xFF322B25),
       onSurfaceVariant:
-          dark ? const Color(0xFFC6C9BC) : const Color(0xFF566356),
-      outline: dark ? const Color(0xFF899584) : const Color(0xFF7F8977),
+          dark ? const Color(0xFFD0C4B8) : const Color(0xFF685B50),
+      outline: dark ? const Color(0xFFA69584) : const Color(0xFF877568),
     );
     final base = ThemeData(
         colorScheme: scheme, fontFamily: 'StonesSans', useMaterial3: true);
@@ -64,17 +63,9 @@ class TavernBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: const Alignment(-.75, -.85),
-          radius: 1.7,
-          colors: dark
-              ? const [Color(0xFF394233), Color(0xFF18251E), Color(0xFF101A16)]
-              : const [Color(0xFFFFF8E8), Color(0xFFEBE5D5), Color(0xFFD8DECD)],
-        ),
-      ),
-      child: CustomPaint(painter: _Panelling(dark), child: child),
+    return ColoredBox(
+      color: dark ? const Color(0xFF1B1816) : const Color(0xFFEDE5D7),
+      child: child,
     );
   }
 }
@@ -91,34 +82,9 @@ class TavernPanel extends StatelessWidget {
       elevation: 3,
       shadowColor: const Color(0x30000000),
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: scheme.outline.withValues(alpha: .30))),
       child: Padding(padding: EdgeInsets.all(padding), child: child),
     );
   }
-}
-
-class _Panelling extends CustomPainter {
-  const _Panelling(this.dark);
-  final bool dark;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = (dark ? Colors.white : const Color(0xFF536745))
-          .withValues(alpha: .035)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (var i = 0; i < 7; i++) {
-      final x = size.width * i / 6;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    final radius = math.min(size.width * .4, 360.0);
-    for (final x in [0.0, size.width]) {
-      canvas.drawCircle(Offset(x, 180), radius, paint);
-      canvas.drawCircle(Offset(x, 180), radius + 12, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Panelling oldDelegate) => oldDelegate.dark != dark;
 }

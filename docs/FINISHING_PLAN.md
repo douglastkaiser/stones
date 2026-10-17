@@ -15,8 +15,10 @@ for packet 1 remains pending. Packets 3–12 have not been represented as comple
 ## Product promise
 
 **A beautiful, welcoming place to learn and play Tak with friends, together or
-across several days.** The presentation evokes a quiet fantasy tavern: a
-believable crafted table, warm lighting, tactile pieces and restrained ambience.
+across several days.** Keep the crafted boards and tactile pieces, with a direct,
+playful game menu. Owner feedback rejected the hospitality/marketing treatment
+("Pull up a chair") as corporate and overdone. Lead with playing and learning
+the game, use concrete instructions, and let the pieces provide the character.
 
 Decisions confirmed with the owner:
 
@@ -55,7 +57,7 @@ remaining work connects these capabilities into dependable experiences.
 | Finishing | Shared result controls show flat counts and Back to play selection. | Explain the actual result, highlight its cause, review the moves and rematch. |
 | Identity | Google identity owns online seats and ratings; progression remains local. Legacy Play Games saves use the old Square implementation. | One coherent Stones account, safe progress migration and explicit lifecycle controls. |
 | Learning | A filtered catalog of lessons/studies; completion returns to the list. Several multiplayer studies repeat one cap-delivery motif. | A short fundamentals path, Next/Practice actions and a curated tactical progression. |
-| Presentation | Warm colors and ornate pieces, but menu/setup surfaces remain conventional forms. | Consistent tavern presentation with readable, stable game controls. |
+| Presentation | Warm colors and ornate pieces, but menu/setup surfaces remain conventional forms. | Consistent game-first presentation with readable, stable controls. |
 | Competition | Many independent rating pools and intentionally cautious calibration. | A restrained secondary feature; spotlight standard Square rather than an empty maze of ladders. |
 | Release | Substantial automated coverage, but actual account/device qualification and Android/web parity remain incomplete. | Real-device and multi-account release evidence, plus accurate store/privacy disclosures. |
 

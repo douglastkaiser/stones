@@ -1,4 +1,4 @@
-# Tavern design review
+# Stones design review
 
 The preview is isolated from real accounts, preferences, rooms and achievements:
 [Open the prototype](https://www.douglastkaiser.com/stones/pr/finishing/?review=d3b129a).
@@ -30,8 +30,11 @@ Direct examples:
 
 ## Design and implementation boundary
 
-Deep green, quiet brass, warm timber and restrained serif headings establish the
-candidate identity. UI controls use a bundled sans serif. The background is a
+The second candidate replaces hospitality slogans and the green/brass landing
+page with a direct game menu, ink/paper surfaces, a copper accent and warm timber.
+Play and Learn lead; the real board switches between a resolved road and a stack
+example with short explanations. This responds to owner feedback that the first
+candidate felt corporate and heavy-handed. Restrained serif headings remain. UI controls use a bundled sans serif. The background is a
 static painter: no large scene images, animation loop or blur filter. Existing
 Classic Wood pieces/board retain their current legal silhouettes and stack system.
 
@@ -56,8 +59,9 @@ Live browser checks exercised home → Hex → fourth seat → table → pickup 
 stones → preview a legal neighbor move → confirm → Charcoal to play. Four-player
 Hex was also visually inspected at 390×900. This is browser layout/interaction
 evidence, not physical Android install, mobile frame timing or screen-reader QA.
-Keyboard Return activation of the Square home button was checked in the live
-final candidate. The owner visual-feedback question is pending.
+Keyboard Return activation of the Square home button was checked in the first
+qualified candidate. The revised candidate requires fresh layout and interaction
+qualification before the next owner review.
 
 Local preview command with Flutter 3.47.7:
 
@@ -67,3 +71,11 @@ flutter run -d chrome --target lib/design_preview.dart
 
 The plan explicitly says to obtain visual feedback before spreading the design.
 That review is pending; the broader finishing plan remains active work.
+
+## Revision in progress
+
+The 2026-10-17 feedback revision removes fireside, hospitality and sentimental
+result copy throughout the preview. It keeps Square/Hex, Join/My games and a
+visible learning entry, and adds a switchable road/stack example using BoardView
+and rule-resolved fixtures. No game mechanics or production entry points change.
+Previous evidence above applies to the first candidate until fresh CI completes.

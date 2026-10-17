@@ -115,6 +115,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
   late MatchState _game =
       previewPosition(_shape, _players, won: _page == PreviewPage.result);
   final _selection = MoveSelection();
+  bool _showHomeRoad = true;
   bool _advanced = false;
   bool _court = false;
   String _clock = 'No clock';
@@ -241,7 +242,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                       IconButton(
                           tooltip: 'Preview collection',
                           onPressed: () =>
-                              _sampleList('A collection of beautiful tables', [
+                              _sampleList('Piece sets', [
                                 'Classic Wood · Ready to play',
                                 'Morocco · Your first learning reward',
                                 'Slate, Marble & Kyoto · Mastery rewards'
@@ -250,7 +251,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                       IconButton(
                           tooltip: 'Preview account',
                           onPressed: () =>
-                              _sampleList('Your place at the table', [
+                              _sampleList('Your account', [
                                 'Play as a guest',
                                 'Sign in with Google',
                                 'Keep your games and earned collection together'
@@ -269,7 +270,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                         child: Padding(
                             padding: const EdgeInsets.only(bottom: 24),
                             child: Text(
-                                'A quiet table. A beautiful game. · ${AppVersion.commitHash}',
+                                'Stones · Design preview · ${AppVersion.commitHash}',
                                 style: Theme.of(context).textTheme.bodySmall))),
                   ]),
             ),
@@ -282,31 +283,25 @@ class _PreviewHomeState extends State<_PreviewHome> {
           Theme.of(context).textTheme.labelMedium?.copyWith(letterSpacing: 2));
 
   Widget _home(bool narrow) {
-    final introduction =
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _eyebrow('Make yourself at home'),
-      const SizedBox(height: 12),
-      Text('Pull up a chair.',
-          style: narrow
-              ? Theme.of(context).textTheme.displayMedium
-              : Theme.of(context).textTheme.displayLarge),
-      const SizedBox(height: 16),
-      Text('A road to build. A friend to outwit.\nA little time well spent.',
-          style:
-              Theme.of(context).textTheme.titleMedium?.copyWith(height: 1.6)),
-      const SizedBox(height: 28),
+    final menu = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+      Text('Play Stones',
+          style: Theme.of(context).textTheme.headlineLarge),
+      const SizedBox(height: 8),
+      const Text('Pick a board. Bring friends or take on the computer.'),
+      const SizedBox(height: 20),
       _boardChoice(BoardShape.square, 'Square',
-          'The classic game of Tak. A lovely place to begin.',
-          featured: true),
-      const SizedBox(height: 12),
+          'Start here for classic Tak.', featured: true),
+      const SizedBox(height: 10),
       _boardChoice(BoardShape.hex, 'Hex',
-          'Take a different road. Explore the Stones variant.'),
-      const SizedBox(height: 24),
-      Wrap(spacing: 12, runSpacing: 12, children: [
+          'More directions. Same goal. A Stones variant.'),
+      const SizedBox(height: 16),
+      Wrap(spacing: 12, runSpacing: 4, children: [
         OutlinedButton.icon(
             onPressed: () => _sampleList('Join a friend', [
                   'Open an invitation link, or enter a room code.',
-                  'The invitation brings you to your friend’s table.'
+                  'Choose your seat and play.'
                 ]),
             icon: const Icon(Icons.link),
             label: const Text('Join a friend')),
@@ -314,51 +309,65 @@ class _PreviewHomeState extends State<_PreviewHome> {
             onPressed: () => _sampleList('My games', [
                   'Your turn · Square with Rowan',
                   'Waiting · Hex with friends',
-                  'Completed · A road well played'
+                  'Completed · Ivory won by road'
                 ]),
             icon: const Icon(Icons.bookmark_border),
             label: const Text('My games')),
       ]),
+      const SizedBox(height: 20),
+      const Divider(),
+      const SizedBox(height: 12),
+      Text('First game?', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 6),
+      const Text('Place stones, build stacks, connect a road. Learn by playing.'),
+      const SizedBox(height: 12),
+      Align(alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+              onPressed: () => _sampleList('Learn to play', [
+                    'Connect opposite edges with your flat stones and capstones.',
+                    'Move stacks to take control. Standing stones block roads.',
+                    'Try the guided lessons, then play with Court Mode hints.'
+                  ]),
+              icon: const Icon(Icons.school_outlined),
+              label: const Text('Learn to play'))),
     ]);
-    final scene = Column(children: [
-      _boardScene(previewPosition(BoardShape.square, 2), hero: true),
+    final example = Column(children: [
+      ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: narrow ? 260 : 480),
+          child: _boardScene(
+              previewPosition(BoardShape.square, 2, won: _showHomeRoad),
+              hero: !narrow)),
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 4, children: [
+        ChoiceChip(
+            label: const Text('The road'),
+            selected: _showHomeRoad,
+            onSelected: (_) => setState(() => _showHomeRoad = true)),
+        ChoiceChip(
+            label: const Text('The stack'),
+            selected: !_showHomeRoad,
+            onSelected: (_) => setState(() => _showHomeRoad = false)),
+      ]),
       const SizedBox(height: 8),
-      const Text('Classic Wood · Made for another game'),
+      Text(_showHomeRoad
+          ? 'Ivory connects opposite edges. That’s a win.'
+          : 'The top stone controls the stack. Move it to change the board.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium),
+      const SizedBox(height: 4),
+      Text('Example position', style: Theme.of(context).textTheme.bodySmall),
     ]);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (narrow)
-        introduction
-      else
-        Row(children: [
-          Expanded(child: introduction),
-          const SizedBox(width: 44),
-          Expanded(child: scene)
-        ]),
-      const SizedBox(height: 32),
-      TavernPanel(
-          padding: 20,
-          child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 20,
-              runSpacing: 16,
-              children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('New to the table?',
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 6),
-                  const Text('Learn a little, then try a friendly game.'),
-                ]),
-                OutlinedButton.icon(
-                    onPressed: () => _sampleList('Your first road', [
-                          'A short introduction',
-                          'The same controls you will use in a game',
-                          'Optional hints whenever you need them'
-                        ]),
-                    icon: const Icon(Icons.school_outlined),
-                    label: const Text('Learn to play'))
-              ])),
-    ]);
+    return narrow
+        ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            menu,
+            const SizedBox(height: 24),
+            example,
+          ])
+        : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(flex: 5, child: menu),
+            const SizedBox(width: 64),
+            Expanded(flex: 6, child: example),
+          ]);
   }
 
   Widget _boardChoice(BoardShape shape, String title, String description,
@@ -417,16 +426,16 @@ class _PreviewHomeState extends State<_PreviewHome> {
         constraints: const BoxConstraints(maxWidth: 620),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _back('Back to the fireside'),
+          _back('Back to games'),
           const SizedBox(height: 12),
-          _eyebrow('Set your table'),
+          _eyebrow('New game'),
           const SizedBox(height: 8),
           Text('A game of $_shapeName',
               style: Theme.of(context).textTheme.headlineLarge),
           const SizedBox(height: 12),
           Text(_shape == BoardShape.square
-              ? 'Classic Tak, or a table for more friends.'
-              : 'Six directions. Shared goals. A Stones variant.'),
+              ? 'Classic Tak. Add extra players for a Stones variant.'
+              : 'Connect opposite edges on a hex board. A Stones variant.'),
           const SizedBox(height: 24),
           TavernPanel(
               child: Column(
@@ -436,7 +445,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 const Text(
-                    'The same table for local friends, online friends or AI.'),
+                    'Mix players on this device, online friends and AI.'),
                 const SizedBox(height: 20),
                 for (final seat in SeatId.values.take(_players)) ...[
                   Row(children: [
@@ -604,7 +613,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
         padding: 20,
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _eyebrow(_game.finished ? 'A road well played' : 'Make your move'),
+          _eyebrow(_game.finished ? 'Game over' : 'Make your move'),
           const SizedBox(height: 12),
           Text(_game.finished ? _finishLabel : '${_game.current.label} to play',
               style: Theme.of(context).textTheme.headlineSmall),
@@ -693,7 +702,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
       else ...[
         _back('Leave the sample table'),
         const SizedBox(height: 8),
-        Text('An evening game',
+        Text('$_shapeName game',
             style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 8),
         Text(
@@ -725,7 +734,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                   style: Theme.of(context).textTheme.titleLarge)),
           IconButton(
               tooltip: 'How to move',
-              onPressed: () => _sampleList('At the table', [
+              onPressed: () => _sampleList('Game controls', [
                     'Tap an empty cell to preview a stone; tap again to place it.',
                     'Tap your stack, then a destination. Confirm to move.',
                     'Hold a stack to inspect the stones inside.'
@@ -773,7 +782,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
           child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
         child: Column(children: [
-          _eyebrow('A road well played'),
+          _eyebrow('Game over'),
           const SizedBox(height: 12),
           Text(
               _game.result?.reason == ResultReason.road &&
@@ -797,7 +806,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('There’s always another road.',
+                    Text('Play again?',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 16),
@@ -814,7 +823,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                         child: const Text('See the winning road')),
                     TextButton(
                         onPressed: () => _open(PreviewPage.home),
-                        child: const Text('Back to the fireside')),
+                        child: const Text('Back to games')),
                   ])),
         ]),
       ));
