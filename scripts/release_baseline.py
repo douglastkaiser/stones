@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
-from time import perf_counter
+from time import perf_counter, time_ns
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
@@ -26,7 +26,7 @@ def fingerprint_name(name, prefix, suffix):
     return name.split('.')[1]
 
 
-def inspect_live(base):
+def inspect_live(base, *, fresh=False):
     parsed = urlparse(base)
     if parsed.scheme != 'https' or parsed.hostname not in {
             'www.douglastkaiser.com', 'douglastkaiser.com',
@@ -36,7 +36,11 @@ def inspect_live(base):
 
     def fetch(path):
         start = perf_counter()
-        with urlopen(Request(urljoin(base.rstrip('/') + '/', path),
+        url = urljoin(base.rstrip('/') + '/', path)
+        if fresh and not path:
+            # A CDN may briefly cache the pre-deployment 404 for a new preview.
+            url += '?baseline=' + str(time_ns())
+        with urlopen(Request(url,
                              headers={'User-Agent': 'Stones-release-baseline'}),
                      timeout=30) as response:
             data = response.read(20 * 1024 * 1024 + 1)
@@ -79,6 +83,8 @@ def inspect_live(base):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--live', action='store_true')
+    parser.add_argument('--fresh', action='store_true',
+                        help='Bypass a cached HTML response when checking a new deployment')
     parser.add_argument('--base', default='https://www.douglastkaiser.com/stones/')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
@@ -91,7 +97,7 @@ def main():
         'deviceQualification': 'pending; this script does not measure a device',
     }
     if args.live:
-        report['live'] = inspect_live(args.base)
+        report['live'] = inspect_live(args.base, fresh=args.fresh)
     encoded = json.dumps(report, indent=2) + '\n'
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

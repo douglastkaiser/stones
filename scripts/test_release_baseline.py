@@ -44,6 +44,13 @@ class BaselineTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         inspect_live('https://www.douglastkaiser.com/stones/')
 
+    def test_fresh_check_busts_only_html_cache(self):
+        with patch('scripts.release_baseline.urlopen', side_effect=self.fixture()) as fetch:
+            inspect_live('https://www.douglastkaiser.com/stones/', fresh=True)
+            urls = [call.args[0].full_url for call in fetch.call_args_list]
+            self.assertIn('?baseline=', urls[0])
+            self.assertTrue(all('?' not in url for url in urls[1:]))
+
     def test_rejects_unsafe_asset_paths(self):
         for value in ['../main.123.dart.js', 'https://elsewhere/main.js', 'main.dart.js']:
             with self.assertRaises(ValueError):

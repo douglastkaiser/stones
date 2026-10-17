@@ -12,6 +12,9 @@ on:
       - 'tools/shared_performance_probe_test.dart'
       - '.github/workflows/finishing-preview.yml'
       - 'web/design_preview.html'
+      - 'pubspec.yaml'
+      - 'scripts/release_baseline.py'
+      - 'scripts/test_release_baseline.py'
 
 permissions:
   contents: write
@@ -76,8 +79,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import shutil
+          from scripts.prepare_web_release import retain_previous
           target = Path('published/pr/finishing')
           if target.is_dir():
+              retain_previous(Path('build/web'), target)
               shutil.rmtree(target)
           target.parent.mkdir(parents=True, exist_ok=True)
           shutil.copytree('build/web', target)

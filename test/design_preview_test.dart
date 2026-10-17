@@ -13,7 +13,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     await (FontLoader('MaterialIcons')
-      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+        .load();
     for (final font in [('StonesLora', 'Lora'), ('StonesSans', 'Roboto')]) {
       await (FontLoader(font.$1)
             ..addFont(rootBundle.load('assets/fonts/${font.$2}-Regular.ttf')))

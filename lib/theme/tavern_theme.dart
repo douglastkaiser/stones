@@ -91,8 +91,8 @@ class TavernPanel extends StatelessWidget {
       elevation: 3,
       shadowColor: const Color(0x30000000),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: scheme.outline.withValues(alpha: .30))),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: scheme.outline.withValues(alpha: .30))),
       child: Padding(padding: EdgeInsets.all(padding), child: child),
     );
   }
