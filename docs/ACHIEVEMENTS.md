@@ -108,6 +108,9 @@ reach every achievement through those histories and catalog completions.
 Widget trials cover phone/desktop, both brightness modes, enlarged text,
 track/status filters, earning rules and progress-save retry.
 
-CI and publication evidence will be recorded after qualification. Physical
-Android/browser trials remain distinct from Flutter widget/model tests. Play
-Store users require a new Android release containing the shared client changes.
+Qualified at `a078f04` in [CI run 38976082886](https://github.com/douglastkaiser/stones/actions/runs/38976082886):
+753 tests passed, `flutter analyze --fatal-infos` reported no issues, and the
+release web and Android builds passed. The normal CI workflow is unchanged.
+
+Physical Android/browser trials remain distinct from Flutter widget/model tests.
+Play Store users require a new Android release containing the shared client changes.
