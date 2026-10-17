@@ -41,7 +41,7 @@ const reject=async promise=>{const r=await promise;assert.equal(r.status,403,r.r
 const accept=async promise=>{const r=await promise;assert(r.ok,r.raw);return r;};
 function room(n=2) {
  const ids=['ivory','charcoal','copper','jade'].slice(0,n);const users=['alice','bob','carol','dan'].slice(0,n);
- return {version:1,code,host:'alice',config:{version:1,shape:'square',size:5,profile:n===2?'standardTak':'sharedRoads',starter:'ivory',seats:ids.map((id,i)=>({id,control:i===0?'localHuman':'onlineHuman',level:'easy'}))},
+ return {version:1,code,ratingKey:humanKey,host:'alice',config:{version:1,shape:'square',size:5,profile:n===2?'standardTak':'sharedRoads',starter:'ivory',seats:ids.map((id,i)=>({id,control:i===0?'localHuman':'onlineHuman',level:'easy'}))},
  owners:Object.fromEntries(ids.map((id,i)=>[id,users[i]])),styles:Object.fromEntries(ids.map(id=>[id,'standard'])),boardTheme:'classicWood',
  moves:ids.map(id=>({seat:id,x:0,y:0,type:'flat',direction:null,drops:[]})),resigned:null,timedOut:null,clock:null,aiRunner:null,aiLeaseAt:null};
 }
@@ -141,7 +141,7 @@ test('the last vote and settlement can share one atomic transaction',async()=>{
 });
 test('two valid settlements based on stale totals cannot erase one another',async()=>{
  const s=await setup();const first=resultWrites(s);await accept(commit(first));
- const other='UBBBBBB';const otherKey=hash(other);const r=room();r.code=other;await seed(`matches/${other}`,r);
+ const other='UBBBBBB';const otherKey=hash(other);const r=room();r.code=other;r.ratingKey=otherKey;await seed(`matches/${other}`,r);
  for(const uid of s.users) await accept(put(`matches/${other}/ratingVotes/${uid}`,{ply:2,winner:0,name:uid},uid));
  const stale=JSON.parse(JSON.stringify(first).replaceAll(humanKey,otherKey).replaceAll(code,other));
  await reject(commit(stale));
@@ -180,4 +180,12 @@ test('shared-device seats and missing signed-in owners cannot be rated',async()=
  const r=room(3);r.owners.charcoal='alice';r.config.seats[1].control='localHuman';await seed(`matches/${code}`,r);
  for(const uid of ['alice','carol'])await accept(put(`matches/${code}/ratingVotes/${uid}`,{ply:3,winner:0,name:uid},uid));
  await reject(commit(resultWrites({users:['alice','alice','carol'],pool:'square-5-3-sharedRoads-open'})));
+});
+
+test('legacy rooms can acquire one opaque rating key from a permanent participant only',async()=>{
+ const r=room();delete r.ratingKey;await seed(`matches/${code}`,r);
+ await reject(put(`matches/${code}`,{...r,ratingKey:humanKey},'stranger'));
+ await reject(put(`matches/${code}`,{...r,ratingKey:humanKey},'alice','anonymous'));
+ await accept(put(`matches/${code}`,{...r,ratingKey:humanKey},'alice'));
+ await reject(put(`matches/${code}`,{...r,ratingKey:hash('replacement')},'bob'));
 });

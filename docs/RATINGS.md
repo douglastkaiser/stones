@@ -48,7 +48,7 @@ Leaderboard list position was mislabeled as global rank. That data is not import
    transactions are bounded to 15s in the application. Timed-out transactions may
    still finish: receipts make retry safe. No gameplay waits on rating settlement.
 
-Public player records use opaque receipt IDs, not invitation codes. Receipt
+Public player records use cryptographically random 256-bit receipt IDs, not invitation codes or hashes of short invitation codes. New rooms allocate a fixed rating key at creation; a permanent participant can allocate it once for an older room. AI source keys are private and immutable. Receipt
 contents and move evidence are participant-private; votes are room-member-only.
 Public aliases are user-chosen, not verified real names. Public rating history
 uses a player's sequential game number and generic opponent descriptions.

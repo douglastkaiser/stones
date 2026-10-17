@@ -454,7 +454,9 @@ service cloud.firestore {
       allow get: if isAuthenticated();
       allow list, delete: if false;
       allow create: if isAuthenticated() && code.matches('^U[A-Z]{6}$') &&
-        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt', 'clock', 'timedOut']) &&
+        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt', 'clock', 'timedOut', 'ratingKey']) &&
+        (!('ratingKey' in request.resource.data) ||
+          (request.resource.data.ratingKey is string && request.resource.data.ratingKey.matches('^[0-9a-f]{64}$'))) &&
         request.resource.data.version == 1 && request.resource.data.code == code &&
         request.resource.data.host == request.auth.uid && configShape(request.resource.data.config) &&
         validSeats(request.resource.data, true) && validBoardTheme(request.resource.data.boardTheme) &&
@@ -463,7 +465,11 @@ service cloud.firestore {
         request.resource.data.timedOut == null && initialClock(request.resource.data);
       allow update: if isAuthenticated() &&
         resource.data.get('ratingReceipt', null) == null &&
-        ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingReceipt']) &&
+        ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingKey']) &&
+          ratingAccount() && request.auth.uid in resource.data.owners.values() &&
+          !('ratingKey' in resource.data) && request.resource.data.ratingKey is string &&
+          request.resource.data.ratingKey.matches('^[0-9a-f]{64}$')) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingReceipt']) &&
           request.resource.data.ratingReceipt is string &&
           getAfter(/databases/$(database)/documents/ratingResults/$(request.resource.data.ratingReceipt)).data.room == code) ||
          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles']) &&
@@ -531,7 +537,7 @@ service cloud.firestore {
       let room = getAfter(/databases/$(database)/documents/matches/$(code)).data;
       let n = room.config.seats.size();
       let gone = room.resigned != null ? room.resigned : room.timedOut;
-      return code.matches('^U[A-Z]{6}$') && room.ratingReceipt == id && r.pool == ratingPool(room.config) &&
+      return code.matches('^U[A-Z]{6}$') && room.ratingReceipt == id && room.ratingKey == id && r.pool == ratingPool(room.config) &&
         r.participants.size() == n && r.participants.toSet().size() == n &&
         request.auth.uid in r.participants && r.ply == room.moves.size() && r.ply >= n &&
         r.winner >= -1 && r.winner < n &&
@@ -673,11 +679,13 @@ service cloud.firestore {
       }
     }
     match /aiResultKeys/{key} {
+      allow get: if ratingAccount() && (!exists(/databases/$(database)/documents/aiResultKeys/$(key)) ||
+        get(/databases/$(database)/documents/ratingResults/$(resource.data.result)).data.actor == request.auth.uid);
       allow create: if ratingAccount() && request.resource.data.keys().hasOnly(['result']) &&
         freshRating(request.resource.data.result) &&
         ratingReceipt(request.resource.data.result).actor == request.auth.uid &&
         key == request.auth.uid + '_' + ratingReceipt(request.resource.data.result).source;
-      allow read, update, delete: if false;
+      allow list, update, delete: if false;
     }
     match /ratingLimits/{key} {
       allow get: if ratingAccount() && (!exists(/databases/$(database)/documents/ratingLimits/$(key)) ||

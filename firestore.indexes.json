@@ -37,5 +37,11 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "ratingResults",
+      "fieldPath": "moves",
+      "indexes": []
+    }
+  ]
 }

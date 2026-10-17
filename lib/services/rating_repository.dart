@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
-import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/elo_rating.dart';
@@ -115,7 +113,10 @@ class FirebaseRatingRepository implements RatingRepository {
     Future<String> settle() =>
         _settleHuman(session, evidence, user.uid, displayName)
             .timeout(const Duration(seconds: 15));
-    final status = await settle();
+    var status = await settle();
+    if (status == 'Preparing rating receipt') {
+      status = await settle();
+    }
     if (!status.startsWith('Waiting')) return status;
     // Both clients can finish together; the last vote settles for everyone.
     // Waiting never blocks gameplay and remains explicitly retryable on reload.
@@ -142,8 +143,12 @@ class FirebaseRatingRepository implements RatingRepository {
       _db.runTransaction((tx) async {
         final roomRef = _db.collection('matches').doc(session.id);
         final raw = (await tx.get(roomRef)).data()!;
-        final resultId = raw['ratingReceipt'] as String? ??
-            sha256.convert(utf8.encode(session.id!)).toString();
+        if (raw['ratingKey'] == null) {
+          tx.update(roomRef, {'ratingKey': _newResultId()});
+          return 'Preparing rating receipt';
+        }
+        final resultId =
+            raw['ratingReceipt'] as String? ?? raw['ratingKey'] as String;
         final receiptRef = _db.collection('ratingResults').doc(resultId);
         if ((await tx.get(receiptRef)).exists) return 'Rating recorded';
         final room = FirestoreMatchRoomStore.decodeRoom(raw);
@@ -243,8 +248,9 @@ class FirebaseRatingRepository implements RatingRepository {
             .level
             .name;
         final bot = 'ai_${RatingEvidence.engine}_$level';
-        final id =
-            sha256.convert(utf8.encode('${uid}_${session.id}')).toString();
+        final keyRef = _db.collection('aiResultKeys').doc('${uid}_${session.id}');
+        final existingKey = (await tx.get(keyRef)).data();
+        final id = existingKey?['result'] as String? ?? _newResultId();
         final receiptRef = _db.collection('ratingResults').doc(id);
         if ((await tx.get(receiptRef)).exists) {
           return 'AI community estimate recorded';
@@ -291,8 +297,7 @@ class FirebaseRatingRepository implements RatingRepository {
           'engine': RatingEvidence.engine,
           'at': FieldValue.serverTimestamp()
         });
-        tx.set(_db.collection('aiResultKeys').doc('${uid}_${session.id}'),
-            {'result': id});
+        tx.set(keyRef, {'result': id});
         tx.set(
             limitRef, {'at': FieldValue.serverTimestamp(), 'lastResult': id});
         if (!opponent.exists) {
@@ -316,6 +321,11 @@ class FirebaseRatingRepository implements RatingRepository {
         _write(tx, e.pool, bot, data, score, 'Established player');
         return 'AI community estimate recorded · human rating unchanged';
       });
+
+  String _newResultId() {
+    final random = Random.secure();
+    return List.generate(64, (_) => random.nextInt(16).toRadixString(16)).join();
+  }
 
   Map<String, dynamic> _record(Map<String, dynamic> before, String pool,
       String name, int rating, double score, String result,

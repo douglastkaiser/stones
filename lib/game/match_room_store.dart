@@ -88,7 +88,11 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
       final created = await firestore.runTransaction<bool>((tx) async {
         final ref = _room(code);
         if ((await tx.get(ref)).exists) return false;
-        tx.set(ref, room.toMap());
+        tx.set(ref, {
+          ...room.toMap(),
+          'ratingKey': List.generate(64, (_) => random.nextInt(16).toRadixString(16))
+              .join()
+        });
         return true;
       });
       if (created) return room;
