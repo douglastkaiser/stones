@@ -165,8 +165,11 @@ exports.rateCompletedMatch = onDocumentWritten({...options, document: 'matches/{
   // Once both players have moved, resigning or timing out must count. A long
   // grace period would let a losing player dodge their rating loss.
   if (['resignation','time'].includes(result.reason) && result.ply < room.config.seats.length) return;
+  let ids;
+  try { ids = R.humanIds(room); }
+  catch (_) { return; } // Shared-device seats are valid practice, not retryable failures.
   let identities;
-  try { identities = await Promise.all(R.humanIds(room).map(account)); }
+  try { identities = await Promise.all(ids.map(account)); }
   catch (error) { if (['permission-denied','auth/user-not-found'].includes(error.code)) return; throw error; }
   if (room.timedOut) {
     const seat = result.current;

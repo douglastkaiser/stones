@@ -121,3 +121,21 @@ test('a duel resignation counts once both players moved; an unstarted duel is un
  assert.equal(db.data.get('ratingPools/square-5-2-standardTak-open/players/alice').wins,1);
  assert.equal(db.data.get('ratingPools/square-5-2-standardTak-open/players/bob').losses,1);
 });
+
+test('a completed mixed-device hotseat room is unrated without an endless retry',async()=>{
+ db.data.clear();
+ const cfg={version:1,shape:'square',size:5,starter:'ivory',profile:'sharedRoads',seats:[
+   {id:'ivory',control:'localHuman',level:'easy'},
+   {id:'charcoal',control:'localHuman',level:'easy'},
+   {id:'copper',control:'onlineHuman',level:'easy'}]};
+ const wall=(seat,x,y)=>({...place(seat,x,y),type:'standing'});
+ const moves=[place('ivory',4,4),place('charcoal',4,3),place('copper',0,0),
+   place('ivory',1,0),wall('charcoal',1,3),wall('copper',2,3),
+   place('ivory',2,0),wall('charcoal',0,3),wall('copper',3,3),
+   place('ivory',3,0),wall('charcoal',2,4),wall('copper',3,4),place('ivory',4,0)];
+ const position=JSON.parse(await globalThis.stonesEngine(JSON.stringify({config:cfg,moves})));
+ assert.equal(position.finished,true);assert.equal(position.winner,'ivory');
+ const room={code:'USHARED',config:cfg,moves,owners:{ivory:'alice',charcoal:'alice',copper:'bob'}};
+ await service.rateCompletedMatch({params:{code:room.code},time:new Date().toISOString(),data:{after:{data:()=>room}}});
+ assert.equal(db.data.size,0);
+});
