@@ -162,8 +162,9 @@ exports.rateCompletedMatch = onDocumentWritten({...options, document: 'matches/{
     }
     return;
   }
-  // Early concessions do not establish competitive strength.
-  if (['resignation','time'].includes(result.reason) && result.ply < room.config.seats.length * 4) return;
+  // Once both players have moved, resigning or timing out must count. A long
+  // grace period would let a losing player dodge their rating loss.
+  if (['resignation','time'].includes(result.reason) && result.ply < room.config.seats.length) return;
   let identities;
   try { identities = await Promise.all(R.humanIds(room).map(account)); }
   catch (error) { if (['permission-denied','auth/user-not-found'].includes(error.code)) return; throw error; }

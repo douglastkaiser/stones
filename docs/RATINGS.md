@@ -97,7 +97,7 @@ rules or budget changes; update client lookup and repository filters together.
 After backend publication: verify public reads and forbidden writes, complete a
 new signed-in human duel and a rematch, confirm both players receive one history
 entry and a unique receipt, replay the same completion, reconnect both devices,
-confirm draws and concessions, switch accounts, and establish ten games in one
+confirm draws and concessions (including a resignation immediately after both opening placements), switch accounts, and establish ten games in one
 pool. Then verify one server-generated AI game changes only the bot rating,
 repeat it to prove deduplication, and repeat a second game that day to prove the
 per-opponent sampling limit. Publish the qualified web client only after these
@@ -153,3 +153,5 @@ rating did not change while others overtook it. Calibration notices are scoped
 to the match identity and appear below the stable board. Failed offline
 calibration completion has a retry action; receipts make repeat submissions safe.
 Public rating histories use opaque IDs and omit room invitation codes.
+
+Duel concessions become rated as soon as both players have moved. A longer grace period would permit rating dodging; incomplete starts remain unrated. Three/four-player abandoned sessions still follow their existing no-winner rules and do not award Elo.

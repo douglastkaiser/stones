@@ -37,7 +37,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   'How Stones ratings work\n\nEach board size, shape, player count and clock category has its own ladder. '
                   'The first 10 games are provisional. Equal ratings share a rank. '
                   'Only completed online games between distinct signed-in accounts affect human ratings. '
-                  'Local games, Court Mode, learning and AI games do not. Early concessions are unrated. '
+                  'Local games, Court Mode, learning and AI games do not. Duels ending before both players move are unrated; later resignations and timeouts count. '
                   'In multiplayer, the winner beats each rival; losing rivals tie each other. A draw ties every pair.\n\n'
                   'AI benchmarks use untimed server-generated moves and actual results against established human players. '
                   'Calibration needs 30 games and 10 distinct opponents, counting at most one sample per person per day. '

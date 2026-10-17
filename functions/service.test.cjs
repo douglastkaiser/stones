@@ -108,3 +108,16 @@ test('a complete server AI duel calibrates exactly once without altering the hum
  assert.equal((await service.completeCalibration({auth:auth('alice'),data:{id:'verified-2',config:cfg,moves:nextMoves}})).status,'practice');
  assert.equal(db.data.get(botKey).gamesPlayed,1);
 });
+
+test('a duel resignation counts once both players moved; an unstarted duel is unrated',async()=>{
+ db.data.clear();
+ const cfg={...config,seats:[{id:'ivory',control:'localHuman',level:'easy'},{id:'charcoal',control:'onlineHuman',level:'easy'}]};
+ const room={code:'UQUITAA',config:cfg,owners:{ivory:'alice',charcoal:'bob'},moves:[],resigned:'charcoal'};
+ const event=data=>({params:{code:data.code},time:new Date().toISOString(),data:{after:{data:()=>data}}});
+ await service.rateCompletedMatch(event(room));
+ assert.equal(db.data.size,0);
+ room.moves=[place('ivory',4,4),place('charcoal',0,0)];
+ await service.rateCompletedMatch(event(room));
+ assert.equal(db.data.get('ratingPools/square-5-2-standardTak-open/players/alice').wins,1);
+ assert.equal(db.data.get('ratingPools/square-5-2-standardTak-open/players/bob').losses,1);
+});
