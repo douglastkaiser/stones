@@ -14,7 +14,7 @@ void main() {
       for (final level in BotLevel.values) {
         test('${shape.name} $players ${level.name}', () async {
           final config = MatchConfig.defaults(shape).copyWith(
-            seats: SeatId.values.take(players).map(SeatConfig.new).toList());
+              seats: SeatId.values.take(players).map(SeatConfig.new).toList());
           var game = MatchState.initial(config);
           for (var i = 0; i < players * 2; i++) {
             game = MatchRules.play(game, MatchRules.legalMoves(game).first)!;
@@ -29,7 +29,9 @@ void main() {
             last = now;
             beats++;
           }
-          final timer = Timer.periodic(const Duration(milliseconds: 1), (_) => beat());
+
+          final timer =
+              Timer.periodic(const Duration(milliseconds: 1), (_) => beat());
           try {
             final move = await MatchAI(level).choose(game);
             beat();
@@ -40,11 +42,15 @@ void main() {
           }
           // ignore: avoid_print
           print('SHARED_PERF ${jsonEncode({
-            'shape': shape.name, 'players': players, 'level': level.name,
-            'elapsedMs': watch.elapsedMilliseconds,
-            'maxEventLoopGapMs': maximumGap / 1000, 'heartbeats': beats,
-            'scope': 'GitHub Actions VM; cooperative shared engine; not a device SLA',
-          })}');
+                'shape': shape.name,
+                'players': players,
+                'level': level.name,
+                'elapsedMs': watch.elapsedMilliseconds,
+                'maxEventLoopGapMs': maximumGap / 1000,
+                'heartbeats': beats,
+                'scope':
+                    'GitHub Actions VM; cooperative shared engine; not a device SLA',
+              })}');
         });
       }
     }

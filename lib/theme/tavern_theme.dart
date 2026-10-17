@@ -13,11 +13,12 @@ class TavernTheme {
       onPrimary: dark ? const Color(0xFF272015) : const Color(0xFFFFF8E8),
       surface: dark ? const Color(0xFF202B25) : const Color(0xFFF7F1E4),
       onSurface: dark ? const Color(0xFFF3E9D5) : const Color(0xFF263A2E),
-      onSurfaceVariant: dark ? const Color(0xFFC6C9BC) : const Color(0xFF566356),
+      onSurfaceVariant:
+          dark ? const Color(0xFFC6C9BC) : const Color(0xFF566356),
       outline: dark ? const Color(0xFF899584) : const Color(0xFF7F8977),
     );
-    final base = ThemeData(colorScheme: scheme, fontFamily: 'StonesSans',
-      useMaterial3: true);
+    final base = ThemeData(
+        colorScheme: scheme, fontFamily: 'StonesSans', useMaterial3: true);
     TextStyle heading(TextStyle? style) =>
         style!.copyWith(fontFamily: 'StonesLora', height: 1.18);
     return base.copyWith(
@@ -34,13 +35,15 @@ class TavernTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, 52),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(48, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -48,8 +51,8 @@ class TavernTheme {
         fillColor: scheme.onSurface.withValues(alpha: .04),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      dividerTheme: DividerThemeData(
-          color: scheme.onSurface.withValues(alpha: .16)),
+      dividerTheme:
+          DividerThemeData(color: scheme.onSurface.withValues(alpha: .16)),
     );
   }
 }
@@ -89,7 +92,8 @@ class TavernPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: scheme.outline.withValues(alpha: .30)),
         boxShadow: const [
-          BoxShadow(color: Color(0x18000000), blurRadius: 24, offset: Offset(0, 8))
+          BoxShadow(
+              color: Color(0x18000000), blurRadius: 24, offset: Offset(0, 8))
         ],
       ),
       child: Padding(padding: EdgeInsets.all(padding), child: child),
@@ -117,6 +121,7 @@ class _Panelling extends CustomPainter {
       canvas.drawCircle(Offset(x, 180), radius + 12, paint);
     }
   }
+
   @override
   bool shouldRepaint(_Panelling oldDelegate) => oldDelegate.dark != dark;
 }

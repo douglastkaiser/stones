@@ -14,25 +14,31 @@ void main() {
   setUpAll(() async {
     for (final font in [('StonesLora', 'Lora'), ('StonesSans', 'Roboto')]) {
       await (FontLoader(font.$1)
-        ..addFont(rootBundle.load('assets/fonts/${font.$2}-Regular.ttf'))).load();
+            ..addFont(rootBundle.load('assets/fonts/${font.$2}-Regular.ttf')))
+          .load();
     }
   });
 
   for (final shape in BoardShape.values) {
     for (final players in [2, 4]) {
-      test('${shape.name} $players visual fixtures preserve supplies and real roads', () {
+      test(
+          '${shape.name} $players visual fixtures preserve supplies and real roads',
+          () {
         for (final won in [false, true]) {
           final game = previewPosition(shape, players, won: won);
           final expected = game.reserves.values.first.total;
           expect(expected, greaterThan(0));
           expect(game.result?.winner, won ? SeatId.ivory : null);
           for (final id in game.config.ids) {
-            final used = game.board.values.expand((pieces) => pieces)
-                .where((stone) => stone.seat == id).length;
+            final used = game.board.values
+                .expand((pieces) => pieces)
+                .where((stone) => stone.seat == id)
+                .length;
             final fresh = previewPosition(shape, players).config;
             expect(used + game.reserves[id]!.total,
                 shape == BoardShape.square ? 22 : 16,
-                reason: 'Same initial supplies for ${fresh.shape.name} ${id.name}');
+                reason:
+                    'Same initial supplies for ${fresh.shape.name} ${id.name}');
           }
           if (won) expect(MatchRules.road(game, SeatId.ivory), isNotEmpty);
         }
@@ -43,16 +49,20 @@ void main() {
   for (final width in [320.0, 390.0, 1440.0]) {
     for (final brightness in Brightness.values) {
       for (final page in PreviewPage.values) {
-        testWidgets('$page $width $brightness fits and captures', (tester) async {
+        testWidgets('$page $width $brightness fits and captures',
+            (tester) async {
           final height = width > 1000 ? 1000.0 : 900.0;
           tester.view.physicalSize = Size(width, height);
           tester.view.devicePixelRatio = 1;
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
           final capture = GlobalKey();
-          await tester.pumpWidget(RepaintBoundary(key: capture,
-            child: DesignPreviewApp(initialPage: page,
-              initialPlayers: 4, initialBrightness: brightness)));
+          await tester.pumpWidget(RepaintBoundary(
+              key: capture,
+              child: DesignPreviewApp(
+                  initialPage: page,
+                  initialPlayers: 4,
+                  initialBrightness: brightness)));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
           if (const bool.fromEnvironment('STONES_CAPTURE_PREVIEW')) {
@@ -61,8 +71,10 @@ void main() {
                   as RenderRepaintBoundary;
               final image = await boundary.toImage();
               try {
-                final data = await image.toByteData(format: ui.ImageByteFormat.png);
-                final file = File('build/qa/finishing/${page.name}-${width.toInt()}-${brightness.name}.png');
+                final data =
+                    await image.toByteData(format: ui.ImageByteFormat.png);
+                final file = File(
+                    'build/qa/finishing/${page.name}-${width.toInt()}-${brightness.name}.png');
                 await file.parent.create(recursive: true);
                 await file.writeAsBytes(data!.buffer.asUint8List());
               } finally {
@@ -71,8 +83,8 @@ void main() {
             });
           }
           // The end of each screen remains reachable on a narrow phone.
-          await tester.drag(find.byType(SingleChildScrollView).first,
-              const Offset(0, -1600));
+          await tester.drag(
+              find.byType(SingleChildScrollView).first, const Offset(0, -1600));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         });
@@ -80,12 +92,14 @@ void main() {
     }
   }
 
-  testWidgets('mobile board stays fixed when move controls change', (tester) async {
+  testWidgets('mobile board stays fixed when move controls change',
+      (tester) async {
     tester.view.physicalSize = const Size(390, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesignPreviewApp(initialPage: PreviewPage.table));
+    await tester
+        .pumpWidget(const DesignPreviewApp(initialPage: PreviewPage.table));
     await tester.pumpAndSettle();
     final board = find.byKey(const ValueKey('preview-board'));
     final before = tester.getRect(board);
@@ -96,7 +110,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Square and Hex navigation uses the real renderer', (tester) async {
+  testWidgets('Square and Hex navigation uses the real renderer',
+      (tester) async {
     await tester.pumpWidget(const DesignPreviewApp());
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hex', findRichText: true));
@@ -116,10 +131,12 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.5)),
-        child: child!),
-      home: const DesignPreviewApp(initialPage: PreviewPage.table, initialPlayers: 4)));
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.5)),
+            child: child!),
+        home: const DesignPreviewApp(
+            initialPage: PreviewPage.table, initialPlayers: 4)));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Preview a finished game'));
     await tester.pumpAndSettle();
