@@ -65,6 +65,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     return Scaffold(
         appBar: AppBar(title: const Text('Competition'), actions: [
           IconButton(
+              onPressed: state.loading
+                  ? null
+                  : ref.read(eloProvider.notifier).fetchLeaderboard,
+              tooltip: 'Refresh standings',
+              icon: const Icon(Icons.refresh)),
+          IconButton(
               onPressed: _rules,
               tooltip: 'How ratings work',
               icon: const Icon(Icons.help_outline))
