@@ -52,6 +52,8 @@ exports.ratingBotMove = onCall(options, async request => {
   }
   const key = sessionKey(uid, id);
   const ref = db.doc(`calibrationSessions/${key}`);
+  const quotaRef = db.doc(`ratingLimits/${R.hash([uid, new Date().toISOString().slice(0,10)])}`);
+  const quota = (await quotaRef.get()).data();
   const current = await ref.get();
   const prefix = R.hash({config, moves});
   const existing = current.data();
@@ -60,6 +62,7 @@ exports.ratingBotMove = onCall(options, async request => {
     if (existing.evidence[moves.length].prefix !== prefix) throw new HttpsError('failed-precondition', 'History was changed');
     return {move: existing.evidence[moves.length].move};
   }
+  if ((quota?.moves || 0) >= 400) throw new HttpsError('resource-exhausted', 'Daily calibration limit reached. Continue as practice.');
   for (const [ply, proof] of Object.entries(existing?.evidence || {})) {
     if (Number(ply) >= moves.length || R.hash(moves[Number(ply)]) !== R.hash(proof.move)) {
       throw new HttpsError('failed-precondition', 'Calibration history diverged');
@@ -67,12 +70,15 @@ exports.ratingBotMove = onCall(options, async request => {
   }
   const result = await engine({action: 'bot', config, moves});
   await db.runTransaction(async tx => {
-    const previous = (await tx.get(ref)).data();
+    const [previousDoc, quotaDoc] = await tx.getAll(ref, quotaRef);
+    const previous = previousDoc.data();
     if (previous?.evidence?.[moves.length]) {
       if (previous.evidence[moves.length].prefix !== prefix) throw new HttpsError('aborted', 'History changed');
       result.move = previous.evidence[moves.length].move;
       return;
     }
+    if ((quotaDoc.data()?.moves || 0) >= 400) throw new HttpsError('resource-exhausted', 'Daily calibration limit reached');
+    tx.set(quotaRef, {moves: (quotaDoc.data()?.moves || 0) + 1});
     tx.set(ref, {uid, id, engineVersion: R.ENGINE, evidence: {...(previous?.evidence || {}), [moves.length]: {prefix, move: result.move}}});
   });
   return result;

@@ -47,6 +47,7 @@ class EloController extends StateNotifier<EloState> {
     state = EloState(pool: pool, uid: _guest ? null : _uid);
     if (_uid == null || _guest) return;
     final uid = _uid!;
+    try {
     _subscription = repository.watchPlayer(pool.id, uid).listen((rating) async {
       if (!mounted || generation != _generation) return;
       state = EloState(pool: pool, uid: uid, localPlayerRating: rating,
@@ -65,6 +66,7 @@ class EloController extends StateNotifier<EloState> {
     }, onError: (Object error) {
       if (mounted && generation == _generation) { _error('Ratings could not be loaded. Check your connection and retry.'); }
     });
+    } catch (_) { _error('Ratings could not be loaded. Check your connection and retry.'); }
   }
   void _error(String message) {
     state = EloState(pool: state.selectedPool, uid: state.uid,
@@ -121,3 +123,6 @@ final seatRatingProvider = StreamProvider.autoDispose.family<EloRating?, (String
   if (identity == null) return Stream.value(null);
   return ref.watch(ratingRepositoryProvider).watchPlayer(key.$1, key.$2);
 });
+
+final playerRankProvider = FutureProvider.autoDispose.family<int, (String, int)>((ref, key) =>
+    ref.watch(ratingRepositoryProvider).rank(key.$1, key.$2));

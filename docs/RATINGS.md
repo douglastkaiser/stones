@@ -59,3 +59,59 @@ https://firebase.google.com/docs/functions/callable
 
 Chess.com keeps bot games separate from competitive ratings:
 https://support.chess.com/en/articles/8614091-how-can-i-play-against-the-chess-com-bots
+
+
+## Backend rollout (not deployed)
+
+The Firebase console currently shows **Spark** for `stones-9a6a0`. Firebase
+requires [Blaze for Cloud Functions](https://firebase.google.com/docs/functions/faq-and-troubleshooting).
+No billing plan was changed. New client/rules/backend code remains on the
+qualification branch until this dependency is resolved; the deployed game is
+unchanged. An operator must link a billing account before backend publication.
+Budget alerts are not a hard spending cap. Each function has zero minimum
+instances, a maximum of three instances, a 30-second timeout, and each signed-in
+account has a 400-move daily calibration quota. These bounds are not a guarantee
+of a zero bill. Monitor quota, invocation, read/write and artifact-storage costs.
+
+With Node 22, the pinned Flutter/Dart SDK and Firebase CLI authenticated to the
+project, from the repository root:
+
+```sh
+flutter pub get
+npm --prefix functions ci
+node --test functions/ratings.test.cjs
+dart compile js -O2 tools/ratings/engine.dart -o functions/engine.js
+node --test functions/*.test.cjs
+firebase deploy --project stones-9a6a0 --only functions:ratings,firestore:rules
+```
+
+The `firebase.json` predeploy step recompiles the shared server engine. Generated
+JavaScript and node_modules are ignored. Existing profile, achievement and room
+policies are preserved. New public readers can access only rating metadata and
+history; totals, receipts, calibration sessions, opponents, samples and quotas
+remain server-owned. Keep historical `/ratings` and device-wide `elo_*` data out
+of the new ladders. No destructive migration or leaderboard backfill is needed.
+The engine revision `shared-search-v1` must change whenever its search behavior,
+rules or budget changes; update client lookup and repository filters together.
+
+After backend publication: verify public reads and forbidden writes, complete a
+new signed-in human duel and a rematch, confirm both players receive one history
+entry and a unique receipt, replay the same completion, reconnect both devices,
+confirm draws and concessions, switch accounts, and establish ten games in one
+pool. Then verify one server-generated AI game changes only the bot rating,
+repeat it to prove deduplication, and repeat a second game that day to prove the
+per-opponent sampling limit. Publish the qualified web client only after these
+checks. Store rollout evidence here. Existing Android installations require a
+new app release; this task does not submit a Play Store release.
+
+## Practical boundaries
+
+Ratings measure this community, not FIDE/Chess.com Elo. Small pools will remain
+provisional longer. Three/four-player ratings use the explicit pair-comparison
+rule above and are never mixed with duels. There is no automatic matching queue
+or season reset. Friendly collusion, outside assistance and account abuse are
+not solved by legal-history replay; moderation/abuse detection are future work.
+AI calibration does not infer strength from a difficulty name and needs real
+established opponents before it becomes useful. Account deletion/profile rename
+handling and long-term evidence retention need an operator policy before wide
+public rollout. History is bounded to the most recent 100 entries in the client.

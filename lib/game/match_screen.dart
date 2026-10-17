@@ -346,6 +346,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                                     children: [
                                                   Text(
                                                       '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps'),
+                                                  if (seat.control == SeatControl.ai)
+                                                    PlayerRatingLabel(uid: 'ai_shared-search-v1_${seat.level.name}',
+                                                        pool: RatingPool.forConfig(game.config), fallback: '${seat.level.name} AI'),
                                                   if (match.room?.owners[seat.id] != null)
                                                     PlayerRatingLabel(uid: match.room!.owners[seat.id]!,
                                                         pool: RatingPool.forConfig(game.config), fallback: seat.id.label),

@@ -11,8 +11,11 @@ class PlayerRatingLabel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(seatRatingProvider((pool.id, uid)));
-    return Text(value.when(data: (rating) => rating == null ? '$fallback · Unrated' :
-      '${rating.displayName} · ${rating.ratingLabel}', loading: () => '$fallback · Rating…',
+    final rating = value.asData?.value;
+    final rank = rating == null || rating.isAi || rating.provisional ? null :
+        ref.watch(playerRankProvider((pool.id, rating.rating))).asData?.value;
+    return Text(value.when(data: (rating) => rating == null ? '$fallback · ${uid.startsWith("ai_") ? "Uncalibrated" : "Unrated"}' :
+      '${rating.displayName} · ${rating.ratingLabel}${rank == null ? "" : " · #$rank"}', loading: () => '$fallback · Rating…',
       error: (_, __) => '$fallback · Rating unavailable'),
       maxLines: 2, overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.labelSmall);

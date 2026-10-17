@@ -2,7 +2,7 @@ name: Firestore Rules
 
 on:
   push:
-    branches: [main]
+    branches: ['**', '!gh-pages']
     paths:
       - firestore.rules
       - firebase.json

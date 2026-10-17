@@ -1,5 +1,8 @@
 # Development map
 
+See [ratings and competition](RATINGS.md) for the legacy Elo failures, trusted
+backend, separate board ladders, measured AI calibration and rollout dependency.
+
 The [achievement progression audit](ACHIEVEMENTS.md) records the 25-goal mastery
 ladder, replay evidence, unified learning, save migration and qualification.
 
