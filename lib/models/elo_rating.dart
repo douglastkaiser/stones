@@ -12,6 +12,12 @@ class EloRating {
   final bool isAi;
   final String? aiDifficulty;
   final DateTime? lastUpdated;
+  final String pool;
+  final String? engineVersion;
+  final int opponents;
+  bool get provisional => gamesPlayed < 10;
+  bool get calibrated => !isAi || (gamesPlayed >= 30 && opponents >= 10);
+  String get ratingLabel => gamesPlayed == 0 ? (isAi ? 'Uncalibrated' : 'Unrated') : '$rating${provisional || !calibrated ? "?" : ""}';
 
   const EloRating({
     required this.id,
@@ -24,6 +30,9 @@ class EloRating {
     this.isAi = false,
     this.aiDifficulty,
     this.lastUpdated,
+    this.pool = 'square-5-2-standardTak-open',
+    this.engineVersion,
+    this.opponents = 0,
   });
 
   EloRating copyWith({
@@ -46,10 +55,17 @@ class EloRating {
       isAi: isAi,
       aiDifficulty: aiDifficulty,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      pool: pool,
+      engineVersion: engineVersion,
+      opponents: opponents,
     );
   }
 
   Map<String, dynamic> toMap() => {
+        'pool': pool,
+        'opponents': opponents,
+        if (engineVersion != null) 'engineVersion': engineVersion,
+        if (lastUpdated != null) 'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
         'displayName': displayName,
         'rating': rating,
         'gamesPlayed': gamesPlayed,
@@ -71,6 +87,10 @@ class EloRating {
       draws: (map['draws'] as num?)?.toInt() ?? 0,
       isAi: map['isAi'] as bool? ?? false,
       aiDifficulty: map['aiDifficulty'] as String?,
+      pool: map['pool'] as String? ?? 'square-5-2-standardTak-open',
+      engineVersion: map['engineVersion'] as String?,
+      opponents: (map['opponents'] as num?)?.toInt() ?? 0,
+      lastUpdated: map['lastUpdated'] is int ? DateTime.fromMillisecondsSinceEpoch(map['lastUpdated'] as int) : null,
     );
   }
 }
@@ -112,14 +132,6 @@ class EloHistoryEntry {
 class EloCalculator {
   const EloCalculator();
 
-  /// Default starting ratings for AI difficulties
-  static const Map<String, int> aiDefaultRatings = {
-    'easy': 800,
-    'medium': 1100,
-    'hard': 1400,
-    'expert': 1700,
-  };
-
   /// Default starting rating for new human players
   static const int defaultRating = 1200;
 
@@ -146,6 +158,9 @@ class EloCalculator {
     required int gamesPlayedB,
     required double actualScoreA,
   }) {
+    if (![0.0, 0.5, 1.0].contains(actualScoreA) || gamesPlayedA < 0 || gamesPlayedB < 0) {
+      throw ArgumentError('Invalid score or game count');
+    }
     final expectedA = expectedScore(ratingA, ratingB);
     final expectedB = 1.0 - expectedA;
     final actualScoreB = 1.0 - actualScoreA;
@@ -160,3 +175,7 @@ class EloCalculator {
     return (max(100, newRatingA), max(100, newRatingB));
   }
 }
+
+/// Competition rank is independent of list position and includes tied scores.
+int competitionRank(int rating, Iterable<EloRating> players) =>
+    1 + players.where((p) => !p.isAi && !p.provisional && p.rating > rating).length;

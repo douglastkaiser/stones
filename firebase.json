@@ -1,8 +1,30 @@
 {
-  "firestore": { "rules": "firestore.rules" },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "emulators": {
-    "firestore": { "host": "127.0.0.1", "port": 8088 },
-    "ui": { "enabled": false },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8088
+    },
+    "ui": {
+      "enabled": false
+    },
     "singleProjectMode": true
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "ratings",
+      "runtime": "nodejs22",
+      "predeploy": [
+        "dart compile js -O2 tools/ratings/engine.dart -o functions/engine.js"
+      ],
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.test.cjs"
+      ]
+    }
+  ]
 }

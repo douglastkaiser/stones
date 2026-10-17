@@ -177,6 +177,10 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                 }),
             const SizedBox(height: 16),
             Text('$local local · $online online · $bots AI'),
+            if (online > 0 && bots == 0 && local <= 1)
+              const Text('Competitive ratings: completed games count when every seat belongs to a different signed-in account. Display names and standings are public.'),
+            if (bots > 0)
+              const Text('AI games are practice for human ratings. Signed-in duels can calibrate AI strength using verified server moves and established human opponents.'),
             if (local == 1 && bots > 0 && online == 0 && !_config.court)
               Text(_config.profile == RulesProfile.standardTak
                   ? (_config.size < 5

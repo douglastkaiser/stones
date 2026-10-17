@@ -10,3 +10,8 @@ android/key.properties
 
 # Python helper caches
 __pycache__/
+
+# Server engine is compiled from shared Dart sources during qualification/deploy.
+functions/node_modules/
+functions/engine.js*
+functions/engine.js.deps

@@ -482,6 +482,21 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Public competition metadata contains display names and game statistics only.
+    // Rating totals, history, receipts and AI evidence are server-owned.
+    match /ratingPools/{pool}/players/{player} {
+      allow read: if true;
+      allow write: if false;
+      match /history/{entry} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+    match /ratingPools/{pool}/standings/{player} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Deny all other database access by default
     match /{document=**} {
       allow read, write: if false;

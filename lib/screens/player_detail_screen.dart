@@ -20,6 +20,7 @@ class PlayerDetailScreen extends ConsumerStatefulWidget {
 class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   List<EloHistoryEntry>? _history;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -29,13 +30,11 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
 
   Future<void> _loadHistory() async {
     setState(() => _loading = true);
-    final history =
-        await ref.read(eloProvider.notifier).fetchRatingHistory(widget.player.id);
-    if (mounted) {
-      setState(() {
-        _history = history;
-        _loading = false;
-      });
+    try {
+      final history = await ref.read(eloProvider.notifier).fetchRatingHistory(widget.player.id, pool: widget.player.pool);
+      if (mounted) setState(() { _history = history; _loading = false; _error = null; });
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = 'History unavailable. Please retry.'; });
     }
   }
 
@@ -55,6 +54,10 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
           _buildHeaderCard(context, player, isDark),
           const SizedBox(height: 24),
 
+          if (_error != null) ...[
+            Text(_error!),
+            TextButton(onPressed: _loadHistory, child: const Text('Retry')),
+          ],
           // Rating history chart
           Text(
             'Rating History',
@@ -149,7 +152,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    '${player.rating}',
+                    player.ratingLabel,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

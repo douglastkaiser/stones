@@ -39,6 +39,23 @@ jobs:
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
+      - name: Format rating implementation for review
+        run: dart format lib test/ratings tools/ratings
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rating-formatted-sources
+          path: |
+            lib/**/*.dart
+            test/ratings/**/*.dart
+            tools/ratings/*.dart
+          retention-days: 2
+
+      - name: Compile and test shared rating backend
+        run: |
+          dart compile js -O2 tools/ratings/engine.dart -o functions/engine.js
+          node --test functions/*.test.cjs
+
       - name: Run analyzer
         run: flutter analyze --fatal-infos
 

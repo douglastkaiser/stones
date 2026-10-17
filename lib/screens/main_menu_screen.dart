@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/providers.dart';
+import '../providers/account_provider.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
 import '../version.dart';
@@ -66,6 +67,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   }
 
   Future<void> _initialize() async {
+    ref.read(eloProvider);
     // Load settings
     await ref.read(appSettingsProvider.notifier).load();
 
@@ -88,7 +90,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
     await ref.read(playGamesServiceProvider.notifier).initialize();
 
     // Initialize ELO rating system
-    await ref.read(eloProvider.notifier).initialize(syncOnline: false);
+    await ref.read(eloProvider.notifier).initialize();
   }
 
   void _continueGame(BuildContext context) {
@@ -108,7 +110,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
               !s.isGameOver &&
               (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty),
         ));
-    final playGames = ref.watch(playGamesServiceProvider);
+    final account = ref.watch(accountProvider).identity;
+    final ratingState = ref.watch(eloProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -136,17 +139,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                       ),
                     ),
                   ),
-                  if (playGames.player != null)
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final eloState = ref.watch(eloProvider);
-                        return _PlayerChip(
-                          displayName: playGames.player!.displayName,
-                          iconImage: playGames.iconImage,
-                          rating: eloState.localPlayerRating?.rating,
-                        );
-                      },
-                    ),
+                  if (account != null && !account.guest)
+                    Flexible(child: _PlayerChip(
+                      displayName: account.name ?? 'Player',
+                      ratingLabel: '${ratingState.selectedPool.shape.name} ${ratingState.selectedPool.size} · ${ratingState.localPlayerRating?.ratingLabel ?? "Unrated"}${ratingState.rank == null ? "" : " · #${ratingState.rank}"}', 
+                    )),
                   // Right side icons
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -383,12 +380,12 @@ class _LogoPainter extends CustomPainter {
 class _PlayerChip extends StatelessWidget {
   final String displayName;
   final String? iconImage;
-  final int? rating;
+  final String? ratingLabel;
 
   const _PlayerChip({
     required this.displayName,
     this.iconImage,
-    this.rating,
+    this.ratingLabel,
   });
 
   @override
@@ -430,18 +427,19 @@ class _PlayerChip extends StatelessWidget {
                 : null,
           ),
           const SizedBox(width: 8),
-          Column(
+          Flexible(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 displayName,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
                 style:
                     const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
-              if (rating != null)
+              if (ratingLabel != null)
                 Text(
-                  'ELO: $rating',
+                  ratingLabel!,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -450,7 +448,7 @@ class _PlayerChip extends StatelessWidget {
                   ),
                 ),
             ],
-          ),
+          )),
           const SizedBox(width: 4),
         ],
       ),

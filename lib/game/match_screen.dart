@@ -17,6 +17,8 @@ import 'match_rules.dart';
 import 'match_state.dart';
 import 'move_selection.dart';
 import 'seat_appearance.dart';
+import 'rating_pool.dart';
+import '../widgets/player_rating_label.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, this.title, this.studyPanel, this.objective});
@@ -344,6 +346,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                                     children: [
                                                   Text(
                                                       '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps'),
+                                                  if (match.room?.owners[seat.id] != null)
+                                                    PlayerRatingLabel(uid: match.room!.owners[seat.id]!,
+                                                        pool: RatingPool.forConfig(game.config), fallback: seat.id.label),
                                                   if (match.clock != null)
                                                     ClockLabel(
                                                         clock: match.clock!,
