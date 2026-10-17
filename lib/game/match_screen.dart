@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/piece.dart';
+import '../providers/account_provider.dart';
 import '../providers/cosmetics_provider.dart';
 import '../providers/elo_provider.dart';
 import '../providers/settings_provider.dart';
@@ -422,19 +423,27 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               ratingMessage.contains('Waiting')))
                         TextButton(
                             onPressed: () async {
+                              final uid = ref.read(accountProvider).identity?.uid;
+                              ref.read(ratingStatusProvider.notifier).state =
+                                  (match.id!, 'Checking game result\u2026');
                               try {
                                 final message = await ref
                                     .read(ratingRepositoryProvider)
                                     .submitResult(
                                         match, _controller.confirmedMoves);
                                 if (mounted &&
-                                    ref.read(matchProvider).id == match.id) {
+                                    ref.read(matchProvider).id == match.id &&
+                                    ref.read(accountProvider).identity?.uid == uid) {
                                   ref
                                       .read(ratingStatusProvider.notifier)
                                       .state = (match.id!, message);
                                 }
                               } catch (_) {
-                                // Retain the visible failure and the retry action.
+                                if (mounted && ref.read(matchProvider).id == match.id &&
+                                    ref.read(accountProvider).identity?.uid == uid) {
+                                  ref.read(ratingStatusProvider.notifier).state =
+                                      (match.id!, 'Rating update could not finish. Retry when connected.');
+                                }
                               }
                             },
                             child: const Text('Retry rating update')),

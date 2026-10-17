@@ -120,21 +120,25 @@ class FirebaseRatingRepository implements RatingRepository {
     if (!status.startsWith('Waiting')) return status;
     // Both clients can finish together; the last vote settles for everyone.
     // Waiting never blocks gameplay and remains explicitly retryable on reload.
+    final confirmed = Completer<void>();
+    final subscription = _db.collection('matches').doc(session.id)
+        .collection('ratingVotes').snapshots().listen((snapshot) {
+      if (!confirmed.isCompleted && evidence.humans.every((uid) =>
+          snapshot.docs.any((doc) => doc.id == uid &&
+            doc.data()['ply'] == evidence.game.ply &&
+            doc.data()['winner'] == evidence.winner))) {
+        confirmed.complete();
+      }
+    }, onError: (Object error, StackTrace stack) {
+      if (!confirmed.isCompleted) confirmed.completeError(error, stack);
+    });
     try {
-      await _db
-          .collection('matches')
-          .doc(session.id)
-          .collection('ratingVotes')
-          .snapshots()
-          .firstWhere((snapshot) => evidence.humans.every((uid) => snapshot.docs
-              .any((doc) =>
-                  doc.id == uid &&
-                  doc.data()['ply'] == evidence.game.ply &&
-                  doc.data()['winner'] == evidence.winner)))
-          .timeout(const Duration(seconds: 12));
+      await confirmed.future.timeout(const Duration(seconds: 12));
       return await settle();
     } on TimeoutException {
       return status;
+    } finally {
+      await subscription.cancel();
     }
   }
 
