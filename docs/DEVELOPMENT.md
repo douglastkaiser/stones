@@ -1,5 +1,11 @@
 # Development map
 
+For current release evidence and pending physical-device qualification, start
+with [release readiness](RELEASE_READINESS.md). The [finishing plan](FINISHING_PLAN.md)
+records the approved product direction and staged work. Older sections below
+retain historical verification notes; their SDK paths/test counts are not current
+release claims. New gameplay uses the shared `lib/game/` architecture described next.
+
 See [ratings and competition](RATINGS.md) for the legacy Elo failures, trusted
 Spark database protocol, separate board ladders, local AI estimates and rollout checks.
 
