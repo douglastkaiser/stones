@@ -62,7 +62,8 @@ class FirebaseRatingRepository implements RatingRepository {
         .collection('standings')
         .where('rating', isGreaterThan: rating)
         .count()
-        .get();
+        .get()
+        .timeout(const Duration(seconds: 8));
     return 1 + (result.count ?? 0);
   }
 

@@ -132,3 +132,24 @@ production deployment. Full Flutter and final build results will be recorded
 once the final candidate completes qualification.
 
 Legacy room codecs still decode old rating metadata for compatibility, but the app no longer advertises client-supplied legacy snapshots as trustworthy ranks or awards points for compatibility sessions.
+
+
+## Calculation and failure handling
+
+For each opponent, expected score is `1 / (1 + 10^((opponent - player)/400))`.
+The update is `K * (actual - expected)`, with K=40 for the first 30 games and
+K=20 thereafter, rounded to an integer and floored at 100. Multiplayer averages
+these pair comparisons before applying K. The ten-game provisional threshold
+controls eligibility for human standings, independently of the K-factor switch.
+All participants in one game use their pre-transaction ratings. AI estimates
+use the same expectation curve but never write human competitive totals.
+
+Leaderboard, rank and history reads have an eight-second application deadline.
+Bot requests bound token refresh and HTTP work separately, fall back to normal
+local play on failure and use a two-minute retry backoff. An empty local cache
+is not treated as a confirmed missing server rating. Sign-out and pool changes
+invalidate late requests. Refresh recomputes exact standing even if a player's
+rating did not change while others overtook it. Calibration notices are scoped
+to the match identity and appear below the stable board. Failed offline
+calibration completion has a retry action; receipts make repeat submissions safe.
+Public rating histories use opaque IDs and omit room invitation codes.
