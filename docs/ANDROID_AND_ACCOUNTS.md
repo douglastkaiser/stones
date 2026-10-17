@@ -34,6 +34,35 @@ hosted `douglastkaiser.github.io` domain was missing, blocking browser Google
 sign-in. After explicit user approval, it was added and confirmed in the saved
 domain table. No provider, Firestore rule or App Check enforcement was changed.
 
+### Custom-domain sign-in follow-up (2026-10-17)
+
+Firefox Android reported `unauthorized-domain` through the Account card, with
+"The requested action is invalid" in the Firebase authentication window. The
+production console still listed only localhost, the Firebase default domains and
+`douglastkaiser.github.io`. The hosted game now redirects to
+`www.douglastkaiser.com/stones/`; neither custom-domain address was listed.
+After explicit user approval, `douglastkaiser.com` and
+`www.douglastkaiser.com` were added and both confirmed in the saved production
+domain table. No application rebuild is needed for this server-side change.
+This is a production Authentication configuration issue, not evidence that
+Firefox requires a different sign-in implementation. The automated hosted-app
+trial remained at Connecting without an accessible Google popup, so credential
+exchange and Firefox Android success remain unverified; retry on the user's
+device after reloading the game. Do not clear browser storage as a first step,
+since that can discard guest identity.
+
+For any hosting-domain change, check the final browser address after redirects
+against Authentication > Settings > Authorized domains, including apex and
+`www` entry points. Then trial Google sign-in on the actual hosted URL in mobile
+Firefox and a desktop browser, including guest linking and existing-account
+sign-in. Rebuilding the app alone does not update this server-side allowlist.
+
+Keep the Firebase popup flow. Do not switch to redirect as a workaround without
+addressing [Firebase's redirect storage requirements](https://firebase.google.com/docs/auth/web/redirect-best-practices).
+Do not point `authDomain` at GitHub Pages unless the Firebase authentication
+helper endpoints are also served correctly there. Domain authorization and
+authentication-helper hosting are separate requirements.
+
 The registered Android package is `com.douglastkaiser.stones`. Console SHA-1s
 match the two Android clients in the existing google-services.json:
 
