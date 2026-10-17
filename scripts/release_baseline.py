@@ -26,7 +26,7 @@ def fingerprint_name(name, prefix, suffix):
     return name.split('.')[1]
 
 
-def inspect_live(base, *, fresh=False):
+def inspect_live(base, *, fresh=False, expected_source=None):
     parsed = urlparse(base)
     if parsed.scheme != 'https' or parsed.hostname not in {
             'www.douglastkaiser.com', 'douglastkaiser.com',
@@ -37,7 +37,7 @@ def inspect_live(base, *, fresh=False):
     def fetch(path):
         start = perf_counter()
         url = urljoin(base.rstrip('/') + '/', path)
-        if fresh and not path:
+        if fresh and path in {'', 'startup-assets.json'}:
             # A CDN may briefly cache the pre-deployment 404 for a new preview.
             url += '?baseline=' + str(time_ns())
         with urlopen(Request(url,
@@ -52,6 +52,12 @@ def inspect_live(base, *, fresh=False):
         return data
 
     index = fetch('').decode('utf-8')
+    source = re.search(r'name="stones-preview-source" content="([a-f0-9]{40})"', index)
+    if expected_source is not None:
+        if not re.fullmatch(r'[a-f0-9]{7,40}', expected_source):
+            raise ValueError('Expected source must be a Git revision prefix')
+        if source is None or not source[1].startswith(expected_source):
+            raise ValueError('The hosted preview is not the requested source revision')
     pairs = json.loads(fetch('startup-assets.json'))
     if not isinstance(pairs, list) or not 1 <= len(pairs) <= 3:
         raise ValueError('Expected current startup pair and at most two previous pairs')
@@ -75,7 +81,8 @@ def inspect_live(base, *, fresh=False):
     main = fetch(main_name)
     if hashlib.sha256(main).hexdigest()[:20] != fingerprint_name(main_name, 'main', '.dart.js'):
         raise ValueError('Main script content does not match its fingerprint')
-    return {'base': base, 'currentPair': pairs[0], 'retainedPairCount': len(pairs) - 1,
+    return {'base': base, 'previewSource': source[1] if source else None,
+            'currentPair': pairs[0], 'retainedPairCount': len(pairs) - 1,
             'integrity': 'passed', 'observations': observations,
             'timingScope': 'HTTP transfer only; not browser startup, input or frame rate'}
 
@@ -84,7 +91,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--live', action='store_true')
     parser.add_argument('--fresh', action='store_true',
-                        help='Bypass a cached HTML response when checking a new deployment')
+                        help='Bypass cached HTML/manifest responses for a new deployment')
+    parser.add_argument('--expected-source', help='Require this source revision in preview metadata')
     parser.add_argument('--base', default='https://www.douglastkaiser.com/stones/')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
@@ -97,7 +105,8 @@ def main():
         'deviceQualification': 'pending; this script does not measure a device',
     }
     if args.live:
-        report['live'] = inspect_live(args.base, fresh=args.fresh)
+        report['live'] = inspect_live(args.base, fresh=args.fresh,
+                                      expected_source=args.expected_source)
     encoded = json.dumps(report, indent=2) + '\n'
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

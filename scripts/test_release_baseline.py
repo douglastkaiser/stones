@@ -28,7 +28,8 @@ class BaselineTests(unittest.TestCase):
         config = {'builds': [{'mainJsPath': main_name}]}
         bootstrap = ('_flutter.buildConfig = ' + json.dumps(config) + ';').encode()
         name = 'flutter_bootstrap.' + hashlib.sha256(bootstrap).hexdigest()[:20] + '.js'
-        return [Response(('<script src="' + ('old.js' if wrong_bootstrap else name)
+        return [Response(('<meta name="stones-preview-source" content="' + 'abcdef1' + '0' * 33 + '">'
+                          + '<script src="' + ('old.js' if wrong_bootstrap else name)
                           + '"></script>').encode()),
                 Response(json.dumps([[name, main_name]]).encode()), Response(bootstrap),
                 Response(b'other build' if corrupt_main else main)]
@@ -44,12 +45,23 @@ class BaselineTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         inspect_live('https://www.douglastkaiser.com/stones/')
 
-    def test_fresh_check_busts_only_html_cache(self):
+    def test_fresh_check_busts_only_mutable_metadata(self):
         with patch('scripts.release_baseline.urlopen', side_effect=self.fixture()) as fetch:
             inspect_live('https://www.douglastkaiser.com/stones/', fresh=True)
             urls = [call.args[0].full_url for call in fetch.call_args_list]
             self.assertIn('?baseline=', urls[0])
-            self.assertTrue(all('?' not in url for url in urls[1:]))
+            self.assertIn('?baseline=', urls[1])
+            self.assertTrue(all('?' not in url for url in urls[2:]))
+
+    def test_requested_source_is_checked(self):
+        with patch('scripts.release_baseline.urlopen', side_effect=self.fixture()):
+            self.assertTrue(inspect_live('https://www.douglastkaiser.com/stones/',
+                                         expected_source='abcdef1')['previewSource'].startswith('abcdef1'))
+
+    def test_coherent_but_old_preview_is_rejected(self):
+        with patch('scripts.release_baseline.urlopen', side_effect=self.fixture()):
+            with self.assertRaisesRegex(ValueError, 'not the requested source'):
+                inspect_live('https://www.douglastkaiser.com/stones/', expected_source='1234567')
 
     def test_rejects_unsafe_asset_paths(self):
         for value in ['../main.123.dart.js', 'https://elsewhere/main.js', 'main.dart.js']:

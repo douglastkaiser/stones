@@ -8,6 +8,9 @@ before deployment; no gameplay changes have been implemented in this audit.
 Execution began on 2026-10-17 on `codex/finishing-foundation`. See
 [release readiness](RELEASE_READINESS.md) for implemented work, qualification and
 pending gates. Packets are not complete merely because a prototype/build exists.
+The baseline tooling and isolated design preview are implemented on the branch.
+The preview is at the owner visual-feedback gate; physical-device qualification
+for packet 1 remains pending. Packets 3–12 have not been represented as complete.
 
 ## Product promise
 
@@ -298,6 +301,9 @@ These are proposed targets to confirm against the baseline, not current claims.
 - Five unfamiliar testers; at least four can complete the fundamentals and start
   a game without coaching, join a valid invitation within 90 seconds after load,
   and explain why a sample result was won or drawn.
+- Meet Play Console's production-access test requirement as well: on 2026-10-17
+  it displays twelve opted-in testers for fourteen continuous days, with three
+  currently opted in. This is separate from the product's usability sample.
 - At least twenty completed friend games across the supported shapes, seat
   counts and human/AI combinations, including a week-long asynchronous trial.
   No unexplained state divergence, lost confirmed move, lost earned progress,

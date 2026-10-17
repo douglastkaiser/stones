@@ -11,7 +11,7 @@ The delivery tracker is [FINISHING_PLAN.md](FINISHING_PLAN.md).
 | Source | `main` at `4ac6485` before branch `codex/finishing-foundation` | Finishing changes are isolated on the branch. |
 | Hosted web | `abbc262`; [Deploy Main 39054797531](https://github.com/douglastkaiser/stones/actions/runs/39054797531) succeeded | HTTP startup integrity verified again on 2026-10-17; not a phone performance test. |
 | Last full qualification | `c0ed867`: 776 Flutter tests, strict analysis and web/Android builds; 77 emulator security checks | A previous revision's result does not qualify new code. |
-| Android | Last recorded Play submission is code 403, source `6788062` | The October 10 record says in review. Current Play publication/install status has not been rechecked. Do not label it current or available from that record alone. |
+| Android | Play Console rechecked October 17: code 403, source `6788062`, Available to testers on Google Play, full rollout on Closed testing - Alpha. Internal testing remains 385. | Actual install/update and account/device qualification are still pending. |
 | Firebase | Spark; published ratings rules and enabled indexes; both custom-domain authentication entries saved | Firefox Android credential exchange still needs a real device trial. |
 
 The live public entrypoint currently names
@@ -42,7 +42,10 @@ flutter test tools/shared_performance_probe_test.dart --reporter expanded
 On Windows if the sandbox temp directory denies test cleanup, set TEMP and TMP
 for that command process to a writable workspace directory such as
 `build/test-temp`. This avoids changing tests to bypass a filesystem failure.
-Python qualification passed all 22 checks after using that writable temp location.
+Python qualification passed all 25 checks after using that writable temp location.
+Use `--fresh` on the baseline script when a new preview path has a cached CDN 404;
+use `--expected-source <revision>` to reject a coherent but older preview.
+The main/bootstrapping scripts are still checked against their exact fingerprints.
 
 The shared performance probe covers both shapes, two/four players and all four
 AI levels on the **current** shared engine. It reports elapsed time and event-loop
@@ -101,11 +104,38 @@ Google accounts. Each must preserve the last server-confirmed state.
 
 | Packet | State | Remaining gate |
 | --- | --- | --- |
-| 1. Baseline | Tooling and source/data inventory implemented | Fresh Play status, physical-device measurements and account trials pending. |
-| 2. Prototype | Isolated Flutter candidate implemented | CI/layout captures, browser inspection and owner visual feedback. |
+| 1. Baseline | Tooling, source/data inventory and current Play status verified; shared-AI VM measurements recorded | Physical-device measurements and account trials pending. |
+| 2. Prototype | Isolated candidate published; 31 focused checks, 24 captures and live Square/Hex inspection | Owner visual feedback before applying the design to production screens. |
 | 3–12 | Not started | Follow the plan's dependencies and per-packet contracts. |
 
 Production gameplay, room rules and real-user data have not been changed by the
 prototype. Use `lib/design_preview.dart` as a separate entry point. It has no
 Firebase initialization, account access, preferences or achievement writes.
 Composed sample positions are labeled and never treated as verified match history.
+
+Play Console currently shows three opted-in closed testers. Production is inactive
+and its application action is disabled. Its displayed requirement is twelve
+opted-in testers for fourteen continuous days; that store gate is separate from
+the product usability/friend-game gates. No track, tester list, account permission
+or Play release was changed during this inspection.
+
+Prototype qualification at `fce59c6`: [full CI](https://github.com/douglastkaiser/stones/actions/runs/39077486497)
+passed 807 Flutter tests and strict analysis. [Preview workflow](https://github.com/douglastkaiser/stones/actions/runs/39077486576)
+passed all 31 focused tests, generated 24 screenshots and measured 16 shared AI
+workloads. The CI runner returned legal moves in 43–1,500 ms, with largest measured
+cooperative event-loop gaps of 4.2–6.2 ms. These are bounded-workload VM observations,
+not whole-game complexity coverage or physical phone frame-rate claims.
+
+Final packaging candidate `d3b129a` passed [full CI](https://github.com/douglastkaiser/stones/actions/runs/39078011782):
+807 Flutter tests, strict analysis, the normal release-web build and Android debug
+APK compilation. Its [preview workflow](https://github.com/douglastkaiser/stones/actions/runs/39078011754)
+also passed the 31 focused tests, 24 captures, 16 AI probes and isolated web build.
+The published source metadata matches `d3b129a`; HTML, manifest and content hashes
+agree. The previous preview startup pair is retained and its served hashes were
+verified. Both font license files are served with the redistributed fonts.
+
+The final baseline helper additionally checks an expected preview source revision
+and refreshes mutable metadata to avoid treating a coherent old deployment as the
+new one. All 25 Python checks passed locally, including these final diagnostics.
+This helper/documentation follow-up changes no Dart runtime code. No production
+game deployment, Play upload or Firebase policy change occurred in this packet.

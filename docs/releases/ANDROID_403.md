@@ -1,5 +1,11 @@
 # Stones Android 1.0.0 (403)
 
+**Availability rechecked 2026-10-17:** Play Console confirms this release is
+Available to testers on Google Play, with full rollout on Closed testing - Alpha.
+Internal testing remains version 385. The dashboard shows three opted-in closed
+testers; production is inactive. The submission/in-review text below preserves
+the earlier October 10 evidence. No new upload was made during this check.
+
 Source: main at `6788062be808533d63d50ae56c497153b53e037b`.
 Package: `com.douglastkaiser.stones`. Flutter: 3.47.7.
 

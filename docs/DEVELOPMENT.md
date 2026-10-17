@@ -23,8 +23,9 @@ protocol for two to four players on Square or Hex. New play and learning now use
 `lib/game/`. Production `/matches` rules are published and passed six independent
 live API trials. Web startup fingerprinting and bounded previous-release retention
 are deployed; a hosted four-seat mixed Hex room passed human/AI/remote turns and
-reload recovery. Android 403 is submitted to closed testing and awaits Google
-review; its automated quick checks passed.
+reload recovery. A fresh Play Console check on 2026-10-17 confirms Android 403
+is available to Alpha closed testers with full rollout; internal testing remains
+385. See release readiness for current qualification and newer web-only changes.
 Check the plan and [release record](releases/ANDROID_403.md) for actual rollout evidence.
 
 The current shared path is `MatchSetupScreen` → `MatchController` →
