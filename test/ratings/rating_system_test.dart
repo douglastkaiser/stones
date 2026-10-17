@@ -241,14 +241,16 @@ void main() {
                         wins: 10)))));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        for (var i = 0;
-            i < 10 &&
-                tester.getCenter(find.text('Rating History')).dy >
-                    size.height - 100;
-            i++) {
+        for (var i = 0; i < 15; i++) {
+          final title = find.text('Rating History');
+          if (title.evaluate().isNotEmpty &&
+              tester.getCenter(title).dy < size.height - 100) {
+            break;
+          }
           await tester.drag(find.byType(ListView), const Offset(0, -200));
           await tester.pumpAndSettle();
         }
+
         expect(find.text('Rating History'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
