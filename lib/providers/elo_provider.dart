@@ -133,13 +133,18 @@ class EloController extends StateNotifier<EloState> {
           final score = b.rating.compareTo(a.rating);
           return score == 0 ? a.id.compareTo(b.id) : score;
         });
+      final personal = state.localPlayerRating;
+      final rank = personal != null && !personal.provisional
+          ? await repository.rank(pool.id, personal.rating)
+          : null;
+      if (!mounted || generation != _generation || request != _request) return;
       state = EloState(
           pool: pool,
           uid: state.uid,
           localPlayerRating: state.localPlayerRating,
           leaderboard: leaders,
           aiRatings: {for (final bot in values[1]) bot.id: bot},
-          rank: state.rank);
+          rank: identical(state.localPlayerRating, personal) ? rank : state.rank);
     } catch (_) {
       if (mounted && generation == _generation && request == _request) {
         _error(

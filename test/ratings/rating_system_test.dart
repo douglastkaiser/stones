@@ -21,6 +21,7 @@ class FakeRatings implements RatingRepository {
   final streams = <String, StreamController<EloRating?>>{};
   Completer<List<EloRating>>? pending;
   bool fail = false;
+  int standing = 2;
   List<EloRating> values = [];
   @override
   Stream<EloRating?> watchPlayer(String pool, String uid) =>
@@ -34,7 +35,7 @@ class FakeRatings implements RatingRepository {
   @override
   Future<List<EloRating>> bots(String pool) async => [];
   @override
-  Future<int> rank(String pool, int rating) async => 2;
+  Future<int> rank(String pool, int rating) async => standing;
   @override
   Future<List<EloHistoryEntry>> history(String pool, String uid) async => [
         EloHistoryEntry(
@@ -66,6 +67,18 @@ class QuietRatingSound extends SoundManager {
 }
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  test('refresh updates standing even when the personal rating is unchanged', () async {
+    final repo = FakeRatings();
+    final controller = EloController(repo)..bind('alice', guest: false);
+    repo.streams['alice']!.add(const EloRating(
+        id: 'alice', displayName: 'Alice', gamesPlayed: 10, wins: 10));
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.state.rank, 2);
+    repo.standing = 7;
+    await controller.fetchLeaderboard();
+    expect(controller.state.rank, 7);
+    controller.dispose();
+  });
   for (final brightness in Brightness.values) {
     testWidgets('signed-in menu stays usable on phone at 200% text $brightness', (tester) async {
       tester.view.physicalSize = const Size(320,700); tester.view.devicePixelRatio = 1;
