@@ -2,6 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stones/providers/account_provider.dart';
+import 'package:stones/services/account_service.dart';
+import 'package:stones/services/sound_manager.dart';
+import 'package:stones/screens/main_menu_screen.dart';
+import '../support/fake_account_service.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/game/rating_pool.dart';
@@ -52,7 +58,34 @@ class FakeRatings implements RatingRepository {
       'practice';
 }
 
+class QuietRatingSound extends SoundManager {
+  @override
+  Future<void> initialize() async {}
+  @override
+  Future<void> setMuted(bool muted) async {}
+}
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+  for (final brightness in Brightness.values) {
+    testWidgets('signed-in menu stays usable on phone at 200% text $brightness', (tester) async {
+      tester.view.physicalSize = const Size(320,700); tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
+      final service = FakeAccount()..current = const AccountIdentity(uid:'alice',guest:false,name:'A player with a very long name');
+      final account = AccountController(service,hasActiveRoom:()=>false);
+      await account.initialize();
+      final repo = FakeRatings(); final ratings = EloController(repo)..bind('alice',guest:false);
+      repo.streams['alice']!.add(const EloRating(id:'alice',displayName:'Alice',gamesPlayed:10,wins:10));
+      await tester.pumpWidget(ProviderScope(overrides:[eloProvider.overrideWith((ref)=>ratings),
+        accountProvider.overrideWith((ref)=>account), soundManagerProvider.overrideWithValue(QuietRatingSound())],
+        child:MaterialApp(theme:ThemeData(brightness:brightness),builder:(context,child)=>MediaQuery(
+          data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(2)),child:child!),
+          home:const MainMenuScreen())));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(),isNull);
+      expect(find.byTooltip('Leaderboard'),findsOneWidget);
+    });
+  }
+
   test(
       'all configuration pools are distinct, clock and standard rules separated',
       () {

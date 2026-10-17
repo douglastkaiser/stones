@@ -17,9 +17,11 @@ void main() {
 Future<JSString> dispatch(String raw) async {
   try {
     final data = jsonDecode(raw) as Map<String, dynamic>;
-    final config = MatchConfig.fromMap(Map<String, dynamic>.from(data['config']));
+    final config =
+        MatchConfig.fromMap(Map<String, dynamic>.from(data['config']));
     if (config.court || config.profile == RulesProfile.legacyHex) {
-      throw const FormatException('Practice or compatibility rules are unrated');
+      throw const FormatException(
+          'Practice or compatibility rules are unrated');
     }
     final records = data['moves'] as List;
     if (records.length > 4096) throw const FormatException('History too long');
@@ -34,7 +36,8 @@ Future<JSString> dispatch(String raw) async {
       game = next;
     }
     if (data['action'] == 'bot') {
-      if (game.finished || config.seat(game.current).control != SeatControl.ai) {
+      if (game.finished ||
+          config.seat(game.current).control != SeatControl.ai) {
         throw const FormatException('Not an AI turn');
       }
       final move = await MatchAI(config.seat(game.current).level).choose(game);
@@ -47,8 +50,11 @@ Future<JSString> dispatch(String raw) async {
         throw const FormatException('Invalid termination');
       }
       if (config.seats.length == 2) {
-        result = MatchResult(config.next(SeatId.values.byName(ended as String)),
-            data['timedOut'] == null ? ResultReason.resignation : ResultReason.time);
+        result = MatchResult(
+            config.next(SeatId.values.byName(ended as String)),
+            data['timedOut'] == null
+                ? ResultReason.resignation
+                : ResultReason.time);
       }
     }
     return jsonEncode({

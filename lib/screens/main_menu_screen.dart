@@ -430,6 +430,8 @@ class _PlayerChip extends StatelessWidget {
               if (ratingLabel != null)
                 Text(
                   ratingLabel!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
