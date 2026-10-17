@@ -193,7 +193,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final boardTheme =
         match.room?.boardTheme ?? ref.watch(currentBoardThemeProvider).theme;
     final calibration = ref.watch(calibrationStatusProvider);
-    final calibrationMessage = calibration?.$1 == match.id ? calibration?.$2 : null;
+    final calibrationMessage =
+        calibration?.$1 == match.id ? calibration?.$2 : null;
     final winner = game.result?.winner;
     final road = winner == null ? <Cell>{} : MatchRules.road(game, winner);
     final scale = MediaQuery.textScalerOf(context).scale(1);
@@ -208,7 +209,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     ? 'Reconnecting · your board is retained'
                     : !match.connected
                         ? 'Disconnected · your board is retained'
-                        : match.paused && match.clock != null && match.room == null
+                        : match.paused &&
+                                match.clock != null &&
+                                match.room == null
                             ? 'Match paused'
                             : match.paused &&
                                     game.config.seat(game.current).control ==
@@ -349,12 +352,27 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                                     children: [
                                                   Text(
                                                       '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps'),
-                                                  if (seat.control == SeatControl.ai)
-                                                    PlayerRatingLabel(uid: 'ai_shared-search-v1_${seat.level.name}',
-                                                        pool: RatingPool.forConfig(game.config), fallback: '${seat.level.name} AI'),
-                                                  if (match.room?.owners[seat.id] != null)
-                                                    PlayerRatingLabel(uid: match.room!.owners[seat.id]!,
-                                                        pool: RatingPool.forConfig(game.config), fallback: seat.id.label),
+                                                  if (seat.control ==
+                                                      SeatControl.ai)
+                                                    PlayerRatingLabel(
+                                                        uid:
+                                                            'ai_shared-search-v1_${seat.level.name}',
+                                                        pool: RatingPool
+                                                            .forConfig(
+                                                                game.config),
+                                                        fallback:
+                                                            '${seat.level.name} AI'),
+                                                  if (match.room
+                                                          ?.owners[seat.id] !=
+                                                      null)
+                                                    PlayerRatingLabel(
+                                                        uid: match.room!
+                                                            .owners[seat.id]!,
+                                                        pool: RatingPool
+                                                            .forConfig(
+                                                                game.config),
+                                                        fallback:
+                                                            seat.id.label),
                                                   if (match.clock != null)
                                                     ClockLabel(
                                                         clock: match.clock!,
@@ -394,23 +412,33 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: _controls(match, game)))),
-              if (widget.studyPanel == null && game.config.seats.any((s) => s.control == SeatControl.ai) &&
+              if (widget.studyPanel == null &&
+                  game.config.seats.any((s) => s.control == SeatControl.ai) &&
                   calibrationMessage != null)
-                Padding(padding: const EdgeInsets.all(12),
+                Padding(
+                    padding: const EdgeInsets.all(12),
                     child: Column(children: [
                       Text(calibrationMessage, textAlign: TextAlign.center),
-                      if (game.finished && calibrationMessage.contains('could not'))
-                        TextButton(onPressed: () async {
-                          try {
-                            final message = await ref.read(ratingRepositoryProvider).completeCalibration(
-                                match.id!, game.config, _controller.confirmedMoves);
-                            if (mounted && ref.read(matchProvider).id == match.id) {
-                              ref.read(calibrationStatusProvider.notifier).state = (match.id!, message);
-                            }
-                          } catch (_) {
-                            // Retain the visible failure and the retry action.
-                          }
-                        }, child: const Text('Retry AI calibration')),
+                      if (game.finished &&
+                          calibrationMessage.contains('could not'))
+                        TextButton(
+                            onPressed: () async {
+                              try {
+                                final message = await ref
+                                    .read(ratingRepositoryProvider)
+                                    .completeCalibration(match.id!, game.config,
+                                        _controller.confirmedMoves);
+                                if (mounted &&
+                                    ref.read(matchProvider).id == match.id) {
+                                  ref
+                                      .read(calibrationStatusProvider.notifier)
+                                      .state = (match.id!, message);
+                                }
+                              } catch (_) {
+                                // Retain the visible failure and the retry action.
+                              }
+                            },
+                            child: const Text('Retry AI calibration')),
                     ])),
               if (match.room != null)
                 Padding(
@@ -419,7 +447,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       Text('Room ${match.room!.code}',
                           style: Theme.of(context).textTheme.titleMedium),
                       if (match.shortcutWarning != null)
-                        Text(match.shortcutWarning!, textAlign: TextAlign.center),
+                        Text(match.shortcutWarning!,
+                            textAlign: TextAlign.center),
                       TextButton.icon(
                           onPressed: () async {
                             await Clipboard.setData(

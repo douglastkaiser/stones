@@ -69,7 +69,7 @@ No billing plan was changed. New client/rules/backend code remains on the
 qualification branch until this dependency is resolved; the deployed game is
 unchanged. An operator must link a billing account before backend publication.
 Budget alerts are not a hard spending cap. Each function has zero minimum
-instances, a maximum of three instances, a 30-second timeout, and each signed-in
+instances, a maximum of three instances, one concurrent request per instance, a 30-second timeout, and each signed-in
 account has a 400-move daily calibration quota. These bounds are not a guarantee
 of a zero bill. Monitor quota, invocation, read/write and artifact-storage costs.
 
@@ -117,3 +117,16 @@ handling and long-term evidence retention need an operator policy before wide
 public rollout. History is bounded to the most recent 100 entries in the client.
 
 Timed AI games remain practice: local pauseable clocks cannot establish trustworthy timed bot strength. Online AI calibration is also finalized by the room trigger, so closing the client after the final move does not lose that sample. Offline completed local saves replay completion when resumed.
+
+
+## Regression evidence
+
+The real Firestore emulator suite passed all 29 authorization tests in
+[run 38995362862](https://github.com/douglastkaiser/stones/actions/runs/38995362862),
+including public read-only competition access, forged-rating rejection and
+private receipt/proof/quota denial. The compiled shared rules/AI plus rating
+processor and service authorization passed all 17 backend tests. These include
+an actual complete server-generated AI duel, idempotent completion and the
+per-opponent daily limit. This is emulator/model evidence, not a claim of a
+production deployment. Full Flutter and final build results will be recorded
+once the final candidate completes qualification.

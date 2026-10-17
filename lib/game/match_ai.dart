@@ -12,4 +12,3 @@ Future<MatchMove?> selectMatchMove(MatchState game, BotLevel level,
 
 Future<MatchMove?> _selectMove((MatchState, BotLevel) request) =>
     MatchAI(request.$2, yieldDuringSearch: false).choose(request.$1);
-

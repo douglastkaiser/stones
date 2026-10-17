@@ -14,7 +14,7 @@ const engine = async data => {
   if (result.error) throw new HttpsError('invalid-argument', result.error);
   return result;
 };
-const options = {region: 'us-central1', maxInstances: 3, memory: '512MiB', timeoutSeconds: 30};
+const options = {region: 'us-central1', maxInstances: 3, concurrency: 1, memory: '512MiB', timeoutSeconds: 30};
 async function account(uid) {
   const user = await getAuth().getUser(uid);
   if (!user.providerData.length || user.disabled) throw new HttpsError('permission-denied', 'Sign in to a permanent account.');

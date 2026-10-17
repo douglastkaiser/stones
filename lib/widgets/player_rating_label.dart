@@ -4,7 +4,11 @@ import '../providers/elo_provider.dart';
 import '../game/rating_pool.dart';
 
 class PlayerRatingLabel extends ConsumerWidget {
-  const PlayerRatingLabel({super.key, required this.uid, required this.pool, required this.fallback});
+  const PlayerRatingLabel(
+      {super.key,
+      required this.uid,
+      required this.pool,
+      required this.fallback});
   final String uid;
   final RatingPool pool;
   final String fallback;
@@ -12,12 +16,18 @@ class PlayerRatingLabel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(seatRatingProvider((pool.id, uid)));
     final rating = value.asData?.value;
-    final rank = rating == null || rating.isAi || rating.provisional ? null :
-        ref.watch(playerRankProvider((pool.id, rating.rating))).asData?.value;
-    return Text(value.when(data: (rating) => rating == null ? '$fallback · ${uid.startsWith("ai_") ? "Uncalibrated" : "Unrated"}' :
-      '${rating.displayName} · ${rating.ratingLabel}${rank == null ? "" : " · #$rank"}', loading: () => '$fallback · Rating…',
-      error: (_, __) => '$fallback · Rating unavailable'),
-      maxLines: 2, overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelSmall);
+    final rank = rating == null || rating.isAi || rating.provisional
+        ? null
+        : ref.watch(playerRankProvider((pool.id, rating.rating))).asData?.value;
+    return Text(
+        value.when(
+            data: (rating) => rating == null
+                ? '$fallback · ${uid.startsWith("ai_") ? "Uncalibrated" : "Unrated"}'
+                : '${rating.displayName} · ${rating.ratingLabel}${rank == null ? "" : " · #$rank"}',
+            loading: () => '$fallback · Rating…',
+            error: (_, __) => '$fallback · Rating unavailable'),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall);
   }
 }

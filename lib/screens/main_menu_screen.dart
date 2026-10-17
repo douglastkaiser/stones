@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -139,9 +138,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                     ),
                   ),
                   if (account != null && !account.guest)
-                    Flexible(child: _PlayerChip(
+                    Flexible(
+                        child: _PlayerChip(
                       displayName: account.name ?? 'Player',
-                      ratingLabel: '${ratingState.selectedPool.shape.name} ${ratingState.selectedPool.size} · ${ratingState.localPlayerRating?.ratingLabel ?? "Unrated"}${ratingState.rank == null ? "" : " · #${ratingState.rank}"}', 
+                      ratingLabel:
+                          '${ratingState.selectedPool.shape.name} ${ratingState.selectedPool.size} · ${ratingState.localPlayerRating?.ratingLabel ?? "Unrated"}${ratingState.rank == null ? "" : " · #${ratingState.rank}"}',
                     )),
                   // Right side icons
                   Row(
@@ -409,18 +410,20 @@ class _PlayerChip extends StatelessWidget {
           CircleAvatar(
             radius: 16,
             child: Text(
-                    displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                    style: const TextStyle(color: Colors.white),
-                  ),
+              displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
           const SizedBox(width: 8),
-          Flexible(child: Column(
+          Flexible(
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 displayName,
-                maxLines: 1, overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style:
                     const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),

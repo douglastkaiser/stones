@@ -67,10 +67,15 @@ class _AccountCardState extends ConsumerState<AccountCard> {
                   style: Theme.of(context).textTheme.titleMedium),
               if (signedIn && user.email != null) Text(user.email!),
               if (signedIn) ...[
-                Text('${ref.watch(eloProvider).selectedPool.label} · ${ref.watch(eloProvider).localPlayerRating?.ratingLabel ?? "Unrated"}'),
-                TextButton.icon(onPressed: () => Navigator.push<void>(context,
-                    MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
-                    icon: const Icon(Icons.leaderboard_outlined), label: const Text('Rating and standing')),
+                Text(
+                    '${ref.watch(eloProvider).selectedPool.label} · ${ref.watch(eloProvider).localPlayerRating?.ratingLabel ?? "Unrated"}'),
+                TextButton.icon(
+                    onPressed: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const LeaderboardScreen())),
+                    icon: const Icon(Icons.leaderboard_outlined),
+                    label: const Text('Rating and standing')),
               ],
               const SizedBox(height: 8),
               Text(signedIn

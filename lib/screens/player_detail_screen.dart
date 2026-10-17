@@ -31,10 +31,23 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   Future<void> _loadHistory() async {
     setState(() => _loading = true);
     try {
-      final history = await ref.read(eloProvider.notifier).fetchRatingHistory(widget.player.id, pool: widget.player.pool);
-      if (mounted) { setState(() { _history = history; _loading = false; _error = null; }); }
+      final history = await ref
+          .read(eloProvider.notifier)
+          .fetchRatingHistory(widget.player.id, pool: widget.player.pool);
+      if (mounted) {
+        setState(() {
+          _history = history;
+          _loading = false;
+          _error = null;
+        });
+      }
     } catch (_) {
-      if (mounted) { setState(() { _loading = false; _error = 'History unavailable. Please retry.'; }); }
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'History unavailable. Please retry.';
+        });
+      }
     }
   }
 
@@ -86,35 +99,73 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   }
 
   Widget _buildHeaderCard(BuildContext context, EloRating player, bool isDark) {
-    final pool = RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
-    final rank = player.isAi || player.provisional ? null :
-        ref.watch(playerRankProvider((player.pool, player.rating))).asData?.value;
-    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(player.isAi ? Icons.smart_toy_outlined : Icons.person_outline, size: 32),
-          const SizedBox(width: 12),
-          Expanded(child: Text(player.displayName, maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge)),
-        ]),
-        const SizedBox(height: 12),
-        Text(pool?.label ?? 'Stones rating'),
-        Wrap(spacing: 12, runSpacing: 8, children: [
-          Text(player.ratingLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: _ratingColor(player.rating, isDark))),
-          if (rank != null) Text('Rank #$rank'),
-          if (!player.isAi && player.provisional) Text('Provisional ${player.gamesPlayed}/10'),
-          if (player.isAi) Text('${player.opponents} opponents · ${player.calibrated ? "Calibrated estimate" : "Still calibrating"}'),
-        ]),
-        const SizedBox(height: 16),
-        Wrap(spacing: 24, runSpacing: 16, children: [
-          _StatItem(label: 'Games', value: '${player.gamesPlayed}', isDark: isDark),
-          _StatItem(label: 'Wins', value: '${player.wins}', isDark: isDark, color: Colors.green),
-          _StatItem(label: 'Losses', value: '${player.losses}', isDark: isDark, color: Colors.red),
-          _StatItem(label: 'Draws', value: '${player.draws}', isDark: isDark),
-          _StatItem(label: 'Win %', value: player.gamesPlayed > 0 ? '${(player.wins * 100 / player.gamesPlayed).round()}%' : '-', isDark: isDark),
-        ]),
-      ])));
+    final pool =
+        RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
+    final rank = player.isAi || player.provisional
+        ? null
+        : ref
+            .watch(playerRankProvider((player.pool, player.rating)))
+            .asData
+            ?.value;
+    return Card(
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(
+                    player.isAi
+                        ? Icons.smart_toy_outlined
+                        : Icons.person_outline,
+                    size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(player.displayName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge)),
+              ]),
+              const SizedBox(height: 12),
+              Text(pool?.label ?? 'Stones rating'),
+              Wrap(spacing: 12, runSpacing: 8, children: [
+                Text(player.ratingLabel,
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(color: _ratingColor(player.rating, isDark))),
+                if (rank != null) Text('Rank #$rank'),
+                if (!player.isAi && player.provisional)
+                  Text('Provisional ${player.gamesPlayed}/10'),
+                if (player.isAi)
+                  Text(
+                      '${player.opponents} opponents · ${player.calibrated ? "Calibrated estimate" : "Still calibrating"}'),
+              ]),
+              const SizedBox(height: 16),
+              Wrap(spacing: 24, runSpacing: 16, children: [
+                _StatItem(
+                    label: 'Games',
+                    value: '${player.gamesPlayed}',
+                    isDark: isDark),
+                _StatItem(
+                    label: 'Wins',
+                    value: '${player.wins}',
+                    isDark: isDark,
+                    color: Colors.green),
+                _StatItem(
+                    label: 'Losses',
+                    value: '${player.losses}',
+                    isDark: isDark,
+                    color: Colors.red),
+                _StatItem(
+                    label: 'Draws', value: '${player.draws}', isDark: isDark),
+                _StatItem(
+                    label: 'Win %',
+                    value: player.gamesPlayed > 0
+                        ? '${(player.wins * 100 / player.gamesPlayed).round()}%'
+                        : '-',
+                    isDark: isDark),
+              ]),
+            ])));
   }
 
   Widget _buildChartSection(BuildContext context, bool isDark) {
@@ -126,7 +177,8 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     }
 
     if (_error != null) {
-      return const Text('History could not be loaded. Your recorded rating is unchanged.');
+      return const Text(
+          'History could not be loaded. Your recorded rating is unchanged.');
     }
     if (_history == null || _history!.isEmpty) {
       return SizedBox(
@@ -150,14 +202,16 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         ),
       ),
       padding: const EdgeInsets.fromLTRB(12, 16, 16, 12),
-      child: Semantics(label: '${_history!.length} rating records. Latest rating ${_history!.last.rating}.',
-        child: CustomPaint(
-        size: Size.infinite,
-        painter: _RatingChartPainter(
-          history: _history!,
-          isDark: isDark,
-        ),
-      )),
+      child: Semantics(
+          label:
+              '${_history!.length} rating records. Latest rating ${_history!.last.rating}.',
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _RatingChartPainter(
+              history: _history!,
+              isDark: isDark,
+            ),
+          )),
     );
   }
 
@@ -202,7 +256,8 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                             : 'Drew vs ${entry.opponentName ?? "Unknown"}',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      color:
+                          isDark ? Colors.grey.shade300 : Colors.grey.shade700,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -224,9 +279,15 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   }
 
   Color _ratingColor(int rating, bool isDark) {
-    if (rating >= 1800) { return isDark ? Colors.purple.shade300 : Colors.purple.shade700; }
-    if (rating >= 1500) { return isDark ? Colors.amber.shade300 : Colors.amber.shade800; }
-    if (rating >= 1200) { return isDark ? Colors.blue.shade300 : Colors.blue.shade700; }
+    if (rating >= 1800) {
+      return isDark ? Colors.purple.shade300 : Colors.purple.shade700;
+    }
+    if (rating >= 1500) {
+      return isDark ? Colors.amber.shade300 : Colors.amber.shade800;
+    }
+    if (rating >= 1200) {
+      return isDark ? Colors.blue.shade300 : Colors.blue.shade700;
+    }
     return isDark ? Colors.grey.shade400 : Colors.grey.shade700;
   }
 }
@@ -303,14 +364,14 @@ class _RatingChartPainter extends CustomPainter {
     }
 
     double yForRating(int rating) {
-      return topPadding + chartHeight - ((rating - ratingFloor) / ratingRange) * chartHeight;
+      return topPadding +
+          chartHeight -
+          ((rating - ratingFloor) / ratingRange) * chartHeight;
     }
 
     // Draw horizontal grid lines
     final gridPaint = Paint()
-      ..color = isDark
-          ? Colors.grey.shade800
-          : Colors.grey.shade300
+      ..color = isDark ? Colors.grey.shade800 : Colors.grey.shade300
       ..strokeWidth = 0.5;
     final gridLabelStyle = TextStyle(
       fontSize: 10,
@@ -365,8 +426,14 @@ class _RatingChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: isDark
-            ? [Colors.amber.shade300.withValues(alpha: 0.25), Colors.transparent]
-            : [Colors.amber.shade700.withValues(alpha: 0.15), Colors.transparent],
+            ? [
+                Colors.amber.shade300.withValues(alpha: 0.25),
+                Colors.transparent
+              ]
+            : [
+                Colors.amber.shade700.withValues(alpha: 0.15),
+                Colors.transparent
+              ],
       ).createShader(Rect.fromLTWH(0, topPadding, size.width, chartHeight));
     canvas.drawPath(fillPath, fillPaint);
 
@@ -402,7 +469,8 @@ class _RatingChartPainter extends CustomPainter {
         text: TextSpan(text: lastLabel, style: xLabelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp2.paint(canvas, Offset(size.width - tp2.width, topPadding + chartHeight + 4));
+      tp2.paint(
+          canvas, Offset(size.width - tp2.width, topPadding + chartHeight + 4));
     }
   }
 

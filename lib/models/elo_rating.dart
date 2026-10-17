@@ -17,7 +17,9 @@ class EloRating {
   final int opponents;
   bool get provisional => gamesPlayed < 10;
   bool get calibrated => !isAi || (gamesPlayed >= 30 && opponents >= 10);
-  String get ratingLabel => gamesPlayed == 0 ? (isAi ? 'Uncalibrated' : 'Unrated') : '$rating${provisional || !calibrated ? "?" : ""}';
+  String get ratingLabel => gamesPlayed == 0
+      ? (isAi ? 'Uncalibrated' : 'Unrated')
+      : '$rating${provisional || !calibrated ? "?" : ""}';
 
   const EloRating({
     required this.id,
@@ -65,7 +67,8 @@ class EloRating {
         'pool': pool,
         'opponents': opponents,
         if (engineVersion != null) 'engineVersion': engineVersion,
-        if (lastUpdated != null) 'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
+        if (lastUpdated != null)
+          'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
         'displayName': displayName,
         'rating': rating,
         'gamesPlayed': gamesPlayed,
@@ -90,7 +93,9 @@ class EloRating {
       pool: map['pool'] as String? ?? 'square-5-2-standardTak-open',
       engineVersion: map['engineVersion'] as String?,
       opponents: (map['opponents'] as num?)?.toInt() ?? 0,
-      lastUpdated: map['lastUpdated'] is int ? DateTime.fromMillisecondsSinceEpoch(map['lastUpdated'] as int) : null,
+      lastUpdated: map['lastUpdated'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(map['lastUpdated'] as int)
+          : null,
     );
   }
 }
@@ -158,7 +163,9 @@ class EloCalculator {
     required int gamesPlayedB,
     required double actualScoreA,
   }) {
-    if (![0.0, 0.5, 1.0].contains(actualScoreA) || gamesPlayedA < 0 || gamesPlayedB < 0) {
+    if (![0.0, 0.5, 1.0].contains(actualScoreA) ||
+        gamesPlayedA < 0 ||
+        gamesPlayedB < 0) {
       throw ArgumentError('Invalid score or game count');
     }
     final expectedA = expectedScore(ratingA, ratingB);
@@ -178,4 +185,5 @@ class EloCalculator {
 
 /// Competition rank is independent of list position and includes tied scores.
 int competitionRank(int rating, Iterable<EloRating> players) =>
-    1 + players.where((p) => !p.isAi && !p.provisional && p.rating > rating).length;
+    1 +
+    players.where((p) => !p.isAi && !p.provisional && p.rating > rating).length;
