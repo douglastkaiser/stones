@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/elo_rating.dart';
 import '../providers/elo_provider.dart';
-import '../theme/game_colors.dart';
+import '../game/rating_pool.dart';
 
 /// Shows a player's profile, stats, and ELO rating history chart.
 class PlayerDetailScreen extends ConsumerStatefulWidget {
@@ -86,122 +86,35 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   }
 
   Widget _buildHeaderCard(BuildContext context, EloRating player, bool isDark) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                // Avatar
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: player.isAi
-                      ? (isDark
-                          ? GameColors.boardFrameInner.withValues(alpha: 0.3)
-                          : GameColors.boardFrameInner.withValues(alpha: 0.15))
-                      : (isDark
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : Colors.blue.shade100),
-                  child: player.isAi
-                      ? Icon(
-                          Icons.smart_toy,
-                          size: 28,
-                          color: isDark ? Colors.white70 : GameColors.boardFrameInner,
-                        )
-                      : Text(
-                          player.displayName.isNotEmpty
-                              ? player.displayName[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Theme.of(context).colorScheme.onPrimaryContainer
-                                : Colors.blue.shade800,
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        player.displayName,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      if (player.isAi)
-                        Text(
-                          '${player.aiDifficulty?[0].toUpperCase()}${player.aiDifficulty?.substring(1)} difficulty',
-                          style: TextStyle(
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                // Rating badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    player.ratingLabel,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: _ratingColor(player.rating, isDark),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // Stats row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _StatItem(
-                  label: 'Games',
-                  value: player.gamesPlayed.toString(),
-                  isDark: isDark,
-                ),
-                _StatItem(
-                  label: 'Wins',
-                  value: player.wins.toString(),
-                  color: Colors.green,
-                  isDark: isDark,
-                ),
-                _StatItem(
-                  label: 'Losses',
-                  value: player.losses.toString(),
-                  color: Colors.red,
-                  isDark: isDark,
-                ),
-                _StatItem(
-                  label: 'Draws',
-                  value: player.draws.toString(),
-                  isDark: isDark,
-                ),
-                _StatItem(
-                  label: 'Win %',
-                  value: player.gamesPlayed > 0
-                      ? '${(player.wins * 100 / player.gamesPlayed).round()}%'
-                      : '-',
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+    final pool = RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
+    final rank = player.isAi || player.provisional ? null :
+        ref.watch(playerRankProvider((player.pool, player.rating))).asData?.value;
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(player.isAi ? Icons.smart_toy_outlined : Icons.person_outline, size: 32),
+          const SizedBox(width: 12),
+          Expanded(child: Text(player.displayName, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge)),
+        ]),
+        const SizedBox(height: 12),
+        Text(pool?.label ?? 'Stones rating'),
+        Wrap(spacing: 12, runSpacing: 8, children: [
+          Text(player.ratingLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: _ratingColor(player.rating, isDark))),
+          if (rank != null) Text('Rank #$rank'),
+          if (!player.isAi && player.provisional) Text('Provisional ${player.gamesPlayed}/10'),
+          if (player.isAi) Text('${player.opponents} opponents · ${player.calibrated ? "Calibrated estimate" : "Still calibrating"}'),
+        ]),
+        const SizedBox(height: 16),
+        Wrap(spacing: 24, runSpacing: 16, children: [
+          _StatItem(label: 'Games', value: '${player.gamesPlayed}', isDark: isDark),
+          _StatItem(label: 'Wins', value: '${player.wins}', isDark: isDark, color: Colors.green),
+          _StatItem(label: 'Losses', value: '${player.losses}', isDark: isDark, color: Colors.red),
+          _StatItem(label: 'Draws', value: '${player.draws}', isDark: isDark),
+          _StatItem(label: 'Win %', value: player.gamesPlayed > 0 ? '${(player.wins * 100 / player.gamesPlayed).round()}%' : '-', isDark: isDark),
+        ]),
+      ])));
   }
 
   Widget _buildChartSection(BuildContext context, bool isDark) {
@@ -212,6 +125,9 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
       );
     }
 
+    if (_error != null) {
+      return const Text('History could not be loaded. Your recorded rating is unchanged.');
+    }
     if (_history == null || _history!.isEmpty) {
       return SizedBox(
         height: 200,
@@ -234,13 +150,14 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         ),
       ),
       padding: const EdgeInsets.fromLTRB(12, 16, 16, 12),
-      child: CustomPaint(
+      child: Semantics(label: '${_history!.length} rating records. Latest rating ${_history!.last.rating}.',
+        child: CustomPaint(
         size: Size.infinite,
         painter: _RatingChartPainter(
           history: _history!,
           isDark: isDark,
         ),
-      ),
+      )),
     );
   }
 

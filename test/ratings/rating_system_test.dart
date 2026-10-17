@@ -8,6 +8,7 @@ import 'package:stones/game/rating_pool.dart';
 import 'package:stones/models/elo_rating.dart';
 import 'package:stones/providers/elo_provider.dart';
 import 'package:stones/screens/leaderboard_screen.dart';
+import 'package:stones/screens/player_detail_screen.dart';
 import 'package:stones/services/rating_repository.dart';
 
 class FakeRatings implements RatingRepository {
@@ -28,7 +29,10 @@ class FakeRatings implements RatingRepository {
   @override
   Future<int> rank(String pool, int rating) async => 2;
   @override
-  Future<List<EloHistoryEntry>> history(String pool, String uid) async => [];
+  Future<List<EloHistoryEntry>> history(String pool, String uid) async => [
+    EloHistoryEntry(rating: 1200, timestamp: DateTime(2026,10,1), score: 1, opponentName: 'A rival'),
+    EloHistoryEntry(rating: 1220, timestamp: DateTime(2026,10,2), score: 1, opponentName: 'Another rival'),
+  ];
   @override
   Future<MatchMove?> botMove(String id, MatchConfig config, List<Map<String,dynamic>> moves) async => null;
   @override
@@ -110,6 +114,23 @@ void main() {
   });
   for (final size in [const Size(320,700),const Size(1366,900)]) {
     for (final brightness in Brightness.values) {
+      testWidgets('rating profile and history fit $size $brightness at 200% text', (tester) async {
+        tester.view.physicalSize = size; tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
+        final repo = FakeRatings(); final controller = EloController(repo);
+        await tester.pumpWidget(ProviderScope(overrides:[eloProvider.overrideWith((ref)=>controller),
+            ratingRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp(theme:ThemeData(brightness:brightness),builder:(context,child) =>
+            MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(2)),child:child!),
+            home:const PlayerDetailScreen(player:EloRating(id:'alice',displayName:'A player with a long display name',gamesPlayed:10,wins:10)))));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(),isNull);
+        for(var i=0;i<10 && tester.getCenter(find.text('Rating History')).dy > size.height-100;i++) {
+          await tester.drag(find.byType(ListView), const Offset(0,-200)); await tester.pumpAndSettle();
+        }
+        expect(find.text('Rating History'),findsOneWidget);
+        expect(tester.takeException(),isNull);
+      });
       testWidgets('competition fits $size $brightness at 200% text', (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
@@ -125,7 +146,7 @@ void main() {
         Future<void> reveal(Finder finder) async {
           for (var i = 0; i < 20; i++) {
             final y = tester.getCenter(finder).dy;
-            if (y > 100 && y < size.height - 80) return;
+            if (y > 100 && y < size.height - 80) { return; }
             await tester.drag(find.byType(ListView), Offset(0, y > size.height - 80 ? -250 : 250));
             await tester.pumpAndSettle();
           }

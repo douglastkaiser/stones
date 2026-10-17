@@ -398,7 +398,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                   calibrationMessage != null)
                 Padding(padding: const EdgeInsets.all(12),
                     child: Column(children: [
-                      Text(calibrationMessage!, textAlign: TextAlign.center),
+                      Text(calibrationMessage, textAlign: TextAlign.center),
                       if (game.finished && calibrationMessage.contains('could not'))
                         TextButton(onPressed: () async {
                           try {

@@ -44,12 +44,12 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
                     final move = await ref.read(ratingRepositoryProvider).botMove(
                         session.id!, game.config,
                         ref.read(matchProvider.notifier).confirmedMoves);
-                    if (!active || ref.read(matchProvider).id != session.id) return move;
+                    if (!active || ref.read(matchProvider).id != session.id) { return move; }
                     ref.read(calibrationStatusProvider.notifier).state =
                         (session.id!, 'AI calibration uses verified server moves; human rating is unchanged.');
                     return move;
                   } catch (_) {
-                    if (!active) return null;
+                    if (!active) { return null; }
                     ref.read(calibrationRetryAfterProvider.notifier).state =
                         DateTime.now().add(const Duration(minutes: 2));
                     ref.read(calibrationStatusProvider.notifier).state =
