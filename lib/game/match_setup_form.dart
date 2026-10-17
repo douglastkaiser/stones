@@ -67,8 +67,8 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                     .map((size) => DropdownMenuItem(
                         value: size,
                         child: Text(_config.shape == BoardShape.square
-                            ? '$size Ã— $size'
-                            : 'Radius $size Â· ${1 + 3 * size * (size + 1)} cells')))
+                            ? '$size × $size'
+                            : 'Radius $size · ${1 + 3 * size * (size + 1)} cells')))
                     .toList(),
                 onChanged: (size) {
                   if (size != null) _update(_config.copyWith(size: size));
@@ -89,7 +89,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                         Row(children: [
                           Expanded(
                               child: Text(
-                                  '${seat.id.symbol} Â· ${seat.id.label}',
+                                  '${seat.id.symbol} · ${seat.id.label}',
                                   style:
                                       Theme.of(context).textTheme.titleMedium)),
                           if (_config.seats.length > 2)
@@ -176,7 +176,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                   if (id != null) _update(_config.copyWith(starter: id));
                 }),
             const SizedBox(height: 16),
-            Text('$local local Â· $online online Â· $bots AI'),
+            Text('$local local · $online online · $bots AI'),
             if (online > 0 && bots == 0 && local <= 1)
               const Text(
                   'Competitive ratings: completed games count when every seat belongs to a different signed-in account. Display names and standings are public.'),
@@ -186,9 +186,9 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
             if (local == 1 && bots > 0 && online == 0 && !_config.court)
               Text(_config.profile == RulesProfile.standardTak
                   ? (_config.size < 5
-                      ? 'Small Square boards are practice for match achievements. Choose 5Ã—5 or larger to earn AI tiers.'
+                      ? 'Small Square boards are practice for match achievements. Choose 5×5 or larger to earn AI tiers.'
                       : 'Unassisted board wins advance the AI ladder. Stronger AI wins also count toward lower tiers.')
-                  : 'Square 5Ã—5+ and all Hex sizes can earn match achievements. AI duel tiers use two-player Square; mastery challenges cover both shapes and more players.'),
+                  : 'Square 5×5+ and all Hex sizes can earn match achievements. AI duel tiers use two-player Square; mastery challenges cover both shapes and more players.'),
             if (local == 0)
               Text(online == 0
                   ? 'Watch the AIs play. You can pause the match.'
@@ -245,7 +245,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
             FilledButton(
                 onPressed: _busy ? null : _start,
                 child: Text(_busy
-                    ? 'Startingâ€¦'
+                    ? 'Starting…'
                     : _config.online
                         ? 'Create room'
                         : 'Start game')),

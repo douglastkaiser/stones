@@ -207,7 +207,8 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        final expired = decodeRoom(snapshot.data()!).expire(uid, DateTime.now());
+        final expired =
+            decodeRoom(snapshot.data()!).expire(uid, DateTime.now());
         tx.update(ref, {'timedOut': expired.timedOut!.name});
       });
 }

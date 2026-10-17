@@ -50,9 +50,9 @@ class FakeRatings implements RatingRepository {
             opponentName: 'Another rival'),
       ];
   @override
-  Future<String> submitResult(MatchSession session,
-          List<Map<String, dynamic>> moves) async => 'practice';
-
+  Future<String> submitResult(
+          MatchSession session, List<Map<String, dynamic>> moves) async =>
+      'practice';
 }
 
 class QuietRatingSound extends SoundManager {
@@ -61,12 +61,13 @@ class QuietRatingSound extends SoundManager {
   @override
   Future<void> setMuted(bool muted) async {}
 }
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
   test('a stalled leaderboard reaches a visible bounded failure', () async {
     final repo = FakeRatings()..pending = Completer<List<EloRating>>();
-    final controller = EloController(repo,
-        requestTimeout: const Duration(milliseconds: 1));
+    final controller =
+        EloController(repo, requestTimeout: const Duration(milliseconds: 1));
     await controller.fetchLeaderboard();
     expect(controller.state.loading, isFalse);
     expect(controller.state.errorMessage, isNotNull);
@@ -74,7 +75,8 @@ void main() {
     repo.pending!.complete([]);
     controller.dispose();
   });
-  test('refresh updates standing even when the personal rating is unchanged', () async {
+  test('refresh updates standing even when the personal rating is unchanged',
+      () async {
     final repo = FakeRatings();
     final controller = EloController(repo)..bind('alice', guest: false);
     repo.streams['alice']!.add(const EloRating(
@@ -87,22 +89,37 @@ void main() {
     controller.dispose();
   });
   for (final brightness in Brightness.values) {
-    testWidgets('signed-in menu stays usable on phone at 200% text $brightness', (tester) async {
-      tester.view.physicalSize = const Size(320,700); tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
-      final service = FakeAccount()..current = const AccountIdentity(uid:'alice',guest:false,name:'A player with a very long name');
-      final account = AccountController(service,hasActiveRoom:()=>false);
+    testWidgets('signed-in menu stays usable on phone at 200% text $brightness',
+        (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final service = FakeAccount()
+        ..current = const AccountIdentity(
+            uid: 'alice', guest: false, name: 'A player with a very long name');
+      final account = AccountController(service, hasActiveRoom: () => false);
       await account.initialize();
-      final repo = FakeRatings(); final ratings = EloController(repo)..bind('alice',guest:false);
-      repo.streams['alice']!.add(const EloRating(id:'alice',displayName:'Alice',gamesPlayed:10,wins:10));
-      await tester.pumpWidget(ProviderScope(overrides:[eloProvider.overrideWith((ref)=>ratings),
-        accountProvider.overrideWith((ref)=>account), soundManagerProvider.overrideWithValue(QuietRatingSound())],
-        child:MaterialApp(theme:ThemeData(brightness:brightness),builder:(context,child)=>MediaQuery(
-          data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(2)),child:child!),
-          home:const MainMenuScreen())));
+      final repo = FakeRatings();
+      final ratings = EloController(repo)..bind('alice', guest: false);
+      repo.streams['alice']!.add(const EloRating(
+          id: 'alice', displayName: 'Alice', gamesPlayed: 10, wins: 10));
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            eloProvider.overrideWith((ref) => ratings),
+            accountProvider.overrideWith((ref) => account),
+            soundManagerProvider.overrideWithValue(QuietRatingSound())
+          ],
+          child: MaterialApp(
+              theme: ThemeData(brightness: brightness),
+              builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: const TextScaler.linear(2)),
+                  child: child!),
+              home: const MainMenuScreen())));
       await tester.pumpAndSettle();
-      expect(tester.takeException(),isNull);
-      expect(find.byTooltip('Leaderboard'),findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip('Leaderboard'), findsOneWidget);
     });
   }
 

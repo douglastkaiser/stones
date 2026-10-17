@@ -171,11 +171,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                                     .textTheme
                                                     .titleMedium),
                                             Text(own == null
-                                                ? 'Unrated Â· play a competitive online game'
-                                                : '${own.ratingLabel} Â· ${own.provisional ? "Provisional ${own.gamesPlayed}/10" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
+                                                ? 'Unrated · play a competitive online game'
+                                                : '${own.ratingLabel} · ${own.provisional ? "Provisional ${own.gamesPlayed}/10" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
                                             if (own != null)
                                               Text(
-                                                  '${own.wins} wins Â· ${own.losses} losses Â· ${own.draws} draws'),
+                                                  '${own.wins} wins · ${own.losses} losses · ${own.draws} draws'),
                                           ]))),
                             if (state.loading) const LinearProgressIndicator(),
                             if (state.errorMessage != null)
@@ -213,7 +213,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                   'AI benchmarks use untimed two-player duels. Choose 2 players and Untimed.')
                             else if (_bots) ...[
                               const Text(
-                                  'Measured from play Â· ? means still calibrating. AI games do not change your competitive rating.'),
+                                  'Measured from play · ? means still calibrating. AI games do not change your competitive rating.'),
                               for (final bot in bots)
                                 _entry(bot, null, state.uid),
                             ] else if (state.leaderboard.isEmpty &&
@@ -225,7 +225,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                       'This ladder is waiting for its first established players. Complete 10 competitive games to join.'))
                             else ...[
                               const Text(
-                                  'Top 50 established players Â· equal ratings share a rank'),
+                                  'Top 50 established players · equal ratings share a rank'),
                               for (final player in state.leaderboard)
                                 _entry(
                                     player,
@@ -284,9 +284,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       Text(rating.ratingLabel),
                     ]),
                     Text(
-                        '${rating.wins}W Â· ${rating.losses}L Â· ${rating.draws}D Â· ${rating.gamesPlayed} games'),
+                        '${rating.wins}W · ${rating.losses}L · ${rating.draws}D · ${rating.gamesPlayed} games'),
                     if (rating.isAi)
                       Text(
-                          '${rating.opponents} opponents Â· ${rating.calibrated ? "Community estimate" : "Calibrating: needs 30 games and 10 opponents"}'),
+                          '${rating.opponents} opponents · ${rating.calibrated ? "Community estimate" : "Calibrating: needs 30 games and 10 opponents"}'),
                   ]))));
 }

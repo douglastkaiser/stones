@@ -21,8 +21,8 @@ reload recovery. Android 403 is submitted to closed testing and awaits Google
 review; its automated quick checks passed.
 Check the plan and [release record](releases/ANDROID_403.md) for actual rollout evidence.
 
-The current shared path is `MatchSetupScreen` â†’ `MatchController` â†’
-`MatchRules`/`MoveSelection` â†’ `MatchScreen`/`BoardView`. `BoardGeometry` supplies
+The current shared path is `MatchSetupScreen` → `MatchController` →
+`MatchRules`/`MoveSelection` → `MatchScreen`/`BoardView`. `BoardGeometry` supplies
 topology; `MatchConfig` supplies seat order, controls, opening, size and optional
 Court/clock settings. `MatchRoomStore` owns transactional `/matches` sessions,
 server-confirmed clocks and recoverable AI runner leases. `MatchStorage` saves
