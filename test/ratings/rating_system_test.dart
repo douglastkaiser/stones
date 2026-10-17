@@ -9,7 +9,7 @@ import 'package:stones/services/sound_manager.dart';
 import 'package:stones/screens/main_menu_screen.dart';
 import '../support/fake_account_service.dart';
 import 'package:stones/game/match_config.dart';
-import 'package:stones/game/match_state.dart';
+import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/rating_pool.dart';
 import 'package:stones/models/elo_rating.dart';
 import 'package:stones/providers/elo_provider.dart';
@@ -50,13 +50,9 @@ class FakeRatings implements RatingRepository {
             opponentName: 'Another rival'),
       ];
   @override
-  Future<MatchMove?> botMove(String id, MatchConfig config,
-          List<Map<String, dynamic>> moves) async =>
-      null;
-  @override
-  Future<String> completeCalibration(String id, MatchConfig config,
-          List<Map<String, dynamic>> moves) async =>
-      'practice';
+  Future<String> submitResult(MatchSession session,
+          List<Map<String, dynamic>> moves) async => 'practice';
+
 }
 
 class QuietRatingSound extends SoundManager {

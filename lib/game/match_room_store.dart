@@ -34,7 +34,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
   final BoardTheme theme;
   DocumentReference<Map<String, dynamic>> _room(String code) =>
       firestore.collection('matches').doc(code);
-  MatchRoom _decode(Map<String, dynamic> data) => MatchRoom.fromMap({
+  static MatchRoom decodeRoom(Map<String, dynamic> data) => MatchRoom.fromMap({
         ...data,
         'aiLeaseAt': (data['aiLeaseAt'] as Timestamp?)
             ?.toDate()
@@ -105,7 +105,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
           final ref = _room(code);
           final snapshot = await tx.get(ref);
           if (!snapshot.exists) throw StateError('Room not found');
-          final room = _decode(snapshot.data()!);
+          final room = decodeRoom(snapshot.data()!);
           observedOwners = room.owners;
           room.replay();
           final joined = room.join(uid, style);
@@ -144,7 +144,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
     final snapshot =
         await _room(code).get(const GetOptions(source: Source.server));
     if (!snapshot.exists) throw StateError('Room not found');
-    return _decode(snapshot.data()!);
+    return decodeRoom(snapshot.data()!);
   }
 
   @override
@@ -156,7 +156,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
               confirmed: false, connected: !snapshot.metadata.isFromCache);
         }
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        return MatchRoomUpdate(_decode(snapshot.data()!));
+        return MatchRoomUpdate(decodeRoom(snapshot.data()!));
       });
   @override
   Future<void> submit(
@@ -165,7 +165,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        final previous = _decode(snapshot.data()!);
+        final previous = decodeRoom(snapshot.data()!);
         final game = previous.replay();
         final updated = previous.append(uid, expectedPly, move);
         final clock =
@@ -184,7 +184,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        final updated = _decode(snapshot.data()!).resign(uid, seat);
+        final updated = decodeRoom(snapshot.data()!).resign(uid, seat);
         tx.update(ref, {'resigned': updated.resigned!.name});
       });
   @override
@@ -193,7 +193,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
       final ref = _room(code);
       final snapshot = await tx.get(ref);
       if (!snapshot.exists) throw StateError('Room no longer exists');
-      final room = _decode(snapshot.data()!);
+      final room = decodeRoom(snapshot.data()!);
       room.claimRunner(uid, DateTime.now());
       tx.update(
           ref, {'aiRunner': uid, 'aiLeaseAt': FieldValue.serverTimestamp()});
@@ -207,7 +207,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
-        final expired = _decode(snapshot.data()!).expire(uid, DateTime.now());
+        final expired = decodeRoom(snapshot.data()!).expire(uid, DateTime.now());
         tx.update(ref, {'timedOut': expired.timedOut!.name});
       });
 }

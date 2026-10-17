@@ -33,7 +33,7 @@ test('even the named player cannot forge their rank or bot strength',async()=>{
   }
 });
 test('receipts, proof, opponent and quota data remain private and server-owned',async()=>{
-  for(const path of ['ratingReceipts/match-UAAAAAA','calibrationSessions/session','ratingLimits/daily',
+  for(const path of ['ratingReceipts/match-UAAAAAA','calibrationSessions/session',
     `${base}/players/ai_easy/opponents/alice`,`${base}/players/ai_easy/samples/today`]) {
     await assertFails(getDoc(reference(signed(),path)));
     await assertFails(setDoc(reference(signed(),path),{rating:9999}));

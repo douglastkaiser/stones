@@ -54,7 +54,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               actions: [
                 FilledButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Let’s play'))
+                    child: const Text('Letâ€™s play'))
               ]));
 
   @override
@@ -129,14 +129,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           content: const Text(
               'Every player can build a road between any opposite sides. '
               'Only exposed flats and capstones connect. Walls block roads.\n\n'
-              'During the opening exchange each player places the next player’s flat. '
+              'During the opening exchange each player places the next playerâ€™s flat. '
               'Then place your own flat, wall or cap on an empty cell, or move a stack you control.\n\n'
               'Tap an empty cell to preview; tap it again to place. Tap a stack to choose Carry, '
               'then a neighbor to preview a move. Swiping or dragging does the same. '
               'Use Drop and Drop & next to spread bottom pieces in a straight line. '
               'Confirm leaves the remainder at the final cell. Back step revises; Cancel discards. '
               'Hold, right-click or hover to inspect a stack.\n\n'
-              'Square has four directions; Hex has six. Carry is limited by the board’s longest row. '
+              'Square has four directions; Hex has six. Carry is limited by the boardâ€™s longest row. '
               'A lone capstone can flatten a wall only at the final drop.\n\n'
               'Roads resolve after the complete move. The mover wins simultaneous roads if they have one; '
               'multiple opponent roads draw. Without a road, a full board or exhausted reserve ends play. '
@@ -202,13 +202,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final status = practiceEnded
         ? 'Practice finished'
         : game.finished
-            ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
+            ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} Â· ${game.result!.reason.name}'
             : !match.ready
                 ? 'Waiting for online players'
                 : match.reconnecting
-                    ? 'Reconnecting · your board is retained'
+                    ? 'Reconnecting Â· your board is retained'
                     : !match.connected
-                        ? 'Disconnected · your board is retained'
+                        ? 'Disconnected Â· your board is retained'
                         : match.paused &&
                                 match.clock != null &&
                                 match.room == null
@@ -218,13 +218,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                         SeatControl.ai
                                 ? 'AI paused'
                                 : match.busy
-                                    ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
-                                    : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
+                                    ? '${game.current.label} Â· ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
+                                    : '${game.current.label} to play${game.opening ? ' Â· opening exchange' : ''}';
     return Scaffold(
         appBar: AppBar(
             title: Text(
                 widget.title ??
-                    '${game.config.shape == BoardShape.square ? 'Square' : 'Hex'} · ${game.config.seats.length} players',
+                    '${game.config.shape == BoardShape.square ? 'Square' : 'Hex'} Â· ${game.config.seats.length} players',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             actions: [
@@ -413,21 +413,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           padding: const EdgeInsets.all(8),
                           child: _controls(match, game)))),
               if (widget.studyPanel == null &&
-                  game.config.seats.any((s) => s.control == SeatControl.ai) &&
                   calibrationMessage != null)
                 Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(children: [
                       Text(calibrationMessage, textAlign: TextAlign.center),
                       if (game.finished &&
-                          calibrationMessage.contains('could not'))
+                          (calibrationMessage.contains('could not') || calibrationMessage.contains('Waiting')))
                         TextButton(
                             onPressed: () async {
                               try {
                                 final message = await ref
                                     .read(ratingRepositoryProvider)
-                                    .completeCalibration(match.id!, game.config,
-                                        _controller.confirmedMoves);
+                                    .submitResult(match, _controller.confirmedMoves);
                                 if (mounted &&
                                     ref.read(matchProvider).id == match.id) {
                                   ref
@@ -438,7 +436,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                 // Retain the visible failure and the retry action.
                               }
                             },
-                            child: const Text('Retry AI calibration')),
+                            child: const Text('Retry rating update')),
                     ])),
               if (match.room != null)
                 Padding(
@@ -463,7 +461,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           label: const Text('Copy invitation code')),
                       for (final seat in game.config.seats)
                         Text(
-                            '${seat.id.label} · ${seat.control == SeatControl.ai ? 'AI' : match.room!.owners[seat.id] == null ? 'Waiting for online human' : match.room!.owners[seat.id] == match.uid ? 'On this device' : 'Online human'}'),
+                            '${seat.id.label} Â· ${seat.control == SeatControl.ai ? 'AI' : match.room!.owners[seat.id] == null ? 'Waiting for online human' : match.room!.owners[seat.id] == match.uid ? 'On this device' : 'Online human'}'),
                     ])),
               if (match.error != null)
                 Padding(
@@ -509,7 +507,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       return Column(children: [
         const Text('Match complete'),
         Text(
-            'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${e.key.label} ${e.value}').join(' · ')}'),
+            'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${e.key.label} ${e.value}').join(' Â· ')}'),
         if (widget.studyPanel == null &&
             match.error != null &&
             ref.read(matchProvider.notifier).canRetryRewards)
@@ -579,7 +577,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               onPressed: () => setState(() => _selection.backStep(game)),
               child: const Text('Back step')),
         ]),
-        Text('Drop ${move.drops.join(' → ')}'),
+        Text('Drop ${move.drops.join(' â†’ ')}'),
       ],
       if (move != null || source != null)
         Wrap(spacing: 12, alignment: WrapAlignment.center, children: [

@@ -462,6 +462,7 @@ service cloud.firestore {
         request.resource.data.aiRunner == null && request.resource.data.aiLeaseAt == null &&
         request.resource.data.timedOut == null && initialClock(request.resource.data);
       allow update: if isAuthenticated() &&
+        !existsAfter(/databases/$(database)/documents/ratingResults/$(code)) &&
         ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles']) &&
           (vacantJoin(0) || vacantJoin(1) ||
            (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
@@ -482,19 +483,198 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Public competition metadata contains display names and game statistics only.
-    // Rating totals, history, receipts and AI evidence are server-owned.
+    // Spark ratings: the database enforces agreement, arithmetic and atomicity.
+    // Rules cannot attest a browser's AI binary or replay arbitrary board games.
+    function ratingAccount() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    function ratingPool(c) {
+      let clock = c.get('clockSeconds', 0);
+      return c.shape + '-' + string(c.size) + '-' + string(c.seats.size()) + '-' +
+        c.profile + '-' + (clock == 0 ? 'open' : clock < 600 ? 'fast' : 'long');
+    }
+    function validRatingPool(pool) {
+      return pool.matches('^square-[3-8]-2-standardTak-(open|fast|long)$') ||
+        pool.matches('^square-[3-8]-[234]-sharedRoads-(open|fast|long)$') ||
+        pool.matches('^hex-[2-4]-[234]-sharedRoads-(open|fast|long)$');
+    }
+    function ratingBefore(pool, id) {
+      let path = /databases/$(database)/documents/ratingPools/$(pool)/players/$(id);
+      return exists(path) ? get(path).data :
+        {'rating': 1200, 'gamesPlayed': 0, 'wins': 0, 'losses': 0, 'draws': 0, 'opponents': 0};
+    }
+    function ratingAfter(pool, id) {
+      return getAfter(/databases/$(database)/documents/ratingPools/$(pool)/players/$(id)).data;
+    }
+    function ratingReceipt(id) {
+      return getAfter(/databases/$(database)/documents/ratingResults/$(id)).data;
+    }
+    function freshRating(id) {
+      return !exists(/databases/$(database)/documents/ratingResults/$(id));
+    }
+    function humanVote(code, uid) {
+      return getAfter(/databases/$(database)/documents/matches/$(code)/ratingVotes/$(uid)).data;
+    }
+    function ratingSeat(r, c, i, code) {
+      let uid = r.participants[i];
+      let vote = humanVote(code, uid);
+      return c.config.seats[i].control != 'ai' && uid is string &&
+        uid == c.owners[c.config.seats[i].id] &&
+        vote.ply == r.ply && vote.winner == r.winner &&
+        ratingAfter(r.pool, uid).lastResult == code;
+    }
+    function agreedHuman(r, code) {
+      let room = get(/databases/$(database)/documents/matches/$(code)).data;
+      let n = room.config.seats.size();
+      let gone = room.resigned != null ? room.resigned : room.timedOut;
+      return code.matches('^U[A-Z]{6}$') && r.pool == ratingPool(room.config) &&
+        r.participants.size() == n && r.participants.toSet().size() == n &&
+        request.auth.uid in r.participants && r.ply == room.moves.size() && r.ply >= n &&
+        r.winner >= -1 && r.winner < n &&
+        (gone == null || (n == 2 && r.winner == (gone == room.config.seats[0].id ? 1 : 0))) &&
+        ratingSeat(r, room, 0, code) && ratingSeat(r, room, 1, code) &&
+        (n < 3 || ratingSeat(r, room, 2, code)) &&
+        (n < 4 || ratingSeat(r, room, 3, code));
+    }
+    function validAIResult(r, id) {
+      let bot = 'ai_shared-search-v1_' + r.level;
+      let anchor = ratingBefore(r.pool, request.auth.uid);
+      let quota = /databases/$(database)/documents/ratingLimits/$(request.auth.uid + '_' + r.pool + '_' + r.level);
+      let opponent = /databases/$(database)/documents/ratingPools/$(r.pool)/players/$(bot)/opponents/$(request.auth.uid);
+      return r.actor == request.auth.uid && r.source is string && r.source.size() <= 160 &&
+        id == request.auth.uid + '_' + r.source && r.engine == 'shared-search-v1' &&
+        r.level in ['easy', 'medium', 'hard', 'expert'] &&
+        r.pool.matches('^(square-[3-8]-2-standardTak|square-[3-8]-2-sharedRoads|hex-[2-4]-2-sharedRoads)-open$') &&
+        r.participants == [bot] && r.winner in [-1, 0, 1] &&
+        r.moves is list && r.moves.size() == r.ply && r.ply >= 2 && r.ply <= 4096 &&
+        anchor.gamesPlayed >= 10 &&
+        (!exists(quota) || request.time >= get(quota).data.at + duration.value(24, 'h')) &&
+        getAfter(quota).data.lastResult == id && getAfter(quota).data.at == request.time &&
+        existsAfter(opponent) && ratingAfter(r.pool, bot).lastResult == id;
+    }
+    match /ratingResults/{id} {
+      // Result receipts/evidence are participant-private, including room codes.
+      allow get: if ratingAccount() &&
+        (!exists(/databases/$(database)/documents/ratingResults/$(id)) ||
+         resource.data.get('actor', '') == request.auth.uid || request.auth.uid in resource.data.participants);
+      allow list, update, delete: if false;
+      allow create: if ratingAccount() && request.resource.data.at == request.time &&
+        request.resource.data.pool is string && validRatingPool(request.resource.data.pool) &&
+        request.resource.data.participants is list && request.resource.data.winner is int &&
+        request.resource.data.ply is int && (
+          (request.resource.data.kind == 'human' &&
+            request.resource.data.keys().hasOnly(['kind', 'pool', 'participants', 'winner', 'ply', 'at']) &&
+            agreedHuman(request.resource.data, id)) ||
+          (request.resource.data.kind == 'ai' &&
+            request.resource.data.keys().hasOnly(['kind', 'pool', 'participants', 'winner', 'ply', 'at', 'actor', 'source', 'level', 'engine', 'moves']) &&
+            validAIResult(request.resource.data, id)));
+    }
+    match /matches/{code}/ratingVotes/{uid} {
+      allow read: if ratingAccount() && request.auth.uid in get(/databases/$(database)/documents/matches/$(code)).data.owners.values();
+      allow create, update: if ratingAccount() && request.auth.uid == uid && freshRating(code) &&
+        uid in get(/databases/$(database)/documents/matches/$(code)).data.owners.values() &&
+        request.resource.data.keys().hasOnly(['ply', 'winner', 'name']) &&
+        request.resource.data.ply == get(/databases/$(database)/documents/matches/$(code)).data.moves.size() &&
+        request.resource.data.winner is int && request.resource.data.winner >= -1 &&
+        request.resource.data.winner < get(/databases/$(database)/documents/matches/$(code)).data.config.seats.size() &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60;
+      allow delete: if false;
+    }
+    function pairScore(winner, i, j) {
+      return winner == -1 || (winner != i && winner != j) ? 0.5 : winner == i ? 1.0 : 0.0;
+    }
+    function pairChange(r, ownRating, i, j) {
+      return i == j || j >= r.participants.size() ? 0.0 :
+        pairScore(r.winner, i, j) - 1.0 / (1.0 + math.pow(10.0,
+          (ratingBefore(r.pool, r.participants[j]).rating - ownRating) / 400.0));
+    }
+    function expectedRating(r, before, index) {
+      let change = pairChange(r, before.rating, index, 0) + pairChange(r, before.rating, index, 1) +
+        pairChange(r, before.rating, index, 2) + pairChange(r, before.rating, index, 3);
+      let next = math.round(before.rating + (before.gamesPlayed < 30 ? 40 : 20) * change / (r.participants.size() - 1));
+      return next < 100 ? 100 : next;
+    }
+    function humanRating(r, data, before, id) {
+      let index = r.participants[0] == id ? 0 : r.participants[1] == id ? 1 :
+        r.participants[2] == id ? 2 : 3;
+      return id in r.participants && data.isAi == false && data.opponents == 0 &&
+        !data.keys().hasAny(['engineVersion', 'aiDifficulty']) &&
+        data.displayName == humanVote(data.lastResult, id).name &&
+        data.rating == expectedRating(r, before, index) &&
+        data.established == (data.gamesPlayed >= 10);
+    }
+    function aiRating(r, data, before, id) {
+      let anchor = ratingBefore(r.pool, r.actor);
+      let expected = 1.0 / (1.0 + math.pow(10.0, (anchor.rating - before.rating) / 400.0));
+      let score = r.winner == -1 ? 0.5 : r.winner == 1 ? 1.0 : 0.0;
+      let next = math.round(before.rating + (before.gamesPlayed < 30 ? 40 : 20) * (score - expected));
+      let known = exists(/databases/$(database)/documents/ratingPools/$(r.pool)/players/$(id)/opponents/$(r.actor));
+      return r.participants == [id] && id == 'ai_shared-search-v1_' + r.level &&
+        data.isAi == true && data.established == false && data.engineVersion == r.engine &&
+        data.aiDifficulty == r.level && data.rating == (next < 100 ? 100 : next) &&
+        data.displayName == (r.level == 'easy' ? 'Easy AI' : r.level == 'medium' ? 'Medium AI' : r.level == 'hard' ? 'Hard AI' : 'Expert AI') &&
+        data.opponents == before.opponents + (known ? 0 : 1);
+    }
+    function resultScore(r, id) {
+      return r.winner == -1 ? 0.5 : r.kind == 'ai' ? (r.winner == 1 ? 1.0 : 0.0) :
+        (r.participants[r.winner] == id ? 1.0 : 0.0);
+    }
+    function checkedRating(pool, id, data) {
+      let r = ratingReceipt(data.lastResult);
+      let before = ratingBefore(pool, id);
+      let score = resultScore(r, id);
+      let history = getAfter(/databases/$(database)/documents/ratingPools/$(pool)/players/$(id)/history/$(string(data.gamesPlayed))).data;
+      return ratingAccount() && freshRating(data.lastResult) && r.pool == pool &&
+        data.keys().hasAll(['pool', 'displayName', 'rating', 'gamesPlayed', 'wins', 'losses', 'draws', 'isAi', 'established', 'opponents', 'lastResult', 'lastUpdated']) &&
+        data.keys().hasOnly(['pool', 'displayName', 'rating', 'gamesPlayed', 'wins', 'losses', 'draws', 'isAi', 'established', 'opponents', 'lastResult', 'lastUpdated', 'aiDifficulty', 'engineVersion']) &&
+        data.pool == pool && data.lastUpdated == request.time && data.rating is int &&
+        data.gamesPlayed == before.gamesPlayed + 1 &&
+        data.wins == before.wins + (score == 1 ? 1 : 0) &&
+        data.losses == before.losses + (score == 0 ? 1 : 0) &&
+        data.draws == before.draws + (score == 0.5 ? 1 : 0) &&
+        history.rating == data.rating && history.timestamp == request.time && history.score == score &&
+        ((r.kind == 'human' && humanRating(r, data, before, id)) ||
+         (r.kind == 'ai' && r.actor == request.auth.uid && aiRating(r, data, before, id)));
+    }
     match /ratingPools/{pool}/players/{player} {
       allow read: if true;
-      allow write: if false;
+      allow create, update: if checkedRating(pool, player, request.resource.data);
+      allow delete: if false;
       match /history/{entry} {
         allow read: if true;
-        allow write: if false;
+        allow create: if ratingAccount() &&
+          entry == string(ratingAfter(pool, player).gamesPlayed) &&
+          freshRating(ratingAfter(pool, player).lastResult) &&
+          request.resource.data.keys().hasOnly(['rating', 'timestamp', 'score', 'opponentName']) &&
+          request.resource.data.rating == ratingAfter(pool, player).rating &&
+          request.resource.data.timestamp == request.time &&
+          request.resource.data.score == resultScore(ratingReceipt(ratingAfter(pool, player).lastResult), player) &&
+          request.resource.data.opponentName == (ratingAfter(pool, player).isAi ? 'Established player' :
+            string(ratingReceipt(ratingAfter(pool, player).lastResult).participants.size()) + '-player game');
+        allow update, delete: if false;
+      }
+      match /opponents/{uid} {
+        allow get: if ratingAccount() && uid == request.auth.uid;
+        allow create: if ratingAccount() && uid == request.auth.uid &&
+          request.resource.data.keys().hasOnly(['firstAt', 'lastResult']) &&
+          request.resource.data.firstAt == request.time && freshRating(request.resource.data.lastResult) &&
+          ratingReceipt(request.resource.data.lastResult).actor == uid &&
+          ratingReceipt(request.resource.data.lastResult).participants == [player] &&
+          ratingReceipt(request.resource.data.lastResult).pool == pool;
+        allow list, update, delete: if false;
       }
     }
-    match /ratingPools/{pool}/standings/{player} {
-      allow read: if true;
-      allow write: if false;
+    match /ratingLimits/{key} {
+      allow get: if ratingAccount() && (!exists(/databases/$(database)/documents/ratingLimits/$(key)) ||
+        get(/databases/$(database)/documents/ratingResults/$(resource.data.lastResult)).data.actor == request.auth.uid);
+      allow list, delete: if false;
+      allow create, update: if ratingAccount() &&
+        request.resource.data.keys().hasOnly(['at', 'lastResult']) &&
+        request.resource.data.at == request.time && freshRating(request.resource.data.lastResult) &&
+        ratingReceipt(request.resource.data.lastResult).actor == request.auth.uid &&
+        key == request.auth.uid + '_' + ratingReceipt(request.resource.data.lastResult).pool + '_' + ratingReceipt(request.resource.data.lastResult).level &&
+        (!exists(/databases/$(database)/documents/ratingLimits/$(key)) ||
+          request.time >= resource.data.at + duration.value(24, 'h'));
     }
 
     // Deny all other database access by default

@@ -39,17 +39,6 @@ jobs:
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Compile and test shared rating backend
-        run: |
-          dart compile js -O2 tools/ratings/engine.dart -o functions/engine.js
-          node --test functions/*.test.cjs
-          npm --prefix functions ci --ignore-scripts --no-audit --no-fund
-          GCLOUD_PROJECT=demo-stones-ratings node -e "require('./functions/index.cjs')"
-
       - name: Run analyzer
         run: flutter analyze --fatal-infos
 
