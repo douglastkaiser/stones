@@ -39,15 +39,16 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
           ref.read(achievementProvider.notifier).recordMatch(event);
       final identity = ref.read(accountProvider).identity;
       if (identity != null && !identity.guest) {
+        ref.read(ratingStatusProvider.notifier).state = (event.id, 'Checking game result…');
         unawaited(ref.read(ratingRepositoryProvider)
             .submitResult(session, event.moves).then((message) {
           if (active && ref.read(matchProvider).id == event.id) {
-            ref.read(calibrationStatusProvider.notifier).state = (event.id, message);
+            ref.read(ratingStatusProvider.notifier).state = (event.id, message);
           }
         }).catchError((Object error) {
           if (active && ref.read(matchProvider).id == event.id) {
-            ref.read(calibrationStatusProvider.notifier).state =
-                (event.id, 'Game saved · rating update could not finish. Retry when connected.');
+            ref.read(ratingStatusProvider.notifier).state =
+                (event.id, 'Game saved Â· rating update could not finish. Retry when connected.');
           }
         }));
       }
@@ -62,5 +63,5 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
   );
 });
 
-final calibrationStatusProvider =
+final ratingStatusProvider =
     StateProvider<(String, String)?>((ref) => null);

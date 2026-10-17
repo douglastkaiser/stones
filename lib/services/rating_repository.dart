@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -95,7 +97,7 @@ class FirebaseRatingRepository implements RatingRepository {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.isAnonymous) return 'Sign in to record ratings';
     final evidence = RatingEvidence.verify(session, moves, user.uid);
-    if (evidence == null) return 'Practice · this game is not eligible for ratings';
+    if (evidence == null) return 'Practice Ã‚Â· this game is not eligible for ratings';
     if (evidence.humans.length == 1) {
       return _sampleAI(session, evidence, moves, user.uid).timeout(const Duration(seconds: 15));
     }
@@ -121,11 +123,12 @@ class FirebaseRatingRepository implements RatingRepository {
 
   Future<String> _settleHuman(MatchSession session, RatingEvidence e, String uid, String name) =>
       _db.runTransaction((tx) async {
-    final receiptRef = _db.collection('ratingResults').doc(session.id);
-    final receipt = await tx.get(receiptRef);
-    if (receipt.exists) return 'Rating recorded';
     final roomRef = _db.collection('matches').doc(session.id);
-    final room = FirestoreMatchRoomStore.decodeRoom((await tx.get(roomRef)).data()!);
+    final raw = (await tx.get(roomRef)).data()!;
+    final resultId = raw['ratingReceipt'] as String? ?? sha256.convert(utf8.encode(session.id!)).toString();
+    final receiptRef = _db.collection('ratingResults').doc(resultId);
+    if ((await tx.get(receiptRef)).exists) return 'Rating recorded';
+    final room = FirestoreMatchRoomStore.decodeRoom(raw);
     if (!RatingEvidence.same(room.toMap(), session.room!.toMap())) {
       // Lease changes are irrelevant, but board/ownership/termination must agree.
       if (!RatingEvidence.same(room.moves, session.room!.moves) ||
@@ -151,14 +154,17 @@ class FirebaseRatingRepository implements RatingRepository {
     tx.set(roomRef.collection('ratingVotes').doc(uid),
         {'ply': e.game.ply, 'winner': e.winner, 'name': name});
     if (!agreed) return 'Waiting for all players to confirm this result. Reopen the room or retry later.';
-    tx.set(receiptRef, {'kind': 'human', 'pool': e.pool, 'participants': e.humans,
+    tx.update(roomRef, {'ratingReceipt': resultId});
+    tx.set(receiptRef, {'kind': 'human', 'room': session.id, 'pool': e.pool, 'participants': e.humans,
       'winner': e.winner, 'ply': e.game.ply, 'at': FieldValue.serverTimestamp()});
     for (var i = 0; i < e.humans.length; i++) {
       final before = previous[i];
       final rating = before['rating'] as int? ?? 1200;
       var change = 0.0;
       for (var j = 0; j < e.humans.length; j++) {
-        if (i == j) continue;
+        if (i == j) {
+          continue;
+        }
         final score = e.winner == -1 || (e.winner != i && e.winner != j) ? 0.5 : e.winner == i ? 1.0 : 0.0;
         change += score - EloCalculator.expectedScore(rating, previous[j]['rating'] as int? ?? 1200);
       }
@@ -166,7 +172,7 @@ class FirebaseRatingRepository implements RatingRepository {
       final nextRating = max(100, (rating + EloCalculator.kFactor(games) * change / (e.humans.length - 1)).round());
       final score = e.winner == -1 ? 0.5 : e.winner == i ? 1.0 : 0.0;
       final data = _record(before, e.pool, votes[i]['name'] as String, nextRating, score,
-          session.id!, isAi: false);
+          resultId, isAi: false);
       _write(tx, e.pool, e.humans[i], data, score, '${e.humans.length}-player game');
     }
     return 'Rating recorded';
@@ -176,12 +182,12 @@ class FirebaseRatingRepository implements RatingRepository {
       List<Map<String, dynamic>> moves, String uid) => _db.runTransaction((tx) async {
     final level = e.game.config.seats.firstWhere((s) => s.control == SeatControl.ai).level.name;
     final bot = 'ai_${RatingEvidence.engine}_$level';
-    final id = '${uid}_${session.id}';
+    final id = sha256.convert(utf8.encode('${uid}_${session.id}')).toString();
     final receiptRef = _db.collection('ratingResults').doc(id);
     if ((await tx.get(receiptRef)).exists) return 'AI community estimate recorded';
     final anchor = (await tx.get(_players(e.pool).doc(uid))).data();
     if ((anchor?['gamesPlayed'] as int? ?? 0) < 10) {
-      return 'Practice · play 10 competitive games in this ladder before contributing AI estimates';
+      return 'Practice Ã‚Â· play 10 competitive games in this ladder before contributing AI estimates';
     }
     final botRef = _players(e.pool).doc(bot);
     final before = (await tx.get(botRef)).data() ?? {};
@@ -189,7 +195,7 @@ class FirebaseRatingRepository implements RatingRepository {
     final limit = (await tx.get(limitRef)).data();
     final last = limit?['at'] as Timestamp?;
     if (last != null && DateTime.now().difference(last.toDate()) < const Duration(hours: 24)) {
-      return 'Practice · one AI sample per opponent and ladder every 24 hours';
+      return 'Practice Ã‚Â· one AI sample per opponent and ladder every 24 hours';
     }
     final opponentRef = botRef.collection('opponents').doc(uid);
     final opponent = await tx.get(opponentRef);
@@ -200,6 +206,7 @@ class FirebaseRatingRepository implements RatingRepository {
     tx.set(receiptRef, {'kind': 'ai', 'pool': e.pool, 'participants': [bot], 'actor': uid,
       'source': session.id, 'winner': e.winner, 'ply': moves.length, 'moves': moves,
       'level': level, 'engine': RatingEvidence.engine, 'at': FieldValue.serverTimestamp()});
+    tx.set(_db.collection('aiResultKeys').doc('${uid}_${session.id}'), {'result': id});
     tx.set(limitRef, {'at': FieldValue.serverTimestamp(), 'lastResult': id});
     if (!opponent.exists) tx.set(opponentRef, {'firstAt': FieldValue.serverTimestamp(), 'lastResult': id});
     final data = _record(before, e.pool, '${level[0].toUpperCase()}${level.substring(1)} AI', next,
@@ -207,7 +214,7 @@ class FirebaseRatingRepository implements RatingRepository {
     data.addAll({'engineVersion': RatingEvidence.engine, 'aiDifficulty': level,
       'opponents': (before['opponents'] as int? ?? 0) + (opponent.exists ? 0 : 1)});
     _write(tx, e.pool, bot, data, score, 'Established player');
-    return 'AI community estimate recorded · human rating unchanged';
+    return 'AI community estimate recorded Ã‚Â· human rating unchanged';
   });
 
   Map<String, dynamic> _record(Map<String, dynamic> before, String pool, String name,

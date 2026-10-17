@@ -24,7 +24,9 @@ class RatingEvidence {
     var replay = MatchState.initial(game.config);
     try {
       for (final record in moves) {
-        if (record['seat'] != replay.current.name || replay.finished) return null;
+        if (record['seat'] != replay.current.name || replay.finished) {
+          return null;
+        }
         final next = MatchRules.play(replay, MatchMove.fromMap(record));
         if (next == null) return null;
         replay = next;
@@ -36,7 +38,9 @@ class RatingEvidence {
     if (room != null) {
       if (!same(moves, room.moves) || !room.owners.values.contains(uid)) return null;
       final result = room.replay().result;
-      if (result?.winner != game.result!.winner || result?.reason != game.result!.reason) return null;
+      if (result?.winner != game.result!.winner || result?.reason != game.result!.reason) {
+        return null;
+      }
     } else if (game.config.online || replay.result?.winner != game.result!.winner ||
         replay.result?.reason != game.result!.reason) {
       return null;

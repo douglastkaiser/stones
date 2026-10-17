@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {before, beforeEach, after, test} from 'node:test';
@@ -8,6 +9,8 @@ assert.match(address,/^(127\.0\.0\.1|localhost):\d+$/);
 const root=`http://${address}/v1/projects/${project}/databases/(default)/documents`;
 const pool='square-5-2-standardTak-open';
 const code='UAAAAAA';
+const hash=x=>createHash('sha256').update(x).digest('hex');
+const humanKey=hash(code);
 let env;
 before(async()=>{env=await initializeHexEmulator({projectId:project,firestore:{rules:await readFile(new URL('../../firestore.rules',import.meta.url),'utf8')}});});
 beforeEach(async()=>{await env.clearFirestore();});
@@ -50,15 +53,16 @@ async function setup(n=2,winner=0) {
 function resultWrites({users,pool:ladder},winner=0,prior={}) {
  const n=users.length;const rating=i=>prior[users[i]]?.rating??1200;
  const before=i=>prior[users[i]]??{rating:1200,gamesPlayed:0,wins:0,losses:0,draws:0,opponents:0};
- const writes=[write(`ratingResults/${code}`,{kind:'human',pool:ladder,participants:users,winner,ply:n},['at'])];
+ const writes=[write(`ratingResults/${humanKey}`,{kind:'human',room:code,pool:ladder,participants:users,winner,ply:n},['at'])];
  for(let i=0;i<n;i++) {
   const b=before(i);let change=0;
   for(let j=0;j<n;j++)if(i!==j) {const s=winner===-1||(winner!==i&&winner!==j)?.5:winner===i?1:0;change+=s-1/(1+10**((rating(j)-rating(i))/400));}
   const next=Math.max(100,Math.round(b.rating+(b.gamesPlayed<30?40:20)*change/(n-1)));
   const score=winner===-1?.5:winner===i?1:0;
-  writes.push(write(`ratingPools/${ladder}/players/${users[i]}`,{pool:ladder,displayName:users[i],rating:next,gamesPlayed:b.gamesPlayed+1,wins:b.wins+(score===1?1:0),losses:b.losses+(score===0?1:0),draws:b.draws+(score===.5?1:0),isAi:false,established:b.gamesPlayed+1>=10,opponents:0,lastResult:code},['lastUpdated']));
+  writes.push(write(`ratingPools/${ladder}/players/${users[i]}`,{pool:ladder,displayName:users[i],rating:next,gamesPlayed:b.gamesPlayed+1,wins:b.wins+(score===1?1:0),losses:b.losses+(score===0?1:0),draws:b.draws+(score===.5?1:0),isAi:false,established:b.gamesPlayed+1>=10,opponents:0,lastResult:humanKey},['lastUpdated']));
   writes.push(write(`ratingPools/${ladder}/players/${users[i]}/history/${b.gamesPlayed+1}`,{rating:next,score,opponentName:`${n}-player game`},['timestamp']));
  }
+ writes.push({update:{name:`projects/${project}/databases/(default)/documents/matches/${code}`,fields:value({ratingReceipt:humanKey}).mapValue.fields},updateMask:{fieldPaths:['ratingReceipt']}});
  return writes;
 }
 test('two independently signed players can settle once with exact Elo and history',async()=>{
@@ -97,9 +101,9 @@ test('a resignation must award the other player and shared-device ownership is u
 });
 test('receipts and samples cannot be enumerated or inspected by unrelated accounts',async()=>{
  const s=await setup();await accept(commit(resultWrites(s)));
- await reject(request(`/ratingResults/${code}`,'GET',undefined,'stranger'));
+ await reject(request(`/ratingResults/${humanKey}`,'GET',undefined,'stranger'));
  await reject(request('/ratingResults','GET',undefined,'alice'));
- await accept(request(`/ratingResults/${code}`,'GET',undefined,'bob'));
+ await accept(request(`/ratingResults/${humanKey}`,'GET',undefined,'bob'));
 });
 const bot='ai_shared-search-v1_easy';
 async function aiSetup() {
@@ -107,22 +111,22 @@ async function aiSetup() {
  await seed(`ratingPools/${pool}/players/alice`,anchor);return anchor;
 }
 function aiWrites(source='local-1',before={rating:1200,gamesPlayed:0,wins:0,losses:0,draws:0,opponents:0},known=false) {
- const id=`alice_${source}`;const rating=Math.round(before.rating+(before.gamesPlayed<30?40:20)*(1-1/(1+10**((1400-before.rating)/400))));
+ const id=hash(`alice_${source}`);const rating=Math.round(before.rating+(before.gamesPlayed<30?40:20)*(1-1/(1+10**((1400-before.rating)/400))));
  return [write(`ratingResults/${id}`,{kind:'ai',pool,participants:[bot],actor:'alice',source,winner:1,ply:2,moves:[{},{}],level:'easy',engine:'shared-search-v1'},['at']),
  write('ratingLimits/alice_'+pool+'_easy',{lastResult:id},['at']),
  ...(!known?[write(`ratingPools/${pool}/players/${bot}/opponents/alice`,{lastResult:id},['firstAt'])]:[]),
  write(`ratingPools/${pool}/players/${bot}`,{pool,displayName:'Easy AI',rating,gamesPlayed:before.gamesPlayed+1,wins:before.wins+1,losses:before.losses,draws:before.draws,isAi:true,established:false,opponents:before.opponents+(known?0:1),lastResult:id,engineVersion:'shared-search-v1',aiDifficulty:'easy'},['lastUpdated']),
- write(`ratingPools/${pool}/players/${bot}/history/${before.gamesPlayed+1}`,{rating,score:1,opponentName:'Established player'},['timestamp'])];
+ write(`ratingPools/${pool}/players/${bot}/history/${before.gamesPlayed+1}`,{rating,score:1,opponentName:'Established player'},['timestamp']),write(`aiResultKeys/alice_${source}`,{result:id})];
 }
 test('local AI estimates update only the bot, require established anchor and enforce 24-hour sampling',async()=>{
  await reject(commit(aiWrites()));await aiSetup();const first=aiWrites();await accept(commit(first));await reject(commit(first));
- const b={rating:Number(first.at(-2).update.fields.rating.integerValue),gamesPlayed:1,wins:1,losses:0,draws:0,opponents:1};
+ const b={rating:Number(first.find(w=>w.update.name.endsWith('/players/'+bot)).update.fields.rating.integerValue),gamesPlayed:1,wins:1,losses:0,draws:0,opponents:1};
  await reject(commit(aiWrites('local-2',b,true)));
- await seed('ratingLimits/alice_'+pool+'_easy',{lastResult:'alice_local-1',at:new Date(Date.now()-25*3600000)});
+ await seed('ratingLimits/alice_'+pool+'_easy',{lastResult:hash('alice_local-1'),at:new Date(Date.now()-25*3600000)});
  await accept(commit(aiWrites('local-2',b,true)));
 });
 test('AI spoofed engine, points, actor and omitted quota/opponent records fail',async()=>{
  await aiSetup();const good=aiWrites();
- for(const edit of [w=>{w[0].update.fields.engine.stringValue='fake';},w=>{w.at(-2).update.fields.rating.integerValue='5000';},w=>{w[0].update.fields.actor.stringValue='bob';},w=>{w.splice(1,1);},w=>{w.splice(2,1);},w=>{w.at(-2).update.fields.opponents.integerValue='100';}]) {const w=structuredClone(good);edit(w);await reject(commit(w));}
+ for(const edit of [w=>{w[0].update.fields.engine.stringValue='fake';},w=>{w.find(item=>item.update.name.endsWith('/players/'+bot)).update.fields.rating.integerValue='5000';},w=>{w[0].update.fields.actor.stringValue='bob';},w=>{w.splice(1,1);},w=>{w.splice(2,1);},w=>{w.find(item=>item.update.name.endsWith('/players/'+bot)).update.fields.opponents.integerValue='100';}]) {const w=structuredClone(good);edit(w);await reject(commit(w));}
  await accept(commit(good));
 });

@@ -462,8 +462,11 @@ service cloud.firestore {
         request.resource.data.aiRunner == null && request.resource.data.aiLeaseAt == null &&
         request.resource.data.timedOut == null && initialClock(request.resource.data);
       allow update: if isAuthenticated() &&
-        !existsAfter(/databases/$(database)/documents/ratingResults/$(code)) &&
-        ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles']) &&
+        resource.data.get('ratingReceipt', null) == null &&
+        ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingReceipt']) &&
+          request.resource.data.ratingReceipt is string &&
+          getAfter(/databases/$(database)/documents/ratingResults/$(request.resource.data.ratingReceipt)).data.room == code) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles']) &&
           (vacantJoin(0) || vacantJoin(1) ||
            (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
            (resource.data.config.seats.size() > 3 && vacantJoin(3)))) ||
@@ -515,26 +518,27 @@ service cloud.firestore {
     function humanVote(code, uid) {
       return getAfter(/databases/$(database)/documents/matches/$(code)/ratingVotes/$(uid)).data;
     }
-    function ratingSeat(r, c, i, code) {
+    function ratingSeat(r, c, i, code, id) {
       let uid = r.participants[i];
       let vote = humanVote(code, uid);
       return c.config.seats[i].control != 'ai' && uid is string &&
         uid == c.owners[c.config.seats[i].id] &&
         vote.ply == r.ply && vote.winner == r.winner &&
-        ratingAfter(r.pool, uid).lastResult == code;
+        ratingAfter(r.pool, uid).lastResult == id;
     }
-    function agreedHuman(r, code) {
-      let room = get(/databases/$(database)/documents/matches/$(code)).data;
+    function agreedHuman(r, id) {
+      let code = r.room;
+      let room = getAfter(/databases/$(database)/documents/matches/$(code)).data;
       let n = room.config.seats.size();
       let gone = room.resigned != null ? room.resigned : room.timedOut;
-      return code.matches('^U[A-Z]{6}$') && r.pool == ratingPool(room.config) &&
+      return code.matches('^U[A-Z]{6}$') && room.ratingReceipt == id && r.pool == ratingPool(room.config) &&
         r.participants.size() == n && r.participants.toSet().size() == n &&
         request.auth.uid in r.participants && r.ply == room.moves.size() && r.ply >= n &&
         r.winner >= -1 && r.winner < n &&
         (gone == null || (n == 2 && r.winner == (gone == room.config.seats[0].id ? 1 : 0))) &&
-        ratingSeat(r, room, 0, code) && ratingSeat(r, room, 1, code) &&
-        (n < 3 || ratingSeat(r, room, 2, code)) &&
-        (n < 4 || ratingSeat(r, room, 3, code));
+        ratingSeat(r, room, 0, code, id) && ratingSeat(r, room, 1, code, id) &&
+        (n < 3 || ratingSeat(r, room, 2, code, id)) &&
+        (n < 4 || ratingSeat(r, room, 3, code, id));
     }
     function validAIResult(r, id) {
       let bot = 'ai_shared-search-v1_' + r.level;
@@ -542,7 +546,7 @@ service cloud.firestore {
       let quota = /databases/$(database)/documents/ratingLimits/$(request.auth.uid + '_' + r.pool + '_' + r.level);
       let opponent = /databases/$(database)/documents/ratingPools/$(r.pool)/players/$(bot)/opponents/$(request.auth.uid);
       return r.actor == request.auth.uid && r.source is string && r.source.size() <= 160 &&
-        id == request.auth.uid + '_' + r.source && r.engine == 'shared-search-v1' &&
+        getAfter(/databases/$(database)/documents/aiResultKeys/$(request.auth.uid + '_' + r.source)).data.result == id && r.engine == 'shared-search-v1' &&
         r.level in ['easy', 'medium', 'hard', 'expert'] &&
         r.pool.matches('^(square-[3-8]-2-standardTak|square-[3-8]-2-sharedRoads|hex-[2-4]-2-sharedRoads)-open$') &&
         r.participants == [bot] && r.winner in [-1, 0, 1] &&
@@ -558,12 +562,12 @@ service cloud.firestore {
         (!exists(/databases/$(database)/documents/ratingResults/$(id)) ||
          resource.data.get('actor', '') == request.auth.uid || request.auth.uid in resource.data.participants);
       allow list, update, delete: if false;
-      allow create: if ratingAccount() && request.resource.data.at == request.time &&
+      allow create: if ratingAccount() && id.matches('^[0-9a-f]{64}$') && request.resource.data.at == request.time &&
         request.resource.data.pool is string && validRatingPool(request.resource.data.pool) &&
         request.resource.data.participants is list && request.resource.data.winner is int &&
         request.resource.data.ply is int && (
           (request.resource.data.kind == 'human' &&
-            request.resource.data.keys().hasOnly(['kind', 'pool', 'participants', 'winner', 'ply', 'at']) &&
+            request.resource.data.keys().hasOnly(['kind', 'room', 'pool', 'participants', 'winner', 'ply', 'at']) &&
             agreedHuman(request.resource.data, id)) ||
           (request.resource.data.kind == 'ai' &&
             request.resource.data.keys().hasOnly(['kind', 'pool', 'participants', 'winner', 'ply', 'at', 'actor', 'source', 'level', 'engine', 'moves']) &&
@@ -571,7 +575,8 @@ service cloud.firestore {
     }
     match /matches/{code}/ratingVotes/{uid} {
       allow read: if ratingAccount() && request.auth.uid in get(/databases/$(database)/documents/matches/$(code)).data.owners.values();
-      allow create, update: if ratingAccount() && request.auth.uid == uid && freshRating(code) &&
+      allow create, update: if ratingAccount() && request.auth.uid == uid &&
+        get(/databases/$(database)/documents/matches/$(code)).data.get('ratingReceipt', null) == null &&
         uid in get(/databases/$(database)/documents/matches/$(code)).data.owners.values() &&
         request.resource.data.keys().hasOnly(['ply', 'winner', 'name']) &&
         request.resource.data.ply == get(/databases/$(database)/documents/matches/$(code)).data.moves.size() &&
@@ -599,7 +604,7 @@ service cloud.firestore {
         r.participants[2] == id ? 2 : 3;
       return id in r.participants && data.isAi == false && data.opponents == 0 &&
         !data.keys().hasAny(['engineVersion', 'aiDifficulty']) &&
-        data.displayName == humanVote(data.lastResult, id).name &&
+        data.displayName == humanVote(r.room, id).name &&
         data.rating == expectedRating(r, before, index) &&
         data.established == (data.gamesPlayed >= 10);
     }
@@ -663,6 +668,13 @@ service cloud.firestore {
           ratingReceipt(request.resource.data.lastResult).pool == pool;
         allow list, update, delete: if false;
       }
+    }
+    match /aiResultKeys/{key} {
+      allow create: if ratingAccount() && request.resource.data.keys().hasOnly(['result']) &&
+        freshRating(request.resource.data.result) &&
+        ratingReceipt(request.resource.data.result).actor == request.auth.uid &&
+        key == request.auth.uid + '_' + ratingReceipt(request.resource.data.result).source;
+      allow read, update, delete: if false;
     }
     match /ratingLimits/{key} {
       allow get: if ratingAccount() && (!exists(/databases/$(database)/documents/ratingLimits/$(key)) ||

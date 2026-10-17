@@ -1,189 +1,152 @@
 # Ratings and competition audit
 
-## Findings (2026-10-16)
+## Current architecture: Firebase Spark, local AI
 
-The old client wrote both players and shared AI documents, accepted arbitrary
-scores, and had no match receipt. A batch did not protect the read/compute/write
-sequence from concurrent games. Each device could award the same online result.
-History writes were separate and failures disappeared into debug logs. Firebase
-rules deny those collections, while the UI fabricated AI entries at 800/1100/1400/
-1700 and cleared errors. Offline cached identity was a single device-wide `local`
-record. Google identity and Play Games identity were mixed. New unified matches
-never invoked the old rating hook. Leaderboard positions were indexes in a top-50
-mixed list, rather than a defined human competition rank. No rating tests existed.
-Old data cannot be promoted into a trusted competitive ladder.
+Updated 2026-10-16. All computer opponents calculate on the device running the
+match, using the existing shared search and cancellation/scheduling. No move
+requires a cloud request. No Cloud Functions, Admin SDK or billing upgrade is
+required by this implementation. The previous Functions implementation was never
+deployed and has been removed, including its packages and deployment entry.
 
-## Implementation contract
+Firebase Authentication supplies identities. Firestore stores recoverable rooms,
+account ratings, history and result receipts. Its security rules independently
+check Elo arithmetic and atomic updates; they do not trust submitted totals.
+Client replay is an honesty check, not proof that the client binary is original.
 
-- New versioned ladders, partitioned by shape, size, seat count, rules and clock
-  category. Rating means strength within a Stones pool, never a chess rating.
-- Human competition requires independently owned seats and nonanonymous accounts.
-  Local/shared-device/Court/learning games are unrated. Online completed histories
-  are replayed on the server using the same Dart MatchRules as gameplay.
-- One atomic transaction updates every participant, deterministic history entries
-  and a unique match receipt. Retries and duplicate client observations are safe.
-- Multiplayer Elo averages comparisons against opponents: sole winner beats each
-  rival, losing rivals tie one another; a whole-game draw ties every pair. All
-  deltas use pre-game ratings and total influence is normalized by opponents.
-- All entities start from the same neutral prior. Fewer than ten games is
-  provisional; no games means Unrated. Competitive human rank excludes bots and
-  provisional players and uses competition ranking (equal ratings share rank).
-- AI does not award human competitive points. Untimed AI duel calibration must be attributed
-  to a particular engine revision and use server-generated moves, actual outcomes
-  and established human opponents in the corresponding pool. No assumed
-  difficulty-to-Elo mapping. An empty sample is explicitly Uncalibrated.
-- Accounts are the identity source. Signing out/switching accounts clears visible
-  personal data immediately; late requests cannot repaint a previous identity.
-- Public leaderboards expose display names, ratings and W/L/D, never email.
-  Clients cannot write rating totals, receipts, histories or calibration evidence.
-- Errors, stale data and unavailable deployment are visible. Never invent entries
-  or silently present a network failure as an empty successful leaderboard.
+## Findings in the old Elo system
 
-## Execution and qualification
+The legacy client accepted arbitrary scores, could award the same game twice,
+and computed updates outside a protected transaction. History writes were
+separate and failures hidden. Production rules denied the collection while the
+UI fabricated bot ratings. Device caches were not account-scoped, Google and
+Play Games identities were mixed, and unified matches did not call the old hook.
+Leaderboard list position was mislabeled as global rank. That data is not imported.
 
-1. Replace the unsafe client writer and fake fallback with a read-only,
-   account-scoped rating repository and identity-safe provider.
-2. Implement the shared server verifier and atomic rating processor, with an
-   authenticated AI move service that records verifiable calibration evidence.
-3. Display pool-specific ratings on accounts and match seats; rebuild competition
-   and AI views with provisional status, exact rank and rating history.
-4. Add model, identity/race, transaction/idempotency, verifier and responsive UI
-   regressions. Run full Flutter analysis/tests, Node backend tests and builds.
-5. Publish backend and read-only rules only after qualification; verify actual
-   production behavior before describing the ladder as live. Record limitations.
+## Human result protocol
 
-## Sources
+1. After a terminal online game, each permanent-account participant replays the
+   confirmed move history with the same MatchRules used by gameplay. Abandoned,
+   Court, local/hotseat and independently unowned seats are excluded.
+2. Each account can write only its own `/matches/{code}/ratingVotes/{uid}` vote.
+   It contains the current ply, winner index (-1 means draw), and public alias.
+   Normal clients only vote for a replayed terminal result. Rules bind the vote
+   to room membership and the exact append-only log length.
+3. A transaction reads the room, receipt, votes and every old rating before any
+   write. The last agreeing voter can settle for everyone. All 2–4 independent
+   human owners must have voted for the same outcome and ply. Guest accounts
+   cannot vote. Duel concessions/timeouts must name the surviving player;
+   multi-seat abandonment is unrated.
+4. The transaction adds an opaque result receipt, freezes the room with its
+   `ratingReceipt` pointer, updates all players and appends each player's history.
+   Rules recompute expected scores from old database ratings, require all
+   participant writes and matching history, and reject altered pools, arbitrary
+   points, changed counts, partial settlement and repeat use of a receipt.
+5. Concurrent games retry against current ratings. Concurrent observers of one
+   game share one receipt. Already recorded results return success without
+   awarding again. Pending/disputed confirmations are explicitly shown, with
+   retry and room reopening. An online wait for peer votes is bounded to 12s;
+   transactions are bounded to 15s in the application. Timed-out transactions may
+   still finish: receipts make retry safe. No gameplay waits on rating settlement.
 
-Firebase callable authentication and server error handling:
-https://firebase.google.com/docs/functions/callable
+Public player records use opaque receipt IDs, not invitation codes. Receipt
+contents and move evidence are participant-private; votes are room-member-only.
+Public aliases are user-chosen, not verified real names. Public rating history
+uses a player's sequential game number and generic opponent descriptions.
 
-Chess.com keeps bot games separate from competitive ratings:
-https://support.chess.com/en/articles/8614091-how-can-i-play-against-the-chess-com-bots
+### Honest limitations
 
+Rules enforce ownership, agreement, arithmetic, append-only room metadata and
+atomicity, but cannot replay arbitrary Tak histories or attest a browser binary.
+One modified client cannot award itself points without every opponent's vote.
+Colluding accounts can manufacture agreement, and a loser who never confirms
+can withhold settlement. The system must display pending results instead of
+inventing an uncontested win. There is no server to finalize games when every
+client has closed; reopening the saved room retries completion. Outside help,
+account farming and deliberate withholding need future moderation/abuse work.
+These are community competition ratings, not independently adjudicated tournament
+results. Do not advertise this protocol as cheat-proof.
 
-## Backend rollout (not deployed)
+## AI community estimates
 
-The Firebase console currently shows **Spark** for `stones-9a6a0`. Firebase
-requires [Blaze for Cloud Functions](https://firebase.google.com/docs/functions/faq-and-troubleshooting).
-No billing plan was changed. New client/rules/backend code remains on the
-qualification branch until this dependency is resolved; the deployed game is
-unchanged. An operator must link a billing account before backend publication.
-Budget alerts are not a hard spending cap. Each function has zero minimum
-instances, a maximum of three instances, one concurrent request per instance, a 30-second timeout, and each signed-in
-account has a 400-move daily calibration quota. These bounds are not a guarantee
-of a zero bill. Monitor quota, invocation, read/write and artifact-storage costs.
+AI executes locally in both web and Android. After a natural, untimed, unassisted
+duel, a signed-in established human (10 competitive games in the same pool) can
+contribute a replay-checked result. Humans never gain or lose competitive Elo
+from AI games. Samples update only the versioned AI record, anchored to the
+human's existing competitive rating. Rules check the exact bot Elo update,
+engine/difficulty identifiers, established anchor, unique source receipt,
+matching history, and a per-account/pool/difficulty 24-hour sampling interval.
+An immutable opponent marker counts distinct contributors. Each engine revision
+starts fresh; bump `shared-search-v1` when search/rules/budget changes.
 
-With Node 22, the pinned Flutter/Dart SDK and Firebase CLI authenticated to the
-project, from the repository root:
+Modified clients can fabricate local outcomes or claim another difficulty. No
+client secret, App Check token or hash proves execution of the AI. Sampling
+limits and established-account requirements reduce impact but do not prevent
+coordinated fabrication. The UI calls these **community estimates**, never
+server-verified AI ratings. Zero samples show Uncalibrated; 30 games against 10
+distinct contributors are required before the estimate loses its calibration
+question mark. Device-dependent search timing can also affect observed strength.
+Timed and multiplayer AI games are practice, not duel calibration data.
+
+## Ladders and mathematics
+
+Pools separate shape, size, player count, rules profile and clock category
+(untimed, under 10 minutes, 10+ minutes). The normal selector exposes 81 pools.
+All players and bots start at neutral 1200, hidden behind Unrated/Uncalibrated
+until games exist. Human standings exclude bots and the first 10 provisional
+games. Ties use competition rank (1,1,3); aggregate counts include players beyond
+the displayed top 50. Rankings query validated `established` player fields,
+avoiding a separate standings table that could become stale.
+
+Expected score is `1/(1+10^((opponent-player)/400))`. K is 40 for the first 30
+games, then 20, with nearest-integer new totals and a floor of 100. For 3/4-player
+games, the winner beats each rival; losing rivals tie one another; an overall
+draw ties every pair. Sum pair deltas and divide by the number of opponents.
+All comparisons use pre-transaction ratings. Player W/L/D records the whole-game
+outcome rather than the individual pair comparisons. This is Stones community
+Elo, not FIDE or Chess.com strength.
+
+## Reads, identity and presentation
+
+Account changes clear prior identity immediately and invalidate late replies.
+Leaderboards/profiles have bounded requests and visible failure/retry states.
+Never substitute fake bots or silently call a failed read an empty leaderboard.
+Seat labels, account cards, history, own rank and mobile/desktop competition views
+share the same account/pool model. Read-only browsing does not require sign-in.
+Firestore timestamps are converted at the repository boundary for model/UI use.
+
+## Rollout and qualification
+
+The work remains on `codex/rating-system-audit`; production rules, main and the
+public site have not been changed by this revision. Preserve the existing Firebase
+configuration and attachments. Deploy the qualified rules and indexes before
+publishing the new client:
 
 ```sh
-flutter pub get
-npm --prefix functions ci
-node --test functions/ratings.test.cjs
-dart compile js -O2 tools/ratings/engine.dart -o functions/engine.js
-node --test functions/*.test.cjs
-firebase deploy --project stones-9a6a0 --only functions:ratings,firestore:rules
+firebase deploy --project stones-9a6a0 --only firestore:rules,firestore:indexes
 ```
 
-The `firebase.json` predeploy step recompiles the shared server engine. Generated
-JavaScript and node_modules are ignored. Existing profile, achievement and room
-policies are preserved. New public readers can access only rating metadata and
-history; totals, receipts, calibration sessions, opponents, samples and quotas
-remain server-owned. Keep historical `/ratings` and device-wide `elo_*` data out
-of the new ladders. No destructive migration or leaderboard backfill is needed.
-The engine revision `shared-search-v1` must change whenever its search behavior,
-rules or budget changes; update client lookup and repository filters together.
+No Cloud Functions command or billing upgrade belongs in this rollout. Wait for
+indexes to finish building. Verify actual signed-in duel and four-seat outcomes,
+duplicate completion, reconnect/reopen, account switch, disagreement/pending
+status, leaderboard reads, and AI sampling after an established anchor exists.
+Qualification uses full Flutter tests, strict analysis, release web/Android
+builds and the real demo Firestore emulator authorization suite. Final evidence
+is recorded below when complete. Earlier Functions/backend results are not
+qualification evidence for this different protocol.
 
-After backend publication: verify public reads and forbidden writes, complete a
-new signed-in human duel and a rematch, confirm both players receive one history
-entry and a unique receipt, replay the same completion, reconnect both devices,
-confirm draws and concessions (including a resignation immediately after both opening placements), switch accounts, and establish ten games in one
-pool. Then verify one server-generated AI game changes only the bot rating,
-repeat it to prove deduplication, and repeat a second game that day to prove the
-per-opponent sampling limit. Publish the qualified web client only after these
-checks. Store rollout evidence here. Existing Android installations require a
-new app release; this task does not submit a Play Store release.
+Spark quotas still apply: database storage/reads/writes are finite, especially
+when waiting on peer votes or replaying many rooms. This design avoids paid
+compute, not all resource limits. No automatic matchmaking, season reset,
+account deletion/rename propagation or retention cleanup is implemented here.
 
-## Practical boundaries
+## Source map
 
-Ratings measure this community, not FIDE/Chess.com Elo. Small pools will remain
-provisional longer. Three/four-player ratings use the explicit pair-comparison
-rule above and are never mixed with duels. There is no automatic matching queue
-or season reset. Friendly collusion, outside assistance and account abuse are
-not solved by legal-history replay; moderation/abuse detection are future work.
-AI calibration does not infer strength from a difficulty name and needs real
-established opponents before it becomes useful. Account deletion/profile rename
-handling and long-term evidence retention need an operator policy before wide
-public rollout. History is bounded to the most recent 100 entries in the client.
-
-Timed AI games remain practice: local pauseable clocks cannot establish trustworthy timed bot strength. Online AI calibration is also finalized by the room trigger, so closing the client after the final move does not lose that sample. Offline completed local saves replay completion when resumed.
-
-
-## Regression evidence
-
-The real Firestore emulator suite passed all 29 authorization tests in
-[run 38995362862](https://github.com/douglastkaiser/stones/actions/runs/38995362862),
-including public read-only competition access, forged-rating rejection and
-private receipt/proof/quota denial.
-
-Final source `8f7e002` passed strict analysis (no issues), all 772 Flutter tests,
-all 19 compiled-engine/backend tests and the release web build in
-[CI 38996812589](https://github.com/douglastkaiser/stones/actions/runs/38996812589).
-Backend trials include a complete server-generated AI duel, idempotent completion,
-the daily sampling limit, rated concessions after both players move, and valid
-shared-device games being excluded without repeat-trigger failures.
-
-The Android debug APK passed in
-[CI 38996559509](https://github.com/douglastkaiser/stones/actions/runs/38996559509)
-at `b76c9a2`; all client sources, Android configuration and dependencies are
-identical between that commit and `8f7e002` (only the backend hotseat exclusion
-and its test changed). The later same-client Android rebuild is additional CI
-verification. These are build/widget/model/emulator results; no physical device
-installation or production rating trial is claimed.
-
-Legacy room codecs still decode old rating metadata for compatibility, but the app no longer advertises client-supplied legacy snapshots as trustworthy ranks or awards points for compatibility sessions.
-
-
-## Calculation and failure handling
-
-For each opponent, expected score is `1 / (1 + 10^((opponent - player)/400))`.
-The update is `K * (actual - expected)`, with K=40 for the first 30 games and
-K=20 thereafter, rounded to an integer and floored at 100. Multiplayer averages
-these pair comparisons before applying K. The ten-game provisional threshold
-controls eligibility for human standings, independently of the K-factor switch.
-All participants in one game use their pre-transaction ratings. AI estimates
-use the same expectation curve but never write human competitive totals.
-
-Leaderboard, rank and history reads have an eight-second application deadline.
-Bot requests bound token refresh and HTTP work separately, fall back to normal
-local play on failure and use a two-minute retry backoff. An empty local cache
-is not treated as a confirmed missing server rating. Sign-out and pool changes
-invalidate late requests. Refresh recomputes exact standing even if a player's
-rating did not change while others overtook it. Calibration notices are scoped
-to the match identity and appear below the stable board. Failed offline
-calibration completion has a retry action; receipts make repeat submissions safe.
-Public rating histories use opaque IDs and omit room invitation codes.
-
-Duel concessions become rated as soon as both players have moved. A longer grace period would permit rating dodging; incomplete starts remain unrated. Three/four-player abandoned sessions still follow their existing no-winner rules and do not award Elo.
-
-
-## Source map and handoff
-
-- `lib/game/rating_pool.dart`: independent ladder identity and labels.
-- `lib/models/elo_rating.dart`: account/AI display, provisional state, tied rank.
-- `lib/providers/elo_provider.dart`: identity-safe read state and bounded refresh.
-- `lib/services/rating_repository.dart`: Firestore reads and authenticated callable protocol.
-- `lib/widgets/player_rating_label.dart`: shared seat/account-facing rating text.
-- `lib/screens/leaderboard_screen.dart` and `player_detail_screen.dart`: competition, calibration, stats/history and responsive layout.
-- `lib/game/match_ai_engine.dart`: the existing AI extracted verbatim into a pure Dart module; Flutter scheduling stays in `match_ai.dart`.
-- `tools/ratings/engine.dart`: compiled Node bridge to the same rules and AI.
-- `functions/index.cjs`: authenticated AI evidence and completed-room triggers.
-- `functions/ratings.cjs`: atomic receipts, normalized Elo and calibration math.
-- `test/ratings`, `functions/*.test.cjs`, `tools/hex_rules/rating_rules.test.mjs`: regression layers.
-
-Work is committed on `codex/rating-system-audit`. Main, live rules and the public
-site were not changed by this audit. The outstanding user decision is enabling
-Blaze billing; after that, authenticate deployment tooling, publish the backend
-and scoped read-only rating policy, perform the production trials above, then
-promote/deploy the client and prepare an Android release. There is deliberately
-no fake successful leaderboard while that backend is unavailable.
+- `lib/game/rating_evidence.dart`: replay eligibility and exact-history comparison.
+- `lib/services/rating_repository.dart`: transactional votes, receipts, Elo, AI samples.
+- `firestore.rules`: independent authorization, arithmetic and atomicity checks.
+- `firestore.indexes.json`: public competition query indexes.
+- `lib/game/match_provider.dart`: local search, nonblocking completion submission.
+- `lib/game/rating_pool.dart`, `lib/models/elo_rating.dart`: ladders and display models.
+- `lib/providers/elo_provider.dart`: identity-safe bounded read state.
+- `test/ratings/`: model, replay, identity, responsiveness and display regressions.
+- `tools/hex_rules/spark_ratings.test.mjs`: real database adversarial transactions.
