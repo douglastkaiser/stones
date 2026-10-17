@@ -153,3 +153,31 @@ test('an AI source cannot be counted again under a new receipt after its cooldow
  const duplicate=JSON.parse(JSON.stringify(aiWrites('local-1',before,true)).replaceAll(hash('alice_local-1'),hash('different')));
  await reject(commit(duplicate));
 });
+
+for(const shape of ['square','hex']) for(const size of shape==='square'?[3,4,5,6,7,8]:[2,3,4]) for(const n of [2,3,4]) {
+ test(`${shape} size ${size} with ${n} independent accounts uses its own ladder`,async()=>{
+  const r=room(n);r.config.shape=shape;r.config.size=size;r.config.profile=shape==='square'&&n===2?'standardTak':'sharedRoads';
+  const ladder=`${shape}-${size}-${n}-${r.config.profile}-open`;
+  await seed(`matches/${code}`,r);const users=Object.values(r.owners);
+  for(const uid of users)await accept(put(`matches/${code}/ratingVotes/${uid}`,{ply:n,winner:n-1,name:uid},uid));
+  await accept(commit(resultWrites({users,pool:ladder},n-1)));
+ });
+}
+for(const [seconds,category] of [[300,'fast'],[600,'long']]) test(`clock category ${category} cannot award points to the untimed ladder`,async()=>{
+ const s=await setup();s.r.config.clockSeconds=seconds;await seed(`matches/${code}`,s.r);
+ await reject(commit(resultWrites(s)));
+ await accept(commit(resultWrites({...s,pool:`square-5-2-standardTak-${category}`})));
+});
+for(const level of ['medium','hard','expert'])test(`${level} locally reported AI keeps an independent measured record`,async()=>{
+ await aiSetup();const writes=JSON.parse(JSON.stringify(aiWrites()).replaceAll('_easy',`_${level}`).replaceAll('"easy"',`"${level}"`).replaceAll('Easy AI',`${level[0].toUpperCase()+level.slice(1)} AI`));
+ await accept(commit(writes));
+});
+test('AI community samples can use a Hex ladder without affecting Square',async()=>{
+ const ladder='hex-2-2-sharedRoads-open';await seed(`ratingPools/${ladder}/players/alice`,{rating:1400,gamesPlayed:10,wins:8,losses:2,draws:0,opponents:0});
+ await accept(commit(JSON.parse(JSON.stringify(aiWrites()).replaceAll(pool,ladder))));
+});
+test('shared-device seats and missing signed-in owners cannot be rated',async()=>{
+ const r=room(3);r.owners.charcoal='alice';r.config.seats[1].control='localHuman';await seed(`matches/${code}`,r);
+ for(const uid of ['alice','carol'])await accept(put(`matches/${code}/ratingVotes/${uid}`,{ply:3,winner:0,name:uid},uid));
+ await reject(commit(resultWrites({users:['alice','alice','carol'],pool:'square-5-3-sharedRoads-open'})));
+});

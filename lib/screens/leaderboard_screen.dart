@@ -40,7 +40,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   'Local games, Court Mode, learning and AI games do not. Duels ending before both players move are unrated; later resignations and timeouts count. '
                   'In multiplayer, the winner beats each rival; losing rivals tie each other. A draw ties every pair.\n\n'
                   'AI community estimates use locally played, replay-checked untimed games against established human players. '
-                  'Calibration needs 30 games and 10 distinct opponents, counting at most one sample per person per day. '
+                  'Calibration needs 30 games and 10 distinct opponents, counting at most one sample per person every 24 hours. '
                   'Modified clients can falsify AI reports. Human ratings require all players to agree on the result. Each engine revision starts a new sample. A question mark means provisional or still calibrating. '
                   'These are Stones ratings, not chess ratings. Player display names and competitive statistics are public.'))));
   @override
@@ -213,7 +213,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                   'AI benchmarks use untimed two-player duels. Choose 2 players and Untimed.')
                             else if (_bots) ...[
                               const Text(
-                                  'Measured from play · ? means still calibrating. AI games do not change your competitive rating.'),
+                                  'Community estimates · ? means still calibrating. AI games do not change your competitive rating.'),
                               for (final bot in bots)
                                 _entry(bot, null, state.uid),
                             ] else if (state.leaderboard.isEmpty &&

@@ -56,7 +56,7 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
               ref.read(accountProvider).identity?.uid == identity.uid) {
             ref.read(ratingStatusProvider.notifier).state = (
               event.id,
-              'Game saved Ã‚· rating update could not finish. Retry when connected.'
+              'Game saved · rating update could not finish. Retry when connected.'
             );
           }
         }));

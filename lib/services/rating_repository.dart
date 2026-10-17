@@ -102,7 +102,7 @@ class FirebaseRatingRepository implements RatingRepository {
     if (user == null || user.isAnonymous) return 'Sign in to record ratings';
     final evidence = RatingEvidence.verify(session, moves, user.uid);
     if (evidence == null) {
-      return 'Practice Ãƒâ€šÃ‚· this game is not eligible for ratings';
+      return 'Practice · this game is not eligible for ratings';
     }
     if (evidence.humans.length == 1) {
       return _sampleAI(session, evidence, moves, user.uid)
@@ -251,7 +251,7 @@ class FirebaseRatingRepository implements RatingRepository {
         }
         final anchor = (await tx.get(_players(e.pool).doc(uid))).data();
         if ((anchor?['gamesPlayed'] as int? ?? 0) < 10) {
-          return 'Practice Ãƒâ€šÃ‚· play 10 competitive games in this ladder before contributing AI estimates';
+          return 'Practice · play 10 competitive games in this ladder before contributing AI estimates';
         }
         final botRef = _players(e.pool).doc(bot);
         final before = (await tx.get(botRef)).data() ?? {};
@@ -262,7 +262,7 @@ class FirebaseRatingRepository implements RatingRepository {
         if (last != null &&
             DateTime.now().difference(last.toDate()) <
                 const Duration(hours: 24)) {
-          return 'Practice Ãƒâ€šÃ‚· one AI sample per opponent and ladder every 24 hours';
+          return 'Practice · one AI sample per opponent and ladder every 24 hours';
         }
         final opponentRef = botRef.collection('opponents').doc(uid);
         final opponent = await tx.get(opponentRef);
@@ -314,7 +314,7 @@ class FirebaseRatingRepository implements RatingRepository {
               (before['opponents'] as int? ?? 0) + (opponent.exists ? 0 : 1)
         });
         _write(tx, e.pool, bot, data, score, 'Established player');
-        return 'AI community estimate recorded Ãƒâ€šÃ‚· human rating unchanged';
+        return 'AI community estimate recorded · human rating unchanged';
       });
 
   Map<String, dynamic> _record(Map<String, dynamic> before, String pool,

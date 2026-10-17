@@ -5,12 +5,14 @@ on:
     branches: ['**', '!gh-pages']
     paths:
       - firestore.rules
+      - firestore.indexes.json
       - firebase.json
       - tools/hex_rules/**
       - .github/workflows/firestore-rules.yml
   pull_request:
     paths:
       - firestore.rules
+      - firestore.indexes.json
       - firebase.json
       - tools/hex_rules/**
       - .github/workflows/firestore-rules.yml

@@ -179,10 +179,10 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
             Text('$local local · $online online · $bots AI'),
             if (online > 0 && bots == 0 && local <= 1)
               const Text(
-                  'Competitive ratings: completed games count when every seat belongs to a different signed-in account. Display names and standings are public.'),
+                  'Competitive ratings: each player needs a separate signed-in account. Results count after every player confirms the same outcome. Names and standings are public.'),
             if (bots > 0)
               const Text(
-                  'AI games are practice for human ratings. Signed-in duels can calibrate AI strength using local AI moves and established human opponents.'),
+                  'AI games are practice for human ratings. Untimed duels against established players contribute community AI strength estimates. AI always runs on the device.'),
             if (local == 1 && bots > 0 && online == 0 && !_config.court)
               Text(_config.profile == RulesProfile.standardTak
                   ? (_config.size < 5
