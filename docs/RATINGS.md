@@ -116,8 +116,9 @@ Firestore timestamps are converted at the repository boundary for model/UI use.
 
 ## Rollout and qualification
 
-The work remains on `codex/rating-system-audit`; production rules, main and the
-public site have not been changed by this revision. Preserve the existing Firebase
+The user approved publication of the exact `01b15ac` rules on 2026-10-17. They
+are now published in production, and both required query indexes are Enabled.
+Client promotion/deployment status is recorded in the publication evidence below. Preserve the existing Firebase
 configuration and attachments. Deploy the qualified rules and indexes before
 publishing the new client:
 
@@ -152,7 +153,9 @@ account deletion/rename propagation or retention cleanup is implemented here.
 - `tools/hex_rules/spark_ratings.test.mjs`: real database adversarial transactions.
 
 
-## Qualification evidence and publication handoff (2026-10-17)
+## Qualification evidence and original publication handoff (2026-10-17)
+
+The approval-pending handoff below is historical; see the subsequent publication evidence.
 
 Source `c0ed867` passed all 776 Flutter tests, strict analysis with no issues,
 release web build, and Android debug APK build in
@@ -184,3 +187,33 @@ index is enabled, run live multi-account/reconnect/duplicate trials, then promot
 the qualified client to main and deploy. Keep private room/evidence IDs out of
 public trial reports. No billing change, Cloud Functions deployment or automatic
 Play Store release is authorized by this handoff.
+
+
+## Approved production publication (2026-10-17)
+
+The user confirmed publication of the pinned `01b15ac` payload. After recovering
+the crashed console in a fresh tab, the exact approved rules were restaged and
+published. Firebase visibly marked the new rules as the starred current revision
+("Today, 10:35 AM" in the console). No Functions or billing operations were used.
+Both collection-scoped player indexes are now visibly Enabled, including
+`CICAgJiUpoMK`; existing manual indexes were not replaced.
+
+`STONES_LIVE_TEST=stones-9a6a0 python tools/live_rating_probe.py` passed against
+production using ordinary client API permissions:
+
+- Public established-player leaderboard and aggregate rank queries succeed.
+- Private receipt and AI-source enumeration are denied.
+- An isolated Square room accepts its new random rating key, independent join,
+  legal opening exchange, cold recovery and durable resignation.
+- Anonymous accounts cannot confirm results, forge totals or create receipts.
+- Only the two disposable QA identities created by this probe were removed.
+  No existing user rooms were read or modified and no ratings were awarded.
+
+The local Node process terminated before executing the broader existing probe;
+its output is not claimed as live evidence. The focused Python probe is retained
+for repeatable verification. Full competitive settlement with distinct real
+Google accounts and real community AI samples still needs a human play test;
+those scenarios are covered in the emulator but not claimed as production trials.
+The optional move-evidence index exemption remains configured but unapplied after
+the console save error. It does not block the feature. The qualified client is
+being promoted to main for the web deployment; deployment result follows below.
