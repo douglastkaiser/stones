@@ -27,7 +27,9 @@ Future<Widget?> loadInvitedRoom(WidgetRef ref, String invitation,
   }
   if (!ref.context.mounted) return null;
   final current = ref.read(matchProvider);
-  if (current.room?.code == code && current.game != null) return const MatchScreen();
+  if (current.room?.code == code && current.game != null) {
+    return const MatchScreen();
+  }
   final hasActiveGame = current.game != null || current.busy ||
       ref.read(hexMatchProvider).game != null ||
       ref.read(onlineGameProvider).session != null;
@@ -42,12 +44,17 @@ Future<Widget?> loadInvitedRoom(WidgetRef ref, String invitation,
           ]));
     if (confirmed != true || !ref.context.mounted) return null;
   }
-  ref.read(matchProvider.notifier).leave();
-  await leaveLegacyRooms(ref);
   if (code.startsWith('U') && code.length == 7) {
     await ref.read(matchProvider.notifier).join(code, expectedUid: expectedUid);
+    if (!ref.context.mounted) return null;
+    if (ref.read(matchProvider).room?.code != code) {
+      throw StateError('Another game was opened. Your invitation is still available.');
+    }
+    await leaveLegacyRooms(ref);
     return const MatchScreen();
   }
+  ref.read(matchProvider.notifier).leave();
+  await leaveLegacyRooms(ref);
   if (code.startsWith('H') && code.length == 7) {
     await ref
         .read(hexMatchProvider.notifier)

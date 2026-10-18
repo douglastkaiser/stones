@@ -11,10 +11,16 @@ import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_provider.dart';
 import 'package:stones/game/match_setup_form.dart';
 import 'package:stones/game/match_state.dart';
+import 'package:stones/game/match_room.dart';
 import 'package:stones/game/room_invitation.dart';
 import 'package:stones/models/piece.dart';
 import 'package:stones/widgets/room_invitation_actions.dart';
 import 'match_controller_test.dart' show MemoryMatchStorage, MemoryMatchRoomStore;
+
+class _FullRoomStore extends MemoryMatchRoomStore {
+  @override
+  Future<MatchRoom> join(String code, String uid) async => throw StateError('Room is full');
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -66,8 +72,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(
       home: Scaffold(body: Text('Existing screen')),
       onGenerateRoute: invitationRoute)));
-    await tester.binding.handlePushRouteInformation(
-        RouteInformation(uri: Uri.parse('/stones/?room=HABCDEF')));
+    await tester.binding.handlePushRoute('/stones/?room=HABCDEF');
     await tester.pumpAndSettle();
     expect(find.byType(JoinRoomScreen), findsOneWidget);
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -104,6 +109,24 @@ void main() {
     await store.updates.close();
   });
 
+  test('a rejected room join preserves a playable local game and its save', () async {
+    final storage = MemoryMatchStorage();
+    final store = _FullRoomStore();
+    final controller = MatchController(storage: storage,
+        authenticate: () async => 'host', store: () => store);
+    await controller.start(MatchConfig.defaults(BoardShape.square));
+    await controller.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
+    final id = controller.state.id;
+    await expectLater(controller.join('UABCDEF'), throwsStateError);
+    expect(controller.state.id, id);
+    expect(controller.state.canPlay, isTrue);
+    expect(controller.state.game!.ply, 1);
+    await controller.play(MatchMove.place(const Cell(1, 0), PieceType.flat));
+    expect(storage.snapshot!['moves'], hasLength(2));
+    controller.dispose();
+    await store.updates.close();
+  });
+
   testWidgets('invalid invitation shows recovery without replacing active state', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(
         home: JoinRoomScreen(invitation: 'https://bad.test/?room=UABCDEF'))));
@@ -122,7 +145,7 @@ void main() {
     ]);
     MatchConfig? started;
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
-        child: MatchSetupForm(initialConfig: config, onStart: (value) async => started = value)))));
+        child: MatchSetupForm(initialConfig: config, onStart: (value) async { started = value; })))));
     await tester.ensureVisible(find.text('Game settings'));
     await tester.tap(find.text('Game settings'));
     await tester.pumpAndSettle();
@@ -144,7 +167,9 @@ void main() {
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      if (call.method == 'Clipboard.setData') {
+        copied = (call.arguments as Map)['text'] as String;
+      }
       return null;
     });
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));

@@ -9,7 +9,9 @@ class RoomInvitationActions extends StatelessWidget {
   Future<void> _copy(BuildContext context, String text, String message) async {
     try {
       await Clipboard.setData(ClipboardData(text: text));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -25,7 +27,9 @@ class RoomInvitationActions extends StatelessWidget {
       Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 4, children: [
         TextButton.icon(onPressed: () async {
           final shown = await shareInvitation(link);
-          if (!shown && context.mounted) await _copy(context, link.toString(), 'Invitation link copied');
+          if (!shown && context.mounted) {
+            await _copy(context, link.toString(), 'Invitation link copied');
+          }
         }, icon: const Icon(Icons.share_outlined), label: const Text('Share invitation')),
         TextButton.icon(onPressed: () => _copy(context, link.toString(), 'Invitation link copied'),
             icon: const Icon(Icons.link), label: const Text('Copy link')),

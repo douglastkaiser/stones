@@ -12,7 +12,12 @@ String roomCodeFromInvitation(String input) {
       !paths.contains(uri.path) || uri.fragment.isNotEmpty) {
     throw StateError('Paste a Stones invitation link or enter its room code.');
   }
-  final codes = uri.queryParametersAll['room'];
+  List<String>? codes;
+  try {
+    codes = uri.queryParametersAll['room'];
+  } on FormatException {
+    throw StateError('This invitation is damaged. Ask your friend for a new link.');
+  }
   if (codes == null || codes.length != 1) {
     throw StateError('This invitation needs one room code. Ask your friend for a new link.');
   }
