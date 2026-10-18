@@ -35,4 +35,3 @@ MatchState examplePosition(BoardShape shape, int players, {bool won = false}) {
       config: config, board: board, reserves: reserves, ply: players * 4);
   return won ? MatchRules.resolve(position, SeatId.ivory) : position;
 }
-

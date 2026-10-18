@@ -166,79 +166,86 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
             ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Game settings'),
-                subtitle: Text(_config.court ? 'Court Mode practice' : _config.clockSeconds == 0 ? 'Untimed' : '${_config.clockSeconds ~/ 60} minutes per player'),
+                subtitle: Text(_config.court
+                    ? 'Court Mode practice'
+                    : _config.clockSeconds == 0
+                        ? 'Untimed'
+                        : '${_config.clockSeconds ~/ 60} minutes per player'),
                 children: [
-            DropdownButtonFormField<SeatId>(
-                isExpanded: true,
-                key: ValueKey('starter-${_config.starter.name}'),
-                initialValue: _config.starter,
-                decoration: const InputDecoration(labelText: 'Starting player'),
-                items: _config.ids
-                    .map((id) =>
-                        DropdownMenuItem(value: id, child: Text(id.label)))
-                    .toList(),
-                onChanged: (id) {
-                  if (id != null) _update(_config.copyWith(starter: id));
-                }),
-            const SizedBox(height: 16),
-            Text('$local local · $online online · $bots AI'),
-            if (online > 0 && bots == 0 && local <= 1)
-              const Text(
-                  'Competitive ratings: each player needs a separate signed-in account. Results count after every player confirms the same outcome. Names and standings are public.'),
-            if (bots > 0)
-              const Text(
-                  'AI games are practice for human ratings. Untimed duels against established players contribute community AI strength estimates. AI always runs on the device.'),
-            if (local == 1 && bots > 0 && online == 0 && !_config.court)
-              Text(_config.profile == RulesProfile.standardTak
-                  ? (_config.size < 5
-                      ? 'Small Square boards are practice for match achievements. Choose 5×5 or larger to earn AI tiers.'
-                      : 'Unassisted board wins advance the AI ladder. Stronger AI wins also count toward lower tiers.')
-                  : 'Square 5×5+ and all Hex sizes can earn match achievements. AI duel tiers use two-player Square; mastery challenges cover both shapes and more players.'),
-            if (local == 0)
-              Text(online == 0
-                  ? 'Watch the AIs play. You can pause the match.'
-                  : 'You host as an observer. Online humans join with the room invitation.'),
-            if (local > 1)
-              const Text('Local humans take turns on this device.'),
-            if (online > 0)
-              const Text('The match starts once every online seat is filled.'),
-            if (online == 0 && bots > 0 && local > 0)
-              SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Court Mode'),
-                  subtitle: const Text(
-                      'Hints, AI explanations and takebacks. Untimed practice; no awards.'),
-                  value: _config.court,
-                  onChanged: (value) =>
-                      _update(_config.copyWith(court: value))),
-            if (!_config.court) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                  key: ValueKey('clock-${_config.clockSeconds}'),
-                  isExpanded: true,
-                  initialValue: _config.clockSeconds,
-                  decoration:
-                      const InputDecoration(labelText: 'Clock per player'),
-                  items: [
-                    const DropdownMenuItem(value: 0, child: Text('Untimed')),
-                    for (final seconds in {
-                      ...[60, 180, 300, 600, 900, 1800, 3600],
-                      if (_config.clockSeconds > 0) _config.clockSeconds
-                    }.toList()
-                      ..sort())
-                      DropdownMenuItem(
-                          value: seconds,
-                          child: Text('${seconds ~/ 60} minutes')),
+                  DropdownButtonFormField<SeatId>(
+                      isExpanded: true,
+                      key: ValueKey('starter-${_config.starter.name}'),
+                      initialValue: _config.starter,
+                      decoration:
+                          const InputDecoration(labelText: 'Starting player'),
+                      items: _config.ids
+                          .map((id) => DropdownMenuItem(
+                              value: id, child: Text(id.label)))
+                          .toList(),
+                      onChanged: (id) {
+                        if (id != null) _update(_config.copyWith(starter: id));
+                      }),
+                  const SizedBox(height: 16),
+                  Text('$local local · $online online · $bots AI'),
+                  if (online > 0 && bots == 0 && local <= 1)
+                    const Text(
+                        'Competitive ratings: each player needs a separate signed-in account. Results count after every player confirms the same outcome. Names and standings are public.'),
+                  if (bots > 0)
+                    const Text(
+                        'AI games are practice for human ratings. Untimed duels against established players contribute community AI strength estimates. AI always runs on the device.'),
+                  if (local == 1 && bots > 0 && online == 0 && !_config.court)
+                    Text(_config.profile == RulesProfile.standardTak
+                        ? (_config.size < 5
+                            ? 'Small Square boards are practice for match achievements. Choose 5×5 or larger to earn AI tiers.'
+                            : 'Unassisted board wins advance the AI ladder. Stronger AI wins also count toward lower tiers.')
+                        : 'Square 5×5+ and all Hex sizes can earn match achievements. AI duel tiers use two-player Square; mastery challenges cover both shapes and more players.'),
+                  if (local == 0)
+                    Text(online == 0
+                        ? 'Watch the AIs play. You can pause the match.'
+                        : 'You host as an observer. Online humans join with the room invitation.'),
+                  if (local > 1)
+                    const Text('Local humans take turns on this device.'),
+                  if (online > 0)
+                    const Text(
+                        'The match starts once every online seat is filled.'),
+                  if (online == 0 && bots > 0 && local > 0)
+                    SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Court Mode'),
+                        subtitle: const Text(
+                            'Hints, AI explanations and takebacks. Untimed practice; no awards.'),
+                        value: _config.court,
+                        onChanged: (value) =>
+                            _update(_config.copyWith(court: value))),
+                  if (!_config.court) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                        key: ValueKey('clock-${_config.clockSeconds}'),
+                        isExpanded: true,
+                        initialValue: _config.clockSeconds,
+                        decoration: const InputDecoration(
+                            labelText: 'Clock per player'),
+                        items: [
+                          const DropdownMenuItem(
+                              value: 0, child: Text('Untimed')),
+                          for (final seconds in {
+                            ...[60, 180, 300, 600, 900, 1800, 3600],
+                            if (_config.clockSeconds > 0) _config.clockSeconds
+                          }.toList()
+                            ..sort())
+                            DropdownMenuItem(
+                                value: seconds,
+                                child: Text('${seconds ~/ 60} minutes')),
+                        ],
+                        onChanged: (seconds) {
+                          if (seconds != null) {
+                            _update(_config.copyWith(clockSeconds: seconds));
+                          }
+                        }),
+                    if (_config.clockSeconds > 0)
+                      const Text(
+                          'Clocks start after the first move. Closing an online game does not pause its clock. In a match with three or four players, timeout ends the match without a winner.'),
                   ],
-                  onChanged: (seconds) {
-                    if (seconds != null) {
-                      _update(_config.copyWith(clockSeconds: seconds));
-                    }
-                  }),
-              if (_config.clockSeconds > 0)
-                const Text(
-                    'Clocks start after the first move. Closing an online game does not pause its clock. In a match with three or four players, timeout ends the match without a winner.'),
-            ],
                 ]),
             if (_error != null)
               Padding(

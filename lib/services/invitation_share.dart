@@ -7,7 +7,9 @@ const _channel = MethodChannel('stones/invitations');
 Future<bool> shareInvitation(Uri invitation) async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
   try {
-    return await _channel.invokeMethod<bool>('share', {'url': invitation.toString()}) ?? false;
+    return await _channel
+            .invokeMethod<bool>('share', {'url': invitation.toString()}) ??
+        false;
   } on MissingPluginException {
     return false;
   } on PlatformException {

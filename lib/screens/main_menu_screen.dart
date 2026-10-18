@@ -68,42 +68,75 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   Widget build(BuildContext context) {
     final account = ref.watch(accountProvider).identity;
     final rating = ref.watch(eloProvider);
-    void open(Widget screen) => Navigator.push<void>(context,
-        MaterialPageRoute(builder: (_) => screen));
-    return Scaffold(body: TavernBackdrop(child: SafeArea(
-      child: SingleChildScrollView(padding: const EdgeInsets.all(20),
-        child: Center(child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1180),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              Expanded(child: Text('STONES', maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(letterSpacing: 3))),
-              IconButton(tooltip: 'Leaderboard', icon: const Icon(Icons.leaderboard_outlined),
-                  onPressed: () => open(const LeaderboardScreen())),
-              IconButton(tooltip: 'Achievements & piece sets', icon: const Icon(Icons.emoji_events_outlined),
-                  onPressed: () => open(const AchievementsScreen())),
-              IconButton(tooltip: 'Settings & account', icon: const Icon(Icons.settings_outlined),
-                  onPressed: () => open(const SettingsScreen())),
-            ]),
-            if (account != null && !account.guest) ...[
-              const SizedBox(height: 8),
-              Align(alignment: Alignment.centerLeft, child: _PlayerChip(
-                displayName: account.name ?? 'Player',
-                ratingLabel: '${rating.selectedPool.shape.name} ${rating.selectedPool.size} · ${rating.personalLabel}${rating.rank == null ? "" : " · #${rating.rank}"}')),
-            ],
-            const SizedBox(height: 28),
-            GameMenu(
-              onSquare: () => _openSetup(BoardShape.square),
-              onHex: () => _openSetup(BoardShape.hex),
-              onLearn: () => open(const LearningHub()),
-              onJoin: () => open(const JoinRoomScreen()),
-              onMyGames: () => open(const SavedGamesScreen())),
-            const SizedBox(height: 24),
-            Center(child: TextButton(onPressed: () => open(const AboutScreen()),
-                child: const Text('About Stones'))),
-            const _VersionFooter(),
-          ])))))));
+    void open(Widget screen) => Navigator.push<void>(
+        context, MaterialPageRoute(builder: (_) => screen));
+    return Scaffold(
+        body: TavernBackdrop(
+            child: SafeArea(
+                child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                        child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1180),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(children: [
+                                    Expanded(
+                                        child: Text('STONES',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall
+                                                ?.copyWith(letterSpacing: 3))),
+                                    IconButton(
+                                        tooltip: 'Leaderboard',
+                                        icon: const Icon(
+                                            Icons.leaderboard_outlined),
+                                        onPressed: () =>
+                                            open(const LeaderboardScreen())),
+                                    IconButton(
+                                        tooltip: 'Achievements & piece sets',
+                                        icon: const Icon(
+                                            Icons.emoji_events_outlined),
+                                        onPressed: () =>
+                                            open(const AchievementsScreen())),
+                                    IconButton(
+                                        tooltip: 'Settings & account',
+                                        icon:
+                                            const Icon(Icons.settings_outlined),
+                                        onPressed: () =>
+                                            open(const SettingsScreen())),
+                                  ]),
+                                  if (account != null && !account.guest) ...[
+                                    const SizedBox(height: 8),
+                                    Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: _PlayerChip(
+                                            displayName:
+                                                account.name ?? 'Player',
+                                            ratingLabel:
+                                                '${rating.selectedPool.shape.name} ${rating.selectedPool.size} · ${rating.personalLabel}${rating.rank == null ? "" : " · #${rating.rank}"}')),
+                                  ],
+                                  const SizedBox(height: 28),
+                                  GameMenu(
+                                      onSquare: () =>
+                                          _openSetup(BoardShape.square),
+                                      onHex: () => _openSetup(BoardShape.hex),
+                                      onLearn: () => open(const LearningHub()),
+                                      onJoin: () =>
+                                          open(const JoinRoomScreen()),
+                                      onMyGames: () =>
+                                          open(const SavedGamesScreen())),
+                                  const SizedBox(height: 24),
+                                  Center(
+                                      child: TextButton(
+                                          onPressed: () =>
+                                              open(const AboutScreen()),
+                                          child: const Text('About Stones'))),
+                                  const _VersionFooter(),
+                                ])))))));
   }
 }
 

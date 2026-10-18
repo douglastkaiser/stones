@@ -64,18 +64,27 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('New game')),
-      body: TavernBackdrop(child: SafeArea(
-          child: SingleChildScrollView(padding: const EdgeInsets.all(20),
-              child: Center(child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 620),
-                  child: TavernPanel(child: MatchSetupForm(
-                      initialConfig: _initialConfig,
-                      onStart: (config) async {
-                        if (!await _allowNewLocal(config)) return;
-                        await leaveLegacyRooms(ref);
-                        await ref.read(matchProvider.notifier).start(config);
-                        if (!context.mounted) return;
-                        await Navigator.push<void>(context,
-                            MaterialPageRoute(builder: (_) => const MatchScreen()));
-                      }))))))));
+      body: TavernBackdrop(
+          child: SafeArea(
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                      child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 620),
+                          child: TavernPanel(
+                              child: MatchSetupForm(
+                                  initialConfig: _initialConfig,
+                                  onStart: (config) async {
+                                    if (!await _allowNewLocal(config)) return;
+                                    await leaveLegacyRooms(ref);
+                                    await ref
+                                        .read(matchProvider.notifier)
+                                        .start(config);
+                                    if (!context.mounted) return;
+                                    await Navigator.push<void>(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const MatchScreen()));
+                                  }))))))));
 }

@@ -267,7 +267,8 @@ class MatchController extends StateNotifier<MatchSession> {
       final uid = await authenticate().timeout(networkTimeout);
       if (!mounted || epoch != _epoch) return;
       if (expectedUid != null && uid != expectedUid) {
-        throw StateError('Use the original account or browser profile to resume');
+        throw StateError(
+            'Use the original account or browser profile to resume');
       }
       final room = expectedUid == null
           ? await store().join(normalized, uid).timeout(networkTimeout)

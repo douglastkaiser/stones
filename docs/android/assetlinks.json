@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.douglastkaiser.stones",
+      "sha256_cert_fingerprints": [
+        "C1:B2:D1:79:4D:94:7B:D3:F1:73:94:01:72:11:56:30:85:75:EF:21:EE:33:C2:E9:45:AF:0E:67:F1:88:08:A2"
+      ]
+    }
+  }
+]

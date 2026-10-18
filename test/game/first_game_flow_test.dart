@@ -15,11 +15,13 @@ import 'package:stones/game/match_room.dart';
 import 'package:stones/game/room_invitation.dart';
 import 'package:stones/models/piece.dart';
 import 'package:stones/widgets/room_invitation_actions.dart';
-import 'match_controller_test.dart' show MemoryMatchStorage, MemoryMatchRoomStore;
+import 'match_controller_test.dart'
+    show MemoryMatchStorage, MemoryMatchRoomStore;
 
 class _FullRoomStore extends MemoryMatchRoomStore {
   @override
-  Future<MatchRoom> join(String code, String uid) async => throw StateError('Room is full');
+  Future<MatchRoom> join(String code, String uid) async =>
+      throw StateError('Room is full');
 }
 
 void main() {
@@ -28,20 +30,30 @@ void main() {
     test('canonical invitation round trips $code and accepts old codes', () {
       expect(roomCodeFromInvitation('  ${code.toLowerCase()}  '), code);
       final link = roomInvitation(code);
-      expect(link.toString(), 'https://www.douglastkaiser.com/stones/?room=$code');
+      expect(
+          link.toString(), 'https://www.douglastkaiser.com/stones/?room=$code');
       expect(roomCodeFromInvitation(link.toString()), code);
       expect(roomCodeFromInvitation('/stones/?room=$code'), code);
-      expect(roomCodeFromInvitation('https://douglastkaiser.github.io/stones/?room=$code'), code);
+      expect(
+          roomCodeFromInvitation(
+              'https://douglastkaiser.github.io/stones/?room=$code'),
+          code);
     });
   }
   for (final bad in [
-    '', 'UABCD', 'UABC123', 'https://example.com/stones/?room=UABCDEF',
+    '',
+    'UABCD',
+    'UABC123',
+    'https://example.com/stones/?room=UABCDEF',
     'http://www.douglastkaiser.com/stones/?room=UABCDEF',
     'https://www.douglastkaiser.com.evil.test/stones/?room=UABCDEF',
     'https://someone@www.douglastkaiser.com/stones/?room=UABCDEF',
     'https://www.douglastkaiser.com:444/stones/?room=UABCDEF',
-    '/stones/?room=UABCDEF&room=HABCDEF', '/other/?room=UABCDEF',
-    '/stones/?room=UABCDEF#other', '/stones/', '/stones/?room=',
+    '/stones/?room=UABCDEF&room=HABCDEF',
+    '/other/?room=UABCDEF',
+    '/stones/?room=UABCDEF#other',
+    '/stones/',
+    '/stones/?room=',
   ]) {
     test('rejects ambiguous or foreign invitation $bad', () {
       expect(() => roomCodeFromInvitation(bad), throwsStateError);
@@ -49,13 +61,19 @@ void main() {
   }
 
   for (final web in [false, true]) {
-    testWidgets('cold ${web ? "web" : "Android"} invitation opens a join form without claiming a seat', (tester) async {
-      await tester.pumpWidget(ProviderScope(child: MaterialApp(
-        onGenerateInitialRoutes: (route) => initialInvitationRoutes(
-          web ? '/' : '/stones/?room=UABCDEF',
-          home: const Scaffold(body: Text('Home')),
-          browserUri: web ? Uri.parse('https://www.douglastkaiser.com/stones/?room=UABCDEF') : null),
-        onGenerateRoute: invitationRoute)));
+    testWidgets(
+        'cold ${web ? "web" : "Android"} invitation opens a join form without claiming a seat',
+        (tester) async {
+      await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+              onGenerateInitialRoutes: (route) => initialInvitationRoutes(
+                  web ? '/' : '/stones/?room=UABCDEF',
+                  home: const Scaffold(body: Text('Home')),
+                  browserUri: web
+                      ? Uri.parse(
+                          'https://www.douglastkaiser.com/stones/?room=UABCDEF')
+                      : null),
+              onGenerateRoute: invitationRoute)));
       await tester.pumpAndSettle();
       expect(find.byType(JoinRoomScreen), findsOneWidget);
       expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -68,10 +86,12 @@ void main() {
     });
   }
 
-  testWidgets('warm platform invitation opens the same non-claiming screen', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(
-      home: Scaffold(body: Text('Existing screen')),
-      onGenerateRoute: invitationRoute)));
+  testWidgets('warm platform invitation opens the same non-claiming screen',
+      (tester) async {
+    await tester.pumpWidget(const ProviderScope(
+        child: MaterialApp(
+            home: Scaffold(body: Text('Existing screen')),
+            onGenerateRoute: invitationRoute)));
     await tester.binding.handlePushRoute('/stones/?room=HABCDEF');
     await tester.pumpAndSettle();
     expect(find.byType(JoinRoomScreen), findsOneWidget);
@@ -82,12 +102,19 @@ void main() {
     expect(find.text('Existing screen'), findsOneWidget);
   });
 
-  testWidgets('declining an invitation leaves the current position and save intact', (tester) async {
+  testWidgets(
+      'declining an invitation leaves the current position and save intact',
+      (tester) async {
     final storage = MemoryMatchStorage();
     final store = MemoryMatchRoomStore();
     var authentications = 0;
-    final controller = MatchController(storage: storage,
-      authenticate: () async { authentications++; return 'host'; }, store: () => store);
+    final controller = MatchController(
+        storage: storage,
+        authenticate: () async {
+          authentications++;
+          return 'host';
+        },
+        store: () => store);
     await controller.start(MatchConfig.defaults(BoardShape.square));
     await controller.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
     final id = controller.state.id;
@@ -109,11 +136,12 @@ void main() {
     await store.updates.close();
   });
 
-  test('a rejected room join preserves a playable local game and its save', () async {
+  test('a rejected room join preserves a playable local game and its save',
+      () async {
     final storage = MemoryMatchStorage();
     final store = _FullRoomStore();
-    final controller = MatchController(storage: storage,
-        authenticate: () async => 'host', store: () => store);
+    final controller = MatchController(
+        storage: storage, authenticate: () async => 'host', store: () => store);
     await controller.start(MatchConfig.defaults(BoardShape.square));
     await controller.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
     final id = controller.state.id;
@@ -127,25 +155,40 @@ void main() {
     await store.updates.close();
   });
 
-  testWidgets('invalid invitation shows recovery without replacing active state', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(
-        home: JoinRoomScreen(invitation: 'https://bad.test/?room=UABCDEF'))));
+  testWidgets(
+      'invalid invitation shows recovery without replacing active state',
+      (tester) async {
+    await tester.pumpWidget(const ProviderScope(
+        child: MaterialApp(
+            home:
+                JoinRoomScreen(invitation: 'https://bad.test/?room=UABCDEF'))));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Join room'));
     await tester.pumpAndSettle();
-    expect(find.text('Paste a Stones invitation link or enter its room code.'), findsOneWidget);
+    expect(find.text('Paste a Stones invitation link or enter its room code.'),
+        findsOneWidget);
     expect(find.text('Join room'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('opening game settings and changing clock preserves mixed seats', (tester) async {
-    final config = MatchConfig.defaults(BoardShape.hex).addPlayer().copyWith(seats: const [
-      SeatConfig(SeatId.ivory), SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman),
-      SeatConfig(SeatId.copper, control: SeatControl.ai), SeatConfig(SeatId.jade),
+  testWidgets('opening game settings and changing clock preserves mixed seats',
+      (tester) async {
+    final config =
+        MatchConfig.defaults(BoardShape.hex).addPlayer().copyWith(seats: const [
+      SeatConfig(SeatId.ivory),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman),
+      SeatConfig(SeatId.copper, control: SeatControl.ai),
+      SeatConfig(SeatId.jade),
     ]);
     MatchConfig? started;
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
-        child: MatchSetupForm(initialConfig: config, onStart: (value) async { started = value; })))));
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: MatchSetupForm(
+                    initialConfig: config,
+                    onStart: (value) async {
+                      started = value;
+                    })))));
     await tester.ensureVisible(find.text('Game settings'));
     await tester.tap(find.text('Game settings'));
     await tester.pumpAndSettle();
@@ -158,23 +201,26 @@ void main() {
     await tester.tap(find.text('Create room'));
     await tester.pumpAndSettle();
     expect(started!.clockSeconds, 300);
-    expect(started!.seats.map((s) => s.control), config.seats.map((s) => s.control));
+    expect(started!.seats.map((s) => s.control),
+        config.seats.map((s) => s.control));
     expect(started!.shape, BoardShape.hex);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('invitation link and code have separate copy fallbacks', (tester) async {
+  testWidgets('invitation link and code have separate copy fallbacks',
+      (tester) async {
     String? copied;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform, (call) async {
+    tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'Clipboard.setData') {
         copied = (call.arguments as Map)['text'] as String;
       }
       return null;
     });
-    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(
-        body: RoomInvitationActions(code: 'UABCDEF'))));
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: RoomInvitationActions(code: 'UABCDEF'))));
     await tester.tap(find.text('Copy link'));
     await tester.pumpAndSettle();
     expect(copied, 'https://www.douglastkaiser.com/stones/?room=UABCDEF');

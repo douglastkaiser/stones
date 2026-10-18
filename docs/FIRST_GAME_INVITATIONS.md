@@ -33,3 +33,15 @@ rule, game schema, rating policy or Play track is changed in this packet.
 References: [Flutter deep linking](https://docs.flutter.dev/ui/navigation/deep-linking),
 [Android app links](https://docs.flutter.dev/cookbook/navigation/set-up-app-links),
 [Android sharesheet](https://developer.android.com/training/sharing/send).
+
+## Android association source
+
+The public domain-root association initially returned HTTP 404. The exact Digital
+Asset Links snippet was read from Play Console App signing on 2026-10-17 and
+is retained in `docs/android/assetlinks.json`. The certificate is Play's app-signing
+certificate, not the upload certificate. The statement was committed as
+`ba451723d035df7683570d3f96c1b983d855e8e3` in the domain-root repository
+`douglastkaiser/douglastkaiser.github.io`, preserving its existing tree. Root-site
+publication and device verification still require confirmation. The Android intent
+filter restricts handling to HTTPS www.douglastkaiser.com/stones/; browser fallback
+continues to serve that URL. No signing key or account permission was changed.

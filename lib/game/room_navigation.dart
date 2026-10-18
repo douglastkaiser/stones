@@ -22,7 +22,8 @@ Future<Widget?> loadInvitedRoom(WidgetRef ref, String invitation,
   if (expectedUid != null) {
     final identity = await ref.read(accountProvider.notifier).ensurePlayer();
     if (identity.uid != expectedUid) {
-      throw StateError('Use the original account or browser profile to resume this game.');
+      throw StateError(
+          'Use the original account or browser profile to resume this game.');
     }
   }
   if (!ref.context.mounted) return null;
@@ -30,25 +31,33 @@ Future<Widget?> loadInvitedRoom(WidgetRef ref, String invitation,
   if (current.room?.code == code && current.game != null) {
     return const MatchScreen();
   }
-  final hasActiveGame = current.game != null || current.busy ||
+  final hasActiveGame = current.game != null ||
+      current.busy ||
       ref.read(hexMatchProvider).game != null ||
       ref.read(onlineGameProvider).session != null;
   if (hasActiveGame) {
-    final confirmed = await showDialog<bool>(context: ref.context,
+    final confirmed = await showDialog<bool>(
+        context: ref.context,
         builder: (context) => AlertDialog(
-          title: const Text('Switch to another game?'),
-          content: const Text('Your current game stays saved. Online clocks keep running while you play elsewhere.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep current game')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Join other game')),
-          ]));
+                title: const Text('Switch to another game?'),
+                content: const Text(
+                    'Your current game stays saved. Online clocks keep running while you play elsewhere.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Keep current game')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Join other game')),
+                ]));
     if (confirmed != true || !ref.context.mounted) return null;
   }
   if (code.startsWith('U') && code.length == 7) {
     await ref.read(matchProvider.notifier).join(code, expectedUid: expectedUid);
     if (!ref.context.mounted) return null;
     if (ref.read(matchProvider).room?.code != code) {
-      throw StateError('Another game was opened. Your invitation is still available.');
+      throw StateError(
+          'Another game was opened. Your invitation is still available.');
     }
     await leaveLegacyRooms(ref);
     return const MatchScreen();

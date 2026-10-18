@@ -5,14 +5,17 @@ import 'join_room_screen.dart';
 List<Route<dynamic>> initialInvitationRoutes(String platformRoute,
     {required Widget home, Uri? browserUri}) {
   final incoming = browserUri != null && _hasRoom(browserUri)
-      ? browserUri.toString() : platformRoute;
+      ? browserUri.toString()
+      : platformRoute;
   final uri = Uri.tryParse(incoming);
   return [
-    MaterialPageRoute<void>(settings: const RouteSettings(name: '/'), builder: (_) => home),
+    MaterialPageRoute<void>(
+        settings: const RouteSettings(name: '/'), builder: (_) => home),
     if (uri != null && _hasRoom(uri))
       invitationRoute(RouteSettings(name: incoming)),
   ];
 }
+
 Route<void> invitationRoute(RouteSettings settings) => MaterialPageRoute<void>(
     settings: settings,
     builder: (_) => JoinRoomScreen(invitation: settings.name ?? ''));

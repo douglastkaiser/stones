@@ -423,7 +423,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               ratingMessage.contains('Waiting')))
                         TextButton(
                             onPressed: () async {
-                              final uid = ref.read(accountProvider).identity?.uid;
+                              final uid =
+                                  ref.read(accountProvider).identity?.uid;
                               ref.read(ratingStatusProvider.notifier).state =
                                   (match.id!, 'Checking game result\u2026');
                               try {
@@ -433,16 +434,23 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                         match, _controller.confirmedMoves);
                                 if (mounted &&
                                     ref.read(matchProvider).id == match.id &&
-                                    ref.read(accountProvider).identity?.uid == uid) {
+                                    ref.read(accountProvider).identity?.uid ==
+                                        uid) {
                                   ref
                                       .read(ratingStatusProvider.notifier)
                                       .state = (match.id!, message);
                                 }
                               } catch (_) {
-                                if (mounted && ref.read(matchProvider).id == match.id &&
-                                    ref.read(accountProvider).identity?.uid == uid) {
-                                  ref.read(ratingStatusProvider.notifier).state =
-                                      (match.id!, 'Rating update could not finish. Retry when connected.');
+                                if (mounted &&
+                                    ref.read(matchProvider).id == match.id &&
+                                    ref.read(accountProvider).identity?.uid ==
+                                        uid) {
+                                  ref
+                                      .read(ratingStatusProvider.notifier)
+                                      .state = (
+                                    match.id!,
+                                    'Rating update could not finish. Retry when connected.'
+                                  );
                                 }
                               }
                             },

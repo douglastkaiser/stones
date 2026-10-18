@@ -10,6 +10,8 @@ on:
       - 'assets/fonts/**'
       - 'test/design_preview_test.dart'
       - 'test/game/first_game_flow_test.dart'
+      - 'test/game/match_screen_test.dart'
+      - 'android/app/src/main/**'
       - 'tools/shared_performance_probe_test.dart'
       - '.github/workflows/finishing-preview.yml'
       - 'web/design_preview.html'
@@ -42,11 +44,11 @@ jobs:
       - name: Format candidate sources
         run: |
           mkdir -p build/qa/finishing
-          dart format lib/design_preview.dart lib/theme/tavern_theme.dart lib/widgets/game_menu.dart lib/widgets/room_invitation_actions.dart lib/widgets/saved_online_games.dart lib/screens/main_menu_screen.dart lib/screens/saved_games_screen.dart lib/services/invitation_share.dart lib/game/example_position.dart lib/game/match_setup_screen.dart lib/game/match_controller.dart lib/game/match_setup_form.dart lib/game/room_invitation.dart lib/game/invitation_navigation.dart lib/game/join_room_screen.dart lib/game/room_navigation.dart lib/game/match_screen.dart lib/main.dart test/design_preview_test.dart test/game/first_game_flow_test.dart tools/shared_performance_probe_test.dart
-          git diff --binary -- lib/design_preview.dart lib/theme/tavern_theme.dart lib/widgets/game_menu.dart lib/widgets/room_invitation_actions.dart lib/widgets/saved_online_games.dart lib/screens/main_menu_screen.dart lib/screens/saved_games_screen.dart lib/services/invitation_share.dart lib/game/example_position.dart lib/game/match_setup_screen.dart lib/game/match_controller.dart lib/game/match_setup_form.dart lib/game/room_invitation.dart lib/game/invitation_navigation.dart lib/game/join_room_screen.dart lib/game/room_navigation.dart lib/game/match_screen.dart lib/main.dart test/design_preview_test.dart test/game/first_game_flow_test.dart tools/shared_performance_probe_test.dart > build/qa/finishing/format.patch
+          dart format lib/design_preview.dart lib/theme/tavern_theme.dart lib/widgets/game_menu.dart lib/widgets/room_invitation_actions.dart lib/widgets/saved_online_games.dart lib/screens/main_menu_screen.dart lib/screens/saved_games_screen.dart lib/services/invitation_share.dart lib/game/example_position.dart lib/game/match_setup_screen.dart lib/game/match_controller.dart lib/game/match_setup_form.dart lib/game/room_invitation.dart lib/game/invitation_navigation.dart lib/game/join_room_screen.dart lib/game/room_navigation.dart lib/game/match_screen.dart lib/main.dart test/design_preview_test.dart test/game/first_game_flow_test.dart test/game/match_screen_test.dart tools/shared_performance_probe_test.dart
+          git diff --binary -- lib/design_preview.dart lib/theme/tavern_theme.dart lib/widgets/game_menu.dart lib/widgets/room_invitation_actions.dart lib/widgets/saved_online_games.dart lib/screens/main_menu_screen.dart lib/screens/saved_games_screen.dart lib/services/invitation_share.dart lib/game/example_position.dart lib/game/match_setup_screen.dart lib/game/match_controller.dart lib/game/match_setup_form.dart lib/game/room_invitation.dart lib/game/invitation_navigation.dart lib/game/join_room_screen.dart lib/game/room_navigation.dart lib/game/match_screen.dart lib/main.dart test/design_preview_test.dart test/game/first_game_flow_test.dart test/game/match_screen_test.dart tools/shared_performance_probe_test.dart > build/qa/finishing/format.patch
       - run: flutter analyze --fatal-infos
       - name: Test layouts and capture review views
-        run: flutter test test/design_preview_test.dart test/game/first_game_flow_test.dart --dart-define=STONES_CAPTURE_PREVIEW=true --reporter expanded
+        run: flutter test test/design_preview_test.dart test/game/first_game_flow_test.dart test/game/match_screen_test.dart --dart-define=STONES_CAPTURE_PREVIEW=true --reporter expanded
       - name: Measure shared AI workloads on this runner
         run: flutter test tools/shared_performance_probe_test.dart --reporter expanded | tee build/qa/finishing/shared-performance.log
       - name: Build isolated preview
