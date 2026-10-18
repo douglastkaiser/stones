@@ -76751,7 +76751,7 @@ A.N8.prototype={
 gHS(){var s=this.d
 return s===$?this.d=this.a.f:s},
 J(a){var s=A.aF5(this.gHS()),r=this.a
-return new A.xm(new A.C5(r.c,r.d,r.e,new A.adJ(this),null),"Stones \xb7 The tavern preview",s,!1,null)}}
+return new A.xm(new A.C5(r.c,r.d,r.e,new A.adJ(this),null),"Stones \xb7 Game design preview",s,!1,null)}}
 A.adJ.prototype={
 $0(){var s=this.a
 return s.ai(new A.adI(s))},
@@ -77071,7 +77071,7 @@ case 2:m=m.a6Z(q)
 break
 case 3:m=m.a5S(q)
 break
-default:m=r}return A.atk(A.iP(new A.dZ(B.zD,new A.cj(new A.aQ(p,0,p,0),A.dY(A.c([new A.cj(B.EJ,n,r),l,s,m,B.OI,A.iP(new A.cj(B.EI,A.bx("Stones \xb7 Design preview \xb7 c48102c",r,r,r,A.L(a).ok.Q,r,r,r),r),r,r)],o),B.aK,B.Z),r),r),r,r))},
+default:m=r}return A.atk(A.iP(new A.dZ(B.zD,new A.cj(new A.aQ(p,0,p,0),A.dY(A.c([new A.cj(B.EJ,n,r),l,s,m,B.OI,A.iP(new A.cj(B.EI,A.bx("Stones \xb7 Design preview \xb7 431cb20",r,r,r,A.L(a).ok.Q,r,r,r),r),r,r)],o),B.aK,B.Z),r),r),r,r))},
 $S:480}
 A.ahI.prototype={
 $0(){return this.a.kt(0,B.dp)},
