@@ -25,9 +25,11 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
       if (!mounted || screen == null) return;
       await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => screen));
     } catch (error) {
-      if (mounted) setState(() => _error = error is StateError
+      if (mounted) {
+        setState(() => _error = error is StateError
           ? error.message.toString()
           : 'Could not join. Check your connection and try again.');
+      }
     } finally {
       if (mounted) setState(() => _joining = false);
     }

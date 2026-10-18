@@ -63,8 +63,8 @@ void main() {
   }
 
   testWidgets('warm platform invitation opens the same non-claiming screen', (tester) async {
-    await tester.pumpWidget(ProviderScope(child: MaterialApp(
-      home: const Scaffold(body: Text('Existing screen')),
+    await tester.pumpWidget(const ProviderScope(child: MaterialApp(
+      home: Scaffold(body: Text('Existing screen')),
       onGenerateRoute: invitationRoute)));
     await tester.binding.handlePushRouteInformation(
         RouteInformation(uri: Uri.parse('/stones/?room=HABCDEF')));
@@ -106,7 +106,7 @@ void main() {
 
   testWidgets('invalid invitation shows recovery without replacing active state', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(
-        home: JoinRoomScreen(invitation: 'https://bad.test/?room=UABCDEF')))));
+        home: JoinRoomScreen(invitation: 'https://bad.test/?room=UABCDEF'))));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Join room'));
     await tester.pumpAndSettle();

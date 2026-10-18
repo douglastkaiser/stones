@@ -61,6 +61,10 @@ jobs:
           flutter build web --release --target lib/design_preview.dart --base-href /stones/pr/finishing/
           python3 scripts/prepare_web_release.py
           python3 scripts/release_baseline.py --output build/qa/finishing/source-baseline.json
+      - name: Build real app for isolated integration review
+        run: |
+          flutter build web --release --target lib/main.dart --base-href /stones/pr/finishing-game/ --output build/finishing-game
+          python3 scripts/prepare_web_release.py build/finishing-game
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -71,27 +75,32 @@ jobs:
         with:
           name: finishing-preview-${{ github.sha }}
           path: build/web/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finishing-game-${{ github.sha }}
+          path: build/finishing-game/
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: published
-      - name: Publish only the isolated preview
+      - name: Publish only the isolated review builds
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import shutil
           from scripts.prepare_web_release import retain_previous
-          target = Path('published/pr/finishing')
-          if target.is_dir():
-              retain_previous(Path('build/web'), target)
-              shutil.rmtree(target)
-          target.parent.mkdir(parents=True, exist_ok=True)
-          shutil.copytree('build/web', target)
+          for name, source in [('finishing', Path('build/web')), ('finishing-game', Path('build/finishing-game'))]:
+              target = Path('published/pr') / name
+              if target.is_dir():
+                  retain_previous(source, target)
+                  shutil.rmtree(target)
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copytree(source, target)
           PY
           cd published
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add pr/finishing
+          git add pr/finishing pr/finishing-game
           git diff --staged --quiet || git commit -m 'Publish finishing design preview [skip ci]'
           git pull --rebase origin gh-pages
           git push origin gh-pages

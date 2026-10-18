@@ -11,8 +11,10 @@ class RoomInvitationActions extends StatelessWidget {
       await Clipboard.setData(ClipboardData(text: text));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (_) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not copy. Select this invitation instead: $text')));
+      }
     }
   }
   @override

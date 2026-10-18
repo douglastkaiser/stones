@@ -30,8 +30,10 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
       await Navigator.push<void>(context,
           MaterialPageRoute(builder: (_) => const MatchScreen()));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not resume. Your saved game is kept; try again.')));
+      }
     } finally {
       if (mounted) setState(() => _resuming = false);
     }
