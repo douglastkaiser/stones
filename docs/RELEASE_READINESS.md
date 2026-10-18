@@ -139,3 +139,21 @@ and refreshes mutable metadata to avoid treating a coherent old deployment as th
 new one. All 25 Python checks passed locally, including these final diagnostics.
 This helper/documentation follow-up changes no Dart runtime code. No production
 game deployment, Play upload or Firebase policy change occurred in this packet.
+
+## Game-first feedback revision
+
+Owner feedback rejected the hospitality slogans and corporate landing-page feel.
+Candidate `c48102c` replaces those with a direct play/learn menu, concrete rule
+examples and ink/paper/copper surfaces. [Full CI](https://github.com/douglastkaiser/stones/actions/runs/39079325527)
+passed 808 tests, strict analysis, web and Android debug compilation. The
+[preview workflow](https://github.com/douglastkaiser/stones/actions/runs/39079325618)
+passed 32 focused tests and 16 AI probes, captured 24 layouts, and published the
+isolated preview. Pages run 39079468729 succeeded. The live footer matches
+`c48102c`; switching from the resolved road to the eight-stone stack updates the
+board and explanation. Visual approval remains pending.
+
+The standalone HTTP/hash diagnostic was not executed because automatic approval
+review hit an account usage limit. Do not record that as an integrity pass or
+failure. The CI formatter patch is applied locally; a browser-title cleanup and
+these evidence notes follow the reviewed source. No production gameplay, Firebase
+policy or Play release has changed.

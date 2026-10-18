@@ -1,7 +1,7 @@
 # Stones design review
 
 The preview is isolated from real accounts, preferences, rooms and achievements:
-[Open the prototype](https://www.douglastkaiser.com/stones/pr/finishing/?review=d3b129a).
+[Open the prototype](https://www.douglastkaiser.com/stones/pr/finishing/?review=c48102c).
 Its startup page does not load the production Analytics bootstrap. UI typography
 is bundled with its open-source licenses, with no runtime font requests.
 
@@ -24,9 +24,9 @@ is bundled with its open-source licenses, with no runtime font requests.
 
 Direct examples:
 
-- [Four-player Hex table](https://www.douglastkaiser.com/stones/pr/finishing/?page=table&shape=hex&players=4&review=d3b129a).
-- [Square result](https://www.douglastkaiser.com/stones/pr/finishing/?page=result&review=d3b129a).
-- [Light Square setup](https://www.douglastkaiser.com/stones/pr/finishing/?page=setup&light=1&review=d3b129a).
+- [Four-player Hex table](https://www.douglastkaiser.com/stones/pr/finishing/?page=table&shape=hex&players=4&review=c48102c).
+- [Square result](https://www.douglastkaiser.com/stones/pr/finishing/?page=result&review=c48102c).
+- [Light Square setup](https://www.douglastkaiser.com/stones/pr/finishing/?page=setup&light=1&review=c48102c).
 
 ## Design and implementation boundary
 
@@ -72,10 +72,18 @@ flutter run -d chrome --target lib/design_preview.dart
 The plan explicitly says to obtain visual feedback before spreading the design.
 That review is pending; the broader finishing plan remains active work.
 
-## Revision in progress
+## Feedback revision
 
 The 2026-10-17 feedback revision removes fireside, hospitality and sentimental
 result copy throughout the preview. It keeps Square/Hex, Join/My games and a
 visible learning entry, and adds a switchable road/stack example using BoardView
 and rule-resolved fixtures. No game mechanics or production entry points change.
-Previous evidence above applies to the first candidate until fresh CI completes.
+Candidate `c48102c` passed all 808 Flutter tests, strict analysis, normal web and
+Android debug builds. Its focused preview workflow passed 32 tests and generated
+24 captures at 320/390/1440 widths in light/dark. Review images are stored locally
+in `build/qa/finishing-revised/`. The published road/stack switch was exercised in
+the browser and the source footer reads `c48102c`. Pages deployment succeeded.
+The final standalone HTTP/hash diagnostic was not executed: automatic approval
+review could not complete because of an account usage limit. This is not a failed
+integrity check. A subsequent source cleanup fixes the browser-tab title and
+applies the CI formatter; it does not alter the reviewed layout.

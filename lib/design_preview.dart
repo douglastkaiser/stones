@@ -47,7 +47,7 @@ class _DesignPreviewAppState extends State<DesignPreviewApp> {
   late var _brightness = widget.initialBrightness;
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Stones · The tavern preview',
+        title: 'Stones · Game design preview',
         debugShowCheckedModeBanner: false,
         theme: TavernTheme.build(_brightness),
         home: _PreviewHome(
@@ -241,8 +241,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                             child: const Text('Learn')),
                       IconButton(
                           tooltip: 'Preview collection',
-                          onPressed: () =>
-                              _sampleList('Piece sets', [
+                          onPressed: () => _sampleList('Piece sets', [
                                 'Classic Wood · Ready to play',
                                 'Morocco · Your first learning reward',
                                 'Slate, Marble & Kyoto · Mastery rewards'
@@ -250,8 +249,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                           icon: const Icon(Icons.auto_awesome_outlined)),
                       IconButton(
                           tooltip: 'Preview account',
-                          onPressed: () =>
-                              _sampleList('Your account', [
+                          onPressed: () => _sampleList('Your account', [
                                 'Play as a guest',
                                 'Sign in with Google',
                                 'Keep your games and earned collection together'
@@ -283,16 +281,14 @@ class _PreviewHomeState extends State<_PreviewHome> {
           Theme.of(context).textTheme.labelMedium?.copyWith(letterSpacing: 2));
 
   Widget _home(bool narrow) {
-    final menu = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-      Text('Play Stones',
-          style: Theme.of(context).textTheme.headlineLarge),
+    final menu =
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('Play Stones', style: Theme.of(context).textTheme.headlineLarge),
       const SizedBox(height: 8),
       const Text('Pick a board. Bring friends or take on the computer.'),
       const SizedBox(height: 20),
-      _boardChoice(BoardShape.square, 'Square',
-          'Start here for classic Tak.', featured: true),
+      _boardChoice(BoardShape.square, 'Square', 'Start here for classic Tak.',
+          featured: true),
       const SizedBox(height: 10),
       _boardChoice(BoardShape.hex, 'Hex',
           'More directions. Same goal. A Stones variant.'),
@@ -319,9 +315,11 @@ class _PreviewHomeState extends State<_PreviewHome> {
       const SizedBox(height: 12),
       Text('First game?', style: Theme.of(context).textTheme.titleLarge),
       const SizedBox(height: 6),
-      const Text('Place stones, build stacks, connect a road. Learn by playing.'),
+      const Text(
+          'Place stones, build stacks, connect a road. Learn by playing.'),
       const SizedBox(height: 12),
-      Align(alignment: Alignment.centerLeft,
+      Align(
+          alignment: Alignment.centerLeft,
           child: OutlinedButton.icon(
               onPressed: () => _sampleList('Learn to play', [
                     'Connect opposite edges with your flat stones and capstones.',
@@ -349,9 +347,10 @@ class _PreviewHomeState extends State<_PreviewHome> {
             onSelected: (_) => setState(() => _showHomeRoad = false)),
       ]),
       const SizedBox(height: 8),
-      Text(_showHomeRoad
-          ? 'Ivory connects opposite edges. That’s a win.'
-          : 'The top stone controls the stack. Move it to change the board.',
+      Text(
+          _showHomeRoad
+              ? 'Ivory connects opposite edges. That’s a win.'
+              : 'The top stone controls the stack. Move it to change the board.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium),
       const SizedBox(height: 4),

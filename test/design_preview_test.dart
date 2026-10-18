@@ -95,7 +95,8 @@ void main() {
     }
   }
 
-  testWidgets('home examples explain a real road and stack without changing setup',
+  testWidgets(
+      'home examples explain a real road and stack without changing setup',
       (tester) async {
     await tester.pumpWidget(const DesignPreviewApp());
     await tester.pumpAndSettle();
