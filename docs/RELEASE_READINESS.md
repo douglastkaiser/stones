@@ -157,3 +157,10 @@ review hit an account usage limit. Do not record that as an integrity pass or
 failure. The CI formatter patch is applied locally; a browser-title cleanup and
 these evidence notes follow the reviewed source. No production gameplay, Firebase
 policy or Play release has changed.
+
+Follow-up `431cb20` passed preview run 39095129214 and Pages run 39095263203.
+Its served revision and startup integrity passed the live baseline check after
+publication; the earlier review usage-limit interruption is resolved. The final
+normal CI run 39095129219 was still running at this record update. The preceding
+full qualification covers the layout/interaction change; this follow-up changes
+only formatting and the browser-tab title.
