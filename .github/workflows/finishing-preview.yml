@@ -1,0 +1,111 @@
+name: Finishing Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/finishing-*']
+    paths:
+      - 'lib/**'
+      - 'lib/theme/tavern_theme.dart'
+      - 'assets/fonts/**'
+      - 'test/design_preview_test.dart'
+      - 'test/game/first_game_flow_test.dart'
+      - 'test/game/match_screen_test.dart'
+      - 'test/widgets/play_selector_test.dart'
+      - 'android/app/src/main/**'
+      - 'tools/shared_performance_probe_test.dart'
+      - '.github/workflows/finishing-preview.yml'
+      - 'web/design_preview.html'
+      - 'pubspec.yaml'
+      - 'scripts/release_baseline.py'
+      - 'scripts/test_release_baseline.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finishing-preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: python3 -m unittest scripts.test_release_baseline
+      - name: Format candidate sources
+        run: |
+          mkdir -p build/qa/finishing
+          dart format lib/design_preview.dart lib/theme/tavern_theme.dart lib/widgets/game_menu.dart lib/widgets/room_invitation_actions.dart lib/widgets/saved_online_games.dart lib/screens/main_menu_screen.dart lib/screens/saved_games_screen.dart lib/services/invitation_share.dart lib/game/example_position.dart lib/game/match_setup_screen.dart lib/game/match_controller.dart lib/game/match_setup_form.dart lib/game/room_invitation.dart lib/game/invitation_navigation.dart lib/game/join_room_screen.dart lib/game/room_navigation.dart lib/game/match_screen.dart lib/main.dart test/design_preview_test.dart test/game/first_game_flow_test.dart test/game/match_screen_test.dart test/widgets/play_selector_test.dart tools/shared_performance_probe_test.dart
+          git diff --binary -- lib/design_preview.dart lib/theme/tavern_theme.dart lib/widgets/game_menu.dart lib/widgets/room_invitation_actions.dart lib/widgets/saved_online_games.dart lib/screens/main_menu_screen.dart lib/screens/saved_games_screen.dart lib/services/invitation_share.dart lib/game/example_position.dart lib/game/match_setup_screen.dart lib/game/match_controller.dart lib/game/match_setup_form.dart lib/game/room_invitation.dart lib/game/invitation_navigation.dart lib/game/join_room_screen.dart lib/game/room_navigation.dart lib/game/match_screen.dart lib/main.dart test/design_preview_test.dart test/game/first_game_flow_test.dart test/game/match_screen_test.dart test/widgets/play_selector_test.dart tools/shared_performance_probe_test.dart > build/qa/finishing/format.patch
+      - run: flutter analyze --fatal-infos
+      - name: Test layouts and capture review views
+        run: flutter test test/design_preview_test.dart test/game/first_game_flow_test.dart test/game/match_screen_test.dart test/widgets/play_selector_test.dart --dart-define=STONES_CAPTURE_PREVIEW=true --reporter expanded
+      - name: Measure shared AI workloads on this runner
+        run: flutter test tools/shared_performance_probe_test.dart --reporter expanded | tee build/qa/finishing/shared-performance.log
+      - name: Build isolated preview
+        run: |
+          ./scripts/generate_version.sh
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          template = Path('web/design_preview.html').read_text(encoding='utf-8')
+          Path('web/index.html').write_text(template.replace('__STONES_PREVIEW_COMMIT__', os.environ['GITHUB_SHA']), encoding='utf-8')
+          PY
+          flutter build web --release --target lib/design_preview.dart --base-href /stones/pr/finishing/
+          python3 scripts/prepare_web_release.py
+          python3 scripts/release_baseline.py --output build/qa/finishing/source-baseline.json
+      - name: Build real app for isolated integration review
+        run: |
+          flutter build web --release --target lib/main.dart --base-href /stones/pr/finishing-game/ --output build/finishing-game
+          python3 scripts/prepare_web_release.py build/finishing-game
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: finishing-review-${{ github.sha }}
+          path: build/qa/finishing/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finishing-preview-${{ github.sha }}
+          path: build/web/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finishing-game-${{ github.sha }}
+          path: build/finishing-game/
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: published
+      - name: Publish only the isolated review builds
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          from scripts.prepare_web_release import retain_previous
+          for name, source in [('finishing', Path('build/web')), ('finishing-game', Path('build/finishing-game'))]:
+              target = Path('published/pr') / name
+              if target.is_dir():
+                  retain_previous(source, target)
+                  shutil.rmtree(target)
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copytree(source, target)
+          PY
+          cd published
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add pr/finishing pr/finishing-game
+          git diff --staged --quiet || git commit -m 'Publish finishing design preview [skip ci]'
+          git pull --rebase origin gh-pages
+          git push origin gh-pages
+      - name: Review location
+        run: echo 'Preview https://www.douglastkaiser.com/stones/pr/finishing/' >> "$GITHUB_STEP_SUMMARY"

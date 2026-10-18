@@ -130,6 +130,7 @@ class MatchController extends StateNotifier<MatchSession> {
   bool _localWritePending = false;
   bool _expiryPending = false;
   int _epoch = 0;
+  int? _joiningAtEpoch;
   int _searchToken = 0;
   int? _searchingPly;
   int? _searchingToken;
@@ -250,9 +251,14 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   Future<void> join(String code, {String? expectedUid}) async {
-    leave();
     final epoch = _epoch;
-    state = const MatchSession(busy: true);
+    if (_joiningAtEpoch == epoch) {
+      throw StateError('A room is already opening.');
+    }
+    _joiningAtEpoch = epoch;
+    // The join screen owns its loading state. Keep an existing game alive until
+    // the server has accepted the replacement, including local saves and AI.
+    if (state.game == null) state = state.copyWith(busy: true);
     try {
       final normalized = code.trim().toUpperCase();
       if (!RegExp(r'^U[A-Z]{6}$').hasMatch(normalized)) {
@@ -267,14 +273,19 @@ class MatchController extends StateNotifier<MatchSession> {
       final room = expectedUid == null
           ? await store().join(normalized, uid).timeout(networkTimeout)
           : await store().read(normalized).timeout(networkTimeout);
+      if (!mounted || epoch != _epoch) return;
       if (room.host != uid && !room.owners.values.contains(uid)) {
         throw StateError('This identity does not own a seat');
       }
-      if (!mounted || epoch != _epoch) return;
-      _openOnline(room, uid, epoch);
+      leave();
+      _openOnline(room, uid, _epoch);
     } catch (error) {
-      if (mounted && epoch == _epoch) state = MatchSession(error: '$error');
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(busy: false, error: '$error');
+      }
       rethrow;
+    } finally {
+      if (_joiningAtEpoch == epoch) _joiningAtEpoch = null;
     }
   }
 

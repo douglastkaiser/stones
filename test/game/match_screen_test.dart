@@ -19,7 +19,8 @@ import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 void main() {
-  testWidgets('resuming an online screen reconciles missed turns from the server',
+  testWidgets(
+      'resuming an online screen reconciles missed turns from the server',
       (tester) async {
     final store = MemoryMatchRoomStore();
     var authentications = 0;
@@ -30,8 +31,8 @@ void main() {
           return 'host';
         },
         store: () => store);
-    await controller.start(
-        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+    await controller
+        .start(MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
       SeatConfig(SeatId.ivory),
       SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
     ]));
@@ -41,6 +42,8 @@ void main() {
         overrides: [matchProvider.overrideWith((ref) => controller)],
         child: const MaterialApp(home: MatchScreen())));
     await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
     expect(controller.state.paused, isFalse);
@@ -49,6 +52,8 @@ void main() {
         MatchMove.place(const Cell(1, 0), PieceType.flat));
     expect(controller.state.game!.ply, 1);
     store.pendingRead = Completer<MatchRoom>();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(find.text('Reconnecting · your board is retained'), findsOneWidget);
@@ -72,8 +77,8 @@ void main() {
         authenticate: () async => 'host',
         store: () => store,
         remember: (room, uid) async => throw StateError('Storage full'));
-    await controller.start(
-        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+    await controller
+        .start(MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
       SeatConfig(SeatId.ivory),
       SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
     ]));
@@ -86,7 +91,8 @@ void main() {
     expect(find.text('Room UABCDEF'), findsOneWidget);
     expect(find.textContaining('Could not save this room’s shortcut.'),
         findsOneWidget);
-    expect(find.text('Copy invitation code'), findsOneWidget);
+    expect(find.text('Copy code'), findsOneWidget);
+    expect(find.text('Copy link'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
@@ -140,12 +146,16 @@ void main() {
         child: const MaterialApp(home: MatchScreen())));
     await tester.pump();
     expect(controller.state.clock!.started[SeatId.charcoal], isNotNull);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
     expect(controller.state.paused, isTrue);
     expect(
         controller.state.clock!.started.values.every((v) => v == null), isTrue);
     expect(controller.state.canPlay, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(controller.state.paused, isTrue);

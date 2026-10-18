@@ -23,8 +23,9 @@ Duplicate guest/auth requests coalesce. Initialization is lazy and retryable.
 Room codes can be resumed on another device using the same Google account.
 Achievements, theme unlocks, puzzle progress and preferences are currently local;
 signing in does not synchronize those. Guest identity cannot survive clearing
-browser storage or app data. Shared ratings still require authoritative backend
-writes; the current Firestore policy intentionally denies client rating writes.
+browser storage or app data. Community ratings now use a protected Spark
+transaction/agreement protocol; see [the ratings contract](RATINGS.md). They are
+separate from device-local achievements and cosmetic ownership.
 
 ## Production Firebase observations and change
 
@@ -243,3 +244,10 @@ Version 403 (unified two-to-four-seat Square/Hex) was subsequently built, accept
 by Play Console and submitted to the same Alpha closed track. Publishing overview
 confirms Changes in review; quick checks completed successfully and publication
 is automatic on approval. See [Android 403](releases/ANDROID_403.md) for artifacts and checks.
+
+Status rechecked 2026-10-17: Play Console lists 403 as **Available to testers on
+Google Play**, full rollout on Closed testing - Alpha. Internal testing still
+distributes 385. The dashboard shows three opted-in closed testers, with production
+access inactive pending the displayed twelve-testers/fourteen-continuous-days
+criterion. The in-review statements above are historical submission evidence,
+not current availability. No new store build was uploaded during this recheck.
