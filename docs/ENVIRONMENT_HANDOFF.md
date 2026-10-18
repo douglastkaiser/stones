@@ -1,7 +1,10 @@
 # Stones environment handoff
 
 Updated 2026-10-18. Continue the existing finishing effort; do not restart the audit.
-The user is moving to a better coding environment. Preserve current source and
+The user is moving to a better coding environment and explicitly requested that
+all remaining finishing work be merged and pushed to main before closing this
+thread. Resume from main; the feature-branch state below records the qualified
+implementation history. Preserve current source and
 local data. Read AGENTS.md, CLAUDE.md, DEVELOPMENT.md and FINISHING_PLAN.md first.
 
 ## Checkout and deployment state
@@ -11,7 +14,9 @@ local data. Read AGENTS.md, CLAUDE.md, DEVELOPMENT.md and FINISHING_PLAN.md firs
   `b8666a5c0da0a231f36a48a6abc8d8fa8c88d8ed`. This handoff follow-up applies only
   the CI formatter to three tests and updates documentation.
 - Main/origin main, checked against GitHub: `4ac6485734b90cb6c088c51f616f92004d6c49ea`.
-  Finishing work has NOT been merged or deployed to the production game root.
+  This is the pre-promotion main baseline. The finishing work is being merged
+  into main by explicit user instruction. Deploy Main remains a manual workflow;
+  this final commit/push does not publish a new web or Play release.
 - Real app review: https://www.douglastkaiser.com/stones/pr/finishing-game/?review=b8666a5
 - Sample-only visual review: https://www.douglastkaiser.com/stones/pr/finishing/?review=b8666a5
   The old `?review=431cb20` browser tab is the design sample, not the real app.
@@ -154,9 +159,10 @@ rejected the old impossible paused-to-resumed shortcut; do not remove its assert
 
 ## Next environment / immediate next work
 
-1. Check out the pushed finishing branch. Inspect status and read the plan/docs.
-   Do not merge to main merely to obtain a running review; the real app review
-   URL already exists. New production/store deployment requires the release gates.
+1. Check out the latest main. The owner explicitly requested final promotion of
+   the finishing branch. Inspect status and read the plan/docs. The real app review
+   URL already exists. Production web/store publication remains a separate action;
+   independent-player and Play-device qualification gates remain pending.
 2. Install/use pinned Flutter 3.47.7, Java/Android SDK and enough disk space. The old
    Windows environment had no Flutter/Dart SDK and about 2.4 GB free, so it used CI
    for all Dart analysis/testing/formatting. Do not copy generated SDK/build files.

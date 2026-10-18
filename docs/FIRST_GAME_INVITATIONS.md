@@ -62,3 +62,12 @@ continues to serve that URL. No signing key or account permission was changed.
   the baseline check. Review output is in `build/qa/first-game-final/` locally and
   in the workflow artifacts. The final handoff commit only applies CI formatting
   to tests and records evidence. It does not change Dart runtime behavior.
+
+## Main promotion requested by owner
+
+On 2026-10-18, the owner explicitly requested committing/pushing all remaining
+finishing work to main before closing the thread. This supersedes the earlier
+branch-only status above. The qualified implementation is being promoted intact;
+remaining device/invitee gates and later finishing packets are still outstanding.
+Deploy Main is manual and no new web publication or Play release is part of this
+final commit/push. Continue from the latest main in the next environment.

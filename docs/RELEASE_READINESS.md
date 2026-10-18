@@ -182,3 +182,12 @@ HTTP 200 with the exact expected JSON. A Play-installed device has not yet prove
 cold/warm app-link routing or sharing. See [environment handoff](ENVIRONMENT_HANDOFF.md)
 and [first-game invitations](FIRST_GAME_INVITATIONS.md). The finishing branch is
 not merged to main, and these changes have not produced a Play release.
+
+## Main promotion requested by owner
+
+On 2026-10-18, the owner explicitly requested committing/pushing all remaining
+finishing work to main before closing the thread. This supersedes the earlier
+branch-only status above. The qualified implementation is being promoted intact;
+remaining device/invitee gates and later finishing packets are still outstanding.
+Deploy Main is manual and no new web publication or Play release is part of this
+final commit/push. Continue from the latest main in the next environment.
