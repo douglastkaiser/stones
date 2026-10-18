@@ -1,8 +1,7 @@
 /// Isolated design review entry point. No Firebase, preferences or real rooms.
 library;
 
-import 'package:flutter/material.dart' hide Step;
-import 'game/board_geometry.dart';
+import 'package:flutter/material.dart';
 import 'game/board_view.dart';
 import 'game/match_config.dart';
 import 'game/match_rules.dart';
@@ -11,6 +10,8 @@ import 'game/move_selection.dart';
 import 'game/seat_appearance.dart';
 import 'models/piece.dart';
 import 'theme/tavern_theme.dart';
+import 'game/example_position.dart';
+import 'widgets/game_menu.dart';
 import 'version.dart';
 
 enum PreviewPage { home, setup, table, result }
@@ -62,37 +63,9 @@ class _DesignPreviewAppState extends State<DesignPreviewApp> {
       );
 }
 
-/// Composed visual study, deliberately not a saved/achievement-eligible game.
-MatchState previewPosition(BoardShape shape, int players, {bool won = false}) {
-  final config = MatchConfig.defaults(shape).copyWith(
-      seats: SeatId.values.take(players).map(SeatConfig.new).toList());
-  Cell cell(int x, int y) =>
-      shape == BoardShape.square ? Cell(x + 2, y + 2) : Cell(x, y);
-  final ids = config.ids;
-  final board = <Cell, List<Stone>>{
-    cell(0, 0): [
-      for (var i = 0; i < 7; i++) Stone(ids[i % players], PieceType.flat),
-      const Stone(SeatId.ivory, PieceType.flat),
-    ],
-    cell(-1, -1): [const Stone(SeatId.ivory, PieceType.capstone)],
-    cell(1, 0): [const Stone(SeatId.charcoal, PieceType.flat)],
-    cell(0, 1): [const Stone(SeatId.charcoal, PieceType.standing)],
-    cell(-1, 1): [Stone(ids.last, PieceType.flat)],
-    cell(1, -1): [const Stone(SeatId.ivory, PieceType.flat)],
-  };
-  if (won) {
-    for (var x = -2; x <= 2; x++) {
-      board[cell(x, 0)] = [const Stone(SeatId.ivory, PieceType.flat)];
-    }
-  }
-  final reserves = {for (final id in ids) id: Reserve.initial(config)};
-  for (final stone in board.values.expand((stack) => stack)) {
-    reserves[stone.seat] = reserves[stone.seat]!.use(stone.type);
-  }
-  final position = MatchState(
-      config: config, board: board, reserves: reserves, ply: players * 4);
-  return won ? MatchRules.resolve(position, SeatId.ivory) : position;
-}
+/// Compatibility entry point for the isolated visual review fixtures.
+MatchState previewPosition(BoardShape shape, int players, {bool won = false}) =>
+    examplePosition(shape, players, won: won);
 
 class _PreviewHome extends StatefulWidget {
   const _PreviewHome(
@@ -115,7 +88,6 @@ class _PreviewHomeState extends State<_PreviewHome> {
   late MatchState _game =
       previewPosition(_shape, _players, won: _page == PreviewPage.result);
   final _selection = MoveSelection();
-  bool _showHomeRoad = true;
   bool _advanced = false;
   bool _court = false;
   String _clock = 'No clock';
@@ -258,7 +230,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                     ]),
                     SizedBox(height: _page == PreviewPage.table ? 12 : 28),
                     switch (_page) {
-                      PreviewPage.home => _home(narrow),
+                      PreviewPage.home => _home(),
                       PreviewPage.setup => _setup(),
                       PreviewPage.table => _table(narrow),
                       PreviewPage.result => _result(narrow),
@@ -280,145 +252,23 @@ class _PreviewHomeState extends State<_PreviewHome> {
       style:
           Theme.of(context).textTheme.labelMedium?.copyWith(letterSpacing: 2));
 
-  Widget _home(bool narrow) {
-    final menu =
-        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text('Play Stones', style: Theme.of(context).textTheme.headlineLarge),
-      const SizedBox(height: 8),
-      const Text('Pick a board. Bring friends or take on the computer.'),
-      const SizedBox(height: 20),
-      _boardChoice(BoardShape.square, 'Square', 'Start here for classic Tak.',
-          featured: true),
-      const SizedBox(height: 10),
-      _boardChoice(BoardShape.hex, 'Hex',
-          'More directions. Same goal. A Stones variant.'),
-      const SizedBox(height: 16),
-      Wrap(spacing: 12, runSpacing: 4, children: [
-        OutlinedButton.icon(
-            onPressed: () => _sampleList('Join a friend', [
-                  'Open an invitation link, or enter a room code.',
-                  'Choose your seat and play.'
-                ]),
-            icon: const Icon(Icons.link),
-            label: const Text('Join a friend')),
-        TextButton.icon(
-            onPressed: () => _sampleList('My games', [
-                  'Your turn · Square with Rowan',
-                  'Waiting · Hex with friends',
-                  'Completed · Ivory won by road'
-                ]),
-            icon: const Icon(Icons.bookmark_border),
-            label: const Text('My games')),
-      ]),
-      const SizedBox(height: 20),
-      const Divider(),
-      const SizedBox(height: 12),
-      Text('First game?', style: Theme.of(context).textTheme.titleLarge),
-      const SizedBox(height: 6),
-      const Text(
-          'Place stones, build stacks, connect a road. Learn by playing.'),
-      const SizedBox(height: 12),
-      Align(
-          alignment: Alignment.centerLeft,
-          child: OutlinedButton.icon(
-              onPressed: () => _sampleList('Learn to play', [
-                    'Connect opposite edges with your flat stones and capstones.',
-                    'Move stacks to take control. Standing stones block roads.',
-                    'Try the guided lessons, then play with Court Mode hints.'
-                  ]),
-              icon: const Icon(Icons.school_outlined),
-              label: const Text('Learn to play'))),
-    ]);
-    final example = Column(children: [
-      ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: narrow ? 260 : 480),
-          child: _boardScene(
-              previewPosition(BoardShape.square, 2, won: _showHomeRoad),
-              hero: !narrow)),
-      const SizedBox(height: 12),
-      Wrap(spacing: 8, runSpacing: 4, children: [
-        ChoiceChip(
-            label: const Text('The road'),
-            selected: _showHomeRoad,
-            onSelected: (_) => setState(() => _showHomeRoad = true)),
-        ChoiceChip(
-            label: const Text('The stack'),
-            selected: !_showHomeRoad,
-            onSelected: (_) => setState(() => _showHomeRoad = false)),
-      ]),
-      const SizedBox(height: 8),
-      Text(
-          _showHomeRoad
-              ? 'Ivory connects opposite edges. That’s a win.'
-              : 'The top stone controls the stack. Move it to change the board.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium),
-      const SizedBox(height: 4),
-      Text('Example position', style: Theme.of(context).textTheme.bodySmall),
-    ]);
-    return narrow
-        ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            menu,
-            const SizedBox(height: 24),
-            example,
-          ])
-        : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(flex: 5, child: menu),
-            const SizedBox(width: 64),
-            Expanded(flex: 6, child: example),
-          ]);
-  }
-
-  Widget _boardChoice(BoardShape shape, String title, String description,
-          {bool featured = false}) =>
-      Material(
-        color: featured
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-            onTap: () => _open(PreviewPage.setup, shape: shape),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(children: [
-                  Icon(
-                      shape == BoardShape.square
-                          ? Icons.grid_view
-                          : Icons.hexagon_outlined,
-                      color: featured
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : null),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                    color: featured
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary
-                                        : null)),
-                        const SizedBox(height: 6),
-                        Text(description,
-                            style: TextStyle(
-                                color: featured
-                                    ? Theme.of(context).colorScheme.onPrimary
-                                    : null,
-                                height: 1.4))
-                      ])),
-                  const SizedBox(width: 8),
-                  Icon(Icons.arrow_forward,
-                      color: featured
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : null),
-                ]))),
-      );
+  Widget _home() => GameMenu(
+      onSquare: () => _open(PreviewPage.setup, shape: BoardShape.square),
+      onHex: () => _open(PreviewPage.setup, shape: BoardShape.hex),
+      onLearn: () => _sampleList('Learn to play', [
+            'Connect opposite edges with your flat stones and capstones.',
+            'Move stacks to take control. Standing stones block roads.',
+            'Try the guided lessons, then play with Court Mode hints.'
+          ]),
+      onJoin: () => _sampleList('Join a friend', [
+            'Open an invitation link, or enter a room code.',
+            'Choose your seat and play.'
+          ]),
+      onMyGames: () => _sampleList('My games', [
+            'Your turn · Square with Rowan',
+            'Waiting · Hex with friends',
+            'Completed · Ivory won by road'
+          ]));
 
   Widget _setup() => Center(
           child: ConstrainedBox(

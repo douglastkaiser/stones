@@ -8,7 +8,6 @@ import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'services/web_back_button_handler.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'providers/providers.dart';
@@ -17,6 +16,7 @@ import 'services/services.dart';
 import 'services/ai/court_coach.dart';
 
 import 'theme/theme.dart';
+import 'theme/tavern_theme.dart';
 import 'version.dart';
 import 'widgets/chess_clock_setup.dart';
 import 'widgets/game_help.dart';
@@ -28,6 +28,7 @@ import 'widgets/board_cell_gestures.dart';
 import 'screens/main_menu_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'game/legacy_achievement_result.dart';
+import 'game/invitation_navigation.dart';
 
 void _debugLog(String message) {
   if (!kDebugMode) return;
@@ -110,23 +111,13 @@ class _StonesAppState extends ConsumerState<StonesApp> {
       scaffoldMessengerKey: _messenger,
       navigatorKey: _navigator,
       title: 'Stones',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: GameColors.themeSeed),
-        useMaterial3: true,
-        textTheme: GoogleFonts.loraTextTheme(),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: GameColors.themeSeed,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        textTheme: GoogleFonts.loraTextTheme(
-          ThemeData(brightness: Brightness.dark).textTheme,
-        ),
-      ),
+      theme: TavernTheme.build(Brightness.light),
+      darkTheme: TavernTheme.build(Brightness.dark),
       themeMode: settings.themeMode,
       home: const MainMenuScreen(),
+      onGenerateInitialRoutes: (route) => initialInvitationRoutes(route,
+          home: const MainMenuScreen(), browserUri: kIsWeb ? Uri.base : null),
+      onGenerateRoute: invitationRoute,
     );
   }
 }

@@ -163,6 +163,11 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                       icon: const Icon(Icons.person_add_outlined),
                       label: const Text('Add player'))),
             const SizedBox(height: 16),
+            ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('Game settings'),
+                subtitle: Text(_config.court ? 'Court Mode practice' : _config.clockSeconds == 0 ? 'Untimed' : '${_config.clockSeconds ~/ 60} minutes per player'),
+                children: [
             DropdownButtonFormField<SeatId>(
                 isExpanded: true,
                 key: ValueKey('starter-${_config.starter.name}'),
@@ -234,6 +239,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                 const Text(
                     'Clocks start after the first move. Closing an online game does not pause its clock. In a match with three or four players, timeout ends the match without a winner.'),
             ],
+                ]),
             if (_error != null)
               Padding(
                   padding: const EdgeInsets.only(top: 12),

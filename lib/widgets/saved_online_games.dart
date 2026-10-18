@@ -42,7 +42,7 @@ class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames> {
     try {
       final screen =
           await loadInvitedRoom(ref, room.code, expectedUid: room.uid);
-      if (!mounted) return;
+      if (!mounted || screen == null) return;
       await Navigator.push<void>(
           context, MaterialPageRoute(builder: (_) => screen));
     } catch (error) {

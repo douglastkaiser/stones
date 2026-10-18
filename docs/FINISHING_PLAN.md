@@ -9,8 +9,9 @@ Execution began on 2026-10-17 on `codex/finishing-foundation`. See
 [release readiness](RELEASE_READINESS.md) for implemented work, qualification and
 pending gates. Packets are not complete merely because a prototype/build exists.
 The baseline tooling and isolated design preview are implemented on the branch.
-The preview is at the owner visual-feedback gate; physical-device qualification
-for packet 1 remains pending. Packets 3–12 have not been represented as complete.
+The owner approved the revised game-first preview and authorized continuation.
+Packet 3 is in implementation; physical-device qualification for packet 1 remains
+pending. Later packets have not been represented as complete.
 
 ## Product promise
 

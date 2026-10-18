@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Candidate design tokens. Production adopts these only after visual review.
+/// Approved shared design tokens for the app and its visual review.
 class TavernTheme {
   static ThemeData build(Brightness brightness) {
     final dark = brightness == Brightness.dark;

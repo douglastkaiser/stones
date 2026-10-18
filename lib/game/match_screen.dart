@@ -1,7 +1,7 @@
+import '../widgets/room_invitation_actions.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart' hide Step;
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/piece.dart';
 import '../providers/account_provider.dart';
@@ -457,18 +457,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       if (match.shortcutWarning != null)
                         Text(match.shortcutWarning!,
                             textAlign: TextAlign.center),
-                      TextButton.icon(
-                          onPressed: () async {
-                            await Clipboard.setData(
-                                ClipboardData(text: match.room!.code));
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Room code copied')));
-                            }
-                          },
-                          icon: const Icon(Icons.copy),
-                          label: const Text('Copy invitation code')),
+                      RoomInvitationActions(code: match.room!.code),
                       for (final seat in game.config.seats)
                         Text(
                             '${seat.id.label} · ${seat.control == SeatControl.ai ? 'AI' : match.room!.owners[seat.id] == null ? 'Waiting for online human' : match.room!.owners[seat.id] == match.uid ? 'On this device' : 'Online human'}'),
