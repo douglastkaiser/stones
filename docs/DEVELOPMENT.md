@@ -1,5 +1,7 @@
 # Development map
 
+For the current finishing-work handoff, start with [environment handoff](ENVIRONMENT_HANDOFF.md).
+
 For current release evidence and pending physical-device qualification, start
 with [release readiness](RELEASE_READINESS.md). The [finishing plan](FINISHING_PLAN.md)
 records the approved product direction and staged work. Older sections below

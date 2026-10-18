@@ -29,23 +29,30 @@ class _SilentSound extends SoundManager {
 Future<void> _capture(WidgetTester tester, GlobalKey key, String name) async {
   if (!const bool.fromEnvironment('STONES_CAPTURE_PREVIEW')) return;
   await tester.runAsync(() async {
-    final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final boundary =
+        key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     final image = await boundary.toImage();
     try {
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       final file = File('build/qa/finishing/$name.png');
       await file.parent.create(recursive: true);
       await file.writeAsBytes(data!.buffer.asUint8List());
-    } finally { image.dispose(); }
+    } finally {
+      image.dispose();
+    }
   });
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
-    await (FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await (FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+        .load();
     for (final font in [('StonesLora', 'Lora'), ('StonesSans', 'Roboto')]) {
-      await (FontLoader(font.$1)..addFont(rootBundle.load('assets/fonts/${font.$2}-Regular.ttf'))).load();
+      await (FontLoader(font.$1)
+            ..addFont(rootBundle.load('assets/fonts/${font.$2}-Regular.ttf')))
+          .load();
     }
   });
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -63,22 +70,25 @@ void main() {
           authenticate: () async => 'host',
           store: () => store);
       final capture = GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(key: capture, child: ProviderScope(
-          overrides: [
-            soundManagerProvider.overrideWithValue(_SilentSound()),
-            accountServiceProvider.overrideWithValue(FakeAccount()),
-            localMatchStorageProvider.overrideWithValue(storage),
-            matchProvider.overrideWith((ref) => controller),
-          ],
-          child: MaterialApp(
-              theme: TavernTheme.build(Brightness.dark),
-              builder: (context, child) => MediaQuery(
-                  data: MediaQuery.of(context)
-                      .copyWith(textScaler: const TextScaler.linear(1.5)),
-                  child: child!),
-              home: const MainMenuScreen()))));
+      await tester.pumpWidget(RepaintBoundary(
+          key: capture,
+          child: ProviderScope(
+              overrides: [
+                soundManagerProvider.overrideWithValue(_SilentSound()),
+                accountServiceProvider.overrideWithValue(FakeAccount()),
+                localMatchStorageProvider.overrideWithValue(storage),
+                matchProvider.overrideWith((ref) => controller),
+              ],
+              child: MaterialApp(
+                  theme: TavernTheme.build(Brightness.dark),
+                  builder: (context, child) => MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(textScaler: const TextScaler.linear(1.5)),
+                      child: child!),
+                  home: const MainMenuScreen()))));
       await tester.pumpAndSettle();
-      await _capture(tester, capture, 'app-home-${size.width.toInt()}-dark-large-text');
+      await _capture(
+          tester, capture, 'app-home-${size.width.toInt()}-dark-large-text');
       expect(find.text('Vs Computer'), findsNothing);
       for (final shape in BoardShape.values) {
         final target = find.text(shape == BoardShape.square ? 'Square' : 'Hex');
@@ -90,7 +100,8 @@ void main() {
                 .widget<MatchSetupScreen>(find.byType(MatchSetupScreen))
                 .shape,
             shape);
-        await _capture(tester, capture, 'app-setup-${shape.name}-${size.width.toInt()}-dark-large-text');
+        await _capture(tester, capture,
+            'app-setup-${shape.name}-${size.width.toInt()}-dark-large-text');
         final count = shape == BoardShape.square ? 2 : 3;
         expect(
             find.byWidgetPredicate(

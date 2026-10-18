@@ -19,7 +19,8 @@ import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 void main() {
-  testWidgets('resuming an online screen reconciles missed turns from the server',
+  testWidgets(
+      'resuming an online screen reconciles missed turns from the server',
       (tester) async {
     final store = MemoryMatchRoomStore();
     var authentications = 0;
@@ -30,8 +31,8 @@ void main() {
           return 'host';
         },
         store: () => store);
-    await controller.start(
-        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+    await controller
+        .start(MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
       SeatConfig(SeatId.ivory),
       SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
     ]));
@@ -76,8 +77,8 @@ void main() {
         authenticate: () async => 'host',
         store: () => store,
         remember: (room, uid) async => throw StateError('Storage full'));
-    await controller.start(
-        MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
+    await controller
+        .start(MatchConfig.defaults(BoardShape.square).copyWith(seats: const [
       SeatConfig(SeatId.ivory),
       SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
     ]));

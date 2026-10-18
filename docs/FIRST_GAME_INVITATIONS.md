@@ -25,9 +25,13 @@ Do not claim verified Android association until the domain-root assetlinks file
 matches the Play app-signing certificate and a Play installation passes cold/warm
 invitation trials. A failed association should leave a functioning browser link.
 
-Verification pending: focused/full Flutter CI, web/Android compilation, real
-production-entry-point layout and navigation capture, independent invitee trial,
-and Play-signed app-link association/install qualification. No Firebase access
+Code qualification passed at `b8666a5`: 833 Flutter tests, strict analysis, normal
+web and Android debug compilation. The isolated review workflow passed 81 focused
+tests and 16 AI probes and captured 30 views, including the real home/setup at
+320/1366 widths with 150% text. Live Square Court play, AI reply/explanation,
+My games recovery, Hex 2/3/4-seat setup, invalid-link recovery and cancellation
+of local-save replacement were exercised. Remaining gates: an independent
+invitee trial and Play-signed app-link/install qualification. No Firebase access
 rule, game schema, rating policy or Play track is changed in this packet.
 
 References: [Flutter deep linking](https://docs.flutter.dev/ui/navigation/deep-linking),
@@ -42,6 +46,19 @@ is retained in `docs/android/assetlinks.json`. The certificate is Play's app-sig
 certificate, not the upload certificate. The statement was committed as
 `ba451723d035df7683570d3f96c1b983d855e8e3` in the domain-root repository
 `douglastkaiser/douglastkaiser.github.io`, preserving its existing tree. Root-site
-publication and device verification still require confirmation. The Android intent
+run 39097313842 succeeded. The public endpoint returned HTTP 200, application/json,
+and exactly the verified Play statement. Device verification remains pending. The Android intent
 filter restricts handling to HTTPS www.douglastkaiser.com/stones/; browser fallback
 continues to serve that URL. No signing key or account permission was changed.
+
+## Qualified sources and review URLs
+
+- Functional source: `b8666a5c0da0a231f36a48a6abc8d8fa8c88d8ed`.
+- Full CI: https://github.com/douglastkaiser/stones/actions/runs/39097647956
+- Review CI: https://github.com/douglastkaiser/stones/actions/runs/39097647931
+- Actual app: https://www.douglastkaiser.com/stones/pr/finishing-game/?review=b8666a5
+- Design-only sample: https://www.douglastkaiser.com/stones/pr/finishing/?review=b8666a5
+- The actual app's live revision, HTML/bootstrap linkage and startup hashes passed
+  the baseline check. Review output is in `build/qa/first-game-final/` locally and
+  in the workflow artifacts. The final handoff commit only applies CI formatting
+  to tests and records evidence. It does not change Dart runtime behavior.

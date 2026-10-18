@@ -105,8 +105,9 @@ Google accounts. Each must preserve the last server-confirmed state.
 | Packet | State | Remaining gate |
 | --- | --- | --- |
 | 1. Baseline | Tooling, source/data inventory and current Play status verified; shared-AI VM measurements recorded | Physical-device measurements and account trials pending. |
-| 2. Prototype | Isolated candidate published; 31 focused checks, 24 captures and live Square/Hex inspection | Owner visual feedback before applying the design to production screens. |
-| 3–12 | Not started | Follow the plan's dependencies and per-packet contracts. |
+| 2. Prototype | Revised game-first direction approved by owner | Applied to real home/setup in packet 3. |
+| 3. Setup/invitations | Code and review builds qualified; root Android association published | Independent invitee and Play-signed device trials pending; not promoted to main. |
+| 4–12 | Not started | Follow the plan's dependencies and per-packet contracts. |
 
 Production gameplay, room rules and real-user data have not been changed by the
 prototype. Use `lib/design_preview.dart` as a separate entry point. It has no
@@ -164,3 +165,20 @@ publication; the earlier review usage-limit interruption is resolved. The final
 normal CI run 39095129219 was still running at this record update. The preceding
 full qualification covers the layout/interaction change; this follow-up changes
 only formatting and the browser-tab title.
+
+## First-game integration qualification
+
+`b8666a5` passed [full CI](https://github.com/douglastkaiser/stones/actions/runs/39097647956):
+833 tests, strict analysis, web release and Android debug builds. Its
+[review pipeline](https://github.com/douglastkaiser/stones/actions/runs/39097647931)
+passed 81 focused tests, 16 AI probes, 30 captures and both isolated web builds.
+The actual app at `/stones/pr/finishing-game/` serves the expected source and
+passed startup integrity checks. It uses real app services; the separate
+`/stones/pr/finishing/` entry remains a sample without Firebase initialization.
+
+The root website association uses the Play app-signing fingerprint, was published
+from root-site commit `ba451723d035df7683570d3f96c1b983d855e8e3`, and returned
+HTTP 200 with the exact expected JSON. A Play-installed device has not yet proved
+cold/warm app-link routing or sharing. See [environment handoff](ENVIRONMENT_HANDOFF.md)
+and [first-game invitations](FIRST_GAME_INVITATIONS.md). The finishing branch is
+not merged to main, and these changes have not produced a Play release.

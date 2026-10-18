@@ -71,10 +71,9 @@ void main() {
                   web ? '/' : '/stones/?room=UABCDEF',
                   home: const Scaffold(body: Text('Home')),
                   browserUri: web
-                      ? Uri.parse(
-                          mode == 'preview web'
-                            ? 'https://www.douglastkaiser.com/stones/pr/finishing-game/?room=UABCDEF'
-                            : 'https://www.douglastkaiser.com/stones/?room=UABCDEF')
+                      ? Uri.parse(mode == 'preview web'
+                          ? 'https://www.douglastkaiser.com/stones/pr/finishing-game/?room=UABCDEF'
+                          : 'https://www.douglastkaiser.com/stones/?room=UABCDEF')
                       : null),
               onGenerateRoute: invitationRoute)));
       await tester.pumpAndSettle();
