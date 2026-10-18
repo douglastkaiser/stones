@@ -60,9 +60,10 @@ void main() {
     });
   }
 
-  for (final web in [false, true]) {
+  for (final mode in ['Android', 'web', 'preview web']) {
+    final web = mode != 'Android';
     testWidgets(
-        'cold ${web ? "web" : "Android"} invitation opens a join form without claiming a seat',
+        'cold $mode invitation opens a join form without claiming a seat',
         (tester) async {
       await tester.pumpWidget(ProviderScope(
           child: MaterialApp(
@@ -71,13 +72,15 @@ void main() {
                   home: const Scaffold(body: Text('Home')),
                   browserUri: web
                       ? Uri.parse(
-                          'https://www.douglastkaiser.com/stones/?room=UABCDEF')
+                          mode == 'preview web'
+                            ? 'https://www.douglastkaiser.com/stones/pr/finishing-game/?room=UABCDEF'
+                            : 'https://www.douglastkaiser.com/stones/?room=UABCDEF')
                       : null),
               onGenerateRoute: invitationRoute)));
       await tester.pumpAndSettle();
       expect(find.byType(JoinRoomScreen), findsOneWidget);
       expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          contains('room=UABCDEF'));
+          '/stones/?room=UABCDEF');
       expect(find.text('Join room'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pageBack();

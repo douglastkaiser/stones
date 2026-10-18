@@ -1,3 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:stones/theme/tavern_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +26,28 @@ class _SilentSound extends SoundManager {
   Future<void> setMuted(bool muted) async {}
 }
 
+Future<void> _capture(WidgetTester tester, GlobalKey key, String name) async {
+  if (!const bool.fromEnvironment('STONES_CAPTURE_PREVIEW')) return;
+  await tester.runAsync(() async {
+    final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = await boundary.toImage();
+    try {
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      final file = File('build/qa/finishing/$name.png');
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(data!.buffer.asUint8List());
+    } finally { image.dispose(); }
+  });
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    await (FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    for (final font in [('StonesLora', 'Lora'), ('StonesSans', 'Roboto')]) {
+      await (FontLoader(font.$1)..addFont(rootBundle.load('assets/fonts/${font.$2}-Regular.ttf'))).load();
+    }
+  });
   setUp(() => SharedPreferences.setMockInitialValues({}));
   for (final size in [const Size(320, 568), const Size(1366, 768)]) {
     testWidgets('Square and Hex use one setup and playable match at $size',
@@ -36,7 +62,8 @@ void main() {
           storage: storage,
           authenticate: () async => 'host',
           store: () => store);
-      await tester.pumpWidget(ProviderScope(
+      final capture = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(key: capture, child: ProviderScope(
           overrides: [
             soundManagerProvider.overrideWithValue(_SilentSound()),
             accountServiceProvider.overrideWithValue(FakeAccount()),
@@ -44,12 +71,14 @@ void main() {
             matchProvider.overrideWith((ref) => controller),
           ],
           child: MaterialApp(
+              theme: TavernTheme.build(Brightness.dark),
               builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context)
                       .copyWith(textScaler: const TextScaler.linear(1.5)),
                   child: child!),
-              home: const MainMenuScreen())));
+              home: const MainMenuScreen()))));
       await tester.pumpAndSettle();
+      await _capture(tester, capture, 'app-home-${size.width.toInt()}-dark-large-text');
       expect(find.text('Vs Computer'), findsNothing);
       for (final shape in BoardShape.values) {
         final target = find.text(shape == BoardShape.square ? 'Square' : 'Hex');
@@ -61,6 +90,7 @@ void main() {
                 .widget<MatchSetupScreen>(find.byType(MatchSetupScreen))
                 .shape,
             shape);
+        await _capture(tester, capture, 'app-setup-${shape.name}-${size.width.toInt()}-dark-large-text');
         final count = shape == BoardShape.square ? 2 : 3;
         expect(
             find.byWidgetPredicate(
