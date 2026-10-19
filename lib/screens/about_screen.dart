@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'feedback_screen.dart';
 import '../models/achievement.dart';
 import '../providers/providers.dart';
 import '../services/play_games_service.dart';
@@ -207,6 +208,20 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                 'Use standing stones to block your opponent and capstones '
                 'to flatten walls in your path.',
                 style: TextStyle(height: 1.5),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _AboutCard(
+            title: 'Help improve Stones',
+            children: [
+              _LinkTile(
+                icon: Icons.feedback_outlined,
+                title: 'Send feedback',
+                subtitle: 'Report a problem or share an idea',
+                onTap: () => Navigator.push<void>(context,
+                    MaterialPageRoute(builder: (_) => const FeedbackScreen())),
               ),
             ],
           ),

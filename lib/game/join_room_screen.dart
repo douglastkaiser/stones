@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/tavern_theme.dart';
 import 'room_navigation.dart';
+import '../widgets/room_qr_scanner.dart';
 
 /// Links and typed codes meet here. Joining always requires an explicit action.
 class JoinRoomScreen extends ConsumerStatefulWidget {
@@ -93,6 +94,27 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                                     icon: const Icon(Icons.login),
                                     label: Text(
                                         _joining ? 'Joining...' : 'Join room')),
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                    onPressed: _joining
+                                        ? null
+                                        : () async {
+                                            final code =
+                                                await showModalBottomSheet<
+                                                        String>(
+                                                    context: context,
+                                                    isScrollControlled: true,
+                                                    builder: (_) =>
+                                                        const RoomQrScanner());
+                                            if (mounted && code != null) {
+                                              setState(() {
+                                                _code.text = code;
+                                                _error = null;
+                                              });
+                                            }
+                                          },
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                    label: const Text('Scan QR code')),
                                 const SizedBox(height: 12),
                                 const Text(
                                     'Joining claims an available seat for this account or guest identity. To resume a seat, use its original account or browser profile.'),

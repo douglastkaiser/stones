@@ -70,11 +70,11 @@ inventory. Fields/ownership below come from the current models and rules.
 | Settings/cosmetics preferences | Local audio, appearance, selected earned set, defaults | Keep device accessibility/audio preferences local; synchronize earned ownership separately. |
 | Play Games legacy save | Optional native old Square cloud save and a separate identity | Isolate recovery; do not market this as shared-engine/account progression sync. |
 
-The current privacy page claims no analytics/personal data and short room
-retention. `web/index.html` explicitly initializes Firebase Analytics, while
-accounts, rooms and ratings persist. Do not copy these claims into the next Play
-declaration. Decide and implement actual telemetry/retention/deletion behavior
-before publishing matching disclosures in finishing packet 11.
+The checked-in privacy page now discloses voluntary feedback email, account/room/
+rating storage and existing website Analytics initialization; it no longer claims
+no personal data or automatic room deletion. Publication, actual telemetry/
+retention/deletion controls and matching Play declarations still require packet 11
+qualification. The wording change does not implement deletion or change telemetry.
 
 ## Device and usability evidence still required
 
@@ -106,8 +106,10 @@ Google accounts. Each must preserve the last server-confirmed state.
 | --- | --- | --- |
 | 1. Baseline | Tooling, source/data inventory and current Play status verified; shared-AI VM measurements recorded | Physical-device measurements and account trials pending. |
 | 2. Prototype | Revised game-first direction approved by owner | Applied to real home/setup in packet 3. |
-| 3. Setup/invitations | Code and review builds qualified; root Android association published | Independent invitee and Play-signed device trials pending; not promoted to main. |
-| 4–12 | Not started | Follow the plan's dependencies and per-packet contracts. |
+| 3. Setup/invitations | Code and review builds qualified; root Android association published | Merged to main at `7036dd9`; independent invitee and Play-signed device trials pending. |
+| 4. Account progress | [Merge/cache foundation and verified-event adapters](ACCOUNT_PROGRESS.md) implemented | Remote adapter, rules, live-provider integration, account UI and multi-client qualification pending. |
+| 5–10, 12 | Not started | Follow the plan's dependencies and per-packet contracts. |
+| 11. Account/support | [Feedback flow](FEEDBACK.md) implemented; checked-in disclosures corrected | Account deletion, retention/telemetry decisions, publication and Play disclosures pending. |
 
 Production gameplay, room rules and real-user data have not been changed by the
 prototype. Use `lib/design_preview.dart` as a separate entry point. It has no
@@ -191,3 +193,17 @@ branch-only status above. The qualified implementation is being promoted intact;
 remaining device/invitee gates and later finishing packets are still outstanding.
 Deploy Main is manual and no new web publication or Play release is part of this
 final commit/push. Continue from the latest main in the next environment.
+
+
+## Owner-requested home, table and invitation follow-up
+
+See [community and layout qualification](COMMUNITY_AND_LAYOUT.md). Home sign-in,
+editable Stones profiles, wider desktop boards, compact mobile controls, top-of-
+table invitations, QR display/scanning and opt-in Open tables are implemented
+locally. The full Flutter suite passed 884 tests, followed by 44 focused tests
+after the final desktop correction. Strict analysis, the final release-web build
+and all 81 Firestore emulator tests passed. After the owner completed Firebase
+browser login, the additive rules were published on 2026-10-19 UTC; the active
+production rules source matches the tested SHA-256 recorded in the linked notes.
+The app client has not been published; physical-device camera and independent
+production-account qualification remain release checks.

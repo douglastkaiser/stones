@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../game/room_invitation.dart';
 import '../services/invitation_share.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class RoomInvitationActions extends StatelessWidget {
   const RoomInvitationActions({super.key, required this.code});
@@ -25,7 +26,27 @@ class RoomInvitationActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final link = roomInvitation(code);
-    return Column(children: [
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      SelectableText(code,
+          style: Theme.of(context)
+              .textTheme
+              .headlineMedium
+              ?.copyWith(fontFamily: 'monospace', letterSpacing: 3)),
+      const SizedBox(height: 12),
+      Semantics(
+          label: 'Room invitation QR code',
+          excludeSemantics: true,
+          image: true,
+          child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(12),
+              child: SizedBox.square(
+                  dimension: 180,
+                  child: QrImageView(
+                      data: link.toString(),
+                      size: 180,
+                      backgroundColor: Colors.white)))),
+      const SizedBox(height: 12),
       SelectableText(link.toString(), textAlign: TextAlign.center),
       Wrap(
           alignment: WrapAlignment.center,
@@ -54,4 +75,38 @@ class RoomInvitationActions extends StatelessWidget {
           ]),
     ]);
   }
+}
+
+class RoomInvitationBar extends StatelessWidget {
+  const RoomInvitationBar({super.key, required this.code});
+  final String code;
+  @override
+  Widget build(BuildContext context) => Card(
+      child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              children: [
+                SelectableText('Room $code',
+                    style: const TextStyle(
+                        fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                TextButton.icon(
+                    icon: const Icon(Icons.qr_code),
+                    label: const Text('Invite / QR'),
+                    onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                                title: const Text('Invite players'),
+                                scrollable: true,
+                                content: SizedBox(
+                                    width: 400,
+                                    child: RoomInvitationActions(code: code)),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Close'))
+                                ]))),
+              ])));
 }

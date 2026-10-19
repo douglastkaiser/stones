@@ -91,6 +91,8 @@ void main() {
     expect(find.text('Room UABCDEF'), findsOneWidget);
     expect(find.textContaining('Could not save this room’s shortcut.'),
         findsOneWidget);
+    await tester.tap(find.text('Invite / QR'));
+    await tester.pumpAndSettle();
     expect(find.text('Copy code'), findsOneWidget);
     expect(find.text('Copy link'), findsOneWidget);
     expect(tester.takeException(), isNull);

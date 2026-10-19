@@ -10,6 +10,8 @@ import '../providers/elo_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/sound_manager.dart';
 import 'board_view.dart';
+import 'match_table_layout.dart';
+import '../widgets/open_table_control.dart';
 import 'board_geometry.dart';
 import 'clock_label.dart';
 import 'match_config.dart';
@@ -297,194 +299,164 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                         : () => _resign(match),
                     icon: const Icon(Icons.flag_outlined)),
             ]),
-        body: LayoutBuilder(builder: (context, constraints) {
-          final boardSide = math.min(
-              680.0,
-              math.min(constraints.maxWidth,
-                  math.max(280.0, constraints.maxHeight - 330 * scale)));
-          return SingleChildScrollView(
-              child: Center(
-                  child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Column(children: [
-              SizedBox(
-                  height: 98 * scale,
-                  child: SingleChildScrollView(
-                      child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                for (final seat in game.config.seats)
-                                  Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                          border: Border.all(
-                                              color: seat.id == game.current
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .primary
-                                                  : Colors.transparent,
-                                              width: 2),
-                                          borderRadius:
-                                              BorderRadius.circular(10)),
-                                      child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            CircleAvatar(
-                                                radius: 12,
-                                                backgroundColor:
-                                                    SeatAppearance.marker(
-                                                        seat.id),
-                                                child: Text(seat.id.symbol,
-                                                    textScaler:
-                                                        TextScaler.noScaling,
-                                                    style: const TextStyle(
-                                                        color: Colors.black,
-                                                        fontSize: 10))),
-                                            const SizedBox(width: 6),
-                                            Flexible(
-                                                child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                  Text(
-                                                      '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps'),
-                                                  if (seat.control ==
-                                                      SeatControl.ai)
-                                                    PlayerRatingLabel(
-                                                        uid:
-                                                            'ai_shared-search-v1_${seat.level.name}',
-                                                        pool: RatingPool
-                                                            .forConfig(
-                                                                game.config),
-                                                        fallback:
-                                                            '${seat.level.name} AI'),
-                                                  if (match.room
-                                                          ?.owners[seat.id] !=
-                                                      null)
-                                                    PlayerRatingLabel(
-                                                        uid: match.room!
-                                                            .owners[seat.id]!,
-                                                        pool: RatingPool
-                                                            .forConfig(
-                                                                game.config),
-                                                        fallback:
-                                                            seat.id.label),
-                                                  if (match.clock != null)
-                                                    ClockLabel(
-                                                        clock: match.clock!,
-                                                        seat: seat.id,
-                                                        finished:
-                                                            game.finished),
-                                                ])),
-                                          ])),
-                              ])))),
-              SizedBox(
-                  height: 44 * scale,
-                  child: Center(
-                      child: Text(status,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium))),
-              SizedBox(
-                  key: const ValueKey('stable-board'),
-                  width: boardSide,
-                  height: boardSide,
-                  child: BoardView(
-                      game: preview ?? game,
-                      original: preview == null ? null : game,
-                      selected: _selection.source,
-                      destinations:
-                          match.canPlay ? _selection.destinations(game) : {},
-                      road: road,
-                      styles: styles,
-                      theme: boardTheme,
-                      onCell: match.canPlay ? (cell) => _tap(game, cell) : null,
-                      onSwipe: !match.canPlay
-                          ? null
-                          : (cell, direction) => setState(
-                              () => _selection.swipe(game, cell, direction)))),
-              SizedBox(
-                  height: 230 * scale,
-                  child: SingleChildScrollView(
-                      child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: _controls(match, game)))),
-              if (widget.studyPanel == null && ratingMessage != null)
-                Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(children: [
-                      Text(ratingMessage, textAlign: TextAlign.center),
-                      if (game.finished &&
-                          (ratingMessage.contains('could not') ||
-                              ratingMessage.contains('Waiting')))
-                        TextButton(
-                            onPressed: () async {
-                              final uid =
-                                  ref.read(accountProvider).identity?.uid;
-                              ref.read(ratingStatusProvider.notifier).state =
-                                  (match.id!, 'Checking game result\u2026');
-                              try {
-                                final message = await ref
-                                    .read(ratingRepositoryProvider)
-                                    .submitResult(
-                                        match, _controller.confirmedMoves);
-                                if (mounted &&
-                                    ref.read(matchProvider).id == match.id &&
-                                    ref.read(accountProvider).identity?.uid ==
-                                        uid) {
-                                  ref
-                                      .read(ratingStatusProvider.notifier)
-                                      .state = (match.id!, message);
-                                }
-                              } catch (_) {
-                                if (mounted &&
-                                    ref.read(matchProvider).id == match.id &&
-                                    ref.read(accountProvider).identity?.uid ==
-                                        uid) {
-                                  ref
-                                      .read(ratingStatusProvider.notifier)
-                                      .state = (
-                                    match.id!,
-                                    'Rating update could not finish. Retry when connected.'
-                                  );
-                                }
+        body: MatchTableLayout(
+          playerCount: game.config.seats.length,
+          invitation: match.room == null
+              ? null
+              : RoomInvitationBar(code: match.room!.code),
+          players: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).width >= 1000
+                      ? double.infinity
+                      : 150 * scale),
+              child: SingleChildScrollView(
+                  child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            for (final seat in game.config.seats)
+                              Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: seat.id == game.current
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                              : Colors.transparent,
+                                          width: 2),
+                                      borderRadius: BorderRadius.circular(10)),
+                                  child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        CircleAvatar(
+                                            radius: 12,
+                                            backgroundColor:
+                                                SeatAppearance.marker(seat.id),
+                                            child: Text(seat.id.symbol,
+                                                textScaler:
+                                                    TextScaler.noScaling,
+                                                style: const TextStyle(
+                                                    color: Colors.black,
+                                                    fontSize: 10))),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                            child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                              Text(
+                                                  '${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps} caps'),
+                                              if (seat
+                                                      .control ==
+                                                  SeatControl.ai)
+                                                PlayerRatingLabel(
+                                                    uid:
+                                                        'ai_shared-search-v1_${seat.level.name}',
+                                                    pool: RatingPool.forConfig(
+                                                        game.config),
+                                                    fallback:
+                                                        '${seat.level.name} AI'),
+                                              if (match.room?.owners[seat.id] !=
+                                                  null)
+                                                PlayerRatingLabel(
+                                                    uid: match
+                                                        .room!.owners[seat.id]!,
+                                                    pool: RatingPool.forConfig(
+                                                        game.config),
+                                                    fallback: seat.id.label),
+                                              if (match.clock != null)
+                                                ClockLabel(
+                                                    clock: match.clock!,
+                                                    seat: seat.id,
+                                                    finished: game.finished),
+                                            ])),
+                                      ])),
+                          ])))),
+          status: Text(status,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium),
+          board: BoardView(
+              game: preview ?? game,
+              original: preview == null ? null : game,
+              selected: _selection.source,
+              destinations: match.canPlay ? _selection.destinations(game) : {},
+              road: road,
+              styles: styles,
+              theme: boardTheme,
+              onCell: match.canPlay ? (cell) => _tap(game, cell) : null,
+              onSwipe: !match.canPlay
+                  ? null
+                  : (cell, direction) =>
+                      setState(() => _selection.swipe(game, cell, direction))),
+          controls: Padding(
+              padding: const EdgeInsets.all(8), child: _controls(match, game)),
+          details: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (match.room != null && match.uid == match.room!.host)
+              OpenTableControl(
+                  key: ValueKey(match.room!.code),
+                  uid: match.uid!,
+                  code: match.room!.code),
+            if (widget.studyPanel == null && ratingMessage != null)
+              Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(children: [
+                    Text(ratingMessage, textAlign: TextAlign.center),
+                    if (game.finished &&
+                        (ratingMessage.contains('could not') ||
+                            ratingMessage.contains('Waiting')))
+                      TextButton(
+                          onPressed: () async {
+                            final uid = ref.read(accountProvider).identity?.uid;
+                            ref.read(ratingStatusProvider.notifier).state =
+                                (match.id!, 'Checking game result\u2026');
+                            try {
+                              final message = await ref
+                                  .read(ratingRepositoryProvider)
+                                  .submitResult(
+                                      match, _controller.confirmedMoves);
+                              if (mounted &&
+                                  ref.read(matchProvider).id == match.id &&
+                                  ref.read(accountProvider).identity?.uid ==
+                                      uid) {
+                                ref.read(ratingStatusProvider.notifier).state =
+                                    (match.id!, message);
                               }
-                            },
-                            child: const Text('Retry rating update')),
-                    ])),
-              if (match.room != null)
-                Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(children: [
-                      Text('Room ${match.room!.code}',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      if (match.shortcutWarning != null)
-                        Text(match.shortcutWarning!,
-                            textAlign: TextAlign.center),
-                      RoomInvitationActions(code: match.room!.code),
-                      for (final seat in game.config.seats)
-                        Text(
-                            '${seat.id.label} · ${seat.control == SeatControl.ai ? 'AI' : match.room!.owners[seat.id] == null ? 'Waiting for online human' : match.room!.owners[seat.id] == match.uid ? 'On this device' : 'Online human'}'),
-                    ])),
-              if (match.error != null)
-                Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(match.error!,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error))),
-              if (match.explanation != null && !practiceEnded)
-                Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(match.explanation!)),
-              if (widget.studyPanel != null && !practiceEnded)
-                widget.studyPanel!,
-            ]),
-          )));
-        }));
+                            } catch (_) {
+                              if (mounted &&
+                                  ref.read(matchProvider).id == match.id &&
+                                  ref.read(accountProvider).identity?.uid ==
+                                      uid) {
+                                ref.read(ratingStatusProvider.notifier).state =
+                                    (
+                                  match.id!,
+                                  'Rating update could not finish. Retry when connected.'
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('Retry rating update')),
+                  ])),
+            if (match.shortcutWarning != null)
+              Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(match.shortcutWarning!)),
+            if (match.error != null)
+              Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(match.error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error))),
+            if (match.explanation != null && !practiceEnded)
+              Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(match.explanation!)),
+            if (widget.studyPanel != null && !practiceEnded) widget.studyPanel!,
+          ]),
+        ));
   }
 
   Widget _counter(String label, int value, int max, ValueChanged<int> update) =>

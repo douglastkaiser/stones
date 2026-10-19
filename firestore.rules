@@ -487,6 +487,42 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && request.auth.uid == userId;
     }
+    // Public aliases contain no email/profile identity or competitive counters.
+    match /playerProfiles/{uid} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isAuthenticated() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['name', 'updatedAt']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 40 &&
+        !request.resource.data.name.matches('^ *$') &&
+        !request.resource.data.name.matches('.*[\\x00-\\x1f\\x7f].*') &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isAuthenticated() && request.auth.uid == uid;
+    }
+    function openSeat(room, index) {
+      return room.config.seats.size() > index &&
+        room.config.seats[index].control == 'onlineHuman' &&
+        room.owners[room.config.seats[index].id] == null;
+    }
+    function validOpenTable(uid, data) {
+      let room = get(/databases/$(database)/documents/matches/$(data.code)).data;
+      return data.keys().hasOnly(['code', 'shape', 'size', 'players', 'seenAt']) &&
+        room.host == uid && room.moves.size() == 0 &&
+        room.resigned == null && room.get('timedOut', null) == null &&
+        (openSeat(room, 0) || openSeat(room, 1) || openSeat(room, 2) || openSeat(room, 3)) &&
+        data.shape == room.config.shape && data.size == room.config.size &&
+        data.players == room.config.seats.size() && data.seenAt == request.time;
+    }
+    // One opt-in listing per host. No permission to enumerate private matches.
+    match /openTables/{uid} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated() && request.query.limit <= 25;
+      allow create, update: if isAuthenticated() && request.auth.uid == uid &&
+        validOpenTable(uid, request.resource.data);
+      allow delete: if isAuthenticated() && request.auth.uid == uid;
+    }
+
     match /achievements/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && request.auth.uid == userId;

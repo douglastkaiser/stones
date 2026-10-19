@@ -12,8 +12,11 @@ import '../game/match_config.dart';
 import '../game/match_setup_screen.dart';
 import '../game/learning_hub.dart';
 import '../widgets/game_menu.dart';
+import '../widgets/account_card.dart';
+import '../providers/player_profile_provider.dart';
 import '../game/join_room_screen.dart';
 import 'saved_games_screen.dart';
+import 'open_tables_screen.dart';
 import 'achievements_screen.dart';
 import 'leaderboard_screen.dart';
 import 'settings_screen.dart';
@@ -30,6 +33,14 @@ class MainMenuScreen extends ConsumerStatefulWidget {
 class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   void _openSetup(BoardShape shape) => Navigator.push<void>(context,
       MaterialPageRoute(builder: (context) => MatchSetupScreen(shape: shape)));
+
+  void _profile() => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const SafeArea(
+          child: SingleChildScrollView(
+              padding: EdgeInsets.all(16), child: AccountCard())));
 
   @override
   void initState() {
@@ -66,7 +77,8 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final account = ref.watch(accountProvider).identity;
+    final accountState = ref.watch(accountProvider);
+    final account = accountState.identity;
     final rating = ref.watch(eloProvider);
     void open(Widget screen) => Navigator.push<void>(
         context, MaterialPageRoute(builder: (_) => screen));
@@ -113,14 +125,44 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                                     const SizedBox(height: 8),
                                     Align(
                                         alignment: Alignment.centerLeft,
-                                        child: _PlayerChip(
-                                            displayName:
-                                                account.name ?? 'Player',
-                                            ratingLabel:
-                                                '${rating.selectedPool.shape.name} ${rating.selectedPool.size} · ${rating.personalLabel}${rating.rank == null ? "" : " · #${rating.rank}"}')),
+                                        child: TextButton(
+                                            onPressed: _profile,
+                                            child: _PlayerChip(
+                                                displayName: ref
+                                                        .watch(
+                                                            playerNameProvider(
+                                                                account.uid))
+                                                        .asData
+                                                        ?.value ??
+                                                    account.name ??
+                                                    'Player',
+                                                ratingLabel:
+                                                    '${rating.selectedPool.shape.name} ${rating.selectedPool.size} · ${rating.personalLabel}${rating.rank == null ? "" : " · #${rating.rank}"}'))),
+                                  ] else ...[
+                                    Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: FilledButton.icon(
+                                            onPressed: accountState.busy
+                                                ? null
+                                                : () => ref
+                                                    .read(accountProvider
+                                                        .notifier)
+                                                    .signInGoogle(),
+                                            icon: const Icon(
+                                                Icons.account_circle_outlined),
+                                            label: Text(accountState.busy
+                                                ? 'Signing in…'
+                                                : 'Sign in with Google'))),
+                                    const Text('Or keep playing as a guest.'),
                                   ],
+                                  if (accountState.error != null)
+                                    TextButton(
+                                        onPressed: _profile,
+                                        child: Text(accountState.error!)),
                                   const SizedBox(height: 28),
                                   GameMenu(
+                                      onOpenTables: () =>
+                                          open(const OpenTablesScreen()),
                                       onSquare: () =>
                                           _openSetup(BoardShape.square),
                                       onHex: () => _openSetup(BoardShape.hex),

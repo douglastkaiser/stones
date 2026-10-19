@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/account_provider.dart';
 import '../providers/elo_provider.dart';
 import '../screens/leaderboard_screen.dart';
+import '../providers/player_profile_provider.dart';
+import 'player_name_editor.dart';
 
 class AccountCard extends ConsumerStatefulWidget {
   const AccountCard({super.key});
@@ -60,12 +62,19 @@ class _AccountCardState extends ConsumerState<AccountCard> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                   signedIn
-                      ? user.name ?? 'Google account'
+                      ? ref.watch(playerNameProvider(user.uid)).asData?.value ??
+                          user.name ??
+                          'Google account'
                       : user?.guest == true
                           ? 'Playing as a guest'
                           : 'Your Stones account',
                   style: Theme.of(context).textTheme.titleMedium),
               if (signedIn && user.email != null) Text(user.email!),
+              if (user != null)
+                PlayerNameEditor(
+                    key: ValueKey(user.uid),
+                    uid: user.uid,
+                    fallback: user.name ?? 'Player'),
               if (signedIn) ...[
                 Text(
                     '${ref.watch(eloProvider).selectedPool.label} · ${ref.watch(eloProvider).personalLabel}'),

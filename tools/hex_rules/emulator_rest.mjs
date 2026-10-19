@@ -124,3 +124,13 @@ export async function initializeHexEmulator({projectId, firestore}) {
     cleanup: async () => {},
   };
 }
+
+// Server timestamps on newly created public metadata, and bounded public queries.
+export const setWithServerTime = (ref, value, fieldPath) => request(`${documents}:commit`, 'POST', {writes: [{
+  update: {name: `projects/${project}/databases/(default)/documents/${ref.path}`, fields: fields(value)},
+  updateTransforms: [{fieldPath, setToServerValue: 'REQUEST_TIME'}],
+}]}, ref.uid);
+export const queryDocs = (uid, path, limit) => request(`${documents}:runQuery`, 'POST', {
+  structuredQuery: {from: [{collectionId: path}], ...(limit == null ? {} : {limit})},
+}, uid);
+export const deleteDoc = ref => request(`${documents}/${ref.path}`, 'DELETE', undefined, ref.uid);

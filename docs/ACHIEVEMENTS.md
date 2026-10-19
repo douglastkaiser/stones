@@ -93,8 +93,11 @@ and these are not server-attested competitive credentials. No new database rules
 account permissions, reward assets or dependencies are needed. Optional native
 Play Games configured IDs/cloud saves are a separate legacy integration; the
 25-item catalog is not claimed as a published Play Games achievement catalog.
-Cross-device account progression and server-attested results require a separately
-designed merge/ownership/backend contract, rather than trusting uploaded counters.
+The [account-progress foundation](ACCOUNT_PROGRESS.md) now specifies and tests
+legacy merges, owner-scoped caches and retryable event synchronization. It is not
+yet connected to this provider or Firebase. Cross-device account progression and
+server-attested results still require the backend/integration qualification
+described there, rather than trusting uploaded counters.
 
 ## Verification and rollout
 

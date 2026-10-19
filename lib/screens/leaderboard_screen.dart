@@ -6,6 +6,7 @@ import '../models/elo_rating.dart';
 import '../providers/elo_provider.dart';
 import 'player_detail_screen.dart';
 import 'settings_screen.dart';
+import '../widgets/player_name.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -278,8 +279,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   children: [
                     Wrap(spacing: 12, runSpacing: 6, children: [
                       if (rank != null) Text('#$rank'),
-                      Text(
-                          '${rating.displayName}${rating.id == uid ? " (You)" : ""}',
+                      PlayerName(
+                          uid: rating.id,
+                          fallback: rating.displayName,
+                          suffix: rating.id == uid ? ' (You)' : '',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(rating.ratingLabel),
                     ]),

@@ -13,7 +13,9 @@ class GameMenu extends StatefulWidget {
       required this.onHex,
       required this.onJoin,
       required this.onMyGames,
-      required this.onLearn});
+      required this.onLearn,
+      this.onOpenTables});
+  final VoidCallback? onOpenTables;
   final VoidCallback onSquare;
   final VoidCallback onHex;
   final VoidCallback onJoin;
@@ -47,6 +49,11 @@ class _GameMenuState extends State<GameMenu> {
                 onPressed: widget.onJoin,
                 icon: const Icon(Icons.link),
                 label: const Text('Join a friend')),
+            if (widget.onOpenTables != null)
+              OutlinedButton.icon(
+                  onPressed: widget.onOpenTables,
+                  icon: const Icon(Icons.public),
+                  label: const Text('Open tables')),
             TextButton.icon(
                 onPressed: widget.onMyGames,
                 icon: const Icon(Icons.bookmark_border),

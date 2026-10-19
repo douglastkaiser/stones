@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'feedback_screen.dart';
 import '../widgets/theme_gallery.dart';
 import '../widgets/account_card.dart';
 import '../providers/providers.dart';
@@ -38,6 +39,18 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   const AccountCard(),
                   const SizedBox(height: 32),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.feedback_outlined),
+                    title: const Text('Send feedback'),
+                    subtitle: const Text('Report a problem or share an idea'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const FeedbackScreen())),
+                  ),
+                  const SizedBox(height: 24),
                   // Sound Section
                   const _SectionHeader(title: 'Audio'),
                   const SizedBox(height: 12),

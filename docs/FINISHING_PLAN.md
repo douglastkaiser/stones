@@ -10,8 +10,12 @@ Execution began on 2026-10-17 on `codex/finishing-foundation`. See
 pending gates. Packets are not complete merely because a prototype/build exists.
 The baseline tooling and isolated design preview are implemented on the branch.
 The owner approved the revised game-first preview and authorized continuation.
-Packet 3 is in implementation; physical-device qualification for packet 1 remains
-pending. Later packets have not been represented as complete.
+Packet 3 code is merged to main; independent invitee and Play-device qualification
+remain pending, as does physical-device qualification for packet 1. Packet 4 has
+a [migration/merge foundation](ACCOUNT_PROGRESS.md); backend and UI integration
+remain pending. The owner-requested [feedback flow](FEEDBACK.md) implements the
+support part of packet 11; account lifecycle and release gates remain pending.
+Later packets have not been represented as complete.
 
 ## Product promise
 

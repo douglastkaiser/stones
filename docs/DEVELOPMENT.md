@@ -1,5 +1,9 @@
 # Development map
 
+The [home/profile and table-layout follow-up](COMMUNITY_AND_LAYOUT.md) documents
+public Stones names, restored QR invitations, responsive boards and opt-in Open
+tables, with emulator evidence and the rules-publication prerequisite.
+
 For the current finishing-work handoff, start with [environment handoff](ENVIRONMENT_HANDOFF.md).
 
 For current release evidence and pending physical-device qualification, start
@@ -13,6 +17,10 @@ Spark database protocol, separate board ladders, local AI estimates and rollout 
 
 The [achievement progression audit](ACHIEVEMENTS.md) records the 25-goal mastery
 ladder, replay evidence, unified learning, save migration and qualification.
+The [account-progress foundation](ACCOUNT_PROGRESS.md) records packet 4's merge
+contract, cache repository and verified-event adapters, with backend/UI integration
+still pending. [Player feedback](FEEDBACK.md) describes the Settings/About support
+flow, data boundaries and report triage.
 
 The [2026-10-16 multiplayer reliability audit](MULTIPLAYER_RELIABILITY.md)
 records startup deadlines, nonblocking shortcut storage, bounded automatic

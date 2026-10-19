@@ -1,3 +1,4 @@
+import '../widgets/player_name.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -58,7 +59,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(player.displayName),
+        title: PlayerName(uid: player.id, fallback: player.displayName),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -120,9 +121,10 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                     size: 32),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: Text(player.displayName,
+                    child: PlayerName(
+                        uid: player.id,
+                        fallback: player.displayName,
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleLarge)),
               ]),
               const SizedBox(height: 12),
