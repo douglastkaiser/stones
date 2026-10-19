@@ -13,7 +13,7 @@ class MatchStandings {
     final result = game.result;
     if (result == null || result.reason == ResultReason.abandoned) return null;
     final counts = MatchRules.flatCounts(game);
-    if (game.config.ratingVersion == 1) {
+    if (game.config.ratingVersion != 2) {
       return MatchStandings._(
           Map.unmodifiable({
             for (final id in game.config.ids)

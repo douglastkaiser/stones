@@ -574,17 +574,20 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       ]);
     }
     if (game.finished) {
+      final rating = ref.watch(ratingStatusProvider)?.$1 == match.id
+          ? ref.watch(ratingStatusProvider)!.$2
+          : const RatingSubmission.unrated();
+      final ratingLabel = rating.labelFor(MatchCompleted(match).participant);
       return Column(children: [
         const Text('Match complete'),
         if (widget.studyPanel == null) ...[
           if (MatchStandings.forGame(game) case final standings?)
             for (final id in standings.ordered)
               Text(
-                  '${ResultShareData.ordinal(standings.ranks[id]!)} · ${_resultSeatName(match, id)} · ${standings.flats[id]} flats'),
-          Text((ref.watch(ratingStatusProvider)?.$1 == match.id
-                  ? ref.watch(ratingStatusProvider)!.$2
-                  : const RatingSubmission.unrated())
-              .labelFor(MatchCompleted(match).participant)),
+                  '${game.config.ratingVersion >= 3 ? game.result!.winner == null ? "Draw" : game.result!.winner == id ? "Won" : "Lost" : ResultShareData.ordinal(standings.ranks[id]!)} · ${_resultSeatName(match, id)} · ${standings.flats[id]} flats'),
+          Text(game.config.ratingVersion >= 3
+              ? ratingLabel.replaceFirst('Elo', 'Rating')
+              : ratingLabel),
           const SizedBox(height: 8),
           FilledButton.icon(
               onPressed: () => showDialog<void>(

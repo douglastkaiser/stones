@@ -82,6 +82,8 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
           ),
           const SizedBox(height: 12),
           _buildChartSection(context, isDark),
+          if (player.skill != null)
+            const Text('Shaded band: approximate 95% skill range.'),
 
           // Recent games list
           if (_history != null && _history!.isNotEmpty) ...[
@@ -101,8 +103,9 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   }
 
   Widget _buildHeaderCard(BuildContext context, EloRating player, bool isDark) {
-    final pool =
-        RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
+    final pool = player.pool == 'overall'
+        ? const RatingPool.overall()
+        : RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
     final rank = player.provisional
         ? null
         : ref
@@ -138,9 +141,16 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                         ?.copyWith(color: _ratingColor(player.rating, isDark))),
                 if (rank != null) Text('Rank #$rank'),
                 if (player.provisional)
-                  Text('Provisional ${player.gamesPlayed}/10'),
+                  Text('Provisional · ${player.gamesPlayed} games'),
                 if (player.isAi) const Text('Global AI player'),
               ]),
+              if (player.uncertaintyLabel != null) ...[
+                const SizedBox(height: 8),
+                Text(player.uncertaintyLabel!),
+                Text(player.confidenceLabel),
+                const Text(
+                    'The range estimates skill uncertainty. Rank is your current leaderboard position.'),
+              ],
               const SizedBox(height: 16),
               Wrap(spacing: 24, runSpacing: 16, children: [
                 _StatItem(
@@ -354,7 +364,12 @@ class _RatingChartPainter extends CustomPainter {
     final chartHeight = size.height - bottomPadding - topPadding;
 
     // Compute rating range
-    final ratings = history.map((e) => e.rating).toList();
+    final ratings = [
+      for (final e in history) ...[
+        e.rating,
+        if (e.skill != null) ...[e.skill!.lower, e.skill!.upper]
+      ]
+    ];
     final minRating = ratings.reduce(min);
     final maxRating = ratings.reduce(max);
     // Pad range so the line isn't squished to edges
@@ -399,6 +414,21 @@ class _RatingChartPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(leftPadding - tp.width - 4, y - tp.height / 2));
+    }
+
+    // Shade the model's approximate 95% skill interval through time.
+    if (history.every((entry) => entry.skill != null)) {
+      final band = Path()
+        ..moveTo(xForIndex(0), yForRating(history.first.skill!.upper));
+      for (var i = 1; i < history.length; i++) {
+        band.lineTo(xForIndex(i), yForRating(history[i].skill!.upper));
+      }
+      for (var i = history.length - 1; i >= 0; i--) {
+        band.lineTo(xForIndex(i), yForRating(history[i].skill!.lower));
+      }
+      band.close();
+      canvas.drawPath(
+          band, Paint()..color = Colors.amber.withValues(alpha: .18));
     }
 
     // Draw the rating line

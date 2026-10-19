@@ -15,7 +15,10 @@ class RatingDelta {
 
 /// A receipt belongs to one match, never to a difference between live profiles.
 class RatingSubmission {
-  const RatingSubmission(this.state, this.message, {this.deltas = const {}});
+  const RatingSubmission(this.state, this.message,
+      {this.deltas = const {},
+      this.formatDeltas = const {},
+      this.skillBased = false});
   const RatingSubmission.pending([String message = 'Checking game result…'])
       : this(RatingSubmissionState.pending, message);
   const RatingSubmission.unrated([String message = 'Unrated'])
@@ -28,13 +31,19 @@ class RatingSubmission {
   final RatingSubmissionState state;
   final String message;
   final Map<SeatId, RatingDelta> deltas;
+  final Map<SeatId, RatingDelta> formatDeltas;
+  final bool skillBased;
   bool get retryable =>
       state == RatingSubmissionState.pending ||
       state == RatingSubmissionState.failed;
 
   String labelFor(SeatId? seat) {
     final value = deltas[seat];
-    if (value != null) return 'Elo ${value.label}';
+    if (value != null) {
+      return skillBased
+          ? 'Overall ${value.label} · Format ${formatDeltas[seat]?.label ?? "pending"}'
+          : 'Elo ${value.label}';
+    }
     return switch (state) {
       RatingSubmissionState.unrated => 'Unrated',
       RatingSubmissionState.confirmed => 'Elo recorded',

@@ -62,7 +62,7 @@ inventory. Fields/ownership below come from the current models and rules.
 | Firebase Authentication | Guest/permanent UID, Google provider/profile | Preserve seat UID on guest linking; explicitly handle existing-account collisions. |
 | `/matches` | Private room code, host/owners, immutable configuration/themes, moves, clocks, runner lease and rating metadata | Keep version-1 readers; never reinterpret old termination rules. |
 | `/games`, `/hexGames` | Older Square/Hex room codecs, including assigned-goal Hex versions | Keep legacy invitation/read adapters until an explicit sunset exists. |
-| `/ratingPools`, `/ratingResults`, votes, limits/AI keys | Public aliases/standings plus private receipts/evidence and anti-duplication metadata | Separate community ratings from cosmetic progress; preserve atomic result identities. |
+| `/ratingPools`, `/skillPools`, `/skillSettlements`, `/ratingResults`, votes, limits/AI keys | Public aliases/standings plus private receipts/evidence and anti-duplication metadata | Separate community ratings from cosmetic progress; preserve atomic result identities. |
 | `/users`, `/achievements` | Legacy per-owner paths retained by rules | Inspect real wire formats before migration; do not assume these are the authoritative current progression. |
 | `achievement_progression_v2` | Device-local counters, evidence, completion IDs, unlocked rewards and pending notices | Preserve old awards; merge by stable evidence/event identities, not by adding two snapshots. |
 | `unified_local_match_v1` | One current shared local game with history/configuration | Do not replace during sign-in or while navigating an invitation. |

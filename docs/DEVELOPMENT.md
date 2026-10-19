@@ -12,8 +12,10 @@ records the approved product direction and staged work. Older sections below
 retain historical verification notes; their SDK paths/test counts are not current
 release claims. New gameplay uses the shared `lib/game/` architecture described next.
 
-See [ratings and competition](RATINGS.md) for the legacy Elo failures, trusted
-Spark database protocol, separate board ladders, local AI estimates and rollout checks.
+See [skill ratings](SKILL_RATINGS.md) for the version 3 Overall/format ladders,
+shared human/AI Glicko-based ratings, uncertainty UI, unordered multiplayer losses
+and Spark settlement/recovery protocol. [Ratings and competition](RATINGS.md)
+retains the version 1/2 audit and historical publication evidence.
 
 The [achievement progression audit](ACHIEVEMENTS.md) records the 25-goal mastery
 ladder, replay evidence, unified learning, save migration and qualification.

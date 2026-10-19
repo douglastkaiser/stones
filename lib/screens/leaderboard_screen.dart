@@ -16,11 +16,23 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   String _filter = 'All';
+  late final EloController _controller;
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(
-        () => ref.read(eloProvider.notifier).fetchLeaderboard());
+    _controller = ref.read(eloProvider.notifier);
+    Future<void>.microtask(() async {
+      if (!mounted) return;
+      await _controller.fetchLeaderboard();
+      if (!mounted) return;
+      _controller.startLive();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.stopLive();
+    super.dispose();
   }
 
   void _pool(RatingPool pool) {
@@ -35,17 +47,24 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           child: SingleChildScrollView(
               padding: EdgeInsets.all(24),
               child: Text(
-                  'How Stones ratings work\n\nEach board size, shape, player count and clock category has its own ladder. '
-                  'Humans and AI share the same Elo system and global leaderboard. The first 10 games are provisional. Equal established ratings share a rank. '
-                  'The winner places first; remaining players rank by exposed flats, with equal counts tied. '
-                  'Elo compares each player with every opponent: higher placement wins, equal placement draws, and lower placement loses. Changes are averaged across opponents and depend on their ratings.\n\n'
-                  'Signed-in players can record completed human, AI and mixed games. Online humans confirm the full standings. '
+                  'How Stones ratings work\n\nEvery rated game updates Overall and its format ladder: board shape, size, player count, rules and clock category. '
+                  'Humans and shared AI profiles use the same uncertainty-aware Glicko-based system. Live standings include both. '
+                  'The winner beats every other seat. All other players receive a loss, without being ranked against one another. Larger games carry proportionally smaller loss penalties. A drawn game counts as a draw for everyone. '
+                  'Changes depend on skill estimates and uncertainty.\n\n'
+                  'Profiles show an approximate 95% skill range. It narrows as evidence accumulates and describes skill, not a range of leaderboard positions. '
+                  'Ratings are provisional for at least ten games and until uncertainty is sufficiently low. Equal established ratings share a rank.\n\n'
+                  'Signed-in players can record completed human, AI and mixed games. Online humans confirm the result. '
                   'Guest games, learning, Court Mode, abandoned games and shared human seats are unrated. '
                   'AI results are reported by the player’s device. '
                   'Player display names and competitive statistics are public. These are Stones ratings, not chess ratings.'))));
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(eloProvider);
+    ref.listen(eloProvider, (previous, next) {
+      if (!identical(previous?.leaderboard, next.leaderboard)) {
+        ref.invalidate(playerRankProvider);
+      }
+    });
     final pool = state.selectedPool;
     final own = state.localPlayerRating;
     final entries = state.leaderboard
@@ -79,54 +98,65 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                     Theme.of(context).textTheme.headlineSmall),
                             Text(pool.label),
                             const SizedBox(height: 16),
-                            Wrap(spacing: 12, runSpacing: 12, children: [
-                              _select(
-                                  'Board', pool.shape.name, ['square', 'hex'],
-                                  (value) {
-                                final shape = BoardShape.values.byName(value);
-                                _pool(RatingPool(
-                                    shape,
-                                    shape == BoardShape.square ? 5 : 2,
-                                    pool.players,
-                                    shape == BoardShape.square &&
-                                            pool.players == 2
-                                        ? RulesProfile.standardTak
-                                        : RulesProfile.sharedRoads,
-                                    pool.clock));
-                              }),
-                              _select(
-                                  'Size',
-                                  '${pool.size}',
-                                  MatchConfig.sizesFor(pool.shape)
-                                      .map((s) => '$s')
-                                      .toList(),
-                                  (v) => _pool(RatingPool(
-                                      pool.shape,
-                                      int.parse(v),
+                            _select(
+                                'Leaderboard',
+                                pool.isOverall ? 'overall' : 'format',
+                                ['overall', 'format'],
+                                (value) => _pool(value == 'overall'
+                                    ? const RatingPool.overall()
+                                    : RatingPool.standard)),
+                            if (!pool.isOverall)
+                              Wrap(spacing: 12, runSpacing: 12, children: [
+                                _select(
+                                    'Board', pool.shape.name, ['square', 'hex'],
+                                    (value) {
+                                  final shape = BoardShape.values.byName(value);
+                                  _pool(RatingPool(
+                                      shape,
+                                      shape == BoardShape.square ? 5 : 2,
                                       pool.players,
-                                      pool.profile,
-                                      pool.clock))),
-                              _select(
-                                  'Players', '${pool.players}', ['2', '3', '4'],
-                                  (v) {
-                                final players = int.parse(v);
-                                _pool(RatingPool(
-                                    pool.shape,
-                                    pool.size,
-                                    players,
-                                    pool.shape == BoardShape.square &&
-                                            players == 2
-                                        ? RulesProfile.standardTak
-                                        : RulesProfile.sharedRoads,
-                                    pool.clock));
-                              }),
-                              _select(
-                                  'Clock category',
-                                  pool.clock,
-                                  ['open', 'fast', 'long'],
-                                  (v) => _pool(RatingPool(pool.shape, pool.size,
-                                      pool.players, pool.profile, v))),
-                            ]),
+                                      shape == BoardShape.square &&
+                                              pool.players == 2
+                                          ? RulesProfile.standardTak
+                                          : RulesProfile.sharedRoads,
+                                      pool.clock));
+                                }),
+                                _select(
+                                    'Size',
+                                    '${pool.size}',
+                                    MatchConfig.sizesFor(pool.shape)
+                                        .map((s) => '$s')
+                                        .toList(),
+                                    (v) => _pool(RatingPool(
+                                        pool.shape,
+                                        int.parse(v),
+                                        pool.players,
+                                        pool.profile,
+                                        pool.clock))),
+                                _select('Players', '${pool.players}',
+                                    ['2', '3', '4'], (v) {
+                                  final players = int.parse(v);
+                                  _pool(RatingPool(
+                                      pool.shape,
+                                      pool.size,
+                                      players,
+                                      pool.shape == BoardShape.square &&
+                                              players == 2
+                                          ? RulesProfile.standardTak
+                                          : RulesProfile.sharedRoads,
+                                      pool.clock));
+                                }),
+                                _select(
+                                    'Clock category',
+                                    pool.clock,
+                                    ['open', 'fast', 'long'],
+                                    (v) => _pool(RatingPool(
+                                        pool.shape,
+                                        pool.size,
+                                        pool.players,
+                                        pool.profile,
+                                        v))),
+                              ]),
                             const SizedBox(height: 16),
                             if (state.uid == null)
                               Card(
@@ -162,7 +192,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                                     .titleMedium),
                                             Text(own == null
                                                 ? 'Unrated · complete a rated game'
-                                                : '${own.ratingLabel} · ${own.provisional ? "Provisional ${own.gamesPlayed}/10" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
+                                                : '${own.ratingLabel} · ${own.provisional ? "Provisional · ${own.gamesPlayed} games" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
+                                            if (own?.uncertaintyLabel != null)
+                                              Text(own!.uncertaintyLabel!),
+                                            if (own?.skill != null)
+                                              Text(own!.confidenceLabel),
                                             if (own != null)
                                               Text(
                                                   '${own.wins} wins · ${own.losses} losses · ${own.draws} draws'),
@@ -193,8 +227,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                         setState(() => _filter = filter)),
                             ]),
                             const SizedBox(height: 12),
-                            const Text(
-                                'Global standings · provisional ratings are marked ?'),
+                            Text(
+                                '${pool.isOverall ? "Overall" : "Format"} standings · provisional ratings are marked ?'),
                             if (entries.isEmpty &&
                                 !state.loading &&
                                 state.errorMessage == null)
@@ -233,6 +267,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                             'long' => '10+ min',
                             'square' => 'Square',
                             'hex' => 'Hex',
+                            'overall' => 'Overall',
+                            'format' => 'By format',
                             _ => item
                           },
                           overflow: TextOverflow.ellipsis)))
@@ -274,8 +310,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       Text(
                           '${rating.wins}W · ${rating.losses}L · ${rating.draws}D · ${rating.gamesPlayed} games'),
                       if (rating.isAi) const Text('AI · shared global rating'),
+                      if (rating.uncertaintyLabel != null)
+                        Text(rating.uncertaintyLabel!),
                       if (rating.provisional && rating.gamesPlayed > 0)
-                        Text('Provisional ${rating.gamesPlayed}/10'),
+                        Text('Provisional · ${rating.gamesPlayed} games'),
                     ]))));
   }
 }

@@ -183,7 +183,8 @@ class _ResultShareDialogState extends ConsumerState<ResultShareDialog> {
             SelectableText(data.text),
             if (rating.retryable)
               TextButton(
-                  onPressed: _refreshRating, child: const Text('Refresh Elo')),
+                  onPressed: _refreshRating,
+                  child: const Text('Refresh rating')),
             const SizedBox(height: 12),
             SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
@@ -315,14 +316,14 @@ class ResultShareCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: Row(children: [
                           SizedBox(
-                              width: 44,
-                              child: Text(ResultShareData.ordinal(
-                                  data.standings!.ranks[id]!))),
+                              width: 44, child: Text(data.outcomeLabel(id))),
                           Expanded(
                               child: Text(data.name(id),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis)),
-                          Text(data.rating.labelFor(id)),
+                          Flexible(
+                              child: Text(data.ratingLabel(id),
+                                  textAlign: TextAlign.end)),
                         ])),
                 const SizedBox(height: 12),
                 const Text('Play: www.douglastkaiser.com/stones/',

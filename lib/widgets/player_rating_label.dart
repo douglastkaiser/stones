@@ -27,7 +27,7 @@ class PlayerRatingLabel extends ConsumerWidget {
         value.when(
             data: (rating) => rating == null
                 ? '$name · Unrated'
-                : '$name · ${rating.ratingLabel}${rank == null ? "" : " · #$rank"}',
+                : '$name · ${rating.ratingLabel}${rating.skill == null ? "" : " ±${(1.96 * rating.skill!.deviation).round()}"}${rank == null ? "" : " · #$rank"}',
             loading: () => '$name · Rating…',
             error: (_, __) => '$name · Rating unavailable'),
         maxLines: 2,

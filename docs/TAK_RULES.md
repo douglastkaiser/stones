@@ -16,12 +16,14 @@ cosmetics remain application features. Publishing status is recorded in the plan
 
 ## Multiplayer placements and sharing (2026-10-19)
 
-New unified matches additionally rank non-winning seats by exposed ordinary
-flats, with equal counts tied. This supplies Stones multiplayer standings,
-pairwise Elo for human and AI seats, and share summaries. Core road/flat victory
-and official two-player Tak adjudication remain the same. Drawn leaders share
-first place; other participants can finish below them. See the
-[result and rating contract](RESULT_SHARING.md) for versioning and qualification.
+Version 3 unified matches now show one winner and unordered losses, or a
+whole-game draw. Flats still determine flat victory but do not order losing
+seats. Every eligible result updates Overall and the exact format skill ladder
+for humans and shared AI, including rating uncertainty. Core road/flat victory
+and official two-player Tak adjudication remain the same. Existing version 2
+saves retain their exposed-flat placements and Elo contract. See
+[skill ratings](SKILL_RATINGS.md) and the historical
+[result contract](RESULT_SHARING.md) for versioning and qualification.
 
 ## Sources and scope
 

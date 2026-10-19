@@ -10,6 +10,13 @@ import '../game/rating_evidence.dart';
 import '../game/placement_elo.dart';
 import '../game/rating_submission.dart';
 import '../game/match_state.dart';
+import '../game/skill_rating.dart';
+
+part 'skill_result_recorder.dart';
+
+abstract interface class LiveRatingRepository {
+  Stream<List<EloRating>> watchLeaders(String pool);
+}
 
 abstract class RatingRepository {
   Stream<EloRating?> watchPlayer(String pool, String uid);
@@ -21,10 +28,53 @@ abstract class RatingRepository {
       MatchSession session, List<Map<String, dynamic>> moves);
 }
 
-class FirebaseRatingRepository implements RatingRepository {
+class FirebaseRatingRepository
+    implements RatingRepository, LiveRatingRepository {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
   CollectionReference<Map<String, dynamic>> _players(String pool) =>
+      _db.collection('skillPools').doc(pool).collection('players');
+  CollectionReference<Map<String, dynamic>> _legacyPlayers(String pool) =>
       _db.collection('ratingPools').doc(pool).collection('players');
+  @override
+  Stream<List<EloRating>> watchLeaders(String pool) {
+    final topPlayers =
+        _players(pool).orderBy('rating', descending: true).limit(50);
+    final aiPlayers = _players(pool).where('isAi', isEqualTo: true);
+    late StreamController<List<EloRating>> controller;
+    final subscriptions =
+        <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    final values = <int, List<EloRating>>{};
+    void receive(int index, QuerySnapshot<Map<String, dynamic>> snapshot) {
+      // An empty offline cache is not evidence of an empty public ladder.
+      if (snapshot.metadata.isFromCache) return;
+      values[index] = snapshot.docs
+          .map((doc) => EloRating.fromMap(doc.id, _dates(doc.data())))
+          .toList();
+      if (values.length != 2) return;
+      controller.add({
+        for (final list in values.values)
+          for (final player in list) player.id: player
+      }.values.toList());
+    }
+
+    controller = StreamController<List<EloRating>>(
+      onListen: () {
+        subscriptions.add(topPlayers
+            .snapshots(includeMetadataChanges: true)
+            .listen((s) => receive(0, s), onError: controller.addError));
+        subscriptions.add(aiPlayers
+            .snapshots(includeMetadataChanges: true)
+            .listen((s) => receive(1, s), onError: controller.addError));
+      },
+      onCancel: () async {
+        for (final subscription in subscriptions) {
+          await subscription.cancel();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
   @override
   Stream<EloRating?> watchPlayer(String pool, String uid) => _players(pool)
       .doc(uid)
@@ -35,7 +85,7 @@ class FirebaseRatingRepository implements RatingRepository {
   @override
   Future<List<EloRating>> leaders(String pool) async {
     final result = await _db
-        .collection('ratingPools')
+        .collection('skillPools')
         .doc(pool)
         .collection('players')
         .orderBy('rating', descending: true)
@@ -60,10 +110,10 @@ class FirebaseRatingRepository implements RatingRepository {
   @override
   Future<int> rank(String pool, int rating) async {
     final result = await _db
-        .collection('ratingPools')
+        .collection('skillPools')
         .doc(pool)
         .collection('players')
-        .where('gamesPlayed', isGreaterThanOrEqualTo: 10)
+        .where('established', isEqualTo: true)
         .where('rating', isGreaterThan: rating)
         .count()
         .get()
@@ -125,6 +175,10 @@ class FirebaseRatingRepository implements RatingRepository {
       name = profile.data()?['name'] as String? ?? name;
     } catch (_) {/* A profile read must not prevent recording the result. */}
     name = name.isEmpty ? 'Player' : name.substring(0, min(60, name.length));
+    if (session.game!.config.ratingVersion >= 3) {
+      return _SkillResultRecorder(_db, _newResultId)
+          .submit(session, evidence, moves, user.uid, name);
+    }
     Future<RatingSubmission> settle() =>
         _settlePlacements(session, evidence, moves, user.uid, name)
             .timeout(const Duration(seconds: 15));
@@ -226,7 +280,8 @@ class FirebaseRatingRepository implements RatingRepository {
         final ids = participants.toSet();
         final previous = <String, Map<String, dynamic>>{};
         for (final id in ids) {
-          previous[id] = (await tx.get(_players(e.pool).doc(id))).data() ?? {};
+          previous[id] =
+              (await tx.get(_legacyPlayers(e.pool).doc(id))).data() ?? {};
         }
         final before = {
           for (final id in ids) id: previous[id]!['rating'] as int? ?? 1200
@@ -310,7 +365,7 @@ class FirebaseRatingRepository implements RatingRepository {
             if (ai) 'engineVersion': RatingEvidence.engine,
             if (ai) 'aiDifficulty': seat.level.name,
           };
-          final player = _players(e.pool).doc(id);
+          final player = _legacyPlayers(e.pool).doc(id);
           tx.set(player, data);
           tx.set(player.collection('history').doc('$games'), {
             'rating': after[id],
@@ -425,7 +480,8 @@ class FirebaseRatingRepository implements RatingRepository {
         final previous = <Map<String, dynamic>>[];
         if (agreed) {
           for (final id in e.humans) {
-            previous.add((await tx.get(_players(e.pool).doc(id))).data() ?? {});
+            previous.add(
+                (await tx.get(_legacyPlayers(e.pool).doc(id))).data() ?? {});
           }
         }
         tx.set(roomRef.collection('ratingVotes').doc(uid),
@@ -498,11 +554,11 @@ class FirebaseRatingRepository implements RatingRepository {
         if ((await tx.get(receiptRef)).exists) {
           return 'AI community estimate recorded';
         }
-        final anchor = (await tx.get(_players(e.pool).doc(uid))).data();
+        final anchor = (await tx.get(_legacyPlayers(e.pool).doc(uid))).data();
         if ((anchor?['gamesPlayed'] as int? ?? 0) < 10) {
           return 'Practice · play 10 competitive games in this ladder before contributing AI estimates';
         }
-        final botRef = _players(e.pool).doc(bot);
+        final botRef = _legacyPlayers(e.pool).doc(bot);
         final before = (await tx.get(botRef)).data() ?? {};
         final limitRef =
             _db.collection('ratingLimits').doc('${uid}_${e.pool}_$level');
@@ -593,7 +649,7 @@ class FirebaseRatingRepository implements RatingRepository {
 
   void _write(Transaction tx, String pool, String id, Map<String, dynamic> data,
       double score, String opponent) {
-    final player = _players(pool).doc(id);
+    final player = _legacyPlayers(pool).doc(id);
     tx.set(player, data);
     tx.set(player.collection('history').doc('${data['gamesPlayed']}'), {
       'rating': data['rating'],

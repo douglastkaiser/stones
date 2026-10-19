@@ -1,6 +1,7 @@
 import 'dart:math';
+import '../game/skill_rating.dart';
 
-/// ELO rating data for a player (human or AI)
+/// Public competition record; version 3 includes an estimate and uncertainty.
 class EloRating {
   final String id;
   final String displayName;
@@ -15,7 +16,19 @@ class EloRating {
   final String pool;
   final String? engineVersion;
   final int opponents;
-  bool get provisional => gamesPlayed < 10;
+  final SkillEstimate? skill;
+  bool get provisional =>
+      gamesPlayed < 10 || (skill != null && skill!.deviation > 150);
+  String? get uncertaintyLabel => skill == null || gamesPlayed == 0
+      ? null
+      : 'Estimated skill range ${skill!.lower}–${skill!.upper} (95%)';
+  String get confidenceLabel => skill == null
+      ? ''
+      : skill!.deviation > 150
+          ? 'Strength still uncertain'
+          : skill!.deviation > 80
+              ? 'Confidence improving'
+              : 'Well established';
   bool get calibrated => !provisional;
   String get ratingLabel =>
       gamesPlayed == 0 ? 'Unrated' : '$rating${provisional ? "?" : ""}';
@@ -34,6 +47,7 @@ class EloRating {
     this.pool = 'square-5-2-standardTak-open',
     this.engineVersion,
     this.opponents = 0,
+    this.skill,
   });
 
   EloRating copyWith({
@@ -44,6 +58,7 @@ class EloRating {
     int? losses,
     int? draws,
     DateTime? lastUpdated,
+    SkillEstimate? skill,
   }) {
     return EloRating(
       id: id,
@@ -59,10 +74,12 @@ class EloRating {
       pool: pool,
       engineVersion: engineVersion,
       opponents: opponents,
+      skill: skill ?? this.skill,
     );
   }
 
   Map<String, dynamic> toMap() => {
+        if (skill != null) ...skill!.toMap(),
         'pool': pool,
         'opponents': opponents,
         if (engineVersion != null) 'engineVersion': engineVersion,
@@ -89,6 +106,7 @@ class EloRating {
       draws: (map['draws'] as num?)?.toInt() ?? 0,
       isAi: map['isAi'] as bool? ?? false,
       aiDifficulty: map['aiDifficulty'] as String?,
+      skill: map.containsKey('deviation') ? SkillEstimate.fromMap(map) : null,
       pool: map['pool'] as String? ?? 'square-5-2-standardTak-open',
       engineVersion: map['engineVersion'] as String?,
       opponents: (map['opponents'] as num?)?.toInt() ?? 0,
@@ -108,6 +126,7 @@ class EloHistoryEntry {
   final int? before, delta;
   final List<int> placements;
   final int seat, appearances;
+  final SkillEstimate? skill;
 
   const EloHistoryEntry({
     required this.rating,
@@ -119,9 +138,11 @@ class EloHistoryEntry {
     this.placements = const [],
     this.seat = 0,
     this.appearances = 1,
+    this.skill,
   });
 
   Map<String, dynamic> toMap() => {
+        if (skill != null) ...skill!.toMap(),
         'rating': rating,
         'timestamp': timestamp.millisecondsSinceEpoch,
         if (opponentName != null) 'opponentName': opponentName,
@@ -146,6 +167,7 @@ class EloHistoryEntry {
       placements: (map['placements'] as List?)?.cast<int>() ?? const [],
       seat: map['seat'] as int? ?? 0,
       appearances: map['appearances'] as int? ?? 1,
+      skill: map.containsKey('deviation') ? SkillEstimate.fromMap(map) : null,
     );
   }
 }

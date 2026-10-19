@@ -2,7 +2,16 @@ import 'match_config.dart';
 
 class RatingPool {
   const RatingPool(
-      this.shape, this.size, this.players, this.profile, this.clock);
+      this.shape, this.size, this.players, this.profile, this.clock)
+      : isOverall = false;
+  const RatingPool.overall()
+      : shape = BoardShape.square,
+        size = 5,
+        players = 2,
+        profile = RulesProfile.standardTak,
+        clock = 'open',
+        isOverall = true;
+  final bool isOverall;
   factory RatingPool.forConfig(MatchConfig config) => RatingPool(
       config.shape,
       config.size,
@@ -18,9 +27,12 @@ class RatingPool {
   final int players;
   final RulesProfile profile;
   final String clock;
-  String get id => '${shape.name}-$size-$players-${profile.name}-$clock';
-  String get label =>
-      '${shape == BoardShape.square ? "Square $size×$size" : "Hex radius $size"} · $players players · ${clock == "open" ? "Untimed" : clock == "fast" ? "Under 10 min" : "10+ min"}';
+  String get id => isOverall
+      ? 'overall'
+      : '${shape.name}-$size-$players-${profile.name}-$clock';
+  String get label => isOverall
+      ? 'Overall · all rated formats'
+      : '${shape == BoardShape.square ? "Square $size×$size" : "Hex radius $size"} · $players players · ${clock == "open" ? "Untimed" : clock == "fast" ? "Under 10 min" : "10+ min"}';
   static final standard =
       RatingPool.forConfig(MatchConfig.defaults(BoardShape.square));
   static List<RatingPool> get all => [

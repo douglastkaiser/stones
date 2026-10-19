@@ -1,5 +1,9 @@
 # Results, sharing, and placement Elo
 
+Version 3 now defaults to unordered multiplayer losses and Overall/Format skill
+deltas with uncertainty. See [the current contract](SKILL_RATINGS.md). The
+version 2 placement-Elo contract below remains for existing saves and rooms.
+
 Implemented 2026-10-19. This is the version 2 application result contract for
 new unified matches. It covers Square and Hex with two to four seats.
 

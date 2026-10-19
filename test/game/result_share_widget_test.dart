@@ -47,7 +47,9 @@ void main() {
                 event.id,
                 const RatingSubmission(
                     RatingSubmissionState.confirmed, 'Rating recorded',
-                    deltas: {SeatId.ivory: RatingDelta(1200, 1206)})
+                    deltas: {SeatId.ivory: RatingDelta(1200, 1206)},
+                    formatDeltas: {SeatId.ivory: RatingDelta(1200, 1210)},
+                    skillBased: true)
               )),
         ],
         child: MaterialApp(
@@ -66,13 +68,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('cancelled native sharing keeps the preview and accurate Elo',
+  testWidgets(
+      'cancelled native sharing keeps the preview and both skill deltas',
       (tester) async {
     final service = FakeShareService();
     await showShare(tester, service);
     await tester.tap(find.text('Share'));
     await tester.pumpAndSettle();
-    expect(service.text, contains('Elo +6'));
+    expect(service.text, contains('Overall +6 · Format +10'));
     expect(find.text('Share result'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
     expect(tester.takeException(), isNull);

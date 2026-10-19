@@ -137,7 +137,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                                                     account.name ??
                                                     'Player',
                                                 ratingLabel:
-                                                    '${rating.selectedPool.shape.name} ${rating.selectedPool.size} · ${rating.personalLabel}${rating.rank == null ? "" : " · #${rating.rank}"}'))),
+                                                    '${rating.selectedPool.isOverall ? "Overall" : "${rating.selectedPool.shape.name} ${rating.selectedPool.size}"} · ${rating.personalLabel}${rating.rank == null ? "" : " · #${rating.rank}"}'))),
                                   ] else ...[
                                     Align(
                                         alignment: Alignment.centerLeft,

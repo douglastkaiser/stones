@@ -25,14 +25,14 @@ class EloState {
   final RatingPool? pool;
   final String? uid;
   final int? rank;
-  RatingPool get selectedPool => pool ?? RatingPool.standard;
+  RatingPool get selectedPool => pool ?? const RatingPool.overall();
   String get personalLabel =>
       localPlayerRating?.ratingLabel ??
       (errorMessage == null ? 'Unrated' : 'Rating unavailable');
 }
 
-/// No client can submit scores or edit another player's totals. The backend
-/// observes confirmed rooms; this controller only reads account-scoped results.
+/// Reads account-scoped results. The repository settles confirmed matches;
+/// database rules independently validate every participant's rating update.
 class EloController extends StateNotifier<EloState> {
   EloController(this.repository,
       {this.bootstrap, this.requestTimeout = const Duration(seconds: 8)})
@@ -41,8 +41,11 @@ class EloController extends StateNotifier<EloState> {
   final Future<void> Function()? bootstrap;
   final Duration requestTimeout;
   StreamSubscription<EloRating?>? _subscription;
+  StreamSubscription<List<EloRating>>? _leaderSubscription;
+  bool _live = false;
   int _generation = 0;
   int _request = 0;
+  int _rankRequest = 0;
   String? _uid;
   bool _guest = true;
   Future<void> initialize({bool syncOnline = true}) async {
@@ -61,6 +64,7 @@ class EloController extends StateNotifier<EloState> {
     _request++;
     unawaited(_subscription?.cancel());
     state = EloState(pool: pool, uid: _guest ? null : _uid);
+    _watchLive();
     if (_uid == null || _guest) return;
     final uid = _uid!;
     try {
@@ -75,12 +79,14 @@ class EloController extends StateNotifier<EloState> {
             aiRatings: state.aiRatings,
             loading: state.loading);
         if (rating == null || rating.provisional) return;
+        final rankRequest = ++_rankRequest;
         try {
           final rank = await repository
               .rank(pool.id, rating.rating)
               .timeout(requestTimeout);
           if (mounted &&
               generation == _generation &&
+              rankRequest == _rankRequest &&
               identical(state.localPlayerRating, rating)) {
             state = EloState(
                 pool: pool,
@@ -93,7 +99,9 @@ class EloController extends StateNotifier<EloState> {
                 rank: rank);
           }
         } catch (_) {
-          if (mounted && generation == _generation) {
+          if (mounted &&
+              generation == _generation &&
+              rankRequest == _rankRequest) {
             _error('Your rank could not be refreshed. Try again.');
           }
         }
@@ -108,6 +116,94 @@ class EloController extends StateNotifier<EloState> {
     }
   }
 
+  void startLive() {
+    _live = true;
+    _watchLive();
+  }
+
+  void stopLive() {
+    _live = false;
+    unawaited(_leaderSubscription?.cancel());
+    _leaderSubscription = null;
+  }
+
+  void _watchLive() {
+    unawaited(_leaderSubscription?.cancel());
+    final repo = repository;
+    if (!_live || repo is! LiveRatingRepository) return;
+    final generation = _generation;
+    final pool = state.selectedPool;
+    final Stream<List<EloRating>> stream;
+    try {
+      stream = (repo as LiveRatingRepository).watchLeaders(pool.id);
+    } catch (_) {
+      _error('Live standings unavailable. Retry when connected.');
+      return;
+    }
+    _leaderSubscription = stream.listen((values) async {
+      if (!mounted || generation != _generation || !_live) return;
+      _request++;
+      final entries = {for (final player in values) player.id: player};
+      for (final level in BotLevel.values) {
+        final id = 'ai_${RatingEvidence.engine}_${level.name}';
+        entries.putIfAbsent(
+            id,
+            () => EloRating(
+                id: id,
+                displayName:
+                    '${level.name[0].toUpperCase()}${level.name.substring(1)} AI',
+                isAi: true,
+                aiDifficulty: level.name,
+                pool: pool.id));
+      }
+      final leaders = entries.values.toList()
+        ..sort((a, b) {
+          final order = b.rating.compareTo(a.rating);
+          return order == 0 ? a.id.compareTo(b.id) : order;
+        });
+      state = EloState(
+          pool: pool,
+          uid: state.uid,
+          localPlayerRating: state.localPlayerRating,
+          leaderboard: leaders,
+          aiRatings: {for (final p in values.where((p) => p.isAi)) p.id: p},
+          rank: state.rank);
+      final personal = state.localPlayerRating;
+      if (personal == null || personal.provisional) return;
+      final rankRequest = ++_rankRequest;
+      try {
+        final rank = await repository
+            .rank(pool.id, personal.rating)
+            .timeout(requestTimeout);
+        if (mounted &&
+            generation == _generation &&
+            rankRequest == _rankRequest &&
+            _live &&
+            identical(state.localPlayerRating, personal)) {
+          state = EloState(
+              pool: pool,
+              uid: state.uid,
+              localPlayerRating: personal,
+              leaderboard: state.leaderboard,
+              aiRatings: state.aiRatings,
+              rank: rank,
+              errorMessage: state.errorMessage);
+        }
+      } catch (_) {
+        if (mounted &&
+            generation == _generation &&
+            rankRequest == _rankRequest &&
+            _live) {
+          _error('Your rank could not be refreshed. Try again.');
+        }
+      }
+    }, onError: (Object error) {
+      if (mounted && generation == _generation && _live) {
+        _error('Live standings unavailable. Retry when connected.');
+      }
+    });
+  }
+
   void _error(String message) {
     state = EloState(
         pool: state.selectedPool,
@@ -120,7 +216,14 @@ class EloController extends StateNotifier<EloState> {
   }
 
   Future<void> fetchLeaderboard() async {
-    await initialize();
+    try {
+      await initialize().timeout(requestTimeout);
+    } catch (_) {
+      if (mounted) {
+        _error('Ratings could not be initialized. Retry when connected.');
+      }
+      return;
+    }
     if (!mounted) return;
     if (state.errorMessage != null) selectPool(state.selectedPool);
     final generation = _generation;
@@ -160,6 +263,7 @@ class EloController extends StateNotifier<EloState> {
           return rating == 0 ? a.id.compareTo(b.id) : rating;
         });
       final personal = state.localPlayerRating;
+      final rankRequest = ++_rankRequest;
       final rank = personal != null && !personal.provisional
           ? await repository
               .rank(pool.id, personal.rating)
@@ -172,8 +276,10 @@ class EloController extends StateNotifier<EloState> {
           localPlayerRating: state.localPlayerRating,
           leaderboard: leaders,
           aiRatings: {for (final bot in values[1]) bot.id: bot},
-          rank:
-              identical(state.localPlayerRating, personal) ? rank : state.rank);
+          rank: identical(state.localPlayerRating, personal) &&
+                  rankRequest == _rankRequest
+              ? rank
+              : state.rank);
     } catch (_) {
       if (mounted && generation == _generation && request == _request) {
         _error(
@@ -191,6 +297,7 @@ class EloController extends StateNotifier<EloState> {
   void dispose() {
     _generation++;
     unawaited(_subscription?.cancel());
+    unawaited(_leaderSubscription?.cancel());
     super.dispose();
   }
 }

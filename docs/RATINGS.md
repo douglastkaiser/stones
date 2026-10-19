@@ -1,5 +1,11 @@
 # Ratings and competition
 
+New configurations now use **version 3 skill ratings**: one Overall ladder plus
+the exact format ladder, shared human/AI updates, uncertainty ranges and unordered
+multiplayer losses. See [the current skill-rating contract](SKILL_RATINGS.md).
+The version 2 and version 1 sections below retain their compatibility and
+historical publication evidence; they are not the v3 default.
+
 Updated 2026-10-19: new unified matches use **placement Elo for humans and AI**.
 The default leaderboard combines both; every eligible version 2 match updates
 all participants' global ratings in the existing board/clock ladder. The actual

@@ -16,6 +16,16 @@ class ResultShareData {
   final RatingSubmission rating;
   MatchState get game => session.game!;
   MatchStandings? get standings => MatchStandings.forGame(game);
+  String ratingLabel(SeatId? id) => game.config.ratingVersion >= 3
+      ? rating.labelFor(id).replaceFirst('Elo', 'Rating')
+      : rating.labelFor(id);
+  String outcomeLabel(SeatId id) => game.config.ratingVersion >= 3
+      ? game.result!.winner == null
+          ? 'Draw'
+          : game.result!.winner == id
+              ? 'Won'
+              : 'Lost'
+      : ordinal(standings!.ranks[id]!);
 
   String name(SeatId id) {
     final seat = game.config.seat(id);
@@ -47,11 +57,22 @@ class ResultShareData {
     final positions = standings;
     if (positions == null) return 'Match ended';
     if (viewer == null) {
+      if (game.config.ratingVersion >= 3 && game.result!.winner == null) {
+        return '${joinNames(game.config.ids.map(name).toList())} drew';
+      }
       final leaders =
           positions.ordered.where((id) => positions.ranks[id] == 1).toList();
       return leaders.length > 1
           ? '${joinNames(leaders.map(name).toList())} tied for first'
           : '${name(leaders.single)} won';
+    }
+    if (game.config.ratingVersion >= 3) {
+      if (game.result!.winner == null) {
+        return 'Drew with ${joinNames(game.config.ids.where((id) => id != viewer).map(name).toList())}';
+      }
+      return game.result!.winner == viewer
+          ? 'Beat ${joinNames(game.config.ids.where((id) => id != viewer).map(name).toList())}'
+          : 'Lost to ${name(game.result!.winner!)}';
     }
     final others = positions.ordered.where((id) => id != viewer);
     final lost = others
@@ -84,6 +105,9 @@ class ResultShareData {
     final positions = standings;
     if (viewer == null || positions == null) {
       return '${game.config.seats.length} players';
+    }
+    if (game.config.ratingVersion >= 3) {
+      return '${game.result!.winner == null ? "Draw" : game.result!.winner == viewer ? "Won" : "Lost"} · ${game.config.seats.length} players';
     }
     final rank = positions.ranks[viewer]!;
     final tied =
@@ -145,7 +169,7 @@ class ResultShareData {
         '${game.ply} moves',
         if (durationLabel != null) durationLabel!,
         if (viewer != null)
-          rating.labelFor(viewer)
+          ratingLabel(viewer)
         else if (rating.state == RatingSubmissionState.unrated)
           'Unrated',
       ].join(' · ');

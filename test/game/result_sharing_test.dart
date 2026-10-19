@@ -15,7 +15,8 @@ MatchState position(
     SeatId? winner = SeatId.ivory,
     ResultReason reason = ResultReason.road,
     List<int> flats = const [1, 3, 2, 2]}) {
-  final config = MatchConfig(shape: BoardShape.square, size: 5, seats: [
+  final config =
+      MatchConfig(ratingVersion: 2, shape: BoardShape.square, size: 5, seats: [
     for (var i = 0; i < players; i++)
       SeatConfig(SeatId.values[i],
           control: i == 2 ? SeatControl.ai : SeatControl.localHuman,

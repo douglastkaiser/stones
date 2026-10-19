@@ -50,7 +50,7 @@ class MatchConfig {
     RulesProfile? profile,
     this.court = false,
     this.clockSeconds = 0,
-    this.ratingVersion = 2,
+    this.ratingVersion = 3,
   })  : seats = List.unmodifiable(seats),
         profile = profile ??
             (shape == BoardShape.square && seats.length == 2
@@ -73,7 +73,7 @@ class MatchConfig {
             seats.any((seat) => seat.id == SeatId.jade))) {
       throw ArgumentError('Legacy Hex requires its original three identities');
     }
-    if (![1, 2].contains(ratingVersion) ||
+    if (![1, 2, 3].contains(ratingVersion) ||
         clockSeconds < 0 ||
         clockSeconds > 59940 ||
         (court && clockSeconds != 0)) {

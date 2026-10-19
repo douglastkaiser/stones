@@ -299,7 +299,7 @@ service cloud.firestore {
       }
       function configShape(c) {
         return c.keys().hasAll(['version', 'shape', 'size', 'seats', 'starter', 'profile']) &&
-          c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion']) && c.get('ratingVersion', 1) in [1, 2] &&
+          c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion']) && c.get('ratingVersion', 1) in [1, 2, 3] &&
           c.get('clockSeconds', 0) is int && c.get('clockSeconds', 0) >= 0 && c.get('clockSeconds', 0) <= 59940 &&
           c.version == 1 && c.size is int &&
           ((c.shape == 'square' && c.size >= 3 && c.size <= 8) ||
@@ -722,6 +722,168 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/ratingPools/$(r.pool)/players/$(id)/history/$(string(data.gamesPlayed))).data.timestamp == request.time;
     }
 
+    // Version 3: immutable source confirmation, then one atomic update per scope.
+    function sConfigSeat(c,i) {
+      return i >= c.seats.size() ||
+        (c.seats[i].keys().hasOnly(['id','control','level']) &&
+         c.seats[i].id in ['ivory','charcoal','copper','jade'] &&
+         c.seats[i].control in ['localHuman','onlineHuman','ai'] &&
+         c.seats[i].level in ['easy','medium','hard','expert'] &&
+         (i == 0 || c.seats[i].id != c.seats[0].id) &&
+         (i < 2 || c.seats[i].id != c.seats[1].id) &&
+         (i < 3 || c.seats[i].id != c.seats[2].id));
+    }
+    function sConfig(c) {
+      return c.keys().hasOnly(['version','shape','size','seats','starter','profile','clockSeconds','ratingVersion','court']) &&
+        c.version == 1 && c.ratingVersion == 3 && !c.get('court',false) &&
+        c.size is int && c.seats is list && c.seats.size() >= 2 && c.seats.size() <= 4 &&
+        ((c.shape == 'square' && c.size >= 3 && c.size <= 8) || (c.shape == 'hex' && c.size >= 2 && c.size <= 4)) &&
+        (c.profile == 'sharedRoads' || (c.profile == 'standardTak' && c.shape == 'square' && c.seats.size() == 2)) &&
+        c.get('clockSeconds',0) is int && c.get('clockSeconds',0) >= 0 && c.get('clockSeconds',0) <= 59940 &&
+        sConfigSeat(c,0) && sConfigSeat(c,1) && sConfigSeat(c,2) && sConfigSeat(c,3) &&
+        (c.starter == c.seats[0].id || c.starter == c.seats[1].id ||
+         (c.seats.size() > 2 && c.starter == c.seats[2].id) || (c.seats.size() > 3 && c.starter == c.seats[3].id));
+    }
+    function sIdentity(r,owners,i) {
+      let uid = r.participants[i];
+      let seat = r.config.seats[i];
+      let name = r.names[i];
+      let ai = seat.control == 'ai';
+      let vote = ai || r.room == null ? {} : humanVote(r.room,uid);
+      return ai
+        ? uid == 'ai_shared-search-v1_' + seat.level && name == pBotName(seat.level)
+        : uid is string && !uid.matches('^ai_.*') && pCount(r,uid) == 1 &&
+          (r.room == null ? seat.control == 'localHuman' && uid == r.actor && name is string && name.size() > 0 && name.size() <= 60
+            : owners[seat.id] == uid && vote == {'version':3,'ply':r.ply,'winner':r.winner,'reason':r.reason,'name':name});
+    }
+    function sSeat(r,owners,i) {
+      return i >= r.participants.size() || sIdentity(r,owners,i);
+    }
+    function sSource(r,id) {
+      let n = r.participants.size();
+      let room = r.room == null ? {} : getAfter(/databases/$(database)/documents/matches/$(r.room)).data;
+      let owners = room.get('owners',{});
+      return r.keys().hasOnly(['kind','version','pool','participants','config','winner','reason','names','ply','actor','source','room','moves','at']) &&
+        r.version == 3 && r.config.get('ratingVersion',1) == 3 && n >= 2 && n <= 4 && n == r.config.seats.size() && r.names.size() == n &&
+        r.pool == ratingPool(r.config) && r.actor == request.auth.uid && r.actor in r.participants &&
+        r.winner >= -1 && r.winner < n && r.reason in ['road','flats','resignation','time'] &&
+        (r.reason in ['road','flats'] || n == 2) && r.ply >= n && r.ply <= 4096 &&
+        r.source is string && r.source.size() <= 160 && r.moves is list &&
+        (r.room == null
+          ? r.source.matches('^local-[a-zA-Z0-9-]+$') && r.moves.size() == r.ply &&
+            getAfter(/databases/$(database)/documents/aiResultKeys/$(r.actor + '_' + r.source)).data.result == id
+          : r.room.matches('^U[A-Z]{6}$') && r.moves.size() == 0 &&
+            r.source == r.room && room.config == r.config && room.ratingReceipt == id && room.ratingKey == id && room.moves.size() == r.ply &&
+            (room.resigned == null && room.get('timedOut',null) == null || (n == 2 && r.winner == ((room.resigned != null ? room.resigned : room.get('timedOut',null)) == room.config.seats[0].id ? 1 : 0)))) &&
+        sSeat(r,owners,0) && sSeat(r,owners,1) && sSeat(r,owners,2) && sSeat(r,owners,3);
+    }
+    function sBefore(pool,id) {
+      let path = /databases/$(database)/documents/skillPools/$(pool)/players/$(id);
+      return exists(path) ? get(path).data :
+        {'mean':1200.0,'deviation':350.0,'gamesPlayed':0,'wins':0,'losses':0,'draws':0};
+    }
+    function sAfter(pool,id) {
+      return getAfter(/databases/$(database)/documents/skillPools/$(pool)/players/$(id)).data;
+    }
+    function sReceipt(key,pool) {
+      return getAfter(/databases/$(database)/documents/skillSettlements/$(key)/scopes/$(pool)).data;
+    }
+    function sFresh(key,pool) {
+      return !exists(/databases/$(database)/documents/skillSettlements/$(key)/scopes/$(pool));
+    }
+    function sWeight(r,id,j) {
+      return j >= r.participants.size() || r.participants[j] == id ? 0.0 :
+        r.winner == -1 ? 1.0 / (r.participants.size()-1) :
+        r.participants[r.winner] == id ? 1.0 / ((r.participants.size()-1)*pCount(r,id)) :
+        j == r.winner ? 1.0 / (r.participants.size()-1) : 0.0;
+    }
+    function sObserved(r,pool,mean,j,weight,score) {
+      let opponent = sBefore(pool,r.participants[j]);
+      let g = 1.0 / math.sqrt(1.0 + 0.000010072398601963978 * opponent.deviation * opponent.deviation);
+      let expected = 1.0 / (1.0 + math.pow(10.0, -g * (mean-opponent.mean) / 400.0));
+      return [weight*g*(score-expected), weight*g*g*expected*(1.0-expected)];
+    }
+    function sTerm(r,pool,id,mean,j) {
+      let weight = sWeight(r,id,j);
+      return weight == 0.0 ? [0.0,0.0] : sObserved(r,pool,mean,j,weight,sScore(r,id));
+    }
+    function sNext(r,pool,id,b) {
+      let a = sTerm(r,pool,id,b.mean,0);
+      let c = sTerm(r,pool,id,b.mean,1);
+      let d = sTerm(r,pool,id,b.mean,2);
+      let e = sTerm(r,pool,id,b.mean,3);
+      let variance = 1.0 / (1.0 / (b.deviation*b.deviation) + 0.000033136863190489995*(a[1]+c[1]+d[1]+e[1]));
+      let deviation = math.sqrt(variance);
+      return [b.mean + 0.005756462732485115*variance*(a[0]+c[0]+d[0]+e[0]), deviation < 50.0 ? 50.0 : deviation];
+    }
+    function sAtomic(r,pool,key,i) {
+      return i >= r.participants.size() || sAfter(pool,r.participants[i]).lastResult == key;
+    }
+    function sSettlement(r,s,pool,key) {
+      return r.kind == 'skill' && request.auth.uid in r.participants && pool in ['overall',r.pool] &&
+        s.keys().hasOnly(['source','pool','before','after','at']) && s.source == key && s.pool == pool && s.at == request.time &&
+        s.before.keys().toSet() == r.participants.toSet() && s.after.keys().toSet() == r.participants.toSet() &&
+        sAtomic(r,pool,key,0) && sAtomic(r,pool,key,1) && sAtomic(r,pool,key,2) && sAtomic(r,pool,key,3);
+    }
+    function sScore(r,id) {
+      return r.winner == -1 ? 0.5 : r.participants[r.winner] == id ? 1.0 : 0.0;
+    }
+    function sProfile(r,pool,key,id,b,data) {
+      let next = sNext(r,pool,id,b);
+      return data.keys().hasOnly(['pool','displayName','mean','deviation','rating','gamesPlayed','wins','losses','draws','isAi','established','lastResult','lastUpdated','engineVersion','aiDifficulty']) &&
+        id in r.participants && pool in ['overall',r.pool] &&
+        data.pool == pool && data.lastResult == key && data.lastUpdated == request.time &&
+        data.mean is number && data.deviation is number && data.deviation >= 50 && data.deviation <= 350 &&
+        math.abs(data.mean-next[0]) < 0.000001 && math.abs(data.deviation-next[1]) < 0.000001 &&
+        getAfter(/databases/$(database)/documents/skillPools/$(pool)/players/$(id)/history/$(string(data.gamesPlayed))).data.timestamp == request.time;
+    }
+    match /skillSettlements/{key}/scopes/{pool} {
+      allow get: if ratingAccount() && request.auth.uid in get(/databases/$(database)/documents/ratingResults/$(key)).data.participants;
+      allow create: if ratingAccount() && sSettlement(get(/databases/$(database)/documents/ratingResults/$(key)).data,request.resource.data,pool,key);
+      allow list,update,delete: if false;
+    }
+    match /skillPools/{pool}/players/{id} {
+      allow read: if true;
+      allow create,update: if ratingAccount() &&
+        sFresh(request.resource.data.lastResult,pool) &&
+        sProfile(get(/databases/$(database)/documents/ratingResults/$(request.resource.data.lastResult)).data,
+          pool,request.resource.data.lastResult,id,sBefore(pool,id),request.resource.data);
+      allow delete: if false;
+      match /history/{entry} {
+        allow read: if true;
+        allow create: if ratingAccount() && sHistory(pool,id,entry,request.resource.data);
+        allow update,delete: if false;
+      }
+    }
+    function sHistory(pool,id,entry,h) {
+      let after = sAfter(pool,id);
+      let key = after.lastResult;
+      let r = get(/databases/$(database)/documents/ratingResults/$(key)).data;
+      let before = sBefore(pool,id);
+      let s = sReceipt(key,pool);
+      let index = pIndex(r,id);
+      let ai = r.config.seats[index].control == 'ai';
+      let score = sScore(r,id);
+      return sFresh(key,pool) && h.keys().hasOnly(['mean','deviation','rating','before','delta','timestamp','score','opponentName','seat','appearances']) &&
+        entry == string(after.gamesPlayed) && h.mean == after.mean && h.deviation == after.deviation && h.rating == after.rating &&
+        after.rating is int && after.rating == math.round(after.mean) &&
+        s.before[id].keys().hasOnly(['mean','deviation']) && s.after[id].keys().hasOnly(['mean','deviation']) &&
+        s.before[id].mean == before.mean && s.before[id].deviation == before.deviation &&
+        s.after[id].mean == after.mean && s.after[id].deviation == after.deviation &&
+        after.gamesPlayed is int && after.gamesPlayed == before.gamesPlayed + 1 &&
+        after.wins is int && after.losses is int && after.draws is int &&
+        after.wins == before.wins + (score == 1.0 ? 1 : 0) &&
+        after.losses == before.losses + (score == 0.0 ? 1 : 0) &&
+        after.draws == before.draws + (score == 0.5 ? 1 : 0) &&
+        after.displayName == r.names[index] && after.isAi == ai &&
+        after.established == (after.gamesPlayed >= 10 && after.deviation <= 150.0) &&
+        (ai ? after.engineVersion == 'shared-search-v1' && after.aiDifficulty == r.config.seats[index].level
+            : !after.keys().hasAny(['engineVersion','aiDifficulty'])) &&
+        h.before == math.round(before.mean) && h.delta == after.rating-h.before && h.timestamp == request.time &&
+        h.score == score && h.opponentName == string(r.participants.size())+'-player game' &&
+        h.seat == index && h.appearances == pCount(r,id);
+    }
+
     match /ratingResults/{id} {
       // Result receipts/evidence are participant-private, including room codes.
       allow get: if ratingAccount() &&
@@ -732,6 +894,7 @@ service cloud.firestore {
         request.resource.data.pool is string && validRatingPool(request.resource.data.pool) &&
         request.resource.data.participants is list && request.resource.data.winner is int &&
         request.resource.data.ply is int && (
+          (request.resource.data.kind == 'skill' && sSource(request.resource.data,id)) ||
           (request.resource.data.kind == 'placements' && pReceipt(request.resource.data,id)) ||
           (request.resource.data.kind == 'human' &&
             request.resource.data.keys().hasOnly(['kind', 'room', 'pool', 'participants', 'winner', 'ply', 'at']) &&
@@ -752,7 +915,10 @@ service cloud.firestore {
           request.resource.data.version == 2 && request.resource.data.reason in ['road','flats','resignation','time'] &&
           request.resource.data.ranks is list && request.resource.data.flats is list &&
           request.resource.data.ranks.size() == get(/databases/$(database)/documents/matches/$(code)).data.config.seats.size() &&
-          request.resource.data.flats.size() == request.resource.data.ranks.size())) &&
+          request.resource.data.flats.size() == request.resource.data.ranks.size()) ||
+         (get(/databases/$(database)/documents/matches/$(code)).data.config.get('ratingVersion',1) == 3 &&
+          request.resource.data.keys().hasOnly(['version','ply','winner','reason','name']) && request.resource.data.version == 3 &&
+          request.resource.data.reason in ['road','flats','resignation','time'])) &&
         request.resource.data.ply == get(/databases/$(database)/documents/matches/$(code)).data.moves.size() &&
         request.resource.data.winner is int && request.resource.data.winner >= -1 &&
         request.resource.data.winner < get(/databases/$(database)/documents/matches/$(code)).data.config.seats.size() &&
@@ -811,7 +977,7 @@ service cloud.firestore {
         data.pool == pool && data.lastUpdated == request.time && data.rating is int &&
         data.gamesPlayed is int && data.wins is int && data.losses is int && data.draws is int &&
         data.opponents is int && data.isAi is bool && data.established is bool &&
-        (ai || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 60)) &&
+        (data.isAi || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 60)) &&
         data.gamesPlayed == before.gamesPlayed + 1 &&
         data.wins == before.wins + (score == 1 ? 1 : 0) &&
         data.losses == before.losses + (score == 0 ? 1 : 0) &&
@@ -856,7 +1022,8 @@ service cloud.firestore {
       allow create: if ratingAccount() && request.resource.data.keys().hasOnly(['result']) &&
         freshRating(request.resource.data.result) &&
         ratingReceipt(request.resource.data.result).actor == request.auth.uid &&
-        ratingReceipt(request.resource.data.result).kind in ['ai','placements'] &&
+        ratingReceipt(request.resource.data.result).kind in ['ai','placements','skill'] &&
+        (ratingReceipt(request.resource.data.result).kind != 'skill' || sConfig(ratingReceipt(request.resource.data.result).config)) &&
         key == request.auth.uid + '_' + ratingReceipt(request.resource.data.result).source;
       allow list, update, delete: if false;
     }

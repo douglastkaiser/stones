@@ -192,7 +192,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                         'Competitive ratings: each player needs a separate signed-in account. Results count after every player confirms the same outcome. Names and standings are public.'),
                   if (bots > 0)
                     const Text(
-                        'AI games are practice for human ratings. Untimed duels against established players contribute community AI strength estimates. AI always runs on the device.'),
+                        'Completed rated games update your overall and format ratings, including games against AI. AI profiles are shared across everyone’s games. AI runs on the device.'),
                   if (local == 1 && bots > 0 && online == 0 && !_config.court)
                     Text(_config.profile == RulesProfile.standardTak
                         ? (_config.size < 5
