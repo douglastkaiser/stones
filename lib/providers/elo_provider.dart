@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/rating_pool.dart';
+import '../game/match_config.dart';
+import '../game/rating_evidence.dart';
 import '../models/elo_rating.dart';
 import '../services/rating_repository.dart';
 import 'account_provider.dart';
@@ -24,7 +26,8 @@ class EloState {
   final String? uid;
   final int? rank;
   RatingPool get selectedPool => pool ?? RatingPool.standard;
-  String get personalLabel => localPlayerRating?.ratingLabel ??
+  String get personalLabel =>
+      localPlayerRating?.ratingLabel ??
       (errorMessage == null ? 'Unrated' : 'Rating unavailable');
 }
 
@@ -73,7 +76,9 @@ class EloController extends StateNotifier<EloState> {
             loading: state.loading);
         if (rating == null || rating.provisional) return;
         try {
-          final rank = await repository.rank(pool.id, rating.rating).timeout(requestTimeout);
+          final rank = await repository
+              .rank(pool.id, rating.rating)
+              .timeout(requestTimeout);
           if (mounted &&
               generation == _generation &&
               identical(state.localPlayerRating, rating)) {
@@ -131,16 +136,34 @@ class EloController extends StateNotifier<EloState> {
         loading: true);
     try {
       final values = await Future.wait(
-          [repository.leaders(pool.id), repository.bots(pool.id)]).timeout(requestTimeout);
+              [repository.leaders(pool.id), repository.bots(pool.id)])
+          .timeout(requestTimeout);
       if (!mounted || generation != _generation || request != _request) return;
-      final leaders = values[0]
+      final combined = {
+        for (final entry in [...values[0], ...values[1]]) entry.id: entry
+      };
+      for (final level in BotLevel.values) {
+        final id = 'ai_${RatingEvidence.engine}_${level.name}';
+        combined.putIfAbsent(
+            id,
+            () => EloRating(
+                id: id,
+                displayName:
+                    '${level.name[0].toUpperCase()}${level.name.substring(1)} AI',
+                pool: pool.id,
+                isAi: true,
+                aiDifficulty: level.name));
+      }
+      final leaders = combined.values.toList()
         ..sort((a, b) {
-          final score = b.rating.compareTo(a.rating);
-          return score == 0 ? a.id.compareTo(b.id) : score;
+          final rating = b.rating.compareTo(a.rating);
+          return rating == 0 ? a.id.compareTo(b.id) : rating;
         });
       final personal = state.localPlayerRating;
       final rank = personal != null && !personal.provisional
-          ? await repository.rank(pool.id, personal.rating).timeout(requestTimeout)
+          ? await repository
+              .rank(pool.id, personal.rating)
+              .timeout(requestTimeout)
           : null;
       if (!mounted || generation != _generation || request != _request) return;
       state = EloState(
@@ -149,7 +172,8 @@ class EloController extends StateNotifier<EloState> {
           localPlayerRating: state.localPlayerRating,
           leaderboard: leaders,
           aiRatings: {for (final bot in values[1]) bot.id: bot},
-          rank: identical(state.localPlayerRating, personal) ? rank : state.rank);
+          rank:
+              identical(state.localPlayerRating, personal) ? rank : state.rank);
     } catch (_) {
       if (mounted && generation == _generation && request == _request) {
         _error(
@@ -160,7 +184,9 @@ class EloController extends StateNotifier<EloState> {
 
   Future<List<EloHistoryEntry>> fetchRatingHistory(String playerId,
           {String? pool}) =>
-      repository.history(pool ?? state.selectedPool.id, playerId).timeout(requestTimeout);
+      repository
+          .history(pool ?? state.selectedPool.id, playerId)
+          .timeout(requestTimeout);
   @override
   void dispose() {
     _generation++;

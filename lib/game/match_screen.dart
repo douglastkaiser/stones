@@ -23,6 +23,12 @@ import 'move_selection.dart';
 import 'seat_appearance.dart';
 import 'stack_move_tray.dart';
 import 'rating_pool.dart';
+import 'rating_submission.dart';
+import 'match_completed.dart';
+import 'match_standings.dart';
+import 'result_share_dialog.dart';
+import 'result_share_data.dart';
+import '../providers/player_profile_provider.dart';
 import '../widgets/player_rating_label.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
@@ -420,15 +426,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(children: [
-                    Text(ratingMessage, textAlign: TextAlign.center),
-                    if (game.finished &&
-                        (ratingMessage.contains('could not') ||
-                            ratingMessage.contains('Waiting')))
+                    Text(ratingMessage.message, textAlign: TextAlign.center),
+                    if (game.finished && ratingMessage.retryable)
                       TextButton(
                           onPressed: () async {
                             final uid = ref.read(accountProvider).identity?.uid;
                             ref.read(ratingStatusProvider.notifier).state =
-                                (match.id!, 'Checking game result\u2026');
+                                (match.id!, const RatingSubmission.pending());
                             try {
                               final message = await ref
                                   .read(ratingRepositoryProvider)
@@ -449,7 +453,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                 ref.read(ratingStatusProvider.notifier).state =
                                     (
                                   match.id!,
-                                  'Rating update could not finish. Retry when connected.'
+                                  const RatingSubmission.failed()
                                 );
                               }
                             }
@@ -550,6 +554,17 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     );
   }
 
+  String _resultSeatName(MatchSession match, SeatId id) {
+    final seat = match.game!.config.seat(id);
+    if (seat.control == SeatControl.ai) {
+      return '${seat.level.name[0].toUpperCase()}${seat.level.name.substring(1)} AI';
+    }
+    final uid = match.room?.owners[id];
+    return uid == null
+        ? id.label
+        : ref.watch(playerNameProvider(uid)).asData?.value ?? id.label;
+  }
+
   Widget _moveControls(MatchSession match, MatchState game) {
     if (widget.studyPanel != null && match.inputLocked) {
       return Column(children: [
@@ -561,6 +576,31 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     if (game.finished) {
       return Column(children: [
         const Text('Match complete'),
+        if (widget.studyPanel == null) ...[
+          if (MatchStandings.forGame(game) case final standings?)
+            for (final id in standings.ordered)
+              Text(
+                  '${ResultShareData.ordinal(standings.ranks[id]!)} · ${_resultSeatName(match, id)} · ${standings.flats[id]} flats'),
+          Text((ref.watch(ratingStatusProvider)?.$1 == match.id
+                  ? ref.watch(ratingStatusProvider)!.$2
+                  : const RatingSubmission.unrated())
+              .labelFor(MatchCompleted(match).participant)),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+              onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => ResultShareDialog(
+                      session: match,
+                      styles: {
+                        for (final id in game.config.ids)
+                          id: match.room?.styles[id] ??
+                              ref.read(currentPieceStyleProvider).style
+                      },
+                      boardTheme: match.room?.boardTheme ??
+                          ref.read(currentBoardThemeProvider).theme)),
+              icon: const Icon(Icons.share_outlined),
+              label: const Text('Share result')),
+        ],
         Text(
             'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${e.key.label} ${e.value}').join(' · ')}'),
         if (widget.studyPanel == null &&

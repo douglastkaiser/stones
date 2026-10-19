@@ -1,4 +1,19 @@
-# Ratings and competition audit
+# Ratings and competition
+
+Updated 2026-10-19: new unified matches use **placement Elo for humans and AI**.
+The default leaderboard combines both; every eligible version 2 match updates
+all participants' global ratings in the existing board/clock ladder. The actual
+winner places first, other seats rank by exposed flats, and equal counts tie.
+Shares include match-specific confirmed Elo deltas from immutable receipts.
+
+See [results, sharing, and placement Elo](RESULT_SHARING.md) for the current
+contract, eligibility, transaction/rule checks, repeated-AI handling, trust
+boundary, verification and deployment sequence. Missing configuration metadata
+retains the version 1 protocol; settled history is not recalculated.
+
+The remainder of this audit records the historical version 1 design and its
+production publication evidence. Its human-only ladder and AI-sampling policy
+apply to that legacy protocol, rather than new version 2 matches.
 
 ## Current architecture: Firebase Spark, local AI
 

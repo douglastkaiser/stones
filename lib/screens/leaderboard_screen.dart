@@ -1,6 +1,6 @@
+import '../game/match_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../game/match_config.dart';
 import '../game/rating_pool.dart';
 import '../models/elo_rating.dart';
 import '../providers/elo_provider.dart';
@@ -15,7 +15,7 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 }
 
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
-  bool _bots = false;
+  String _filter = 'All';
   @override
   void initState() {
     super.initState();
@@ -36,33 +36,22 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               padding: EdgeInsets.all(24),
               child: Text(
                   'How Stones ratings work\n\nEach board size, shape, player count and clock category has its own ladder. '
-                  'The first 10 games are provisional. Equal ratings share a rank. '
-                  'Only completed online games between distinct signed-in accounts affect human ratings. '
-                  'Local games, Court Mode, learning and AI games do not. Duels ending before both players move are unrated; later resignations and timeouts count. '
-                  'In multiplayer, the winner beats each rival; losing rivals tie each other. A draw ties every pair.\n\n'
-                  'AI community estimates use locally played, replay-checked untimed games against established human players. '
-                  'Calibration needs 30 games and 10 distinct opponents, counting at most one sample per person every 24 hours. '
-                  'Modified clients can falsify AI reports. Human ratings require all players to agree on the result. Each engine revision starts a new sample. A question mark means provisional or still calibrating. '
-                  'These are Stones ratings, not chess ratings. Player display names and competitive statistics are public.'))));
+                  'Humans and AI share the same Elo system and global leaderboard. The first 10 games are provisional. Equal established ratings share a rank. '
+                  'The winner places first; remaining players rank by exposed flats, with equal counts tied. '
+                  'Elo compares each player with every opponent: higher placement wins, equal placement draws, and lower placement loses. Changes are averaged across opponents and depend on their ratings.\n\n'
+                  'Signed-in players can record completed human, AI and mixed games. Online humans confirm the full standings. '
+                  'Guest games, learning, Court Mode, abandoned games and shared human seats are unrated. '
+                  'AI results are reported by the player’s device. '
+                  'Player display names and competitive statistics are public. These are Stones ratings, not chess ratings.'))));
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(eloProvider);
     final pool = state.selectedPool;
     final own = state.localPlayerRating;
-    final bots = [
-      for (final level in BotLevel.values)
-        state.aiRatings.values
-                .where((r) => r.aiDifficulty == level.name)
-                .firstOrNull ??
-            EloRating(
-                id: 'ai_shared-search-v1_${level.name}',
-                displayName:
-                    '${level.name[0].toUpperCase()}${level.name.substring(1)} AI',
-                pool: pool.id,
-                isAi: true,
-                aiDifficulty: level.name)
-    ];
-    bots.sort((a, b) => b.rating.compareTo(a.rating));
+    final entries = state.leaderboard
+        .where((entry) =>
+            _filter == 'All' || (_filter == 'AI' ? entry.isAi : !entry.isAi))
+        .toList();
     return Scaffold(
         appBar: AppBar(title: const Text('Competition'), actions: [
           IconButton(
@@ -172,7 +161,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                                     .textTheme
                                                     .titleMedium),
                                             Text(own == null
-                                                ? 'Unrated · play a competitive online game'
+                                                ? 'Unrated · complete a rated game'
                                                 : '${own.ratingLabel} · ${own.provisional ? "Provisional ${own.gamesPlayed}/10" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
                                             if (own != null)
                                               Text(
@@ -196,44 +185,31 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                           ]))),
                             const SizedBox(height: 12),
                             Wrap(spacing: 8, children: [
-                              ChoiceChip(
-                                  label: const Text('Players'),
-                                  selected: !_bots,
-                                  onSelected: (_) =>
-                                      setState(() => _bots = false)),
-                              ChoiceChip(
-                                  label: const Text('AI benchmarks'),
-                                  selected: _bots,
-                                  onSelected: (_) =>
-                                      setState(() => _bots = true)),
+                              for (final filter in ['All', 'Humans', 'AI'])
+                                ChoiceChip(
+                                    label: Text(filter),
+                                    selected: _filter == filter,
+                                    onSelected: (_) =>
+                                        setState(() => _filter = filter)),
                             ]),
                             const SizedBox(height: 12),
-                            if (_bots &&
-                                (pool.players != 2 || pool.clock != 'open'))
-                              const Text(
-                                  'AI benchmarks use untimed two-player duels. Choose 2 players and Untimed.')
-                            else if (_bots) ...[
-                              const Text(
-                                  'Community estimates · ? means still calibrating. AI games do not change your competitive rating.'),
-                              for (final bot in bots)
-                                _entry(bot, null, state.uid),
-                            ] else if (state.leaderboard.isEmpty &&
+                            const Text(
+                                'Global standings · provisional ratings are marked ?'),
+                            if (entries.isEmpty &&
                                 !state.loading &&
                                 state.errorMessage == null)
                               const Padding(
                                   padding: EdgeInsets.all(16),
                                   child: Text(
-                                      'This ladder is waiting for its first established players. Complete 10 competitive games to join.'))
-                            else ...[
-                              const Text(
-                                  'Top 50 established players · equal ratings share a rank'),
-                              for (final player in state.leaderboard)
-                                _entry(
-                                    player,
-                                    competitionRank(
-                                        player.rating, state.leaderboard),
-                                    state.uid),
-                            ],
+                                      'No rated players in this ladder yet.')),
+                            for (final player in entries)
+                              _entry(
+                                  player,
+                                  player.provisional
+                                      ? null
+                                      : competitionRank(
+                                          player.rating, state.leaderboard),
+                                  state.uid),
                           ]))),
             ])));
   }
@@ -264,32 +240,42 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               onChanged: (next) {
                 if (next != null) onChanged(next);
               }));
-  Widget _entry(EloRating rating, int? rank, String? uid) => Card(
-      child: InkWell(
-          onTap: rating.gamesPlayed == 0
-              ? null
-              : () => Navigator.push<void>(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => PlayerDetailScreen(player: rating))),
-          child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(spacing: 12, runSpacing: 6, children: [
-                      if (rank != null) Text('#$rank'),
-                      PlayerName(
-                          uid: rating.id,
-                          fallback: rating.displayName,
-                          suffix: rating.id == uid ? ' (You)' : '',
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(rating.ratingLabel),
-                    ]),
-                    Text(
-                        '${rating.wins}W · ${rating.losses}L · ${rating.draws}D · ${rating.gamesPlayed} games'),
-                    if (rating.isAi)
+  Widget _entry(EloRating rating, int? rank, String? uid) {
+    // AI rows can be merged from outside the bounded top-player query.
+    final displayRank = rating.isAi && !rating.provisional
+        ? ref
+            .watch(playerRankProvider((rating.pool, rating.rating)))
+            .asData
+            ?.value
+        : rank;
+    return Card(
+        child: InkWell(
+            onTap: rating.gamesPlayed == 0
+                ? null
+                : () => Navigator.push<void>(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => PlayerDetailScreen(player: rating))),
+            child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(spacing: 12, runSpacing: 6, children: [
+                        if (displayRank != null) Text('#$displayRank'),
+                        PlayerName(
+                            uid: rating.id,
+                            fallback: rating.displayName,
+                            suffix: rating.id == uid ? ' (You)' : '',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(rating.ratingLabel),
+                      ]),
                       Text(
-                          '${rating.opponents} opponents · ${rating.calibrated ? "Community estimate" : "Calibrating: needs 30 games and 10 opponents"}'),
-                  ]))));
+                          '${rating.wins}W · ${rating.losses}L · ${rating.draws}D · ${rating.gamesPlayed} games'),
+                      if (rating.isAi) const Text('AI · shared global rating'),
+                      if (rating.provisional && rating.gamesPlayed > 0)
+                        Text('Provisional ${rating.gamesPlayed}/10'),
+                    ]))));
+  }
 }

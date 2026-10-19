@@ -16,10 +16,9 @@ class EloRating {
   final String? engineVersion;
   final int opponents;
   bool get provisional => gamesPlayed < 10;
-  bool get calibrated => !isAi || (gamesPlayed >= 30 && opponents >= 10);
-  String get ratingLabel => gamesPlayed == 0
-      ? (isAi ? 'Uncalibrated' : 'Unrated')
-      : '$rating${provisional || !calibrated ? "?" : ""}';
+  bool get calibrated => !provisional;
+  String get ratingLabel =>
+      gamesPlayed == 0 ? 'Unrated' : '$rating${provisional ? "?" : ""}';
 
   const EloRating({
     required this.id,
@@ -106,12 +105,20 @@ class EloHistoryEntry {
   final DateTime timestamp;
   final String? opponentName;
   final double? score;
+  final int? before, delta;
+  final List<int> placements;
+  final int seat, appearances;
 
   const EloHistoryEntry({
     required this.rating,
     required this.timestamp,
     this.opponentName,
     this.score,
+    this.before,
+    this.delta,
+    this.placements = const [],
+    this.seat = 0,
+    this.appearances = 1,
   });
 
   Map<String, dynamic> toMap() => {
@@ -119,6 +126,11 @@ class EloHistoryEntry {
         'timestamp': timestamp.millisecondsSinceEpoch,
         if (opponentName != null) 'opponentName': opponentName,
         if (score != null) 'score': score,
+        if (before != null) 'before': before,
+        if (delta != null) 'delta': delta,
+        if (placements.isNotEmpty) 'placements': placements,
+        if (placements.isNotEmpty) 'seat': seat,
+        if (placements.isNotEmpty) 'appearances': appearances,
       };
 
   factory EloHistoryEntry.fromMap(Map<String, dynamic> map) {
@@ -129,6 +141,11 @@ class EloHistoryEntry {
           : DateTime.now(),
       opponentName: map['opponentName'] as String?,
       score: (map['score'] as num?)?.toDouble(),
+      before: map['before'] as int?,
+      delta: map['delta'] as int?,
+      placements: (map['placements'] as List?)?.cast<int>() ?? const [],
+      seat: map['seat'] as int? ?? 0,
+      appearances: map['appearances'] as int? ?? 1,
     );
   }
 }
@@ -185,5 +202,4 @@ class EloCalculator {
 
 /// Competition rank is independent of list position and includes tied scores.
 int competitionRank(int rating, Iterable<EloRating> players) =>
-    1 +
-    players.where((p) => !p.isAi && !p.provisional && p.rating > rating).length;
+    1 + players.where((p) => !p.provisional && p.rating > rating).length;

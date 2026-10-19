@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/elo_rating.dart';
 import '../providers/elo_provider.dart';
 import '../game/rating_pool.dart';
+import '../game/result_share_data.dart';
 
 /// Shows a player's profile, stats, and ELO rating history chart.
 class PlayerDetailScreen extends ConsumerStatefulWidget {
@@ -102,7 +103,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   Widget _buildHeaderCard(BuildContext context, EloRating player, bool isDark) {
     final pool =
         RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
-    final rank = player.isAi || player.provisional
+    final rank = player.provisional
         ? null
         : ref
             .watch(playerRankProvider((player.pool, player.rating)))
@@ -136,11 +137,9 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                         .headlineSmall
                         ?.copyWith(color: _ratingColor(player.rating, isDark))),
                 if (rank != null) Text('Rank #$rank'),
-                if (!player.isAi && player.provisional)
+                if (player.provisional)
                   Text('Provisional ${player.gamesPlayed}/10'),
-                if (player.isAi)
-                  Text(
-                      '${player.opponents} opponents · ${player.calibrated ? "Calibrated estimate" : "Still calibrating"}'),
+                if (player.isAi) const Text('Global AI player'),
               ]),
               const SizedBox(height: 16),
               Wrap(spacing: 24, runSpacing: 16, children: [
@@ -251,11 +250,16 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                 // Opponent name
                 Expanded(
                   child: Text(
-                    entry.score == 1.0
-                        ? 'Won vs ${entry.opponentName ?? "Unknown"}'
-                        : entry.score == 0.0
-                            ? 'Lost vs ${entry.opponentName ?? "Unknown"}'
-                            : 'Drew vs ${entry.opponentName ?? "Unknown"}',
+                    entry.placements.isNotEmpty &&
+                            entry.seat < entry.placements.length
+                        ? entry.appearances > 1
+                            ? '${entry.appearances} AI seats · ${entry.opponentName}'
+                            : 'Placed ${ResultShareData.ordinal(entry.placements[entry.seat])} · ${entry.opponentName}'
+                        : entry.score == 1.0
+                            ? 'Won vs ${entry.opponentName ?? "Unknown"}'
+                            : entry.score == 0.0
+                                ? 'Lost vs ${entry.opponentName ?? "Unknown"}'
+                                : 'Drew vs ${entry.opponentName ?? "Unknown"}',
                     style: TextStyle(
                       fontSize: 13,
                       color:
@@ -266,7 +270,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                 ),
                 // Rating after game
                 Text(
-                  '${entry.rating}',
+                  '${entry.rating}${entry.delta == null ? "" : " (${entry.delta! > 0 ? '+' : entry.delta == 0 ? '±' : ''}${entry.delta})"}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,

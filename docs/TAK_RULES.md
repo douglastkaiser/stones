@@ -14,6 +14,15 @@ replacing the old validators; current compatibility checks exercise the adapters
 and existing official-rule regressions. Court, clocks, online recovery and
 cosmetics remain application features. Publishing status is recorded in the plan.
 
+## Multiplayer placements and sharing (2026-10-19)
+
+New unified matches additionally rank non-winning seats by exposed ordinary
+flats, with equal counts tied. This supplies Stones multiplayer standings,
+pairwise Elo for human and AI seats, and share summaries. Core road/flat victory
+and official two-player Tak adjudication remain the same. Drawn leaders share
+first place; other participants can finish below them. See the
+[result and rating contract](RESULT_SHARING.md) for versioning and qualification.
+
 ## Sources and scope
 
 - [University Edition rules](https://crabfragmentlabs.com/s/UniversityRules.pdf),

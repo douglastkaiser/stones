@@ -7,6 +7,7 @@ import '../providers/cosmetics_provider.dart';
 import '../providers/elo_provider.dart';
 import '../providers/saved_rooms_provider.dart';
 import 'match_config.dart';
+import 'rating_submission.dart';
 import 'match_completed.dart';
 import 'match_controller.dart';
 import 'match_room_store.dart';
@@ -27,8 +28,16 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
     StateNotifierProvider<MatchController, MatchSession>((ref) {
   var active = true;
   ref.onDispose(() => active = false);
+  ref.listen(accountProvider.select((value) => value.identity?.uid),
+      (previous, next) {
+    if (previous != next) ref.read(ratingStatusProvider.notifier).state = null;
+  });
   return MatchController(
     storage: ref.read(localMatchStorageProvider),
+    ratingIdentity: () {
+      final identity = ref.read(accountProvider).identity;
+      return identity != null && !identity.guest ? identity.uid : null;
+    },
     authenticate: () async =>
         (await ref.read(accountProvider.notifier).ensurePlayer()).uid,
     store: () => ref.read(matchRoomStoreProvider),
@@ -40,7 +49,7 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
       final identity = ref.read(accountProvider).identity;
       if (identity != null && !identity.guest) {
         ref.read(ratingStatusProvider.notifier).state =
-            (event.id, 'Checking game result…');
+            (event.id, const RatingSubmission.pending());
         unawaited(ref
             .read(ratingRepositoryProvider)
             .submitResult(session, event.moves)
@@ -54,10 +63,8 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
           if (active &&
               ref.read(matchProvider).id == event.id &&
               ref.read(accountProvider).identity?.uid == identity.uid) {
-            ref.read(ratingStatusProvider.notifier).state = (
-              event.id,
-              'Game saved · rating update could not finish. Retry when connected.'
-            );
+            ref.read(ratingStatusProvider.notifier).state =
+                (event.id, const RatingSubmission.failed());
           }
         }));
       }
@@ -72,4 +79,5 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
   );
 });
 
-final ratingStatusProvider = StateProvider<(String, String)?>((ref) => null);
+final ratingStatusProvider =
+    StateProvider<(String, RatingSubmission)?>((ref) => null);

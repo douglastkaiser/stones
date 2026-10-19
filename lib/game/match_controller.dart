@@ -86,6 +86,7 @@ class MatchController extends StateNotifier<MatchSession> {
       required this.store,
       this.remember,
       this.completed,
+      this.ratingIdentity,
       this.botDelay = const Duration(milliseconds: 250),
       this.networkTimeout = const Duration(seconds: 20),
       this.recoveryDelays = const [
@@ -100,6 +101,7 @@ class MatchController extends StateNotifier<MatchSession> {
       : _searchOverride = search,
         super(const MatchSession());
   final LocalMatchStorage storage;
+  final String? Function()? ratingIdentity;
   final Future<String> Function() authenticate;
   final MatchRoomStore Function() store;
   final Future<void> Function(MatchRoom, String)? remember;
@@ -176,6 +178,7 @@ class MatchController extends StateNotifier<MatchSession> {
           'local-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 30)}';
       state = MatchSession(
           game: MatchState.initial(config),
+          uid: ratingIdentity?.call(),
           id: id,
           busy: true,
           clock: config.clockSeconds > 0 ? MatchClock.initial(config) : null);
@@ -244,7 +247,11 @@ class MatchController extends StateNotifier<MatchSession> {
       throw const FormatException('Saved clock does not match configuration');
     }
     state = MatchSession(
-        game: game, id: snapshot['id'] as String, paused: true, clock: clock);
+        game: game,
+        id: snapshot['id'] as String,
+        uid: snapshot['ratingUid'] as String?,
+        paused: true,
+        clock: clock);
     _watchClock();
     _notifyCompleted();
     return true;
@@ -511,6 +518,7 @@ class MatchController extends StateNotifier<MatchSession> {
         final clock = state.clock?.frozen(DateTime.now());
         await storage.write({
           'id': state.id,
+          'ratingUid': state.uid,
           'config': game.config.toMap(),
           'moves': _localMoves,
           if (clock != null) 'clock': clock.toMap(),
@@ -639,6 +647,7 @@ class MatchController extends StateNotifier<MatchSession> {
         final clock = state.clock?.advance(game.current, result.current, now);
         await storage.write({
           'id': state.id,
+          'ratingUid': state.uid,
           'config': game.config.toMap(),
           'moves': records,
           if (clock != null) 'clock': clock.frozen(now).toMap(),
@@ -687,6 +696,7 @@ class MatchController extends StateNotifier<MatchSession> {
 
   Future<void> _save() => storage.write({
         'id': state.id,
+        'ratingUid': state.uid,
         'config': state.game!.config.toMap(),
         'moves': _localMoves,
         if (state.clock != null)
@@ -753,6 +763,7 @@ class MatchController extends StateNotifier<MatchSession> {
         final clock = state.clock!.frozen(DateTime.now());
         await storage.write({
           'id': state.id,
+          'ratingUid': state.uid,
           'config': game.config.toMap(),
           'moves': _localMoves,
           'clock': clock.toMap(),
@@ -828,8 +839,12 @@ class MatchController extends StateNotifier<MatchSession> {
     }
     state = state.copyWith(busy: true);
     try {
-      await storage.write(
-          {'id': state.id, 'config': game.config.toMap(), 'moves': records});
+      await storage.write({
+        'id': state.id,
+        'ratingUid': state.uid,
+        'config': game.config.toMap(),
+        'moves': records
+      });
       if (!mounted || epoch != _epoch) return false;
       _localMoves = records;
       state = state.copyWith(

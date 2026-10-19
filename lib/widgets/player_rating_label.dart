@@ -20,13 +20,13 @@ class PlayerRatingLabel extends ConsumerWidget {
     final name = ref.watch(playerNameProvider(uid)).asData?.value ??
         rating?.displayName ??
         fallback;
-    final rank = rating == null || rating.isAi || rating.provisional
+    final rank = rating == null || rating.provisional
         ? null
         : ref.watch(playerRankProvider((pool.id, rating.rating))).asData?.value;
     return Text(
         value.when(
             data: (rating) => rating == null
-                ? '$name · ${uid.startsWith("ai_") ? "Uncalibrated" : "Unrated"}'
+                ? '$name · Unrated'
                 : '$name · ${rating.ratingLabel}${rank == null ? "" : " · #$rank"}',
             loading: () => '$name · Rating…',
             error: (_, __) => '$name · Rating unavailable'),

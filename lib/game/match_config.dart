@@ -50,6 +50,7 @@ class MatchConfig {
     RulesProfile? profile,
     this.court = false,
     this.clockSeconds = 0,
+    this.ratingVersion = 2,
   })  : seats = List.unmodifiable(seats),
         profile = profile ??
             (shape == BoardShape.square && seats.length == 2
@@ -72,7 +73,8 @@ class MatchConfig {
             seats.any((seat) => seat.id == SeatId.jade))) {
       throw ArgumentError('Legacy Hex requires its original three identities');
     }
-    if (clockSeconds < 0 ||
+    if (![1, 2].contains(ratingVersion) ||
+        clockSeconds < 0 ||
         clockSeconds > 59940 ||
         (court && clockSeconds != 0)) {
       throw ArgumentError('Invalid clock or timed Court Mode');
@@ -102,6 +104,7 @@ class MatchConfig {
   final RulesProfile profile;
   final bool court;
   final int clockSeconds;
+  final int ratingVersion;
   bool get online =>
       seats.any((seat) => seat.control == SeatControl.onlineHuman);
   late final List<SeatId> ids = List.unmodifiable(seats.map((seat) => seat.id));
@@ -125,6 +128,7 @@ class MatchConfig {
     final newSeats = seats ?? this.seats;
     final newStarter = starter ?? this.starter;
     return MatchConfig(
+        ratingVersion: ratingVersion,
         shape: newShape,
         size: size ??
             (newShape == this.shape
@@ -160,6 +164,7 @@ class MatchConfig {
 
   Map<String, dynamic> toMap() => {
         'version': wireVersion,
+        if (ratingVersion != 1) 'ratingVersion': ratingVersion,
         'shape': shape.name,
         'size': size,
         'seats': seats.map((seat) => seat.toMap()).toList(),
@@ -174,6 +179,7 @@ class MatchConfig {
       throw const FormatException('Unsupported match configuration version');
     }
     return MatchConfig(
+        ratingVersion: map['ratingVersion'] as int? ?? 1,
         shape: BoardShape.values.byName(map['shape'] as String),
         size: map['size'] as int,
         seats: (map['seats'] as List)

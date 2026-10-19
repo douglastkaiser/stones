@@ -38,6 +38,11 @@ is available to Alpha closed testers with full rollout; internal testing remains
 385. See release readiness for current qualification and newer web-only changes.
 Check the plan and [release record](releases/ANDROID_403.md) for actual rollout evidence.
 
+The [result sharing and placement Elo contract](RESULT_SHARING.md) documents
+version 2 standings, globally rated AI, the combined leaderboard, persisted Elo
+deltas, native/SMS/copy sharing and final-board PNG export. New configurations
+use this contract; missing saved metadata preserves the legacy rating protocol.
+
 The current shared path is `MatchSetupScreen` → `MatchController` →
 `MatchRules`/`MoveSelection` → `MatchScreen`/`BoardView`. `BoardGeometry` supplies
 topology; `MatchConfig` supplies seat order, controls, opening, size and optional

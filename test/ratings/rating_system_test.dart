@@ -11,6 +11,7 @@ import '../support/fake_account_service.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/rating_pool.dart';
+import 'package:stones/game/rating_submission.dart';
 import 'package:stones/models/elo_rating.dart';
 import 'package:stones/providers/elo_provider.dart';
 import 'package:stones/screens/leaderboard_screen.dart';
@@ -23,6 +24,7 @@ class FakeRatings implements RatingRepository {
   bool fail = false;
   int standing = 2;
   List<EloRating> values = [];
+  List<EloRating> botValues = [];
   @override
   Stream<EloRating?> watchPlayer(String pool, String uid) =>
       (streams[uid] ??= StreamController<EloRating?>.broadcast()).stream;
@@ -33,7 +35,7 @@ class FakeRatings implements RatingRepository {
   }
 
   @override
-  Future<List<EloRating>> bots(String pool) async => [];
+  Future<List<EloRating>> bots(String pool) async => botValues;
   @override
   Future<int> rank(String pool, int rating) async => standing;
   @override
@@ -50,9 +52,9 @@ class FakeRatings implements RatingRepository {
             opponentName: 'Another rival'),
       ];
   @override
-  Future<String> submitResult(
+  Future<RatingSubmission> submitResult(
           MatchSession session, List<Map<String, dynamic>> moves) async =>
-      'practice';
+      const RatingSubmission.unrated('practice');
 }
 
 class QuietRatingSound extends SoundManager {
@@ -137,15 +139,13 @@ void main() {
     expect(RatingPool.forConfig(config.addPlayer()).profile,
         RulesProfile.sharedRoads);
   });
-  test(
-      'neutral priors remain hidden; provisional and AI calibration are honest',
-      () {
+  test('human and AI ratings share neutral priors and provisional policy', () {
     const unrated = EloRating(id: 'a', displayName: 'Alice');
     expect(unrated.ratingLabel, 'Unrated');
     expect(unrated.copyWith(gamesPlayed: 1).ratingLabel, '1200?');
     const bot = EloRating(id: 'bot', displayName: 'Bot', isAi: true);
-    expect(bot.ratingLabel, 'Uncalibrated');
-    expect(bot.copyWith(gamesPlayed: 30).calibrated, isFalse);
+    expect(bot.ratingLabel, 'Unrated');
+    expect(bot.copyWith(gamesPlayed: 30).calibrated, isTrue);
     const calibrated = EloRating(
         id: 'bot',
         displayName: 'Bot',
@@ -155,8 +155,7 @@ void main() {
     expect(calibrated.calibrated, isTrue);
     expect(EloRating.fromMap('bot', calibrated.toMap()).opponents, 10);
   });
-  test('equal established human scores share competition rank; bots excluded',
-      () {
+  test('equal established human and AI scores share competition rank', () {
     const players = [
       EloRating(id: 'a', displayName: 'a', rating: 1500, gamesPlayed: 10),
       EloRating(id: 'b', displayName: 'b', rating: 1500, gamesPlayed: 10),
@@ -168,8 +167,41 @@ void main() {
           isAi: true,
           gamesPlayed: 100)
     ];
-    expect(competitionRank(1500, players), 1);
-    expect(competitionRank(1400, players), 3);
+    expect(competitionRank(1500, players), 2);
+    expect(competitionRank(1400, players), 4);
+  });
+  testWidgets('AI outside the top 50 uses its actual global rank',
+      (tester) async {
+    final repo = FakeRatings()
+      ..standing = 87
+      ..values = List.generate(
+          50,
+          (i) => EloRating(
+              id: 'human-$i',
+              displayName: 'Human $i',
+              rating: 2000 - i,
+              gamesPlayed: 10))
+      ..botValues = [
+        const EloRating(
+            id: 'ai_shared-search-v1_expert',
+            displayName: 'Expert AI',
+            rating: 1400,
+            gamesPlayed: 40,
+            isAi: true,
+            aiDifficulty: 'expert')
+      ];
+    final controller = EloController(repo);
+    await tester.pumpWidget(ProviderScope(overrides: [
+      ratingRepositoryProvider.overrideWithValue(repo),
+      eloProvider.overrideWith((ref) => controller),
+    ], child: const MaterialApp(home: LeaderboardScreen())));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('AI'));
+    await tester.tap(find.text('AI'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Expert AI'));
+    expect(find.text('#87'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
   test('invalid scores and counters rejected by calculator', () {
     expect(
@@ -309,11 +341,11 @@ void main() {
           }
         }
 
-        await reveal(find.text('AI benchmarks'));
-        await tester.tap(find.text('AI benchmarks'));
+        await reveal(find.text('AI'));
+        await tester.tap(find.text('AI'));
         await tester.pumpAndSettle();
         await reveal(find.text('Easy AI'));
-        expect(find.text('Uncalibrated'), findsWidgets);
+        expect(find.text('Unrated'), findsWidgets);
         expect(tester.takeException(), isNull);
       });
     }
