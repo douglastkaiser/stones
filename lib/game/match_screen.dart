@@ -1,9 +1,9 @@
 import '../widgets/room_invitation_actions.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/piece.dart';
+import '../models/cosmetics.dart';
 import '../providers/account_provider.dart';
 import '../providers/cosmetics_provider.dart';
 import '../providers/elo_provider.dart';
@@ -21,6 +21,7 @@ import 'match_rules.dart';
 import 'match_state.dart';
 import 'move_selection.dart';
 import 'seat_appearance.dart';
+import 'stack_move_tray.dart';
 import 'rating_pool.dart';
 import '../widgets/player_rating_label.dart';
 
@@ -35,6 +36,7 @@ class MatchScreen extends ConsumerStatefulWidget {
 class _MatchScreenState extends ConsumerState<MatchScreen>
     with WidgetsBindingObserver {
   final _selection = MoveSelection();
+  bool _inspectPicking = false;
   late MatchController _controller;
   @override
   void initState() {
@@ -89,11 +91,21 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   }
 
   void _tap(MatchState game, Cell cell) {
-    if (!ref.read(matchProvider).canPlay) return;
+    if (_inspectPicking || !ref.read(matchProvider).canPlay) {
+      _inspect(game, cell);
+      return;
+    }
     var confirm = false;
     setState(() => confirm = _selection.tap(game, cell));
     if (confirm) unawaited(_confirm());
   }
+
+  void _inspect(MatchState game, Cell cell) => setState(() {
+        final position =
+            cell == _selection.source ? game : _selection.preview(game) ?? game;
+        _selection.inspect(position, cell);
+        if (position.stackAt(cell).isNotEmpty) _inspectPicking = false;
+      });
 
   Future<void> _resign(MatchSession match) async {
     final game = match.game!;
@@ -134,11 +146,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               'Only exposed flats and capstones connect. Walls block roads.\n\n'
               'During the opening exchange each player places the next player’s flat. '
               'Then place your own flat, wall or cap on an empty cell, or move a stack you control.\n\n'
-              'Tap an empty cell to preview; tap it again to place. Tap a stack to choose Carry, '
-              'then a neighbor to preview a move. Swiping or dragging does the same. '
-              'Use Drop and Drop & next to spread bottom pieces in a straight line. '
-              'Confirm leaves the remainder at the final cell. Back step revises; Cancel discards. '
-              'Hold, right-click or hover to inspect a stack.\n\n'
+              'Tap an empty cell to preview; tap it again to place. Tap a stack to see its stones '
+              'and choose the top portion to take. Tap a neighbor to drop one bottom stone in preview. '
+              'Tap there again to add another, or tap the next cell to continue straight. '
+              'Drop remaining here stages the rest. Confirm move commits the displayed result. '
+              'Undo last drop revises; Cancel discards the draft. Inspect lets you examine another stack.\n\n'
               'Square has four directions; Hex has six. Carry is limited by the board’s longest row. '
               'A lone capstone can flatten a wall only at the final drop.\n\n'
               'Roads resolve after the complete move. The mover wins simultaneous roads if they have one; '
@@ -179,15 +191,18 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           ref.read(currentPieceStyleProvider).style);
       unawaited(feedback.catchError((Object _) {}));
     });
-    ref.listen(matchProvider.select((s) => s.game?.ply), (previous, next) {
-      if (previous != next && mounted) setState(_selection.clear);
+    ref.listen(matchProvider.select((s) => (s.id, s.game)), (previous, next) {
+      if (previous != next && mounted) {
+        setState(() {
+          _selection.clear();
+          _inspectPicking = false;
+        });
+      }
     });
     if (game == null) {
       return const Scaffold(body: Center(child: Text('No match loaded')));
     }
-    final preview = _selection.planned == null
-        ? null
-        : MatchRules.apply(game, _selection.planned!);
+    final preview = _selection.preview(game);
     final styles = match.room?.styles ??
         {
           for (final id in game.config.ids)
@@ -253,13 +268,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                             final move = await _controller.hint();
                             if (move != null && mounted) {
                               setState(() {
-                                _selection.clear();
-                                _selection.planned = move;
-                                if (move.direction != null) {
-                                  _selection.source = move.from;
-                                  _selection.carry = move.carry;
-                                  _selection.pendingDrop = move.drops.last;
-                                }
+                                _selection.choose(move);
                               });
                             }
                           },
@@ -382,18 +391,25 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           board: BoardView(
               game: preview ?? game,
               original: preview == null ? null : game,
-              selected: _selection.source,
+              selected: _selection.source ?? _selection.inspected,
+              drops: _selection.drops,
+              routeSource: _selection.source,
+              routeDirection: _selection.direction,
+              carried: _selection.hand(game),
+              handCell: _selection.current,
               destinations: match.canPlay ? _selection.destinations(game) : {},
               road: road,
               styles: styles,
               theme: boardTheme,
-              onCell: match.canPlay ? (cell) => _tap(game, cell) : null,
-              onSwipe: !match.canPlay
+              onCell: (cell) => _tap(game, cell),
+              onInspect: (cell) => _inspect(game, cell),
+              onSwipe: !match.canPlay || _inspectPicking
                   ? null
                   : (cell, direction) =>
                       setState(() => _selection.swipe(game, cell, direction))),
           controls: Padding(
-              padding: const EdgeInsets.all(8), child: _controls(match, game)),
+              padding: const EdgeInsets.all(8),
+              child: _controls(match, game, styles)),
           details: Column(mainAxisSize: MainAxisSize.min, children: [
             if (match.room != null && match.uid == match.room!.host)
               OpenTableControl(
@@ -459,22 +475,82 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         ));
   }
 
-  Widget _counter(String label, int value, int max, ValueChanged<int> update) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        IconButton(
-            tooltip: 'Decrease $label',
-            onPressed:
-                value <= 1 ? null : () => setState(() => update(value - 1)),
-            icon: const Icon(Icons.remove)),
-        Text('$label $value'),
-        IconButton(
-            tooltip: 'Increase $label',
-            onPressed:
-                value >= max ? null : () => setState(() => update(value + 1)),
-            icon: const Icon(Icons.add)),
-      ]);
+  Widget _controls(
+      MatchSession match, MatchState game, Map<SeatId, PieceStyle> styles) {
+    final inspected = _selection.inspected;
+    final source = _selection.source;
+    final position =
+        inspected == source ? game : _selection.preview(game) ?? game;
+    final stones =
+        inspected == null ? const <Stone>[] : position.stackAt(inspected);
+    final isCarry = inspected != null && inspected == source;
+    return SizedBox(
+      height: MatchTableLayout.controlsHeight(
+          MediaQuery.sizeOf(context).width -
+              MediaQuery.paddingOf(context).horizontal,
+          MediaQuery.textScalerOf(context).scale(1)),
+      child: Column(children: [
+        Expanded(
+            child: LayoutBuilder(
+                builder: (context, area) => SingleChildScrollView(
+                    key: ValueKey('stack-controls-$inspected'),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      if (stones.isNotEmpty)
+                        StackMoveTray(
+                            label:
+                                '${!isCarry && !identical(position, game) ? 'Preview stack' : 'Stack'} $inspected',
+                            stones: stones,
+                            styles: styles,
+                            carry: isCarry ? _selection.carry : 0,
+                            dropped: isCarry ? _selection.dropped : 0,
+                            started: isCarry && _selection.started,
+                            carryLimit: game.geometry.carryLimit,
+                            showNextDrop: false,
+                            maxHeight: area.maxHeight,
+                            onCarry: isCarry &&
+                                    match.canPlay &&
+                                    !_selection.started
+                                ? (count) =>
+                                    setState(() => _selection.setCarry(count))
+                                : null,
+                            onReturn: source != null && !isCarry
+                                ? () => setState(
+                                    () => _selection.inspected = source)
+                                : null),
+                      if (source == null) _moveControls(match, game),
+                    ])))),
+        if (source != null) _draftActions(match, game, styles),
+        if (source != null || _selection.planned != null)
+          Wrap(spacing: 12, alignment: WrapAlignment.center, children: [
+            TextButton(
+                onPressed: () => setState(() {
+                      _selection.clear();
+                      _inspectPicking = false;
+                    }),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed:
+                    match.canPlay && previewLegal(game) ? _confirm : null,
+                child: Text(source == null ? 'Confirm' : 'Confirm move')),
+          ])
+        else if (inspected != null)
+          Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
+            TextButton(
+                onPressed: () => setState(() => _selection.inspected = null),
+                child: const Text('Close inspection')),
+            if (match.canPlay &&
+                !game.opening &&
+                game.topAt(inspected)?.seat == game.current)
+              FilledButton(
+                  onPressed: () =>
+                      setState(() => _selection.tap(game, inspected)),
+                  child: const Text('Move this stack')),
+          ]),
+      ]),
+    );
+  }
 
-  Widget _controls(MatchSession match, MatchState game) {
+  Widget _moveControls(MatchSession match, MatchState game) {
     if (widget.studyPanel != null && match.inputLocked) {
       return Column(children: [
         if (match.explanation != null)
@@ -506,71 +582,92 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           : 'Share the room code with your friends.');
     }
     final move = _selection.planned;
-    final source = _selection.source;
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      if (source == null)
-        Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final type
-                  in game.opening ? [PieceType.flat] : PieceType.values)
-                ChoiceChip(
-                    label: Text(switch (type) {
-                      PieceType.flat => 'Flat',
-                      PieceType.standing => 'Wall',
-                      PieceType.capstone => 'Capstone'
-                    }),
-                    selected: _selection.type == type,
-                    onSelected: !game.reserves[game.opening
-                                ? game.config.next(game.current)
-                                : game.current]!
-                            .has(type)
-                        ? null
-                        : (_) => setState(() {
-                              _selection.clear();
-                              _selection.type = type;
-                            })),
-            ]),
-      if (source != null)
-        _counter(
-            'Carry',
-            _selection.carry,
-            math.min(game.geometry.carryLimit, game.stackAt(source).length),
-            _selection.setCarry),
-      if (move?.direction != null) ...[
-        Wrap(alignment: WrapAlignment.center, children: [
-          _counter('Drop', _selection.pendingDrop, move!.drops.last,
-              (v) => _selection.pendingDrop = v),
-          TextButton(
-              onPressed: _selection.continuation(game) == null
-                  ? null
-                  : () => setState(() => _selection.continueMove(game)),
-              child: const Text('Drop & next')),
-          TextButton(
-              onPressed: () =>
-                  setState(() => _selection.pendingDrop = move.drops.last),
-              child: const Text('All here')),
-          TextButton(
-              onPressed: () => setState(() => _selection.backStep(game)),
-              child: const Text('Back step')),
-        ]),
-        Text('Drop ${move.drops.join(' → ')}'),
-      ],
-      if (move != null || source != null)
-        Wrap(spacing: 12, alignment: WrapAlignment.center, children: [
-          TextButton(
-              onPressed: () => setState(_selection.clear),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: previewLegal(game) ? _confirm : null,
-              child: const Text('Confirm')),
-        ])
-      else
+      Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            for (final type
+                in game.opening ? [PieceType.flat] : PieceType.values)
+              ChoiceChip(
+                  label: Text(switch (type) {
+                    PieceType.flat => 'Flat',
+                    PieceType.standing => 'Wall',
+                    PieceType.capstone => 'Capstone'
+                  }),
+                  selected: _selection.type == type,
+                  onSelected: !game.reserves[game.opening
+                              ? game.config.next(game.current)
+                              : game.current]!
+                          .has(type)
+                      ? null
+                      : (_) => setState(() {
+                            _selection.clear();
+                            _selection.type = type;
+                          })),
+          ]),
+      if (move == null && _selection.inspected == null)
         const Padding(
             padding: EdgeInsets.only(top: 12),
-            child: Text('Tap a cell to preview. Tap it again to place.')),
+            child: Text(
+                'Tap a stack to look inside. Tap an empty cell to preview a stone.')),
+    ]);
+  }
+
+  Widget _draftActions(
+      MatchSession match, MatchState game, Map<SeatId, PieceStyle> styles) {
+    final hand = _selection.hand(game);
+    final compact = TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8));
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (_selection.feedback != null)
+        Semantics(
+            liveRegion: true,
+            child: Text(_selection.feedback!, textAlign: TextAlign.center)),
+      if (_inspectPicking)
+        const Text('Tap any stack to inspect. Your draft is retained.'),
+      if (hand.isNotEmpty) StackMoveTray.nextDrop(hand.first, styles),
+      if (!_selection.started)
+        const Text('Choose top stones, then tap a highlighted neighbor.',
+            textAlign: TextAlign.center),
+      if (_selection.started) ...[
+        Text(
+            _selection.remaining == 0
+                ? 'All stones staged · ready to confirm'
+                : 'Tap the current cell to add one, or the next highlighted cell to continue.',
+            textAlign: TextAlign.center),
+        Text('Drops along path: ${_selection.drops.join(', ')}'),
+      ],
+      Wrap(alignment: WrapAlignment.center, spacing: 4, children: [
+        if (_selection.started && _selection.remaining > 0)
+          TextButton(
+              style: compact,
+              onPressed: !match.canPlay
+                  ? null
+                  : () => setState(() => _selection.dropRemaining(game)),
+              child: const Text('Drop remaining here')),
+        if (_selection.started)
+          Tooltip(
+              message: 'Undo last drop',
+              child: TextButton.icon(
+                  style: compact,
+                  onPressed: !match.canPlay
+                      ? null
+                      : () => setState(_selection.undoDrop),
+                  icon: const Icon(Icons.undo, size: 18),
+                  label: const Text('Undo'))),
+        Tooltip(
+            message: _inspectPicking ? 'Back to move' : 'Inspect another stack',
+            child: TextButton.icon(
+                style: compact,
+                onPressed: () =>
+                    setState(() => _inspectPicking = !_inspectPicking),
+                icon: Icon(
+                    _inspectPicking ? Icons.close : Icons.layers_outlined,
+                    size: 18),
+                label: Text(_inspectPicking ? 'Back to move' : 'Inspect'))),
+      ]),
     ]);
   }
 

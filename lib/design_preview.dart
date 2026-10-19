@@ -7,6 +7,7 @@ import 'game/match_config.dart';
 import 'game/match_rules.dart';
 import 'game/match_state.dart';
 import 'game/move_selection.dart';
+import 'game/stack_move_tray.dart';
 import 'game/seat_appearance.dart';
 import 'models/piece.dart';
 import 'theme/tavern_theme.dart';
@@ -406,9 +407,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
 
   Widget _boardScene(MatchState game,
       {bool hero = false, bool interactive = false}) {
-    final preview = interactive && _selection.planned != null
-        ? MatchRules.apply(game, _selection.planned!)
-        : null;
+    final preview = interactive ? _selection.preview(game) : null;
     return DecoratedBox(
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
@@ -438,6 +437,15 @@ class _PreviewHomeState extends State<_PreviewHome> {
                   selected: interactive
                       ? _selection.source ?? _selection.planned?.from
                       : null,
+                  routeSource: interactive ? _selection.source : null,
+                  routeDirection: interactive ? _selection.direction : null,
+                  drops: interactive ? _selection.drops : const [],
+                  carried: interactive ? _selection.hand(game) : const [],
+                  handCell: interactive ? _selection.current : null,
+                  onInspect: !interactive
+                      ? null
+                      : (cell) =>
+                          setState(() => _selection.inspect(game, cell)),
                   destinations:
                       interactive ? _selection.destinations(game) : const {},
                   road: game.result?.winner == null
@@ -457,6 +465,39 @@ class _PreviewHomeState extends State<_PreviewHome> {
                 ))));
   }
 
+  Widget _sampleStack() {
+    final cell = _selection.inspected;
+    if (cell == null) return const SizedBox.shrink();
+    final source = _selection.source;
+    final stones = (cell == source ? _game : _selection.preview(_game) ?? _game)
+        .stackAt(cell);
+    final isCarry = source == cell;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      StackMoveTray(
+          label: 'Stack $cell',
+          stones: stones,
+          styles: const {},
+          carry: isCarry ? _selection.carry : 0,
+          dropped: isCarry ? _selection.dropped : 0,
+          started: _selection.started,
+          carryLimit: _game.geometry.carryLimit,
+          onCarry: !isCarry || _selection.started
+              ? null
+              : (count) => setState(() => _selection.setCarry(count))),
+      if (_selection.started)
+        Wrap(spacing: 4, children: [
+          if (_selection.remaining > 0)
+            TextButton(
+                onPressed: () =>
+                    setState(() => _selection.dropRemaining(_game)),
+                child: const Text('Drop remaining here')),
+          TextButton(
+              onPressed: () => setState(_selection.undoDrop),
+              child: const Text('Undo last drop')),
+        ]),
+    ]);
+  }
+
   Widget _table(bool narrow) {
     final controls = TavernPanel(
         padding: 20,
@@ -473,10 +514,10 @@ class _PreviewHomeState extends State<_PreviewHome> {
                   _game.finished
                       ? 'The highlighted road joins opposite edges.'
                       : _selection.source != null
-                          ? 'Carry ${_selection.carry}. Choose a destination, then confirm your move.'
+                          ? 'Carry ${_selection.remaining} · ${_selection.dropped} staged. Tap a neighbor to drop one bottom stone.'
                           : _selection.planned != null
                               ? 'Your stone is previewed. Tap again or confirm to place it.'
-                              : 'Tap to preview a stone. Tap your stack to pick it up. Hold a stack to look inside.',
+                              : 'Tap to preview a stone. Tap your stack to pick it up. Tap a stack to look inside.',
                   style: Theme.of(context)
                       .textTheme
                       .bodyLarge
@@ -497,6 +538,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                         })),
             ]),
           const SizedBox(height: 16),
+          _sampleStack(),
           FilledButton(
               onPressed: _selection.planned == null ? null : _confirm,
               child: const Text('Confirm move')),
@@ -585,8 +627,8 @@ class _PreviewHomeState extends State<_PreviewHome> {
               tooltip: 'How to move',
               onPressed: () => _sampleList('Game controls', [
                     'Tap an empty cell to preview a stone; tap again to place it.',
-                    'Tap your stack, then a destination. Confirm to move.',
-                    'Hold a stack to inspect the stones inside.'
+                    'Choose top stones, then tap neighbors to stage bottom stones. Confirm when the hand is empty.',
+                    'Tap a stack to inspect the stones inside.'
                   ]),
               icon: const Icon(Icons.help_outline)),
         ]),
@@ -606,6 +648,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
                       })),
           ]),
         const SizedBox(height: 8),
+        _sampleStack(),
         Row(children: [
           Expanded(
               child: FilledButton(
@@ -619,8 +662,8 @@ class _PreviewHomeState extends State<_PreviewHome> {
         const SizedBox(height: 8),
         Text(
             _selection.source != null
-                ? 'Carry ${_selection.carry}. Choose a destination.'
-                : 'Tap to preview. Hold a stack to look inside.',
+                ? 'Carry ${_selection.remaining} · ${_selection.dropped} staged. Drop all stones, then confirm.'
+                : 'Tap to preview. Tap a stack to look inside.',
             style: Theme.of(context).textTheme.bodySmall),
         TextButton(
             onPressed: () => _open(PreviewPage.result),

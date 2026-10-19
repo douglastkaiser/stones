@@ -8,63 +8,87 @@ class MatchRules {
   /// Pure preview/application. Does not advance turns or resolve outcomes.
   static MatchState? apply(MatchState game, MatchMove move) {
     if (game.finished || !game.geometry.contains(move.from)) return null;
+    if (move.type == null) {
+      if (move.drops.isEmpty) return null;
+      return previewSpread(
+              game, move.from, move.carry, move.direction, move.drops)
+          .position;
+    }
+    if (game.stackAt(move.from).isNotEmpty ||
+        (game.opening && move.type != PieceType.flat)) {
+      return null;
+    }
+    final owner = game.opening ? game.config.next(game.current) : game.current;
+    if (!game.reserves[owner]!.has(move.type!)) return null;
     final board = Map<Cell, List<Stone>>.from(game.board);
     final reserves = Map<SeatId, Reserve>.from(game.reserves);
-    if (move.type != null) {
-      if (game.stackAt(move.from).isNotEmpty ||
-          (game.opening && move.type != PieceType.flat)) {
-        return null;
-      }
-      final owner =
-          game.opening ? game.config.next(game.current) : game.current;
-      if (!reserves[owner]!.has(move.type!)) return null;
-      board[move.from] = [Stone(owner, move.type!)];
-      reserves[owner] = reserves[owner]!.use(move.type!);
-    } else {
-      if (game.opening ||
-          !game.geometry.directions.contains(move.direction) ||
-          move.drops.isEmpty ||
-          move.drops.any((drop) => drop <= 0)) {
-        return null;
-      }
-      final stack = game.stackAt(move.from);
-      final carry = move.carry;
-      if (stack.isEmpty ||
-          stack.last.seat != game.current ||
-          carry > stack.length ||
-          carry > game.geometry.carryLimit) {
-        return null;
-      }
-      final hand = stack.sublist(stack.length - carry);
-      final left = stack.sublist(0, stack.length - carry);
-      if (left.isEmpty) {
-        board.remove(move.from);
-      } else {
-        board[move.from] = left;
-      }
-      var cell = move.from;
-      var offset = 0;
-      for (final drop in move.drops) {
-        cell = cell.step(move.direction!);
-        if (!game.geometry.contains(cell)) return null;
-        final target = List<Stone>.from(board[cell] ?? const []);
-        if (target.isNotEmpty) {
-          if (target.last.type == PieceType.capstone) return null;
-          if (target.last.type == PieceType.standing) {
-            if (drop != 1 ||
-                offset != carry - 1 ||
-                hand[offset].type != PieceType.capstone) {
-              return null;
-            }
-            target[target.length - 1] = Stone(target.last.seat, PieceType.flat);
-          }
-        }
-        target.addAll(hand.sublist(offset, offset + drop));
-        board[cell] = target;
-        offset += drop;
-      }
-    }
+    board[move.from] = [Stone(owner, move.type!)];
+    reserves[owner] = reserves[owner]!.use(move.type!);
     return game.copyWith(board: board, reserves: reserves);
+  }
+
+  /// A local draft can leave stones in hand. Complete moves use this same
+  /// transformer, so previews cannot invent different wall/cap rules.
+  static SpreadPreview previewSpread(MatchState game, Cell from, int pickup,
+      Step? direction, List<int> drops) {
+    if (game.finished || game.opening) {
+      return const SpreadPreview.blocked('Stack movement is unavailable now.');
+    }
+    final stack = game.stackAt(from);
+    if (stack.isEmpty || stack.last.seat != game.current) {
+      return const SpreadPreview.blocked(
+          'You can only move a stack you control.');
+    }
+    if (pickup < 1 ||
+        pickup > stack.length ||
+        pickup > game.geometry.carryLimit) {
+      return const SpreadPreview.blocked(
+          'Take top stones within the carry limit.');
+    }
+    if ((direction != null && !game.geometry.directions.contains(direction)) ||
+        (drops.isNotEmpty && direction == null) ||
+        drops.any((drop) => drop <= 0) ||
+        drops.fold(0, (sum, drop) => sum + drop) > pickup) {
+      return const SpreadPreview.blocked(
+          'Drop bottom stones in one straight line.');
+    }
+    final board = Map<Cell, List<Stone>>.from(game.board);
+    final hand = stack.sublist(stack.length - pickup);
+    final left = stack.sublist(0, stack.length - pickup);
+    if (left.isEmpty) {
+      board.remove(from);
+    } else {
+      board[from] = left;
+    }
+    var cell = from;
+    var offset = 0;
+    for (final drop in drops) {
+      cell = cell.step(direction!);
+      if (!game.geometry.contains(cell)) {
+        return const SpreadPreview.blocked(
+            'The next drop would leave the board.');
+      }
+      final target = List<Stone>.from(board[cell] ?? const []);
+      if (target.isNotEmpty) {
+        if (target.last.type == PieceType.capstone) {
+          return const SpreadPreview.blocked('A capstone cannot be covered.');
+        }
+        if (target.last.type == PieceType.standing) {
+          if (drop != 1 ||
+              offset != pickup - 1 ||
+              hand[offset].type != PieceType.capstone) {
+            return const SpreadPreview.blocked(
+                'Only a lone capstone can flatten a wall on the final drop.');
+          }
+          target[target.length - 1] = Stone(target.last.seat, PieceType.flat);
+        }
+      }
+      target.addAll(hand.sublist(offset, offset + drop));
+      board[cell] = target;
+      offset += drop;
+    }
+    return SpreadPreview(
+        game.copyWith(board: board), List.unmodifiable(hand.skip(offset)));
   }
 
   static MatchState? play(MatchState game, MatchMove move) {
@@ -218,4 +242,15 @@ class MatchRules {
       }
     }
   }
+}
+
+/// Draft rendering never advances the turn, resolves a road, or spends reserves.
+class SpreadPreview {
+  const SpreadPreview(this.position, this.hand) : error = null;
+  const SpreadPreview.blocked(this.error)
+      : position = null,
+        hand = const [];
+  final MatchState? position;
+  final List<Stone> hand;
+  final String? error;
 }

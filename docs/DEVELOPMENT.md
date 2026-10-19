@@ -66,7 +66,10 @@ connection, shared opposite-side goals, legacy room compatibility, and independe
 
 The [playability audit](PLAYABILITY_AUDIT.md) records player-journey questions,
 UX improvements, browser trials, automated evidence and remaining product work.
-The [shared stack display](STACK_DISPLAY.md) records layer rendering, hover and
+The [current stack interaction](STACK_INTERACTION.md) documents persistent
+inspection, physical pickup selection, explicit spread drafts and live drag
+feedback in shared play. The [shared stack display](STACK_DISPLAY.md) records
+layer rendering, hover and
 touch inspection across square and Hex, including owner themes and previews.
 
 The [Android and account audit](ANDROID_AND_ACCOUNTS.md) records Firebase

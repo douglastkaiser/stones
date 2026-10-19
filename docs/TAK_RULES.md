@@ -72,6 +72,15 @@ or a no-progress counter. If introduced, expose these as explicit variants or
 match settings rather than silently changing default results. Undo, Elo ratings,
 AI difficulty, puzzles, cosmetics, and achievements are application features.
 
+## Stack draft interaction update (2026-10-19)
+
+The shared play UI now stages bottom-first drops with an explicit remaining hand.
+`MatchRules.previewSpread` and complete `apply` share the same carry, direction,
+wall and capstone validation. Intermediate draft positions never advance a turn,
+resolve a road, or publish a partial move. Confirmation still submits one atomic
+legal move. This is an application interaction feature; the rules above are
+unchanged. See [the interaction contract and regressions](STACK_INTERACTION.md).
+
 ## Implementation and evidence
 
 The changes from this audit address disagreements between the app's separate

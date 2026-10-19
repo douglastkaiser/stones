@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/foundation.dart' show setEquals, listEquals;
 import 'package:flutter/material.dart' hide Step;
 import '../models/cosmetics.dart';
 import '../widgets/board_cell_gestures.dart';
@@ -8,6 +8,8 @@ import '../widgets/procedural_painters.dart';
 import 'board_geometry.dart';
 import 'match_config.dart';
 import 'match_state.dart';
+import 'match_rules.dart';
+import 'stack_move_tray.dart';
 import 'seat_appearance.dart';
 
 /// All pixel geometry lives here; legality only sees BoardGeometry.
@@ -70,7 +72,7 @@ class BoardLayout {
   }
 }
 
-class BoardView extends StatelessWidget {
+class BoardView extends StatefulWidget {
   const BoardView(
       {super.key,
       required this.game,
@@ -81,6 +83,12 @@ class BoardView extends StatelessWidget {
       this.styles = const {},
       this.theme = BoardTheme.classicWood,
       this.onCell,
+      this.onInspect,
+      this.drops = const [],
+      this.routeSource,
+      this.routeDirection,
+      this.carried = const [],
+      this.handCell,
       this.onSwipe});
   final MatchState game;
   final MatchState? original;
@@ -91,6 +99,65 @@ class BoardView extends StatelessWidget {
   final BoardTheme theme;
   final ValueChanged<Cell>? onCell;
   final void Function(Cell, Step)? onSwipe;
+
+  final ValueChanged<Cell>? onInspect;
+  final List<int> drops;
+  final Cell? routeSource, handCell;
+  final Step? routeDirection;
+  final List<Stone> carried;
+  @override
+  State<BoardView> createState() => _BoardViewState();
+}
+
+class _BoardViewState extends State<BoardView> {
+  MatchState get game => widget.game;
+  MatchState? get original => widget.original;
+  Cell? get selected => widget.selected;
+  Set<Cell> get destinations => widget.destinations;
+  Set<Cell> get road => widget.road;
+  Map<SeatId, PieceStyle> get styles => widget.styles;
+  BoardTheme get theme => widget.theme;
+  ValueChanged<Cell>? get onCell => widget.onCell;
+  void Function(Cell, Step)? get onSwipe => widget.onSwipe;
+  Cell? _dragCell;
+  Offset? _dragOffset;
+
+  void _resetDrag() {
+    if (!mounted || _dragCell == null) return;
+    setState(() {
+      _dragCell = null;
+      _dragOffset = null;
+    });
+  }
+
+  bool _canDrag(Cell cell) {
+    final base = original ?? game;
+    if (base.finished || base.opening) return false;
+    if (widget.handCell != null) {
+      return cell == widget.handCell && widget.carried.isNotEmpty;
+    }
+    return base.topAt(cell)?.seat == base.current;
+  }
+
+  Map<Cell, int> get _staged {
+    final counts = <Cell, int>{};
+    var cell = widget.routeSource;
+    for (final drop in widget.drops) {
+      cell = cell!.step(widget.routeDirection!);
+      counts[cell] = drop;
+    }
+    return counts;
+  }
+
+  @override
+  void didUpdateWidget(BoardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.game, game) ||
+        oldWidget.onSwipe != widget.onSwipe) {
+      _dragCell = null;
+      _dragOffset = null;
+    }
+  }
 
   List<StackVisualPiece> _visuals(Cell cell, {bool before = false}) {
     final stones = (before ? original ?? game : game).stackAt(cell);
@@ -130,7 +197,14 @@ class BoardView extends StatelessWidget {
                   child: CustomPaint(
                       size: layout.size,
                       painter: _BoardPainter(
-                          layout, material, selected, destinations, road))),
+                          layout,
+                          material,
+                          selected,
+                          destinations,
+                          road,
+                          widget.routeSource,
+                          widget.routeDirection,
+                          widget.drops))),
               for (final cell in game.geometry.cells)
                 Positioned.fromRect(
                     rect: layout.bounds(cell),
@@ -140,12 +214,15 @@ class BoardView extends StatelessWidget {
                           child: Semantics(
                         key: ValueKey('cell-${cell.x}-${cell.y}'),
                         label:
-                            'Cell ${cell.x}, ${cell.y}, ${game.topAt(cell) == null ? 'empty' : '${game.topAt(cell)!.seat.label} ${game.topAt(cell)!.type.name}, ${game.stackAt(cell).length} pieces'}',
+                            'Cell ${cell.x}, ${cell.y}, ${game.topAt(cell) == null ? 'empty' : '${game.topAt(cell)!.seat.label} ${game.topAt(cell)!.type.name}, ${game.stackAt(cell).length} pieces'}${_staged[cell] == null ? '' : ', ${_staged[cell]} staged'}${widget.handCell == cell && widget.carried.isNotEmpty ? ', ${widget.carried.length} carried' : ''}${destinations.contains(cell) ? ', drop one bottom stone' : ''}',
                         button: true,
                         enabled: onCell != null,
                         selected: selected == cell,
                         child: StackInspection(
                           label: 'Stack ${cell.x}, ${cell.y}',
+                          onInspect: widget.onInspect == null
+                              ? null
+                              : () => widget.onInspect!(cell),
                           pieces: _visuals(cell),
                           inspectionPieces: original != null && selected == cell
                               ? _visuals(cell, before: true)
@@ -153,6 +230,17 @@ class BoardView extends StatelessWidget {
                           builder: (expanded) => Material(
                               type: MaterialType.transparency,
                               child: BoardCellGestures(
+                                onDragUpdate: onSwipe == null
+                                    ? null
+                                    : (delta) {
+                                        if (_canDrag(cell)) {
+                                          setState(() {
+                                            _dragCell = cell;
+                                            _dragOffset = delta;
+                                          });
+                                        }
+                                      },
+                                onDragCancel: _resetDrag,
                                 onDrag: onSwipe == null
                                     ? null
                                     : (delta) =>
@@ -167,38 +255,139 @@ class BoardView extends StatelessWidget {
                                               child: PieceStackView(
                                                   pieces: _visuals(cell),
                                                   expanded: expanded))),
-                                      if (game.topAt(cell) != null)
-                                        Positioned(
-                                            top: layout.unit * .11,
-                                            right: layout.unit * .12,
-                                            child: ExcludeSemantics(
-                                                child: Text(
-                                                    game
-                                                        .topAt(cell)!
-                                                        .seat
-                                                        .symbol,
-                                                    textScaler:
-                                                        TextScaler.noScaling,
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize:
-                                                            (layout.unit * .28)
-                                                                .clamp(8, 13),
-                                                        color: Colors.black,
-                                                        backgroundColor:
-                                                            SeatAppearance
-                                                                .marker(game
-                                                                    .topAt(
-                                                                        cell)!
-                                                                    .seat))))),
+                                      ..._cellBadges(context, layout, cell),
                                     ])),
                               )),
                         ),
                       )),
                     )),
+              if (_dragCell != null && _dragOffset != null)
+                ..._dragFeedback(context, layout),
             ]));
       });
+  List<Widget> _cellBadges(
+      BuildContext context, BoardLayout layout, Cell cell) {
+    final palette = Theme.of(context).colorScheme;
+    final top = game.topAt(cell);
+    final staged = _staged[cell];
+    final hex = game.geometry is HexGeometry;
+    Widget badge(
+        String id, String text, Alignment alignment, Color color, Color ink,
+        {double fontSize = 9}) {
+      final centered = alignment.x == 0;
+      final below = alignment.y > 0;
+      final inset = hex ? layout.unit * .5 : math.max(3.0, layout.unit * .06);
+      return Align(
+          alignment: alignment,
+          child: Padding(
+              padding: EdgeInsets.only(
+                  top: below ? 0 : inset,
+                  bottom: below ? inset : 0,
+                  left: centered
+                      ? 0
+                      : hex
+                          ? layout.unit * .4
+                          : inset,
+                  right: centered
+                      ? 0
+                      : hex
+                          ? layout.unit * .4
+                          : inset),
+              child: ExcludeSemantics(
+                  child: Container(
+                      key: ValueKey('$id-$cell'),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 2, vertical: 1),
+                      decoration: BoxDecoration(
+                          color: color, borderRadius: BorderRadius.circular(3)),
+                      child: Text(text,
+                          textScaler: TextScaler.noScaling,
+                          style: TextStyle(
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.bold,
+                              color: ink))))));
+    }
+
+    return [
+      if (destinations.contains(cell) && layout.unit >= 20)
+        badge(
+            'drop-target',
+            'Drop 1',
+            hex ? Alignment.topCenter : Alignment.topLeft,
+            const Color(0xFF275C51),
+            Colors.white),
+      if (staged != null)
+        badge(
+            'staged-count',
+            '+$staged${layout.unit < 20 ? '' : ' ${top?.seat.symbol ?? ''}'}',
+            Alignment.topCenter,
+            palette.primaryContainer,
+            palette.onPrimaryContainer,
+            fontSize: layout.unit < 20 ? 7 : 9)
+      else if (top != null && !destinations.contains(cell))
+        badge('stack-owner', top.seat.symbol, Alignment.topRight,
+            SeatAppearance.marker(top.seat), Colors.black,
+            fontSize: (layout.unit * .28).clamp(8, 13)),
+      if (widget.handCell == cell &&
+          widget.carried.isNotEmpty &&
+          layout.unit >= 20)
+        badge(
+            'carry-count',
+            '${widget.carried.length} held',
+            hex ? Alignment.bottomCenter : Alignment.bottomLeft,
+            palette.surface,
+            palette.onSurface),
+    ];
+  }
+
+  List<Widget> _dragFeedback(BuildContext context, BoardLayout layout) {
+    final cell = _dragCell!;
+    final target = cell.step(layout.direction(_dragOffset!));
+    final base = original ?? game;
+    final stack = base.stackAt(cell);
+    final carried = widget.carried.isNotEmpty
+        ? widget.carried
+        : stack
+            .skip(math.max(0, stack.length - base.geometry.carryLimit))
+            .toList();
+    final legal = widget.handCell != null
+        ? destinations.contains(target)
+        : MatchRules.previewSpread(base, cell, carried.length,
+                layout.direction(_dragOffset!), [1]).position !=
+            null;
+    final side = layout.unit * 1.5;
+    final origin =
+        layout.center(cell) + _dragOffset! - Offset(side / 2, side * 1.25);
+    return [
+      if (base.geometry.contains(target))
+        Positioned.fromRect(
+            rect: layout.bounds(target).deflate(3),
+            child: IgnorePointer(
+                child: DecoratedBox(
+                    key: const ValueKey('drag-target'),
+                    decoration: BoxDecoration(
+                        border: Border.all(
+                            color: legal
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.error,
+                            width: 3),
+                        borderRadius: BorderRadius.circular(8))))),
+      Positioned(
+          left: origin.dx.clamp(0, math.max(0, layout.size.width - side)),
+          top: origin.dy.clamp(0, math.max(0, layout.size.height - side)),
+          width: side,
+          height: side,
+          child: IgnorePointer(
+              child: Opacity(
+                  opacity: .85,
+                  child: PieceStackView(
+                      key: const ValueKey('carried-drag-ghost'),
+                      pieces: carried
+                          .map((stone) => StackMoveTray.visual(stone, styles))
+                          .toList(),
+                      expanded: true)))),
+    ];
+  }
 }
 
 class _CellClipper extends CustomClipper<Path> {
@@ -217,13 +406,16 @@ class _CellClipper extends CustomClipper<Path> {
 }
 
 class _BoardPainter extends CustomPainter {
-  _BoardPainter(
-      this.layout, this.theme, this.selected, this.destinations, this.road);
+  _BoardPainter(this.layout, this.theme, this.selected, this.destinations,
+      this.road, this.routeSource, this.routeDirection, this.drops);
   final BoardLayout layout;
   final BoardThemeData theme;
   final Cell? selected;
   final Set<Cell> destinations;
   final Set<Cell> road;
+  final Cell? routeSource;
+  final Step? routeDirection;
+  final List<int> drops;
   static const pairColors = [
     Color(0xFFDED3BA),
     Color(0xFFB8C8BE),
@@ -269,6 +461,9 @@ class _BoardPainter extends CustomPainter {
                 ..strokeWidth = math.max(2, layout.unit * .09));
         }
       }
+      if (destinations.contains(cell)) {
+        canvas.drawPath(polygon, Paint()..color = const Color(0x22275C51));
+      }
       if (selected == cell ||
           destinations.contains(cell) ||
           road.contains(cell)) {
@@ -279,8 +474,25 @@ class _BoardPainter extends CustomPainter {
               ..strokeWidth = 3
               ..color = road.contains(cell)
                   ? Colors.yellowAccent
-                  : Colors.cyanAccent);
+                  : selected == cell
+                      ? const Color(0xFFB9632F)
+                      : const Color(0xFF275C51));
       }
+    }
+    if (routeSource != null && routeDirection != null && drops.isNotEmpty) {
+      var cell = routeSource!;
+      final path = Path()
+        ..moveTo(layout.center(cell).dx, layout.center(cell).dy);
+      for (final _ in drops) {
+        cell = cell.step(routeDirection!);
+        path.lineTo(layout.center(cell).dx, layout.center(cell).dy);
+      }
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = theme.gridLine.withValues(alpha: .7)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2);
     }
   }
 
@@ -290,6 +502,9 @@ class _BoardPainter extends CustomPainter {
       layout.geometry != old.layout.geometry ||
       theme != old.theme ||
       selected != old.selected ||
+      routeSource != old.routeSource ||
+      routeDirection != old.routeDirection ||
+      !listEquals(drops, old.drops) ||
       !setEquals(destinations, old.destinations) ||
       !setEquals(road, old.road);
 }

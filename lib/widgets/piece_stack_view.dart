@@ -171,9 +171,11 @@ class StackInspection extends StatefulWidget {
       required this.pieces,
       required this.label,
       required this.builder,
-      this.inspectionPieces});
+      this.inspectionPieces,
+      this.onInspect});
   final List<StackVisualPiece> pieces;
   final List<StackVisualPiece>? inspectionPieces;
+  final VoidCallback? onInspect;
   final String label;
   final Widget Function(bool expanded) builder;
   @override
@@ -241,8 +243,12 @@ class _StackInspectionState extends State<StackInspection> {
   Future<void> _inspect() async {
     final contents = widget.inspectionPieces ?? widget.pieces;
     if (contents.isEmpty || _inspecting) return;
-    _inspecting = true;
     _expand(false);
+    if (widget.onInspect != null) {
+      widget.onInspect!();
+      return;
+    }
+    _inspecting = true;
     final pieces = List<StackVisualPiece>.of(contents.reversed);
     final label = widget.label;
     try {

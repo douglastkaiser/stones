@@ -4,177 +4,226 @@ import 'board_geometry.dart';
 import 'match_state.dart';
 import 'match_rules.dart';
 
-/// Shared planner; previews are complete legal moves against the original board.
+/// Local, reversible draft. Only an empty hand exposes a committable spread.
 class MoveSelection {
   Cell? source;
+  Cell? inspected;
   int carry = 1;
+  int _maximum = 1;
   PieceType type = PieceType.flat;
-  MatchMove? planned;
-  int pendingDrop = 1;
+  Step? direction;
+  MatchMove? _placement;
+  final List<int> _drops = [];
+  final List<List<int>> _history = [];
+  String? feedback;
 
-  void clear() {
-    source = null;
-    planned = null;
-    pendingDrop = 1;
-  }
-
-  static Cell end(MatchMove move) {
-    var cell = move.from;
-    for (final _ in move.drops) {
-      cell = cell.step(move.direction!);
+  List<int> get drops => List.unmodifiable(_drops);
+  int get dropped => _drops.fold(0, (sum, value) => sum + value);
+  int get remaining => source == null ? 0 : carry - dropped;
+  bool get started => _drops.isNotEmpty;
+  Cell? get current {
+    var cell = source;
+    for (final _ in _drops) {
+      cell = cell!.step(direction!);
     }
     return cell;
   }
 
+  MatchMove? get planned => source != null && started && remaining == 0
+      ? MatchMove.spread(source!, direction!, _drops)
+      : _placement;
+
+  void clear() {
+    source = null;
+    inspected = null;
+    direction = null;
+    _placement = null;
+    _drops.clear();
+    _history.clear();
+    feedback = null;
+  }
+
+  static Cell end(MatchMove move) => move.end;
+
+  MatchState? preview(MatchState game) => source != null
+      ? MatchRules.previewSpread(game, source!, carry, direction, _drops)
+          .position
+      : _placement == null
+          ? null
+          : MatchRules.apply(game, _placement!);
+
+  List<Stone> hand(MatchState game) => source == null
+      ? const []
+      : MatchRules.previewSpread(game, source!, carry, direction, _drops).hand;
+
+  void inspect(MatchState game, Cell cell) {
+    if (game.stackAt(cell).isNotEmpty) inspected = cell;
+  }
+
   Set<Cell> destinations(MatchState game) {
-    if (source == null) return {};
-    if (planned?.direction != null) {
-      final next = continuation(game);
-      return next == null ? {} : {end(next)};
+    if (source == null || remaining == 0) return {};
+    if (started) {
+      final next = current!.step(direction!);
+      return _candidate(game, next, 1).$1.position == null ? {} : {next};
     }
     return {
-      for (final direction in game.geometry.directions)
-        if (MatchRules.apply(
-                game, MatchMove.spread(source!, direction, [carry])) !=
-            null)
-          source!.step(direction),
+      for (final step in game.geometry.directions)
+        if (_candidate(game, source!.step(step), 1).$1.position != null)
+          source!.step(step),
     };
   }
 
   void setCarry(int value) {
+    if (started || value < 1 || value > _maximum) return;
     carry = value;
-    planned = null;
-    pendingDrop = 1;
+    feedback = null;
   }
 
+  /// Used for a complete, rule-checked coaching suggestion.
   void choose(MatchMove move) {
-    planned = move;
-    pendingDrop = 1;
-  }
-
-  /// True requests confirmation of an already-visible placement/single stone.
-  bool tap(MatchState game, Cell cell) {
-    if (game.finished) return false;
-    final move = planned;
-    if (move?.type != null && move!.from == cell) return true;
-    if (move?.direction != null && end(move!) == cell) {
-      if (carry == 1) return true;
-      pendingDrop = pendingDrop >= move.drops.last ? 1 : pendingDrop + 1;
-      return false;
+    clear();
+    if (move.type != null) {
+      _placement = move;
+      return;
     }
-    if (move?.direction != null) {
-      if (cell == source) {
-        planned = null;
-      } else if (cell == end(move!).step(move.direction!)) {
-        continueMove(game);
-      }
-      return false; // Stray taps preserve the preview.
-    }
-    if (cell == source) {
-      final max = math.min(game.geometry.carryLimit, game.stackAt(cell).length);
-      setCarry(carry <= 1 ? max : carry - 1);
-      return false;
-    }
-    // The primary neighbor interaction has exactly one complete distribution.
-    // Avoid enumerating every long spread (thousands at carry nine) for a tap.
-    List<MatchMove>? adjacentOptions;
-    if (source != null) {
-      for (final direction in game.geometry.directions) {
-        if (source!.step(direction) == cell) {
-          final next = MatchMove.spread(source!, direction, [carry]);
-          adjacentOptions = MatchRules.apply(game, next) == null ? [] : [next];
-          break;
+    source = inspected = move.from;
+    carry = _maximum = move.carry;
+    direction = move.direction;
+    for (final drop in move.drops) {
+      for (var i = 0; i < drop; i++) {
+        _history.add(List.of(_drops));
+        if (i == 0) {
+          _drops.add(1);
+        } else {
+          _drops[_drops.length - 1]++;
         }
       }
     }
-    // A distant tap has a predictable preview: one bottom stone per crossed
-    // cell, with the remainder at the destination. Checking at most the carry
-    // limit avoids enumerating exponentially many distributions in a gesture.
-    final options = adjacentOptions ?? _distantPreview(game, cell);
-    if (options.isNotEmpty) {
-      choose(options.first);
-    } else if (!game.opening && game.topAt(cell)?.seat == game.current) {
-      clear();
-      source = cell;
-      carry = math.min(game.geometry.carryLimit, game.stackAt(cell).length);
-    } else if (game.stackAt(cell).isEmpty && source == null) {
+  }
+
+  void _select(MatchState game, Cell cell) {
+    clear();
+    source = inspected = cell;
+    carry = _maximum =
+        math.min(game.geometry.carryLimit, game.stackAt(cell).length);
+  }
+
+  /// Placement retains tap-to-confirm. Stack drops always require Confirm move.
+  bool tap(MatchState game, Cell cell) {
+    if (game.finished) {
+      inspect(game, cell);
+      return false;
+    }
+    if (source != null) {
+      if (cell == source && !started) {
+        inspected = source;
+        return false;
+      }
+      stage(game, cell);
+      return false;
+    }
+    if (_placement?.from == cell) return true;
+    if (game.stackAt(cell).isNotEmpty) {
+      if (!game.opening && game.topAt(cell)?.seat == game.current) {
+        _select(game, cell);
+      } else {
+        _placement = null;
+        inspect(game, cell);
+      }
+    } else {
       final placement =
           MatchMove.place(cell, game.opening ? PieceType.flat : type);
       if (MatchRules.apply(game, placement) != null) {
         clear();
-        planned = placement;
+        _placement = placement;
       }
     }
     return false;
   }
 
-  List<MatchMove> _distantPreview(MatchState game, Cell destination) {
-    if (source == null) return [];
-    for (final direction in game.geometry.directions) {
-      var cell = source!;
-      for (var distance = 1; distance <= carry; distance++) {
-        cell = cell.step(direction);
-        if (!game.geometry.contains(cell)) break;
-        if (cell != destination) continue;
-        final move = MatchMove.spread(source!, direction,
-            [for (var i = 1; i < distance; i++) 1, carry - distance + 1]);
-        return MatchRules.apply(game, move) == null ? [] : [move];
+  (SpreadPreview, List<int>, Step?) _candidate(
+      MatchState game, Cell target, int count) {
+    var step = direction;
+    final nextDrops = List<int>.of(_drops);
+    if (!started) {
+      for (final value in game.geometry.directions) {
+        if (source!.step(value) == target) step = value;
       }
+      if (step == null) {
+        return (
+          const SpreadPreview.blocked('Choose a highlighted neighbor.'),
+          nextDrops,
+          step
+        );
+      }
+      nextDrops.add(count);
+    } else if (target == current) {
+      nextDrops[nextDrops.length - 1] += count;
+    } else if (target == current!.step(direction!)) {
+      nextDrops.add(count);
+    } else {
+      return (
+        const SpreadPreview.blocked(
+            'Continue straight, or undo the last drop.'),
+        nextDrops,
+        step
+      );
     }
-    return [];
+    return (
+      MatchRules.previewSpread(game, source!, carry, step, nextDrops),
+      nextDrops,
+      step
+    );
   }
 
-  void swipe(MatchState game, Cell cell, Step direction) {
-    if (game.finished || game.opening) return;
-    if (planned?.direction != null) {
-      if (cell == end(planned!) && direction == planned!.direction) {
-        continueMove(game);
-      }
+  void stage(MatchState game, Cell target, {int count = 1}) {
+    if (source == null) return;
+    if (remaining == 0) {
+      feedback = 'All stones are staged. Confirm the move or undo a drop.';
       return;
     }
-    if (game.topAt(cell)?.seat != game.current) return;
-    final pickup = source == cell
-        ? carry
-        : math.min(game.geometry.carryLimit, game.stackAt(cell).length);
-    final move = MatchMove.spread(cell, direction, [pickup]);
-    if (MatchRules.apply(game, move) == null) return;
-    clear();
-    source = cell;
-    carry = pickup;
-    choose(move);
-  }
-
-  MatchMove? continuation(MatchState game) {
-    final move = planned;
-    if (move?.direction == null || pendingDrop >= move!.drops.last) return null;
-    final next = MatchMove.spread(move.from, move.direction!, [
-      ...move.drops.take(move.drops.length - 1),
-      pendingDrop,
-      move.drops.last - pendingDrop,
-    ]);
-    return MatchRules.apply(game, next) == null ? null : next;
-  }
-
-  void continueMove(MatchState game) {
-    final next = continuation(game);
-    if (next != null) {
-      choose(next);
-    }
-  }
-
-  void backStep(MatchState game) {
-    final move = planned;
-    if (move?.direction == null) return;
-    if (move!.drops.length == 1) {
-      planned = null;
+    final (candidate, nextDrops, step) = _candidate(game, target, count);
+    if (candidate.position == null) {
+      feedback = candidate.error;
       return;
     }
-    final drops = move.drops.toList();
-    final last = drops.removeLast();
-    drops[drops.length - 1] += last;
-    final previous = MatchMove.spread(move.from, move.direction!, drops);
-    if (MatchRules.apply(game, previous) != null) {
-      choose(previous);
+    _history.add(List.of(_drops));
+    _drops
+      ..clear()
+      ..addAll(nextDrops);
+    direction = step;
+    inspected = source;
+    feedback = null;
+  }
+
+  void dropRemaining(MatchState game) {
+    if (started && remaining > 0) stage(game, current!, count: remaining);
+  }
+
+  void undoDrop() {
+    if (_history.isEmpty) return;
+    _drops
+      ..clear()
+      ..addAll(_history.removeLast());
+    if (!started) direction = null;
+    inspected = source;
+    feedback = null;
+  }
+
+  void swipe(MatchState game, Cell cell, Step step) {
+    if (game.finished ||
+        game.opening ||
+        !game.geometry.directions.contains(step)) {
+      return;
+    }
+    if (source == null) {
+      if (game.topAt(cell)?.seat != game.current) return;
+      _select(game, cell);
+    }
+    if (cell == current && (direction == null || direction == step)) {
+      stage(game, cell.step(step));
+    } else {
+      feedback = 'Continue straight from the carried stack.';
     }
   }
 }

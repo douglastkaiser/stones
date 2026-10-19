@@ -1,5 +1,11 @@
 # Movement interaction review
 
+The 2026-10-19 shared-play implementation is documented in
+[Stack inspection and movement](STACK_INTERACTION.md). It replaces the old
+complete-move preview with explicit carried/staged stones and a persistent tray.
+The sections below retain the earlier implementation history and legacy behavior.
+
+
 This is an application interaction contract, not a change to Tak or Hex rules.
 Read TAK_RULES.md and HEX_MODE.md for legality. Square preview, gameplay and AI
 continue to share GameRules; Hex remains isolated in HexRules.

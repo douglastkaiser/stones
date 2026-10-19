@@ -1,5 +1,11 @@
 # Shared piece stacks
 
+The 2026-10-19 shared-play implementation is documented in
+[Stack inspection and movement](STACK_INTERACTION.md). It replaces the old
+complete-move preview with explicit carried/staged stones and a persistent tray.
+The sections below retain the earlier implementation history and legacy behavior.
+
+
 Updated 2026-10-10. This is an application interaction contract. Tak and Hex
 retain their separate rules, move validation, ownership and carry limits.
 

@@ -15,6 +15,14 @@ class MatchTableLayout extends StatelessWidget {
   final Widget board, players, status, controls, details;
   final Widget? invitation;
   final int playerCount;
+  static double controlsHeight(double width, double scale) =>
+      (width >= 1000 && width / scale >= 760
+          ? 520
+          : width < 360
+              ? 400
+              : 380) *
+      scale;
+
   Widget _board(double side) => SizedBox(
       key: const ValueKey('stable-board'),
       width: side,
@@ -56,7 +64,7 @@ class MatchTableLayout extends StatelessWidget {
                 bounds.maxHeight -
                     playerBudget -
                     44 * scale -
-                    130 * scale -
+                    (controlsHeight(bounds.maxWidth, scale) + 16) -
                     (invitation == null ? 0 : 60 * scale)));
         return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
