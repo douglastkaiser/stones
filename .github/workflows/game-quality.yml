@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: quality-evidence-${{ github.ref }}
   cancel-in-progress: true
