@@ -3,10 +3,7 @@ name: iOS Build
 on:
   # Manual trigger
   workflow_dispatch:
-  # Tagged releases (v*)
-  push:
-    tags:
-      - 'v*'
+  # Native iOS is unsupported until its project and Firebase configuration exist.
 
 jobs:
   preflight:
@@ -25,6 +22,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.7'
           channel: stable
           cache: true
 
@@ -60,6 +58,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.7'
           channel: stable
           cache: true
 

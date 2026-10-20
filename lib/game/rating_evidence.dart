@@ -89,11 +89,12 @@ class RatingEvidence {
         replay = room.replay();
       } else {
         if (game.config.online ||
-            humanSeats.length != 1 ||
+            humanSeats.length > 1 ||
+            (humanSeats.isEmpty && game.config.ratingVersion < 3) ||
             session.uid != uid) {
           return null;
         }
-        humans = [uid];
+        humans = humanSeats.isEmpty ? [] : [uid];
         if (!replay.finished) {
           if (game.config.seats.length != 2 ||
               ![ResultReason.resignation, ResultReason.time]

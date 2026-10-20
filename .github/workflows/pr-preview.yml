@@ -5,16 +5,15 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write
-  pull-requests: write
-
-concurrency:
-  group: "pr-preview-${{ github.event.pull_request.number }}"
-  cancel-in-progress: true
+  contents: read
 
 jobs:
   build-and-deploy-preview:
-    name: Build & Deploy Preview
+    name: Build Preview
+    timeout-minutes: 20
+    concurrency:
+      group: pr-preview-build-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +28,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.7'
           channel: stable
           cache: true
 
@@ -62,38 +62,55 @@ jobs:
             echo "Warning: web/privacy.html not found"
           fi
 
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview-${{ github.event.pull_request.number }}
+          path: build/web
+          if-no-files-found: error
+
+  publish:
+    needs: build-and-deploy-preview
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: stones-gh-pages-publication
+      cancel-in-progress: false
+    steps:
+      - name: Reject a closed or superseded preview
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = (await github.rest.pulls.get({
+              ...context.repo, pull_number: context.payload.pull_request.number
+            })).data;
+            if (pr.state !== 'open' ||
+                pr.head.sha !== context.payload.pull_request.head.sha) {
+              throw new Error('This preview is closed or has been superseded');
+            }
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-preview-${{ github.event.pull_request.number }}
+          path: build/web
+      - uses: actions/checkout@v4
         with:
           ref: gh-pages
-          path: gh-pages-branch
-        continue-on-error: true
-
-      - name: Create gh-pages branch if it doesn't exist
+          path: published
+      - name: Publish this preview on the latest publishing branch
+        env:
+          PREVIEW: ${{ github.event.pull_request.number }}
         run: |
-          if [ ! -d "gh-pages-branch" ]; then
-            mkdir gh-pages-branch
-            cd gh-pages-branch
-            git init
-            git checkout -b gh-pages
-            git remote add origin "https://github.com/${{ github.repository }}.git"
-          fi
-
-      - name: Update PR preview directory
-        run: |
-          # Create or update only the PR preview directory
-          rm -rf "gh-pages-branch/pr/${{ github.event.pull_request.number }}"
-          mkdir -p "gh-pages-branch/pr/${{ github.event.pull_request.number }}"
-          cp -r build/web/* "gh-pages-branch/pr/${{ github.event.pull_request.number }}/"
-
-      - name: Commit and push to gh-pages
-        run: |
-          cd gh-pages-branch
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --staged --quiet || git commit -m "Deploy PR #${{ github.event.pull_request.number }} preview [skip ci]"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
+          git -C published pull --ff-only origin gh-pages
+          python3 scripts/publish_web.py --source build/web --target published --preview "$PREVIEW"
+          git -C published config user.name 'github-actions[bot]'
+          git -C published config user.email 'github-actions[bot]@users.noreply.github.com'
+          git -C published add -A
+          git -C published diff --staged --quiet || git -C published commit -m 'Publish PR preview [skip ci]'
+          git -C published push origin HEAD:gh-pages
 
       - name: Comment PR with preview URL
         uses: actions/github-script@v7

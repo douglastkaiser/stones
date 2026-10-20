@@ -80,11 +80,10 @@ const achievements = <GameAchievement>[
   GameAchievement(
       type: AchievementType.student,
       name: 'Student',
-      description:
-          'Complete every Square and Hex tutorial, including multiplayer openings.',
+      description: 'Complete the nine Square fundamentals lessons.',
       track: AchievementTrack.learning,
       tier: AchievementTier.bronze,
-      requirements: [AchievementRequirement('tutorials', 0, 'tutorials')],
+      requirements: [AchievementRequirement('fundamentals', 9, 'fundamentals')],
       unlocksReward: 'Morocco theme'),
   GameAchievement(
       type: AchievementType.puzzleSolver,

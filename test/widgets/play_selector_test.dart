@@ -102,6 +102,9 @@ void main() {
             shape);
         await _capture(tester, capture,
             'app-setup-${shape.name}-${size.width.toInt()}-dark-large-text');
+        await tester.ensureVisible(find.text('Customize'));
+        await tester.tap(find.text('Customize'));
+        await tester.pumpAndSettle();
         final count = shape == BoardShape.square ? 2 : 3;
         expect(
             find.byWidgetPredicate(

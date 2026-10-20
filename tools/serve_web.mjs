@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 
-const root = resolve('build/web');
+const root = resolve(process.env.WEB_ROOT ?? 'build/web');
 const port = Number(process.env.PORT ?? 4173);
 const mime = {'.html': 'text/html', '.js': 'application/javascript',
   '.mjs': 'application/javascript', '.json': 'application/json', '.wasm': 'application/wasm',

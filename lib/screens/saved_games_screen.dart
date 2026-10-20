@@ -4,6 +4,9 @@ import '../providers/providers.dart';
 import '../game/match_provider.dart';
 import '../game/match_screen.dart';
 import '../game/join_room_screen.dart';
+import '../game/match_history_provider.dart';
+import '../game/match_review_screen.dart';
+import '../game/result_explanation.dart';
 import '../widgets/saved_online_games.dart';
 import '../widgets/play_mode_card.dart';
 import 'game_screen.dart';
@@ -17,6 +20,7 @@ class SavedGamesScreen extends ConsumerStatefulWidget {
 
 class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
   bool _resuming = false;
+  int _historyLimit = 10;
   Future<void> _resume() async {
     if (_resuming) return;
     setState(() => _resuming = true);
@@ -49,6 +53,7 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
             !s.isGameOver &&
             (s.turnNumber > 1 || s.board.occupiedPositions.isNotEmpty)));
     final saved = ref.watch(savedLocalMatchProvider);
+    final history = ref.watch(completedMatchesProvider(_historyLimit));
     final local = ref
         .watch(matchProvider.select((s) => s.game != null && s.room == null));
     return Scaffold(
@@ -94,6 +99,42 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
                                 const SizedBox(height: 16),
                               ],
                               const SavedOnlineGames(),
+                              if (history.hasError) ...[
+                                const Text(
+                                    'Completed games could not be read. Saved records have been kept.'),
+                                TextButton(
+                                    onPressed: () => ref
+                                        .invalidate(completedMatchesProvider),
+                                    child: const Text('Retry game history')),
+                              ],
+                              if (history.valueOrNull?.unreadableCount
+                                  case final int count when count > 0)
+                                const Text(
+                                    'Some completed games could not be read. Other games are available; saved records have been kept.'),
+                              if (history.valueOrNull?.matches.isNotEmpty ==
+                                  true) ...[
+                                Text('Completed games on this device',
+                                    style:
+                                        Theme.of(context).textTheme.titleLarge),
+                                for (final match in history.value!.matches)
+                                  ListTile(
+                                      title: Text(
+                                          '${match.config.shape.name} · ${match.config.seats.length} players · ${match.moves.length} moves'),
+                                      subtitle: Text(
+                                          explainResult(match.finalPosition)),
+                                      trailing: const Icon(Icons.history),
+                                      onTap: () => Navigator.push<void>(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) => MatchReviewScreen(
+                                                  match: match)))),
+                              ],
+                              if (history.valueOrNull?.hasMore == true)
+                                TextButton(
+                                    onPressed: () =>
+                                        setState(() => _historyLimit += 10),
+                                    child: const Text(
+                                        'Show more completed games')),
                               const Text(
                                   'Have another game? Open its invitation link or enter its room code.'),
                               const SizedBox(height: 12),

@@ -50,7 +50,8 @@ guests, Court, learning, abandonment, legacy Hex profiles, games shorter than an
 opening cycle, and histories over 4096 individual moves are unrated. Online
 human seats must have distinct owners and every signed-in human must confirm
 the same full result. Timed AI games can qualify under their own clock ladder.
-AI-only exhibitions remain unrated because they lack a human participant.
+Version 2 AI-only exhibitions remain unrated. Version 3 now permits AI-only
+games reported by their original signed-in observer; see [skill ratings](SKILL_RATINGS.md).
 
 ## Durable settlement and trust boundary
 

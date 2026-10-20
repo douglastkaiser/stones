@@ -28,6 +28,10 @@ import 'match_completed.dart';
 import 'match_standings.dart';
 import 'result_share_dialog.dart';
 import 'result_share_data.dart';
+import 'result_explanation.dart';
+import 'completed_match.dart';
+import 'match_history_provider.dart';
+import 'match_review_screen.dart';
 import '../providers/player_profile_provider.dart';
 import '../widgets/player_rating_label.dart';
 
@@ -43,6 +47,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     with WidgetsBindingObserver {
   final _selection = MoveSelection();
   bool _inspectPicking = false;
+  bool _startingAgain = false;
   late MatchController _controller;
   @override
   void initState() {
@@ -94,6 +99,36 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final move = _selection.planned;
     if (move == null || !ref.read(matchProvider).canPlay) return;
     if (await _controller.play(move) && mounted) setState(_selection.clear);
+  }
+
+  Future<void> _playAgain(MatchSession match) async {
+    final rating = ref.read(ratingStatusProvider);
+    if (_startingAgain ||
+        match.room != null ||
+        (rating?.$1 == match.id && rating!.$2.retryable) ||
+        _controller.resultUpdatePending ||
+        _controller.canRetryRewards) {
+      return;
+    }
+    setState(() => _startingAgain = true);
+    try {
+      final completed =
+          CompletedMatch.capture(match, _controller.confirmedMoves);
+      await ref.read(completedMatchStorageProvider).save(completed);
+      if (!mounted || ref.read(matchProvider).id != match.id) return;
+      ref.invalidate(completedMatchesProvider);
+      await _controller.start(completed.config
+          .copyWith(starter: completed.config.next(completed.config.starter)));
+      if (mounted) setState(_selection.clear);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not start another game. Your finished game is kept; try again.')));
+      }
+    } finally {
+      if (mounted) setState(() => _startingAgain = false);
+    }
   }
 
   void _tap(MatchState game, Cell cell) {
@@ -580,7 +615,41 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       final ratingLabel = rating.labelFor(MatchCompleted(match).participant);
       return Column(children: [
         const Text('Match complete'),
+        const SizedBox(height: 8),
+        Text(
+            explainResult(game,
+                winnerName: game.result!.winner == null
+                    ? null
+                    : _resultSeatName(match, game.result!.winner!)),
+            textAlign: TextAlign.center),
         if (widget.studyPanel == null) ...[
+          Wrap(alignment: WrapAlignment.center, spacing: 12, children: [
+            OutlinedButton.icon(
+                onPressed: () {
+                  final record =
+                      CompletedMatch.capture(match, _controller.confirmedMoves);
+                  Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => MatchReviewScreen(match: record)));
+                },
+                icon: const Icon(Icons.history),
+                label: const Text('Review game')),
+            if (match.room == null)
+              OutlinedButton.icon(
+                  onPressed: _startingAgain ||
+                          rating.retryable ||
+                          _controller.resultUpdatePending ||
+                          _controller.canRetryRewards
+                      ? null
+                      : () => _playAgain(match),
+                  icon: const Icon(Icons.replay),
+                  label: Text(_startingAgain ? 'Starting…' : 'Play again')),
+          ]),
+          if (_controller.resultUpdatePending)
+            const Text('Saving result…')
+          else if (match.room == null && rating.retryable)
+            const Text('Finish the rating update below before playing again.'),
           if (MatchStandings.forGame(game) case final standings?)
             for (final id in standings.ordered)
               Text(

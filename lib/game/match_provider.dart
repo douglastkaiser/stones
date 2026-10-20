@@ -12,6 +12,8 @@ import 'match_completed.dart';
 import 'match_controller.dart';
 import 'match_room_store.dart';
 import 'match_storage.dart';
+import 'completed_match.dart';
+import 'match_history_provider.dart';
 
 final localMatchStorageProvider =
     Provider<LocalMatchStorage>((ref) => PreferencesMatchStorage());
@@ -32,7 +34,8 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
       (previous, next) {
     if (previous != next) ref.read(ratingStatusProvider.notifier).state = null;
   });
-  return MatchController(
+  late final MatchController controller;
+  return controller = MatchController(
     storage: ref.read(localMatchStorageProvider),
     ratingIdentity: () {
       final identity = ref.read(accountProvider).identity;
@@ -42,26 +45,31 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
         (await ref.read(accountProvider.notifier).ensurePlayer()).uid,
     store: () => ref.read(matchRoomStoreProvider),
     completed: (session) async {
-      final event = MatchCompleted(session,
-          moves: ref.read(matchProvider.notifier).confirmedMoves);
-      final achievementWrite =
-          ref.read(achievementProvider.notifier).recordMatch(event);
+      final event = MatchCompleted(session, moves: controller.confirmedMoves);
       final identity = ref.read(accountProvider).identity;
-      if (identity != null && !identity.guest) {
+      final achievements = ref.read(achievementProvider.notifier);
+      final ratings = ref.read(ratingRepositoryProvider);
+      await ref
+          .read(completedMatchStorageProvider)
+          .save(CompletedMatch.capture(session, event.moves));
+      if (!active) return;
+      ref.invalidate(completedMatchesProvider);
+      final achievementWrite = achievements.recordMatch(event);
+      if (identity != null &&
+          !identity.guest &&
+          identity.uid == session.uid &&
+          ref.read(accountProvider).identity?.uid == identity.uid) {
         ref.read(ratingStatusProvider.notifier).state =
             (event.id, const RatingSubmission.pending());
-        unawaited(ref
-            .read(ratingRepositoryProvider)
-            .submitResult(session, event.moves)
-            .then((message) {
+        unawaited(ratings.submitResult(session, event.moves).then((message) {
           if (active &&
-              ref.read(matchProvider).id == event.id &&
+              controller.currentMatchId == event.id &&
               ref.read(accountProvider).identity?.uid == identity.uid) {
             ref.read(ratingStatusProvider.notifier).state = (event.id, message);
           }
         }).catchError((Object error) {
           if (active &&
-              ref.read(matchProvider).id == event.id &&
+              controller.currentMatchId == event.id &&
               ref.read(accountProvider).identity?.uid == identity.uid) {
             ref.read(ratingStatusProvider.notifier).state =
                 (event.id, const RatingSubmission.failed());

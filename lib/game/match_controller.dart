@@ -158,6 +158,8 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   Future<void> start(MatchConfig config) async {
+    final previous = state;
+    final previousMoves = _localMoves;
     leave();
     final epoch = _epoch;
     if (config.online) {
@@ -186,7 +188,13 @@ class MatchController extends StateNotifier<MatchSession> {
         await _save();
       } catch (error) {
         if (mounted && epoch == _epoch) {
-          state = MatchSession(error: 'Could not save the new game: $error');
+          if (previous.room == null && previous.game?.finished == true) {
+            _localMoves = previousMoves;
+            state =
+                previous.copyWith(error: 'Could not save the new game: $error');
+          } else {
+            state = MatchSession(error: 'Could not save the new game: $error');
+          }
         }
         rethrow;
       }
@@ -593,8 +601,19 @@ class MatchController extends StateNotifier<MatchSession> {
         state = state.copyWith(
             error: 'Game saved; reward update needs a retry: $error');
       }
-    }).whenComplete(() => _completionPending.remove(key)));
+    }).whenComplete(() {
+      _completionPending.remove(key);
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(error: state.error);
+      }
+    }));
   }
+
+  bool get resultUpdatePending =>
+      state.id != null &&
+      state.game?.finished == true &&
+      _completionPending.contains(
+          '${state.id}:${state.game!.ply}:${state.game!.result!.reason.name}');
 
   bool get canRetryRewards {
     if (completed == null || state.game?.finished != true || state.id == null) {
@@ -611,6 +630,8 @@ class MatchController extends StateNotifier<MatchSession> {
     state = state.copyWith();
     _notifyCompleted();
   }
+
+  String? get currentMatchId => state.id;
 
   /// Durable, confirmed records only; learning overrides do not award matches.
   List<Map<String, dynamic>> get confirmedMoves =>

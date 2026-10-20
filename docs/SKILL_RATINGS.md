@@ -4,7 +4,7 @@ New unified configurations use ratingVersion 3. Each eligible game contributes
 once to Overall and once to its exact format (shape, size, seat count, rules
 profile and clock category). Overall is calculated directly from game outcomes,
 not by averaging a player's format ratings. Learning, Court, anonymous users,
-unowned/shared human seats, abandonment, AI-only exhibitions and legacy Hex
+unowned/shared human seats, abandonment and legacy Hex
 remain unrated. Existing replay, identity binding and opening-length checks
 continue to apply. Game AI runs on participants' devices; Firebase remains Spark.
 
@@ -75,8 +75,22 @@ against its own identity. Write one posterior and count one match, with one
 whole-identity W/L/D result: win if one of its seats won, draw for a drawn game,
 otherwise loss. History records the number of appearances. This avoids treating
 several copies as independent calibration matches or manufacturing confidence
-from self-play. AI-only exhibitions have no eligible human source and cannot
-settle.
+from self-play.
+
+AI-only games use this same version 3 model in Overall and the exact format.
+The signed-in player who started the local game is its reporter, bound by the
+saved session UID and immutable source pointer; the reporter is not a competing
+seat and receives no rating or achievement. Only actual AI identities appear in
+the participant list. Two-to-four-seat games, timed outcomes and genuine draws
+use the normal settlement policy. Anonymous games and older rating protocols
+retain their existing eligibility. A match containing only copies of one shared
+AI still records one match for that identity, with no self-comparison or change
+in mean/uncertainty. Replaying or reopening the same source cannot rate it twice.
+
+Authorization must permit the original reporter to read/finish both scope
+receipts without granting another observer access. Tests cover eligible replays,
+identity mismatch, altered moves, duplicate and partial settlement, both scopes,
+forged identities/counters, unrelated reporters and anonymous writes.
 
 ## Confirmation, atomicity and recovery
 
@@ -84,7 +98,7 @@ The immutable /ratingResults/{randomKey} source has kind skill/version 3. It
 binds configuration, participants, outcome, aliases, ply and source identity.
 Online participants each cast their own v3 vote; all independent human owners
 must agree before the source and room pointer can be frozen. A local AI source
-is bound to the signed-in human and its immutable /aiResultKeys source pointer.
+is bound to the signed-in reporter and its immutable /aiResultKeys source pointer.
 Rules validate local configuration at that pointer write; online configuration
 is bound to the already validated room. Keep these complementary checks.
 

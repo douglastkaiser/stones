@@ -759,13 +759,22 @@ service cloud.firestore {
     function sSeat(r,owners,i) {
       return i >= r.participants.size() || sIdentity(r,owners,i);
     }
+    function sAiOnly(r) {
+      return r.room == null && r.config.seats[0].control == 'ai' && r.config.seats[1].control == 'ai' &&
+        (r.config.seats.size() < 3 || r.config.seats[2].control == 'ai') &&
+        (r.config.seats.size() < 4 || r.config.seats[3].control == 'ai');
+    }
+    function sActor(r) {
+      return request.auth.uid in r.participants ||
+        (r.actor == request.auth.uid && sAiOnly(r));
+    }
     function sSource(r,id) {
       let n = r.participants.size();
       let room = r.room == null ? {} : getAfter(/databases/$(database)/documents/matches/$(r.room)).data;
       let owners = room.get('owners',{});
       return r.keys().hasOnly(['kind','version','pool','participants','config','winner','reason','names','ply','actor','source','room','moves','at']) &&
         r.version == 3 && r.config.get('ratingVersion',1) == 3 && n >= 2 && n <= 4 && n == r.config.seats.size() && r.names.size() == n &&
-        r.pool == ratingPool(r.config) && r.actor == request.auth.uid && r.actor in r.participants &&
+        r.pool == ratingPool(r.config) && r.actor == request.auth.uid && sActor(r) &&
         r.winner >= -1 && r.winner < n && r.reason in ['road','flats','resignation','time'] &&
         (r.reason in ['road','flats'] || n == 2) && r.ply >= n && r.ply <= 4096 &&
         r.source is string && r.source.size() <= 160 && r.moves is list &&
@@ -820,7 +829,7 @@ service cloud.firestore {
       return i >= r.participants.size() || sAfter(pool,r.participants[i]).lastResult == key;
     }
     function sSettlement(r,s,pool,key) {
-      return r.kind == 'skill' && request.auth.uid in r.participants && pool in ['overall',r.pool] &&
+      return r.kind == 'skill' && sActor(r) && pool in ['overall',r.pool] &&
         s.keys().hasOnly(['source','pool','before','after','at']) && s.source == key && s.pool == pool && s.at == request.time &&
         s.before.keys().toSet() == r.participants.toSet() && s.after.keys().toSet() == r.participants.toSet() &&
         sAtomic(r,pool,key,0) && sAtomic(r,pool,key,1) && sAtomic(r,pool,key,2) && sAtomic(r,pool,key,3);
@@ -838,7 +847,7 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/skillPools/$(pool)/players/$(id)/history/$(string(data.gamesPlayed))).data.timestamp == request.time;
     }
     match /skillSettlements/{key}/scopes/{pool} {
-      allow get: if ratingAccount() && request.auth.uid in get(/databases/$(database)/documents/ratingResults/$(key)).data.participants;
+      allow get: if ratingAccount() && sActor(get(/databases/$(database)/documents/ratingResults/$(key)).data);
       allow create: if ratingAccount() && sSettlement(get(/databases/$(database)/documents/ratingResults/$(key)).data,request.resource.data,pool,key);
       allow list,update,delete: if false;
     }

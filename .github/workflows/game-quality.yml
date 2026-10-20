@@ -1,0 +1,56 @@
+name: Game Quality Evidence
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shape: square
+            players: 2
+            size: 5
+          - shape: square
+            players: 4
+            size: 5
+          - shape: hex
+            players: 3
+            size: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Record source, runtime and bounded strength probes
+        env:
+          SHAPE: ${{ matrix.shape }}
+          PLAYERS: ${{ matrix.players }}
+          SIZE: ${{ matrix.size }}
+        run: |
+          mkdir -p build/qa/quality
+          git rev-parse HEAD > build/qa/quality/source.txt
+          flutter --version > build/qa/quality/runtime.txt
+          flutter test tools/ai_balance_probe_test.dart --reporter expanded --dart-define="AI_SHAPE=$SHAPE" --dart-define="AI_PLAYERS=$PLAYERS" --dart-define="AI_SIZE=$SIZE" | tee build/qa/quality/balance.log
+          flutter test tools/shared_performance_probe_test.dart --reporter expanded | tee build/qa/quality/performance.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-${{ matrix.shape }}-${{ matrix.players }}-${{ github.sha }}
+          path: build/qa/quality
+          retention-days: 30

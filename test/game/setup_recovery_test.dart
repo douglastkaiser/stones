@@ -37,6 +37,9 @@ void main() {
         child: const MaterialApp(
             home: MatchSetupScreen(shape: BoardShape.square))));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Customize'));
+    await tester.tap(find.text('Customize'));
+    await tester.pumpAndSettle();
     final config = tester
         .widget<MatchSetupForm>(find.byType(MatchSetupForm))
         .initialConfig;

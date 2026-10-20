@@ -15,3 +15,17 @@ __pycache__/
 functions/node_modules/
 functions/engine.js*
 functions/engine.js.deps
+
+# Flutter-generated SDK, build and local platform configuration.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+coverage/
+android/local.properties
+android/.gradle/
+android/.kotlin/
+android/gradlew
+android/gradlew.bat
+android/gradle/wrapper/gradle-wrapper.jar
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java

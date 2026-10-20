@@ -6,12 +6,21 @@ import 'match_screen.dart';
 import 'match_study.dart';
 import 'study_controller.dart';
 
+enum StudyExit { next, practice }
+
 class StudyScreen extends StatelessWidget {
   const StudyScreen(
-      {super.key, required this.study, required this.onSolved, this.onResult});
+      {super.key,
+      required this.study,
+      required this.onSolved,
+      this.onResult,
+      this.nextLesson,
+      this.offerPractice = false});
   final MatchStudy study;
   final Future<void> Function(MatchStudy) onSolved;
   final Future<void> Function(MatchStudy, bool)? onResult;
+  final String? nextLesson;
+  final bool offerPractice;
   @override
   Widget build(BuildContext context) => ProviderScope(
           overrides: [
@@ -27,12 +36,15 @@ class StudyScreen extends StatelessWidget {
           child: MatchScreen(
               title: study.title,
               objective: study.goal,
-              studyPanel: _StudyPanel(study)));
+              studyPanel: _StudyPanel(study,
+                  nextLesson: nextLesson, offerPractice: offerPractice)));
 }
 
 class _StudyPanel extends ConsumerWidget {
-  const _StudyPanel(this.study);
+  const _StudyPanel(this.study, {this.nextLesson, required this.offerPractice});
   final MatchStudy study;
+  final String? nextLesson;
+  final bool offerPractice;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(matchProvider);
@@ -56,11 +68,22 @@ class _StudyPanel extends ConsumerWidget {
             Text(controller.hintsUsed
                 ? 'Hints used · completion still counts'
                 : 'Unaided solve eligible'),
-          if (controller.canRetryProgress)
+          if (controller.savingProgress) const Text('Saving progress…'),
+          if (controller.canRetryProgress && !controller.savingProgress)
             TextButton.icon(
                 onPressed: controller.retryProgress,
                 icon: const Icon(Icons.save_outlined),
                 label: const Text('Retry saving progress')),
+          if (controller.solved && !controller.canRetryProgress) ...[
+            if (nextLesson != null)
+              FilledButton(
+                  onPressed: () => Navigator.pop(context, StudyExit.next),
+                  child: Text('Next lesson: $nextLesson')),
+            if (offerPractice)
+              OutlinedButton(
+                  onPressed: () => Navigator.pop(context, StudyExit.practice),
+                  child: const Text('Try a coached game')),
+          ],
           if (controller.solved)
             FilledButton(
                 onPressed: () => Navigator.pop(context),

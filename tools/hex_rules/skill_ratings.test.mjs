@@ -89,7 +89,7 @@ function settle(s,pool='overall',prior={}) {
  }
  return {writes,records,receipt};
 }
-for(const participants of [['alice','bob'],['alice','bob','carol'],['alice','bob','carol','dan'],['alice',expert],['alice','bob',expert],['alice',easy,expert],['alice',easy,easy,easy],['alice',easy,easy,'bob']]) {
+for(const participants of [['alice','bob'],['alice','bob','carol'],['alice','bob','carol','dan'],['alice',expert],['alice','bob',expert],['alice',easy,expert],['alice',easy,easy,easy],['alice',easy,easy,'bob'],[easy,expert],[easy,expert,easy],[easy,expert,easy,expert],[easy,easy]]) {
  test(`v3 confirms and rates both scopes: ${participants}`,async()=>{
   const s=await prepare(source({participants,local:!participants.includes('bob')}));
   await accept(commit(s.writes));
@@ -97,6 +97,43 @@ for(const participants of [['alice','bob'],['alice','bob','carol'],['alice','bob
   await reject(commit(s.writes));
  });
 }
+test('AI-only reporters can recover both scopes without rating themselves or exposing receipts',async()=>{
+ const s=source({participants:[easy,expert],local:true});
+ await reject(commit(s.writes,'stranger'));
+ await reject(request(':commit','POST',{writes:s.writes},'alice','anonymous'));
+ await accept(commit(s.writes));
+ const overall=settle(s);
+ assert.deepEqual(Object.keys(overall.records).sort(),[easy,expert].sort());
+ assert(overall.records[easy].rating>1200);
+ assert(overall.records[expert].rating<1200);
+ await reject(commit(overall.writes,'stranger'));
+ await reject(commit(overall.writes.slice(0,-1)));
+ const forged=structuredClone(overall.writes);
+ forged[1].update.fields.rating.integerValue='9999';
+ await reject(commit(forged));
+ await accept(commit(overall.writes));
+ await accept(request(`/skillSettlements/${s.key}/scopes/overall`,'GET'));
+ await reject(request(`/skillSettlements/${s.key}/scopes/overall`,'GET',undefined,'stranger'));
+ await reject(request(`/ratingResults/${s.key}`,'GET',undefined,'stranger'));
+ await accept(commit(settle(s,s.pool).writes));
+ await reject(commit(overall.writes));
+ await reject(commit(s.writes));
+});
+test('AI-only draws use normal math and a mirror match creates no skill evidence',async()=>{
+ for(const [i,participants,winner] of [[0,[easy,expert],-1],[1,[easy,easy],0]]) {
+  await env.clearFirestore();
+  const s=source({participants,winner,local:true,sourceId:`local-ai-${i}`});
+  await accept(commit(s.writes));
+  const result=settle(s);
+  if(i===0)assert.equal(result.records[easy].draws,1);
+  else {
+   assert.equal(result.records[easy].mean,1200);
+   assert.equal(result.records[easy].deviation,350);
+   assert.equal(result.records[easy].gamesPlayed,1);
+  }
+  await accept(commit(result.writes));
+ }
+});
 for(const shape of ['square','hex'])for(const clock of [0,300,600]) {
  test(`v3 pool derives ${shape}, clock ${clock}`,async()=>{
   const s=await prepare(source({shape,size:shape==='square'?3:2,clock}));

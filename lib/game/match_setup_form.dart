@@ -201,7 +201,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                         : 'Square 5×5+ and all Hex sizes can earn match achievements. AI duel tiers use two-player Square; mastery challenges cover both shapes and more players.'),
                   if (local == 0)
                     Text(online == 0
-                        ? 'Watch the AIs play. You can pause the match.'
+                        ? 'Watch the AIs play. Sign in before starting to record their Overall and format ratings. You can pause the match.'
                         : 'You host as an observer. Online humans join with the room invitation.'),
                   if (local > 1)
                     const Text('Local humans take turns on this device.'),

@@ -5,18 +5,22 @@ import 'match_config.dart';
 import 'match_provider.dart';
 import 'match_screen.dart';
 import 'match_setup_form.dart';
+import 'match_preset.dart';
 import 'room_navigation.dart';
 import '../theme/tavern_theme.dart';
 
 class MatchSetupScreen extends ConsumerStatefulWidget {
-  const MatchSetupScreen({super.key, required this.shape});
+  const MatchSetupScreen({super.key, required this.shape, this.preset});
   final BoardShape shape;
+  final MatchPreset? preset;
   @override
   ConsumerState<MatchSetupScreen> createState() => _MatchSetupScreenState();
 }
 
 class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
   late final MatchConfig _initialConfig;
+  bool _busy = false;
+  String? _error;
   @override
   void initState() {
     super.initState();
@@ -31,6 +35,29 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
             ? settings.chessClockSecondsForSize(
                 widget.shape == BoardShape.square ? size : 2 * size + 1)
             : 0);
+  }
+
+  Future<void> _start(MatchConfig config) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      if (!await _allowNewLocal(config)) return;
+      await leaveLegacyRooms(ref);
+      await ref.read(matchProvider.notifier).start(config);
+      if (!mounted) return;
+      await Navigator.push<void>(
+          context, MaterialPageRoute(builder: (_) => const MatchScreen()));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error =
+            'Could not start the game. Your saved game is kept. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<bool> _allowNewLocal(MatchConfig config) async {
@@ -72,19 +99,65 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
                       child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 620),
                           child: TavernPanel(
-                              child: MatchSetupForm(
-                                  initialConfig: _initialConfig,
-                                  onStart: (config) async {
-                                    if (!await _allowNewLocal(config)) return;
-                                    await leaveLegacyRooms(ref);
-                                    await ref
-                                        .read(matchProvider.notifier)
-                                        .start(config);
-                                    if (!context.mounted) return;
-                                    await Navigator.push<void>(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const MatchScreen()));
-                                  }))))))));
+                              child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                Text(
+                                    widget.shape == BoardShape.square
+                                        ? 'Play Square'
+                                        : 'Play Hex',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall),
+                                const SizedBox(height: 8),
+                                Text(widget.shape == BoardShape.square
+                                    ? '5 × 5 · two players · untimed'
+                                    : 'Radius 2 · three players · untimed · Stones variant'),
+                                const SizedBox(height: 16),
+                                for (final preset in MatchPreset.values)
+                                  Card(
+                                      child: ListTile(
+                                          enabled: !_busy,
+                                          leading: Icon(switch (preset) {
+                                            MatchPreset.learn =>
+                                              Icons.school_outlined,
+                                            MatchPreset.computer =>
+                                              Icons.smart_toy_outlined,
+                                            MatchPreset.sameDevice =>
+                                              Icons.people_outline,
+                                            MatchPreset.online => Icons.link,
+                                          }),
+                                          title: Text(preset.label),
+                                          subtitle: Text(preset.description),
+                                          trailing: widget.preset == preset
+                                              ? const Icon(Icons.star_outline)
+                                              : const Icon(Icons.chevron_right),
+                                          onTap: _busy
+                                              ? null
+                                              : () => _start(
+                                                  preset.configuration(
+                                                      widget.shape)))),
+                                if (_busy) const Text('Starting…'),
+                                if (_error != null)
+                                  Text(_error!, semanticsLabel: _error),
+                                const SizedBox(height: 8),
+                                ExpansionTile(
+                                    key: const ValueKey('customize-game'),
+                                    maintainState: true,
+                                    tilePadding: EdgeInsets.zero,
+                                    title: const Text('Customize'),
+                                    subtitle: const Text(
+                                        'Board size, players, difficulty and clock'),
+                                    children: [
+                                      AbsorbPointer(
+                                          absorbing: _busy,
+                                          child: MatchSetupForm(
+                                              initialConfig: widget.preset
+                                                      ?.configuration(
+                                                          widget.shape) ??
+                                                  _initialConfig,
+                                              onStart: _start)),
+                                    ]),
+                              ]))))))));
 }

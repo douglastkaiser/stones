@@ -7,37 +7,30 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: "pr-cleanup-${{ github.event.pull_request.number }}"
-  cancel-in-progress: false
-
 jobs:
   cleanup-preview:
-    name: Remove PR Preview
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
+    concurrency:
+      group: stones-gh-pages-publication
+      cancel-in-progress: false
     steps:
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/checkout@v4
         with:
           ref: gh-pages
-          path: gh-pages-branch
-        continue-on-error: true
-
-      - name: Delete PR preview directory
+          path: published
+      - name: Remove only this preview
+        env:
+          PREVIEW: ${{ github.event.pull_request.number }}
         run: |
-          if [ -d "gh-pages-branch/pr/${{ github.event.pull_request.number }}" ]; then
-            rm -rf "gh-pages-branch/pr/${{ github.event.pull_request.number }}"
-            echo "Deleted PR #${{ github.event.pull_request.number }} preview"
-          else
-            echo "PR #${{ github.event.pull_request.number }} preview directory does not exist"
-          fi
-
-      - name: Commit and push to gh-pages
-        run: |
-          cd gh-pages-branch
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --staged --quiet || git commit -m "Remove PR #${{ github.event.pull_request.number }} preview [skip ci]"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
+          git -C published pull --ff-only origin gh-pages
+          python3 scripts/publish_web.py --target published --preview "$PREVIEW"
+          git -C published config user.name 'github-actions[bot]'
+          git -C published config user.email 'github-actions[bot]@users.noreply.github.com'
+          git -C published add -A
+          git -C published diff --staged --quiet || git -C published commit -m 'Remove closed PR preview [skip ci]'
+          git -C published push origin HEAD:gh-pages

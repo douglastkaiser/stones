@@ -19,6 +19,7 @@ class StudyController extends MatchController {
   int steps = 0;
   bool solved = false, failed = false;
   bool _rewarded = false;
+  bool savingProgress = false;
   // Hints remain disclosed across Retry within the same visit.
   bool hintsUsed = false;
   void markHintUsed() {
@@ -28,7 +29,9 @@ class StudyController extends MatchController {
 
   bool get canRetryProgress => solved && !_rewarded;
   Future<void> retryProgress() async {
-    if (!canRetryProgress) return;
+    if (!canRetryProgress || savingProgress) return;
+    savingProgress = true;
+    if (mounted) state = state.copyWith(error: state.error);
     try {
       await onSolved?.call(study);
       _rewarded = true;
@@ -38,6 +41,9 @@ class StudyController extends MatchController {
         state = state.copyWith(
             error: 'Solved; progress could not be saved: $error');
       }
+    } finally {
+      savingProgress = false;
+      if (mounted) state = state.copyWith(error: state.error);
     }
   }
 

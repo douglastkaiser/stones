@@ -90,6 +90,7 @@ class RoomInvitationBar extends StatelessWidget {
               spacing: 12,
               children: [
                 SelectableText('Room $code',
+                    semanticsLabel: 'Room $code',
                     style: const TextStyle(
                         fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                 TextButton.icon(

@@ -92,6 +92,39 @@ void main() {
             'alice'),
         isNull);
   });
+  test('AI-only v3 results bind their reporter without adding a human player',
+      () {
+    final allAI = config().copyWith(seats: const [
+      SeatConfig(SeatId.ivory, control: SeatControl.ai, level: BotLevel.expert),
+      SeatConfig(SeatId.charcoal, control: SeatControl.ai),
+    ]);
+    final (game, moves) = finish(allAI);
+    final session = MatchSession(game: game, id: 'local-ai-only', uid: 'alice');
+    final evidence = RatingEvidence.verify(session, moves, 'alice')!;
+    expect(evidence.humans, isEmpty);
+    expect(evidence.participants,
+        ['ai_shared-search-v1_expert', 'ai_shared-search-v1_easy']);
+    expect(evidence.winner, 0);
+    expect(RatingEvidence.verify(session, moves, 'bob'), isNull);
+    expect(
+        RatingEvidence.verify(
+            MatchSession(game: game, id: session.id), moves, 'alice'),
+        isNull);
+    expect(RatingEvidence.verify(session, moves.reversed.toList(), 'alice'),
+        isNull);
+    for (final excluded in [
+      config(court: true),
+      MatchConfig.fromMap({...allAI.toMap(), 'ratingVersion': 2}),
+    ]) {
+      final (position, history) = finish(excluded);
+      expect(
+          RatingEvidence.verify(
+              MatchSession(game: position, id: 'local-excluded', uid: 'alice'),
+              history,
+              'alice'),
+          isNull);
+    }
+  });
   test('independent human seats must own the same replayed room and outcome',
       () {
     final c = config(online: true);
@@ -114,6 +147,29 @@ void main() {
             game.copyWith(result: const MatchResult(null, ResultReason.flats)),
         room: room);
     expect(RatingEvidence.verify(bad, moves, 'bob'), isNull);
+  });
+  test('AI-only replays qualify on both shapes with two to four seats', () {
+    for (final shape in BoardShape.values) {
+      for (final count in [2, 3, 4]) {
+        final original = roadMatch(shape: shape, count: count);
+        final c = original.game.config.copyWith(seats: [
+          for (final seat in original.game.config.seats)
+            seat.copyWith(control: SeatControl.ai),
+        ]);
+        var game = MatchState.initial(c);
+        for (final move in original.moves) {
+          game = MatchRules.play(game, MatchMove.fromMap(move))!;
+        }
+        final evidence = RatingEvidence.verify(
+            MatchSession(
+                game: game, id: 'local-${shape.name}-$count', uid: 'alice'),
+            original.moves,
+            'alice');
+        expect(evidence, isNotNull);
+        expect(evidence!.humans, isEmpty);
+        expect(evidence.participants, hasLength(count));
+      }
+    }
   });
   for (final count in [3, 4]) {
     test('$count-seat legal AI history attributes every global opponent', () {

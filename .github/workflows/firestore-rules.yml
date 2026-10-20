@@ -3,23 +3,15 @@ name: Firestore Rules
 on:
   push:
     branches: ['**', '!gh-pages']
-    paths:
-      - firestore.rules
-      - firestore.indexes.json
-      - firebase.json
-      - tools/hex_rules/**
-      - .github/workflows/firestore-rules.yml
   pull_request:
-    paths:
-      - firestore.rules
-      - firestore.indexes.json
-      - firebase.json
-      - tools/hex_rules/**
-      - .github/workflows/firestore-rules.yml
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: rules-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   authorization:

@@ -1,7 +1,36 @@
 # Current release qualification
 
-Updated 2026-10-17. This is the current evidence/checklist; historical audit pages
-describe their own revisions and must not be interpreted as today's architecture.
+## October 20 working-tree changes
+
+See [the candidate audit](RELEASE_CANDIDATE_AUDIT.md) for the latest checks and
+release gates, and [player experience and CI](PLAYER_EXPERIENCE.md) for the new implementation,
+contracts, reproduction commands and outstanding product acceptance. These changes
+have not been published. The October 17 sections below are historical evidence.
+The October 20 audit observed main at `84e90a2`, successful CI and rules runs,
+successful web publication and Android artifact creation; it did not establish a
+new Play rollout. iOS failed because there is no configured iOS application.
+
+The follow-up also makes signed-in AI-only version 3 games eligible for Overall
+and format ratings. The changed reporter authorization rules must be published
+before promoting that client. Local/emulator validation does not change the
+production backend or batch-submit historical games.
+
+Final local verification passed 996 Flutter tests, strict analysis, 29 Python
+release-tool checks, workflow lint, formatting and both web builds. The security
+suite passed 136 emulator checks. Expanded browser qualification and Android
+compilation must pass on the candidate commit; local external SDK/Maven downloads
+returned HTTP 503. Do not treat those interrupted checks as passes. Physical-device
+and production-account qualification remain separate.
+
+The implementation adds an emulator-only browser gate and verifies a qualified
+web artifact before deployment. Successful automation is still separate from
+newcomer playtests, physical-device checks, live backend compatibility and Play
+distribution. Account-progress sync, the account-wide inbox, online rematch consent
+and reminders remain pending.
+
+The sections below retain historical evidence updated 2026-10-17 onward. Their
+SDK availability, test counts and deployment state describe their own revisions;
+use the candidate audit above for the current qualification.
 The delivery tracker is [FINISHING_PLAN.md](FINISHING_PLAN.md).
 
 ## Baseline before finishing work
@@ -24,9 +53,9 @@ download size, and must not be used as a mobile speed claim.
 
 ## Reproduce checks
 
-Flutter is pinned to 3.47.7 in CI. No functioning local Flutter/Dart command was
-found when execution began; approximately 2.4 GB of disk was available. Use CI
-rather than installing an unbounded second SDK into this workspace.
+Flutter is pinned to 3.47.7 in CI. Use the same version locally. Keep SDKs and
+generated artifacts outside version control. Android compilation requires JDK 17
+with javac and the configured Android SDK; the rules emulator requires Java 21.
 
 ```sh
 flutter pub get

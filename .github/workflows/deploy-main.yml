@@ -2,104 +2,97 @@ name: Deploy Main
 
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Qualified main commit; blank selects current main'
+        required: false
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 jobs:
-  deploy:
-    name: Build & Deploy to gh-pages
+  qualify:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
+    outputs:
+      source: ${{ steps.qualification.outputs.source }}
+      run: ${{ steps.qualification.outputs.run }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Require successful CI and rules for the selected main commit
+        id: qualification
+        uses: actions/github-script@v7
+        env:
+          SELECTED_SOURCE: ${{ inputs.source_sha }}
         with:
-          fetch-depth: 0
+          script: |
+            const repo = {...context.repo};
+            const main = (await github.rest.repos.getBranch({...repo, branch: 'main'})).data.commit.sha;
+            const source = process.env.SELECTED_SOURCE || main;
+            if (!/^[a-f0-9]{40}$/.test(source)) throw new Error('Use a full commit SHA');
+            const comparison = (await github.rest.repos.compareCommitsWithBasehead({
+              ...repo, basehead: `${source}...${main}`
+            })).data;
+            if (!['ahead', 'identical'].includes(comparison.status)) {
+              throw new Error('Selected commit must belong to main history');
+            }
+            for (const workflow_id of ['ci.yml', 'firestore-rules.yml']) {
+              const runs = (await github.rest.actions.listWorkflowRuns({
+                ...repo, workflow_id, branch: 'main', event: 'push', head_sha: source,
+                per_page: 100
+              })).data.workflow_runs;
+              const run = runs[0];
+              if (!run || run.status !== 'completed' || run.conclusion !== 'success' ||
+                  run.head_sha !== source || run.head_repository.full_name !== `${repo.owner}/${repo.repo}`) {
+                throw new Error(`${workflow_id} has not qualified ${source}`);
+              }
+              if (workflow_id === 'ci.yml') core.setOutput('run', String(run.id));
+            }
+            core.setOutput('source', source);
 
-      - name: Generate version info
-        run: ./scripts/generate_version.sh
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+  publish:
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: stones-gh-pages-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
         with:
-          flutter-version: '3.47.7'
-          channel: stable
-          cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Generate app icons
-        run: dart run flutter_launcher_icons
-
-      - name: Generate splash branding
-        run: ./scripts/generate_splash_branding.sh
-
-      - name: Generate splash screen
-        run: dart run flutter_native_splash:create
-
-      - name: Build web
-        run: flutter build web --release --base-href "/stones/"
-
-      - name: Fingerprint web startup assets
-        run: |
-          python3 -m unittest scripts.test_prepare_web_release
-          python3 scripts/prepare_web_release.py
-
-      - name: Ensure privacy.html is included
-        run: |
-          if [ -f "web/privacy.html" ] && [ ! -f "build/web/privacy.html" ]; then
-            cp web/privacy.html build/web/
-            echo "Copied privacy.html to build/web/"
-          elif [ -f "build/web/privacy.html" ]; then
-            echo "privacy.html already exists in build/web/"
-          else
-            echo "Warning: web/privacy.html not found"
-          fi
-
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
+          ref: ${{ needs.qualify.outputs.source }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build-${{ needs.qualify.outputs.source }}
+          run-id: ${{ needs.qualify.outputs.run }}
+          github-token: ${{ github.token }}
+          path: build/web
+      - name: Verify the qualified artifact
+        run: python3 scripts/web_artifact.py verify build/web --source "$SOURCE"
+        env:
+          SOURCE: ${{ needs.qualify.outputs.source }}
+      - uses: actions/checkout@v4
         with:
           ref: gh-pages
-          path: gh-pages-branch
-        continue-on-error: true
-
-      - name: Create gh-pages branch if it doesn't exist
+          path: published
+      - name: Publish the verified build while preserving previews and cached startup
         run: |
-          if [ ! -d "gh-pages-branch" ]; then
-            mkdir gh-pages-branch
-            cd gh-pages-branch
-            git init
-            git checkout -b gh-pages
-            git remote add origin "https://github.com/${{ github.repository }}.git"
-          fi
-
-      - name: Preserve PR previews and update main build
+          git -C published pull --ff-only origin gh-pages
+          python3 scripts/publish_web.py --source build/web --target published
+          git -C published config user.name 'github-actions[bot]'
+          git -C published config user.email 'github-actions[bot]@users.noreply.github.com'
+          git -C published add -A
+          git -C published diff --staged --quiet || git -C published commit -m 'Publish qualified main artifact [skip ci]'
+          git -C published push origin HEAD:gh-pages
+      - name: Record publication evidence
         run: |
-          # Cached HTML may still name an earlier fingerprinted entrypoint.
-          python3 scripts/prepare_web_release.py --retain-previous build/web gh-pages-branch
-          # Preserve the /pr/ directory if it exists
-          if [ -d "gh-pages-branch/pr" ]; then
-            mv gh-pages-branch/pr /tmp/pr-previews
-          fi
-
-          # Remove old content except .git
-          find gh-pages-branch -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-
-          # Copy new build
-          cp -r build/web/* gh-pages-branch/
-
-          # Restore PR previews
-          if [ -d "/tmp/pr-previews" ]; then
-            mv /tmp/pr-previews gh-pages-branch/pr
-          fi
-
-      - name: Commit and push to gh-pages
-        run: |
-          cd gh-pages-branch
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --staged --quiet || git commit -m "Deploy main site [skip ci]"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages --force
+          echo "Published source: $SOURCE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Qualified CI run: $RUN" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Artifact verified before bounded cached-startup retention. Play distribution and real-device qualification are separate.' >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SOURCE: ${{ needs.qualify.outputs.source }}
+          RUN: ${{ needs.qualify.outputs.run }}

@@ -1,5 +1,10 @@
 # Development map
 
+The [player-experience implementation](PLAYER_EXPERIENCE.md) documents setup
+presets, the fundamentals path, local history/review/rematch, emulator browser
+journeys and qualified-artifact publication. It includes reproducible checks and
+the boundaries of the remaining account/inbox/reminder work.
+
 The [home/profile and table-layout follow-up](COMMUNITY_AND_LAYOUT.md) documents
 public Stones names, restored QR invitations, responsive boards and opt-in Open
 tables, with emulator evidence and the rules-publication prerequisite.
