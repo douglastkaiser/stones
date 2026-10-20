@@ -14,6 +14,9 @@ not a claim that a public release is ready. Product contracts are in
   damaged data is retained and the user sees a recovery warning.
 - Study progress immediately exposes its saving state during retry, preventing
   premature continuation or duplicate writes.
+- Browser evidence clears prior captures and explicitly marks failed runs, so a
+  previous successful summary cannot qualify a later failure. Leaderboard checks
+  use the actual accessible row controls exposed by Flutter.
 - CI retains hidden web artifact files required by its integrity manifest.
   Generated Android wrapper/cache files are excluded from source control.
 
@@ -37,6 +40,23 @@ The observer gets neither personal rating nor achievements. Shared AI identities
 receive the same rating protocol as other players; duplicate identities count
 once without learning from comparisons against themselves. Existing receipts
 are immutable, and historical games are not batch-submitted.
+
+## Hosted audit and workspace interruption
+
+The first candidate `2df1b28471e987802688d1ffbd9f41735797ad35` passed
+[hosted analysis, 996 tests, 29 release-tool checks and web compilation](https://github.com/douglastkaiser/stones/actions/runs/39496314476),
+and [Firestore authorization](https://github.com/douglastkaiser/stones/actions/runs/39496314518).
+Its expanded browser run reached both updated leaderboard rows after actual SDK
+settlement/reopen checks. The final assertion failed because it expected separate
+text nodes; Flutter exposes those names in accessible row buttons. The assertion
+is corrected without weakening the database or duplicate checks. Final green
+hosted checks on this follow-up are still required.
+
+The workspace then lost connectivity. The follow-up is committed using GitHub's
+repository API, preserving the existing candidate tree except for the reviewed
+browser/documentation edits. Local longer AI probes were interrupted; no full
+matrix pass is claimed. Main, production policy, website and store are unchanged.
+Repository branch-protection settings could not be inspected with this connection.
 
 ## Before going wide
 

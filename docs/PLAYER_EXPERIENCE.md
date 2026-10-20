@@ -123,12 +123,14 @@ checks, workflow lint and nonmutating formatting checks passed. The Firestore
 suite passed 136 authorization checks; a final rerun is recorded in the audit.
 
 The earlier complete Chromium run passed learning, local recovery, review/rematch
-and independent invitation/rejoin journeys. The expanded run also exercised an
+and independent invitation/rejoin journeys. The expanded local and hosted runs also exercised an
 actual computer reply and signed-in AI-only settlement through the real app SDK:
-both scopes changed, and reopening did not award again. Its final navigation
-assertion exposed a harness Back-selector ambiguity, which was fixed. A complete
+both scopes changed, and reopening did not award again. Its navigation
+assertions exposed harness Back-selector and merged leaderboard-row semantics
+ambiguities, which were fixed. A complete
 rerun of the expanded harness remains required; external SDK downloads returned
-HTTP 503 in this workspace. Individual passing assertions do not qualify that
+HTTP 503 before workspace connectivity was lost. The follow-up is committed on
+the remote candidate branch; see the audit for hosted run links. Individual passing assertions do not qualify that
 whole run. The harness caches only exact public Firebase SDK JavaScript between
 isolated contexts; auth/database traffic is never cached.
 

@@ -8,6 +8,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import time
 from urllib.request import urlopen
@@ -121,7 +122,12 @@ def place(page, x, y):
 
 
 def main():
+    # Never leave a previous successful summary or captures in a failed run.
+    if EVIDENCE.exists():
+        shutil.rmtree(EVIDENCE)
     EVIDENCE.mkdir(parents=True, exist_ok=True)
+    summary = EVIDENCE / 'summary.json'
+    summary.write_text(json.dumps({'status': 'running'}, indent=2))
     server = subprocess.Popen(['node', 'tools/serve_web.mjs'],
                               env={**os.environ, 'WEB_ROOT': 'build/integration-web'},
                               stdout=subprocess.DEVNULL)
@@ -286,8 +292,8 @@ def main():
         click(reporter, 'Back')
         click(reporter, 'Back')
         click(reporter, 'Leaderboard')
-        expect(reporter.get_by_text('Expert AI', exact=True)).to_be_visible(timeout=30000)
-        expect(reporter.get_by_text('Easy AI', exact=True)).to_be_visible(timeout=30000)
+        expect(button(reporter, 'Expert AI')).to_be_visible(timeout=30000)
+        expect(button(reporter, 'Easy AI')).to_be_visible(timeout=30000)
         reporter.screenshot(path=str(EVIDENCE / 'ai-leaderboard-phone.png'))
         if errors:
             raise AssertionError(errors)
@@ -301,6 +307,11 @@ def main():
             'status': 'passed',
         }, indent=2))
     finally:
+        if json.loads(summary.read_text()).get('status') != 'passed':
+            summary.write_text(json.dumps({
+                'status': 'failed',
+                'detail': 'See the process log, traces and page-errors.json',
+            }, indent=2))
         if 'contexts' in locals():
             for i, context in enumerate(contexts):
                 for page in context.pages:
