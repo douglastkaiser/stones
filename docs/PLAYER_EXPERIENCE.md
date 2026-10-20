@@ -115,35 +115,38 @@ flutter test tools/shared_performance_probe_test.dart --reporter expanded
 Use `STONES_CHROMIUM` to select an installed Chromium for local checks. Do not
 publish the integration build. Production web builds continue to use `lib/main.dart`.
 
-## Local verification, October 20
+## Qualification, October 20
 
-The final audited Dart sources passed **996 Flutter tests**, strict analysis,
-and production and emulator-only web compilation. All 29 Python release-tool
-checks, workflow lint and nonmutating formatting checks passed. The Firestore
-suite passed 136 authorization checks; a final rerun is recorded in the audit.
+Candidate `a045e37` passed [full hosted CI](https://github.com/douglastkaiser/stones/actions/runs/39497631177)
+and [Firestore Rules](https://github.com/douglastkaiser/stones/actions/runs/39497631273):
+996 Flutter tests, strict analysis, 29 release-tool checks, production web and
+Android debug compilation, 136 authorization checks and nine complete browser
+journeys with zero page errors. The final hosted web artifact was downloaded and
+independently verified against its source/backend manifest, including all 77
+files and the hidden Flutter build ID.
 
-The earlier complete Chromium run passed learning, local recovery, review/rematch
-and independent invitation/rejoin journeys. The expanded local and hosted runs also exercised an
-actual computer reply and signed-in AI-only settlement through the real app SDK:
-both scopes changed, and reopening did not award again. Its navigation
-assertions exposed harness Back-selector and merged leaderboard-row semantics
-ambiguities, which were fixed. A complete
-rerun of the expanded harness remains required; external SDK downloads returned
-HTTP 503 before workspace connectivity was lost. The follow-up is committed on
-the remote candidate branch; see the audit for hosted run links. Individual passing assertions do not qualify that
-whole run. The harness caches only exact public Firebase SDK JavaScript between
-isolated contexts; auth/database traffic is never cached.
+Browser evidence covers learning/Next, local save/reload, completion/review/
+rematch, cold invitations, independent clients, disconnect/rejoin, an actual
+computer reply, real signed-in SDK AI-only settlement in both scopes and no
+duplicate award on reopen. The final phone-sized leaderboard capture shows the
+updated AI profiles while the observer remains unrated. Harness Back/row selectors
+were corrected to match Flutter's accessible controls. Failed reruns clear stale
+captures and explicitly report failure. Static public SDK caching never caches
+authentication or database requests.
 
-Android SDK/JDK were installed, but the local Android build was blocked by a
-Google Maven dependency download returning HTTP 503. No APK pass is claimed.
-An isolated candidate branch is used for hosted CI qualification. Local evidence
-is retained under `build/qa/` and `/workspace/.tools/audit-*.log`. CI artifacts
-provide portable evidence for the actual candidate commit.
+Twelve longer AI games passed with rotated levels/starters across Square duels,
+four-player Square and three-player Hex. All finished within the 100-ply bound,
+with legal moves and no threefold-repeated positions. These VM samples do not
+establish difficulty balance or physical phone latency. Full replays, logs and
+source hashes are retained in `build/qa/release-audit/`.
 
-The AI evidence harness passed four Square duel rotations at a 24-ply smoke-test
-bound. The scheduled workflow uses a longer 100-ply bound and larger format
-matrix. These are runner checks, not human difficulty or phone latency results.
-No physical-device installation or production deployment is claimed.
+Local external downloads and workspace connectivity interrupted some attempts;
+only completed reruns and passing hosted checks count as qualification. The
+[Firebase deployment](releases/FIREBASE_20261020.md) subsequently published the
+exact tested rules/indexes and passed production readback/access checks. Main
+promotion still requires fresh main push checks before web publication. Android
+signing/store distribution, real-device and independent production-account
+acceptance remain separate.
 
 ## Keep the product goal measurable
 

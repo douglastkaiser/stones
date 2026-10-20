@@ -1,32 +1,36 @@
 # Current release qualification
 
-## October 20 working-tree changes
+## October 20 main promotion
 
-See [the candidate audit](RELEASE_CANDIDATE_AUDIT.md) for the latest checks and
-release gates, and [player experience and CI](PLAYER_EXPERIENCE.md) for the new implementation,
-contracts, reproduction commands and outstanding product acceptance. These changes
-have not been published. The October 17 sections below are historical evidence.
-The October 20 audit observed main at `84e90a2`, successful CI and rules runs,
-successful web publication and Android artifact creation; it did not establish a
-new Play rollout. iOS failed because there is no configured iOS application.
+The owner authorized committing/pushing the audited candidate to main, publishing
+the qualified website and preparing the signed Android update after Firebase
+publication. See [the candidate audit](RELEASE_CANDIDATE_AUDIT.md) and
+[player experience and CI](PLAYER_EXPERIENCE.md) for the implemented contracts.
 
-The follow-up also makes signed-in AI-only version 3 games eligible for Overall
-and format ratings. The changed reporter authorization rules must be published
-before promoting that client. Local/emulator validation does not change the
-production backend or batch-submit historical games.
+Candidate `a045e37` passed [full hosted CI](https://github.com/douglastkaiser/stones/actions/runs/39497631177)
+and [Firestore authorization](https://github.com/douglastkaiser/stones/actions/runs/39497631273):
+996 Flutter tests, strict analysis, 29 release-tool checks, production web and
+Android compilation, nine browser journeys with zero page errors and 136 security
+checks. The hosted web artifact passed independent 77-file manifest verification
+after download, including its hidden Flutter build file. Twelve longer local AI
+games passed across Square duels, four-player Square and three-player Hex; all
+finished within 100 plies, with legal moves and no threefold-repeated positions.
 
-Final local verification passed 996 Flutter tests, strict analysis, 29 Python
-release-tool checks, workflow lint, formatting and both web builds. The security
-suite passed 136 emulator checks. Expanded browser qualification and Android
-compilation must pass on the candidate commit; local external SDK/Maven downloads
-returned HTTP 503. Do not treat those interrupted checks as passes. Physical-device
-and production-account qualification remain separate.
+[Firebase publication](releases/FIREBASE_20261020.md) is complete: the exact tested
+rules were published/read back, all five indexes remain READY, and 13 read-only
+production access checks passed. No player/game/rating records were seeded or
+rewritten. This main promotion records that backend state without changing Dart
+sources or the qualified rules/indexes.
 
-The implementation adds an emulator-only browser gate and verifies a qualified
-web artifact before deployment. Successful automation is still separate from
-newcomer playtests, physical-device checks, live backend compatibility and Play
-distribution. Account-progress sync, the account-wide inbox, online rematch consent
-and reminders remain pending.
+Main must pass its own push CI and rules runs before Deploy Main can publish its
+exact verified web artifact. Android Release separately creates signed APKs/AABs;
+the existing workflow does not upload to Google Play. Follow the actual workflow
+run/artifact evidence for completion; this commit does not predeclare publication.
+
+Physical-device/Play upgrade, Google sign-in, independent account settlement,
+large-text/screen-reader and newcomer playtests remain acceptance work. iOS has
+no configured application and is unsupported. Account-progress sync, an account-
+wide inbox, online rematch consent and reminders remain later work.
 
 The sections below retain historical evidence updated 2026-10-17 onward. Their
 SDK availability, test counts and deployment state describe their own revisions;

@@ -1,7 +1,8 @@
 # Release candidate audit — 2026-10-20
 
-The candidate is isolated from main and production. This is an evidence record,
-not a claim that a public release is ready. Product contracts are in
+The owner has authorized main promotion and client publication. The matching
+[Firebase rules/indexes are published](releases/FIREBASE_20261020.md). This record
+distinguishes automated qualification from remaining physical-device acceptance. Product contracts are in
 [PLAYER_EXPERIENCE.md](PLAYER_EXPERIENCE.md).
 
 ## Corrections from the final review
@@ -32,8 +33,8 @@ corrupt and foreign records, pagination and delayed study-progress writes.
 | Release helpers | 29 Python checks passed | Publishing has not occurred. |
 | Firestore authorization | 136 emulator checks passed, including AI-only 2–4 seats, repeats and rejection cases | New rules must be deployed before the client. |
 | Web | Production and separate emulator builds passed; production fingerprint/manifest verification passed | Not phone startup/performance evidence. |
-| Browser | Earlier complete core journeys passed. Expanded run verified real SDK AI-only settlement in Overall/format and no duplicate on reopen | Full expanded rerun pending after fixing a harness selector; external CDN fetch returned 503 locally. |
-| Android | SDK/JDK installed; build attempted | Google Maven returned HTTP 503. No candidate APK qualification yet. |
+| Browser | Earlier complete core journeys passed. Expanded run verified real SDK AI-only settlement in Overall/format and no duplicate on reopen | Final corrected hosted run passed all nine journeys with zero page errors. |
+| Android | SDK/JDK installed; build attempted | Final hosted CI compiled and retained the candidate debug APK successfully. |
 
 An all-AI game must start under a permanent signed-in account to submit ratings.
 The observer gets neither personal rating nor achievements. Shared AI identities
@@ -49,22 +50,25 @@ and [Firestore authorization](https://github.com/douglastkaiser/stones/actions/r
 Its expanded browser run reached both updated leaderboard rows after actual SDK
 settlement/reopen checks. The final assertion failed because it expected separate
 text nodes; Flutter exposes those names in accessible row buttons. The assertion
-is corrected without weakening the database or duplicate checks. Final green
-hosted checks on this follow-up are still required.
+is corrected without weakening the database or duplicate checks. Follow-up
+`a045e37` passed [all final CI jobs](https://github.com/douglastkaiser/stones/actions/runs/39497631177)
+and [authorization checks](https://github.com/douglastkaiser/stones/actions/runs/39497631273).
 
 The workspace then lost connectivity. The follow-up is committed using GitHub's
 repository API, preserving the existing candidate tree except for the reviewed
-browser/documentation edits. Local longer AI probes were interrupted; no full
-matrix pass is claimed. Main, production policy, website and store are unchanged.
+browser/documentation edits. The workspace reconnected and its clean tree was aligned to the final commit.
+Interrupted probes were rerun: all twelve longer AI games passed across the full
+three-format matrix. The owner subsequently authorized main promotion and
+client publication after the verified Firebase update.
 Repository branch-protection settings could not be inspected with this connection.
 
 ## Before going wide
 
 1. Require green CI and Firestore Rules runs on the exact candidate commit,
    including the complete expanded browser harness and Android compilation.
-2. Publish and read back the qualified backward-compatible Firestore rules;
-   verify required indexes before promoting the client. No production write or
-   policy publication is performed by this audit.
+2. Backend prerequisite completed: the qualified rules were published and read
+   back, five indexes remain READY, and thirteen read-only production checks passed.
+   No game/player/rating records were written. See the linked publication record.
 3. Exercise a Play-installed upgrade, Google sign-in, cold/warm invitations,
    backgrounded AI, offline/rejoin, large text and TalkBack on named phones.
    Confirm an independently signed-in production game settles and recovers once.
