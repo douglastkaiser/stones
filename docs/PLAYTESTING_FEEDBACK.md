@@ -108,7 +108,7 @@ open acceptance criteria, not completed work hidden by the correctness tests.
 - Flutter 3.47.7 / Dart 3.13.5 installed in the task workspace.
 - All 141 Firestore emulator checks passed, including old rating protocols,
   178 online seat combinations, chat and new engine identity checks.
-- The complete Flutter regression suite passed 1,027 tests. The final app-shell
+- The previous complete Flutter regression suite passed 1,027 tests. The final app-shell
   review then passed 28 focused startup, achievement, invitation and audio checks.
   That review also fixed the root's redundant home/initial-route configuration
   and supplied an overlay ancestor for the persistent audio tooltip.
@@ -147,6 +147,20 @@ open acceptance criteria, not completed work hidden by the correctness tests.
   emulator-only app passed the complete nine-scenario Chromium journey with no
   page errors, including lesson sequencing, durable saves, friend reconnect and
   v2 AI rating settlement/recovery.
+- After the seven PR-review fixes, all 1,039 Flutter tests passed, including nine
+  new review regressions and the existing lesson sequencing/sandbox tests.
+  Final production and emulator web builds and all nine rebuilt-browser journeys
+  passed with no page errors. Current AI profile fixtures now use v2; mixed v1/v2 regressions cover both live
+  and static standings. Strict analysis and all 29 Python release checks passed.
+- Review AI tuning adds reserve deployment pressure, a more forgiving Easy move
+  set, endgame flat-control evaluation for Hard/Expert and narrower multiplayer
+  breadth so Expert can finish more full-round searches within the same budget.
+  The [actual-default native probe](qa/playtesting-ai-defaults-probe.json) records
+  45 games: three seeds with seat rotations per tier on Square 5×5/two seats and
+  Hex radius 2/three seats. All finished within 160 plies. It is exploratory:
+  Hex Medium/Easy has equal per-seat win share, and Hard/Medium has many draws.
+  It does not satisfy the 50-seed gate or prove the human Expert target. Different
+  runtime and ply bounds prevent direct comparison with the historical probe.
 - Physical iOS sign-in, Android swipe-back and Play-signed audio/sharing remain
   device qualification, not results established by desktop or emulator checks.
 

@@ -15,6 +15,19 @@ const calibrationSize = int.fromEnvironment('AI_SIZE');
 const calibrationMaxPlies =
     int.fromEnvironment('AI_MAX_PLIES', defaultValue: 160);
 
+void validateCalibrationSelection() {
+  if (calibrationPairs < 1 ||
+      calibrationMaxPlies < 1 ||
+      calibrationTier < -1 ||
+      calibrationTier > 2 ||
+      (calibrationPlayers != 0 &&
+          (calibrationPlayers < 2 || calibrationPlayers > 4)) ||
+      (calibrationShape.isNotEmpty &&
+          !BoardShape.values.any((s) => s.name == calibrationShape))) {
+    throw ArgumentError('Invalid AI calibration selection');
+  }
+}
+
 Future<Map<String, Object?>> calibrateAi(BoardShape shape, int tier) async {
   final defaults = MatchConfig.defaults(shape);
   final players =
@@ -84,6 +97,7 @@ Future<Map<String, Object?>> calibrateAi(BoardShape shape, int tier) async {
   final decisive = strongerWins + weakerWins;
   // ignore: avoid_print
   final result = <String, Object?>{
+    'sample': pairs >= 50 ? 'qualification-candidate' : 'exploratory',
     'engine': MatchConfig.currentAiEngine,
     'shape': shape.name,
     'size': size,
@@ -123,6 +137,7 @@ void qualifyAi(Map<String, Object?> result) {
 }
 
 Future<void> main() async {
+  validateCalibrationSelection();
   var failed = false;
   for (final shape in BoardShape.values
       .where((s) => calibrationShape.isEmpty || s.name == calibrationShape)) {

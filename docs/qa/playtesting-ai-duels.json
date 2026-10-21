@@ -2,7 +2,7 @@
   "engine": "shared-search-v2",
   "date": "2026-10-21",
   "qualification": "Historical pre-review reduced-board duels: Square 3\u00d73 and Hex radius 2 with two seats, 50 seeded seat-swapped starts per adjacent tier. Does not qualify the actual defaults or post-review AI tuning, and is not a human skill estimate.",
-  "command": "Explicit historical boards: flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50 --dart-define=AI_PLAYERS=2 --dart-define=AI_SIZE=3 --dart-define=AI_TOURNAMENT_SHAPE=square; repeat with AI_SIZE=2 and AI_TOURNAMENT_SHAPE=hex.",
+  "command": "At sourceCommit: flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50",
   "results": [
     {
       "shape": "square",
@@ -98,5 +98,6 @@
         "expert:search": 12
       }
     }
-  ]
+  ],
+  "sourceCommit": "aa15870671681d555948672d52ef50f724abec41"
 }

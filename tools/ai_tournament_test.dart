@@ -4,6 +4,7 @@ import 'package:stones/game/match_config.dart';
 import 'ai_calibration.dart';
 
 void main() {
+  validateCalibrationSelection();
   for (final shape in BoardShape.values
       .where((s) => calibrationShape.isEmpty || s.name == calibrationShape)) {
     for (var tier = 0; tier < 3; tier++) {
