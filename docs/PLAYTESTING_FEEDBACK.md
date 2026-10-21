@@ -36,7 +36,7 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 | --- | --- | --- |
 | BOARD-01 | Actual Hex extents; width-sized narrow board; scrolling controls | Geometry, phone/layout and real gesture tests; Chromium phone capture |
 | BOARD-02 | Independent board/piece selection; preserve room seat styles | Existing room round trips and owner-layer tests, gallery migration tests |
-| BOARD-03 | Celestial board-only reward, polled established-human Overall rank | Top-decile boundaries, provisional exclusion, cutoff ties; live server queries |
+| BOARD-03 | Celestial board-only reward, polled established-human Overall rank | Server query selects one established human; live/exported revocation regression |
 | UX-01 | App-owned browser history, back to previous screen, forward restoration | Chromium Home → Settings → Back → Forward; Android remains device qualification |
 | UX-02 | New-turn/restored-position Flat selection | Wall-to-next-turn widget regression; normal draft clear preserves same-turn choice |
 | UX-03 | Online own-turn and shared-device human-turn banner/sound, deduplicated by match/ply | Three-human and mixed human/AI transitions; pause/disconnect suppression; effects independent of music |
@@ -67,9 +67,10 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
   and checked against the auth token's anonymous/permanent status. Reads require
   authentication; enumeration and extra identity/profile fields are denied.
   Missing metadata in older rooms remains unknown, never assumed signed in.
-- Top-decile eligibility uses human established Overall competition rank at or
-  above the ceil(population/10) cutoff, including ties. It is checked on the
-  server every minute while observed. Failed checks render the default board;
+- Celestial eligibility belongs only to the single highest-rated established
+  human in Overall. Equal ratings use Firestore document ID ordering to select
+  one player. It is checked on the server every minute while observed. Failed
+  checks render the default board;
   selection never grants a permanent achievement. This remains client-enforced
   cosmetic eligibility under the existing Spark trust boundary.
 - Chat uses Firebase REST delivery so message bodies never enter the native

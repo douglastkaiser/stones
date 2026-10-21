@@ -158,7 +158,7 @@ final isPieceStyleUnlockedProvider =
 final boardThemeUnlockRequirementProvider =
     Provider.family<String?, BoardTheme>((ref, theme) {
   if (theme == BoardTheme.celestial) {
-    return 'Current top 10% of established human Overall ratings. Access ends when your rank drops.';
+    return 'Current #1 established human player in Overall ratings only. Access ends when you lose the top spot.';
   }
   final themeData = BoardThemeData.forTheme(theme);
   if (themeData.requiredAchievement == null) return null;

@@ -17,7 +17,6 @@ import 'package:stones/game/rating_recovery.dart';
 import 'package:stones/game/rating_submission.dart';
 import 'package:stones/game/result_share_data.dart';
 import 'package:stones/models/piece.dart';
-import 'package:stones/providers/elite_theme_provider.dart';
 import 'package:stones/services/match_chat_service.dart';
 import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
@@ -110,17 +109,6 @@ void main() {
     expect(MatchConfig.fromMap(current.toMap()).aiEngine, 'shared-search-v2');
     final old = current.toMap()..remove('aiEngine');
     expect(MatchConfig.fromMap(old).aiEngine, 'shared-search-v1');
-  });
-  test('top decile excludes provisional, includes ties and small populations',
-      () {
-    expect(
-        topDecileEligible(established: false, population: 100, rank: 1), false);
-    expect(topDecileEligible(established: true, population: 0, rank: 1), false);
-    expect(topDecileEligible(established: true, population: 1, rank: 1), true);
-    expect(
-        topDecileEligible(established: true, population: 101, rank: 11), true);
-    expect(
-        topDecileEligible(established: true, population: 100, rank: 11), false);
   });
   test('chat filter intentionally masks substrings and markup stays plain text',
       () {

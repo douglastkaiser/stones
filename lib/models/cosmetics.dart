@@ -74,7 +74,7 @@ const List<BoardThemeData> boardThemes = [
     theme: BoardTheme.celestial,
     name: 'Celestial',
     description:
-        'A midnight constellation board for the current top 10% of established human players.',
+        'A midnight constellation board for the current #1 established human player.',
     frameOuter: Color(0xFF090C24),
     frameInner: Color(0xFF7371B9),
     background: Color(0xFF101632),
