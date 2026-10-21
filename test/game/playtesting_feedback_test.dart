@@ -213,6 +213,7 @@ void main() {
         overrides: [matchProvider.overrideWith((_) => controller)],
         child: const MaterialApp(home: MatchScreen())));
     await tester.pump();
+    await tester.ensureVisible(find.text('Wall'));
     await tester.tap(find.text('Wall'));
     await tester.pump();
     expect(

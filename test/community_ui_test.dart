@@ -165,7 +165,6 @@ void main() {
               body: ValueListenableBuilder<bool>(
                   valueListenable: expanded,
                   builder: (_, value, __) => MatchTableLayout(
-                      playerCount: 2,
                       board: const ColoredBox(color: Colors.brown),
                       players: const SizedBox(height: 60),
                       status: const Text('Your turn'),

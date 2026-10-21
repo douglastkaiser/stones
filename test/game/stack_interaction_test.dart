@@ -162,10 +162,14 @@ void main() {
             find.byTooltip('Undo last drop'),
             find.byTooltip('Inspect another stack')
           ]) {
+            // Secondary actions scroll; confirmation stays pinned.
+            await tester.ensureVisible(action);
+            await tester.pumpAndSettle();
             expect(action.hitTestable(), findsOneWidget);
+            expect(find.text('Confirm move').hitTestable(), findsOneWidget);
             expect(tester.getRect(action).bottom,
                 lessThanOrEqualTo(confirmBounds.top),
-                reason: 'Draft actions must stay visible above confirmation');
+                reason: 'Scrolled draft actions must clear the pinned confirmation');
           }
 
           await capture(tester, key,
@@ -279,6 +283,8 @@ void main() {
       await tapVisible(tester, find.text('Expand'));
       await tester.pumpAndSettle();
       final layers = find.byKey(const ValueKey('stack-layers-Stack 0,0'));
+      await tester.ensureVisible(layers);
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
           find.byKey(const ValueKey('take-layer-30')), 350,
           scrollable:

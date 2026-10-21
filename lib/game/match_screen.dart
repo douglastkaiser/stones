@@ -409,8 +409,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     icon: const Icon(Icons.flag_outlined)),
             ]),
         body: MatchTableLayout(
-          playerCount: game.config.seats.length,
-          expandBoard: game.config.shape == BoardShape.hex,
           invitation: match.room == null
               ? null
               : RoomInvitationBar(code: match.room!.code),
@@ -519,6 +517,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                   ? null
                   : (cell, direction) =>
                       setState(() => _selection.swipe(game, cell, direction))),
+          primaryActions: _primaryActions(match, game),
           controls: Padding(
               padding: const EdgeInsets.all(8),
               child: _controls(match, game, styles)),
@@ -613,7 +612,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   }
 
   Widget _controls(
-      MatchSession match, MatchState game, Map<SeatId, PieceStyle> styles) {
+    MatchSession match,
+    MatchState game,
+    Map<SeatId, PieceStyle> styles,
+  ) {
     final inspected = _selection.inspected;
     final source = _selection.source;
     final position =
@@ -621,71 +623,76 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final stones =
         inspected == null ? const <Stone>[] : position.stackAt(inspected);
     final isCarry = inspected != null && inspected == source;
-    return SizedBox(
-      height: MatchTableLayout.controlsHeight(
-          MediaQuery.sizeOf(context).width -
-              MediaQuery.paddingOf(context).horizontal,
-          MediaQuery.textScalerOf(context).scale(1)),
-      child: Column(children: [
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         if (match.elapsed != null) ElapsedLabel(elapsed: match.elapsed!),
-        Expanded(
-            child: LayoutBuilder(
-                builder: (context, area) => SingleChildScrollView(
-                    key: ValueKey('stack-controls-$inspected'),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      if (stones.isNotEmpty)
-                        StackMoveTray(
-                            label:
-                                '${!isCarry && !identical(position, game) ? 'Preview stack' : 'Stack'} $inspected',
-                            stones: stones,
-                            styles: styles,
-                            carry: isCarry ? _selection.carry : 0,
-                            dropped: isCarry ? _selection.dropped : 0,
-                            started: isCarry && _selection.started,
-                            carryLimit: game.geometry.carryLimit,
-                            showNextDrop: false,
-                            maxHeight: area.maxHeight,
-                            onCarry: isCarry &&
-                                    match.canPlay &&
-                                    !_selection.started
-                                ? (count) =>
-                                    setState(() => _selection.setCarry(count))
-                                : null,
-                            onReturn: source != null && !isCarry
-                                ? () => setState(
-                                    () => _selection.inspected = source)
-                                : null),
-                      if (source == null) _moveControls(match, game),
-                    ])))),
+        if (stones.isNotEmpty)
+          StackMoveTray(
+            label:
+                '${!isCarry && !identical(position, game) ? 'Preview stack' : 'Stack'} $inspected',
+            stones: stones,
+            styles: styles,
+            carry: isCarry ? _selection.carry : 0,
+            dropped: isCarry ? _selection.dropped : 0,
+            started: isCarry && _selection.started,
+            carryLimit: game.geometry.carryLimit,
+            showNextDrop: false,
+            onCarry: isCarry && match.canPlay && !_selection.started
+                ? (count) => setState(() => _selection.setCarry(count))
+                : null,
+            onReturn: source != null && !isCarry
+                ? () => setState(() => _selection.inspected = source)
+                : null,
+          ),
+        if (source == null) _moveControls(match, game),
         if (source != null) _draftActions(match, game, styles),
-        if (source != null || _selection.planned != null)
-          Wrap(spacing: 12, alignment: WrapAlignment.center, children: [
-            TextButton(
-                onPressed: () => setState(() {
-                      _selection.clear();
-                      _inspectPicking = false;
-                    }),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed:
-                    match.canPlay && previewLegal(game) ? _confirm : null,
-                child: Text(source == null ? 'Confirm' : 'Confirm move')),
-          ])
-        else if (inspected != null)
-          Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
-            TextButton(
-                onPressed: () => setState(() => _selection.inspected = null),
-                child: const Text('Close inspection')),
-            if (match.canPlay &&
-                !game.opening &&
-                game.topAt(inspected)?.seat == game.current)
-              FilledButton(
-                  onPressed: () =>
-                      setState(() => _selection.tap(game, inspected)),
-                  child: const Text('Move this stack')),
-          ]),
-      ]),
+      ],
     );
+  }
+
+  Widget? _primaryActions(MatchSession match, MatchState game) {
+    final source = _selection.source;
+    final inspected = _selection.inspected;
+    if (source != null || _selection.planned != null) {
+      return Wrap(
+        spacing: 12,
+        alignment: WrapAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => setState(() {
+              _selection.clear();
+              _inspectPicking = false;
+            }),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: match.canPlay && previewLegal(game) ? _confirm : null,
+            child: Text(source == null ? 'Confirm' : 'Confirm move'),
+          ),
+        ],
+      );
+    }
+    if (inspected != null) {
+      return Wrap(
+        spacing: 8,
+        alignment: WrapAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => setState(() => _selection.inspected = null),
+            child: const Text('Close inspection'),
+          ),
+          if (match.canPlay &&
+              !game.opening &&
+              game.topAt(inspected)?.seat == game.current)
+            FilledButton(
+              onPressed: () => setState(() => _selection.tap(game, inspected)),
+              child: const Text('Move this stack'),
+            ),
+        ],
+      );
+    }
+    return null;
   }
 
   String _resultSeatName(MatchSession match, SeatId id) {

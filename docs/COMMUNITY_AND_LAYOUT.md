@@ -22,29 +22,43 @@ No email, competitive counters or room content is stored in this collection.
 
 ## Board layout audit and repair
 
-The previous shared screen used a 760-pixel-wide vertical column on desktop and
-reserved 98 text-scaled pixels for players plus 230 for controls. Its board-size
-calculation reserved a different amount of height, causing oversized scroll
-content and unused space even when the useful controls fitted on a phone.
+Both Square and Hex now use the same width-based portrait layout: the safe
+available width, capped at 760 pixels, with the existing 12-pixel drawing margin.
+Desktop retains a board beside a 310-pixel sidebar. Board dimensions do not
+depend on selection controls, inspection content, or transient messages.
 
-`MatchTableLayout` uses a board up to 760 pixels beside a 310-pixel controls
-sidebar on wide viewports. Phones retain the vertical layout with compact,
-content-sized controls. Board geometry depends on the viewport/configuration,
-not selection controls or transient errors. Normal 390×844 two-player tables
-have zero outer scroll extent; genuinely taller short-screen/large-text content
-remains scrollable. Clamped scrolling prevents dragging into unused tail space.
+Primary confirmation/cancellation and inspection actions sit outside the content
+scroll view, above the bottom safe area. They occupy layout space instead of
+covering the board. Secondary controls, player information and details scroll
+when necessary. Fixed control-height reservations have been removed.
 
-The reachable home, setup, Join, My games, learning, account, Settings, collection
-and feedback layouts use their existing bounded or content-sized scroll paths.
-The unnecessary fixed control reservation was in the shared match screen; it was
-removed there rather than disabling useful scrolling elsewhere. Existing legacy
-screens remain available for old saves and rooms.
+The previous zero-outer-scroll requirement is superseded: short screens may
+scroll, but must not shrink portrait boards to fit a guessed control budget.
+Regression checks must verify actual board width and action hit testing without
+scrolling to confirmation, for both shapes. Browser/device qualification is
+separate from widget-test evidence.
 
-Automated captures use the actual MatchScreen, renderers and bundled fonts:
-`build/qa/community/{square,hex}-{2,4}-{320,390,1366}.png`. They cover 320×568,
-390×844 and 1366×900; existing shared screen tests also cover three players and
-large text. Debug ribbons in captures are test UI. These are layout/gesture
-checks, not physical-phone performance measurements.
+### 2026-10-21 regression qualification
+
+The shared-screen matrix passed 130 cases across both shapes, two/three/four
+seats, minimum/maximum board sizes, seven viewport sizes, and 100/150/200% text.
+Checks cover safe-area bounds, rendered square width, placement/cancellation,
+rotation with a draft, keyboard insets, stack drafting and inspection.
+
+The full suite ran with 1,143 passes and seven reported failures: one stale
+compile after removing the obsolete layout parameter, and six assertions based
+on the old non-scrolling control layout. The four affected files were corrected
+to assert the new contract and rerun: all 64 tests passed. In particular,
+secondary controls and expanded stack lists are scrolled into view, while
+confirmation must remain hit-testable without scrolling to it. Learning status
+may wrap naturally while board dimensions remain stable.
+
+Strict analysis and the release web build passed. Real Chromium checks passed
+for Square and Hex at 320×568, 390×844, 768×1024 and 1366×900, including tapping
+confirmation without scrolling to it. Captures are under
+`build/qa/layout-browser/`; phone and desktop captures were visually inspected.
+These are browser viewport checks, not physical-device browser-toolbar or native
+safe-area qualification. No production deployment was performed.
 
 ## Invitation and QR recovery
 

@@ -116,7 +116,7 @@ void main() {
     await tester.tap(find.text('Let’s play'));
     await tester.pumpAndSettle();
     final board = find.byKey(const ValueKey('stable-board'));
-    final before = tester.getRect(board);
+    final before = tester.getSize(board);
     for (final cell in study.initial.geometry.cells.take(4)) {
       final target = find.byKey(ValueKey('cell-${cell.x}-${cell.y}'));
       await tester.tap(target);
@@ -128,7 +128,10 @@ void main() {
     expect(find.text('Waiting for the current player.'), findsNothing);
     expect(find.text('Ivory to play'), findsNothing);
     expect(find.text('Done'), findsOneWidget);
-    expect(tester.getRect(board), before);
+    // Status text can wrap naturally; finishing must not resize the board.
+    expect(tester.getSize(board), before);
+    await tester.ensureVisible(find.text('Done'));
+    expect(find.text('Done').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
