@@ -1,0 +1,17 @@
+{
+  "project": "stones-9a6a0",
+  "verifiedAt": "2026-10-21T14:35:21.978Z",
+  "rulesetName": "projects/stones-9a6a0/rulesets/c7cad732-21df-4e85-a5b2-8f4f0376a546",
+  "rulesUpdated": "2026-10-21T14:31:00.648956Z",
+  "rulesSha256": "922b127302119aea7f400099ed26cd0a91ab96918e0705c2865ca5e68191a1b9",
+  "exactSourceMatch": true,
+  "indexFileSha256": "a1e2148a12658d0475f03f054493f54c9dbf241d1e46004bfd4a83828098aed3",
+  "expectedIndexCount": 6,
+  "remoteIndexCount": 6,
+  "sourceCommit": "a72c2991c2bb17e52b594e332f96183677ee3155",
+  "allIndexesReady": true,
+  "indexAdditions": [
+    "chat: createdAt DESC, expiresAt DESC"
+  ],
+  "indexDeletions": []
+}

@@ -48,7 +48,7 @@ class RankRaceRatings extends LiveRatings {
 
 void main() {
   const bot = EloRating(
-      id: 'ai_shared-search-v1_easy',
+      id: 'ai_shared-search-v2_easy',
       displayName: 'Easy AI',
       rating: 1300,
       gamesPlayed: 20,

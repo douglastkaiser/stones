@@ -1,0 +1,103 @@
+{
+  "engine": "shared-search-v2",
+  "date": "2026-10-21",
+  "qualification": "Historical pre-review reduced-board duels: Square 3\u00d73 and Hex radius 2 with two seats, 50 seeded seat-swapped starts per adjacent tier. Does not qualify the actual defaults or post-review AI tuning, and is not a human skill estimate.",
+  "command": "At sourceCommit: flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50",
+  "results": [
+    {
+      "shape": "square",
+      "tier": 0,
+      "pairs": 50,
+      "strongerWins": 90,
+      "weakerWins": 6,
+      "draws": 4,
+      "unfinished": 0,
+      "strongerWinRate": 0.9375,
+      "averageCompletedDepth": {
+        "easy": 0.0,
+        "medium": 0.908237747653806
+      },
+      "timeouts": {}
+    },
+    {
+      "shape": "square",
+      "tier": 1,
+      "pairs": 50,
+      "strongerWins": 81,
+      "weakerWins": 16,
+      "draws": 3,
+      "unfinished": 0,
+      "strongerWinRate": 0.8350515463917526,
+      "averageCompletedDepth": {
+        "medium": 0.9805589307411907,
+        "hard": 1.810304449648712
+      },
+      "timeouts": {}
+    },
+    {
+      "shape": "square",
+      "tier": 2,
+      "pairs": 50,
+      "strongerWins": 86,
+      "weakerWins": 11,
+      "draws": 3,
+      "unfinished": 0,
+      "strongerWinRate": 0.8865979381443299,
+      "averageCompletedDepth": {
+        "hard": 1.9745958429561201,
+        "expert": 2.713968957871397
+      },
+      "timeouts": {}
+    },
+    {
+      "shape": "hex",
+      "tier": 0,
+      "pairs": 50,
+      "strongerWins": 90,
+      "weakerWins": 8,
+      "draws": 1,
+      "unfinished": 1,
+      "strongerWinRate": 0.9183673469387755,
+      "averageCompletedDepth": {
+        "easy": 0.0,
+        "medium": 0.9550673989016475
+      },
+      "timeouts": {
+        "easy:defense": 9
+      }
+    },
+    {
+      "shape": "hex",
+      "tier": 1,
+      "pairs": 50,
+      "strongerWins": 69,
+      "weakerWins": 28,
+      "draws": 3,
+      "unfinished": 0,
+      "strongerWinRate": 0.711340206185567,
+      "averageCompletedDepth": {
+        "medium": 0.9726027397260274,
+        "hard": 1.8674351585014408
+      },
+      "timeouts": {}
+    },
+    {
+      "shape": "hex",
+      "tier": 2,
+      "pairs": 50,
+      "strongerWins": 88,
+      "weakerWins": 12,
+      "draws": 0,
+      "unfinished": 0,
+      "strongerWinRate": 0.88,
+      "averageCompletedDepth": {
+        "hard": 1.9797297297297298,
+        "expert": 2.7741407528641573
+      },
+      "timeouts": {
+        "expert:search": 12
+      }
+    }
+  ],
+  "sourceCommit": "aa15870671681d555948672d52ef50f724abec41"
+}

@@ -1,49 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/puzzle_hints.dart';
+import '../providers/achievements_provider.dart';
 import 'match_provider.dart';
 import 'match_screen.dart';
 import 'match_study.dart';
 import 'study_controller.dart';
+import 'study_catalog.dart';
+import 'fundamentals.dart';
+import 'match_config.dart';
+import 'match_preset.dart';
+import 'match_setup_screen.dart';
 
-enum StudyExit { next, practice }
-
-class StudyScreen extends StatelessWidget {
+class StudyScreen extends ConsumerWidget {
   const StudyScreen(
-      {super.key,
-      required this.study,
-      required this.onSolved,
-      this.onResult,
-      this.nextLesson,
-      this.offerPractice = false});
+      {super.key, required this.study, this.onSolved, this.onResult});
   final MatchStudy study;
-  final Future<void> Function(MatchStudy) onSolved;
+  final Future<void> Function(MatchStudy)? onSolved;
   final Future<void> Function(MatchStudy, bool)? onResult;
-  final String? nextLesson;
-  final bool offerPractice;
   @override
-  Widget build(BuildContext context) => ProviderScope(
-          overrides: [
-            matchProvider.overrideWith((ref) {
-              late final StudyController controller;
-              controller = StudyController(study,
-                  onSolved: (study) =>
-                      onResult?.call(study, !controller.hintsUsed) ??
-                      onSolved(study));
-              return controller;
-            })
-          ],
-          child: MatchScreen(
-              title: study.title,
-              objective: study.goal,
-              studyPanel: _StudyPanel(study,
-                  nextLesson: nextLesson, offerPractice: offerPractice)));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = squareFundamentals.indexOf(study.id);
+    final next = index >= 0 && index + 1 < squareFundamentals.length
+        ? matchStudies.firstWhere((s) => s.id == squareFundamentals[index + 1])
+        : null;
+    final awards = ref.read(achievementProvider.notifier);
+    Future<void> save(MatchStudy value, bool unassisted) => value.puzzle
+        ? awards.completePuzzle(value.id, unassisted: unassisted)
+        : awards.completeTutorial(value.id);
+    return ProviderScope(
+        overrides: [
+          matchProvider.overrideWith((ref) {
+            late final StudyController controller;
+            controller = StudyController(study,
+                onSolved: (study) =>
+                    onResult?.call(study, !controller.hintsUsed) ??
+                    onSolved?.call(study) ??
+                    save(study, !controller.hintsUsed));
+            return controller;
+          })
+        ],
+        child: MatchScreen(
+            title: study.title,
+            objective: study.goal,
+            studyPanel:
+                _StudyPanel(study, next: next, offerPractice: index >= 0)));
+  }
 }
 
 class _StudyPanel extends ConsumerWidget {
-  const _StudyPanel(this.study, {this.nextLesson, required this.offerPractice});
+  const _StudyPanel(this.study, {this.next, required this.offerPractice});
   final MatchStudy study;
-  final String? nextLesson;
+  final MatchStudy? next;
   final bool offerPractice;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -75,13 +83,21 @@ class _StudyPanel extends ConsumerWidget {
                 icon: const Icon(Icons.save_outlined),
                 label: const Text('Retry saving progress')),
           if (controller.solved && !controller.canRetryProgress) ...[
-            if (nextLesson != null)
+            if (next != null)
               FilledButton(
-                  onPressed: () => Navigator.pop(context, StudyExit.next),
-                  child: Text('Next lesson: $nextLesson')),
+                  onPressed: () => Navigator.pushReplacement<void, void>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => StudyScreen(study: next!))),
+                  child: Text('Next lesson: ${next!.title}')),
             if (offerPractice)
               OutlinedButton(
-                  onPressed: () => Navigator.pop(context, StudyExit.practice),
+                  onPressed: () => Navigator.pushReplacement<void, void>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MatchSetupScreen(
+                              shape: BoardShape.square,
+                              preset: MatchPreset.learn))),
                   child: const Text('Try a coached game')),
           ],
           if (controller.solved)

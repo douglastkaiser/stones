@@ -21,12 +21,14 @@ class ThemeGallery extends ConsumerWidget {
               width: width,
               child: Builder(builder: (context) {
                 final data = BoardThemeData.forTheme(theme);
-                final style = PieceStyle.values[theme.index];
+                final style = theme == BoardTheme.celestial
+                    ? selected.selectedPieceStyle
+                    : PieceStyle.values[theme.index];
                 final unlocked =
                     ref.watch(isBoardThemeUnlockedProvider(theme)) ||
-                        ref.watch(isPieceStyleUnlockedProvider(style));
-                final active = selected.selectedBoardTheme == theme &&
-                    selected.selectedPieceStyle == style;
+                        (theme != BoardTheme.celestial &&
+                            ref.watch(isPieceStyleUnlockedProvider(style)));
+                final active = selected.selectedBoardTheme == theme && unlocked;
                 final boardRequirement =
                     ref.watch(boardThemeUnlockRequirementProvider(theme));
                 final pieceRequirement =
@@ -92,13 +94,24 @@ class ThemeGallery extends ConsumerWidget {
                                 onPressed: unlocked
                                     ? () => ref
                                         .read(cosmeticsProvider.notifier)
-                                        .setTheme(theme)
+                                        .setBoardTheme(theme)
                                     : preview,
                                 child: Text(active
                                     ? 'Selected'
                                     : unlocked
                                         ? 'Use ${data.name}'
                                         : 'Locked')),
+                            if (theme != BoardTheme.celestial)
+                              TextButton(
+                                  onPressed: unlocked
+                                      ? () => ref
+                                          .read(cosmeticsProvider.notifier)
+                                          .setPieceStyle(style)
+                                      : null,
+                                  child: Text(
+                                      selected.selectedPieceStyle == style
+                                          ? 'Pieces selected'
+                                          : 'Use pieces')),
                           ]),
                         ])));
               })),
@@ -128,7 +141,9 @@ class ThemeSamplePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final data = BoardThemeData.forTheme(theme);
-    final pieces = PieceStyleData.forStyle(PieceStyle.values[theme.index]);
+    final pieces = PieceStyleData.forStyle(theme == BoardTheme.celestial
+        ? PieceStyle.standard
+        : PieceStyle.values[theme.index]);
     final board = Rect.fromLTWH(0, 0, size.width, size.height);
     canvas.drawRRect(RRect.fromRectAndRadius(board, const Radius.circular(8)),
         Paint()..color = data.frameOuter);

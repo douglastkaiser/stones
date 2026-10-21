@@ -192,6 +192,15 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
           ),
           const SizedBox(height: 40),
 
+          ListTile(
+            leading: const Icon(Icons.menu_book_outlined),
+            title: const Text('Official Tak rules (PDF)'),
+            subtitle: const Text(
+                'Publisher rules for two-player Tak. Hex and multiplayer are Stones variants.'),
+            onTap: () => launchUrl(
+                Uri.parse('https://crabfragmentlabs.com/s/TakCoreRules.pdf'),
+                mode: LaunchMode.externalApplication),
+          ),
           // About Stones Section
           const _AboutCard(
             title: 'About Stones',

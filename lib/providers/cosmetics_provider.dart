@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/achievement.dart';
 import '../models/cosmetics.dart';
 import 'achievements_provider.dart';
+import 'account_provider.dart';
+import 'elite_theme_provider.dart';
 
 /// Keys for SharedPreferences
 class CosmeticsKeys {
@@ -72,7 +74,9 @@ class CosmeticsNotifier extends StateNotifier<CosmeticsState> {
 
   /// Set the board theme and persist
   Future<void> setTheme(BoardTheme theme) async {
-    final style = PieceStyle.values[theme.index];
+    final style = theme == BoardTheme.celestial
+        ? state.selectedPieceStyle
+        : PieceStyle.values[theme.index];
     state =
         CosmeticsState(selectedBoardTheme: theme, selectedPieceStyle: style);
     final prefs = await SharedPreferences.getInstance();
@@ -111,7 +115,11 @@ final cosmeticsProvider =
 
 /// Provider for current board theme data
 final currentBoardThemeProvider = Provider<BoardThemeData>((ref) {
-  return ref.watch(cosmeticsProvider).boardThemeData;
+  final theme = ref.watch(cosmeticsProvider).selectedBoardTheme;
+  return BoardThemeData.forTheme(theme == BoardTheme.celestial &&
+          !ref.watch(isBoardThemeUnlockedProvider(theme))
+      ? BoardTheme.classicWood
+      : theme);
 });
 
 /// Provider for current piece style data
@@ -122,6 +130,13 @@ final currentPieceStyleProvider = Provider<PieceStyleData>((ref) {
 /// Provider for checking if a board theme is unlocked
 final isBoardThemeUnlockedProvider =
     Provider.family<bool, BoardTheme>((ref, theme) {
+  if (theme == BoardTheme.celestial) {
+    final identity = ref.watch(accountProvider).identity;
+    return identity != null &&
+        !identity.guest &&
+        ref.watch(eliteThemeEligibilityProvider(identity.uid)).valueOrNull ==
+            true;
+  }
   final themeData = BoardThemeData.forTheme(theme);
   if (themeData.requiredAchievement == null) return true;
 
@@ -142,6 +157,9 @@ final isPieceStyleUnlockedProvider =
 /// Provider for unlock requirement text for a board theme
 final boardThemeUnlockRequirementProvider =
     Provider.family<String?, BoardTheme>((ref, theme) {
+  if (theme == BoardTheme.celestial) {
+    return 'Current top 10% of established human Overall ratings. Access ends when your rank drops.';
+  }
   final themeData = BoardThemeData.forTheme(theme);
   if (themeData.requiredAchievement == null) return null;
 
@@ -176,6 +194,8 @@ final shareablePieceStyleProvider = Provider<PieceStyle>((ref) {
 final shareableBoardThemeProvider = Provider<BoardTheme>((ref) {
   final theme = ref.watch(cosmeticsProvider).selectedBoardTheme;
   final unlocked = ref.watch(isBoardThemeUnlockedProvider(theme)) ||
-      ref.watch(isPieceStyleUnlockedProvider(PieceStyle.values[theme.index]));
+      (theme != BoardTheme.celestial &&
+          ref.watch(
+              isPieceStyleUnlockedProvider(PieceStyle.values[theme.index])));
   return unlocked ? theme : BoardTheme.classicWood;
 });

@@ -35,6 +35,37 @@ void main() {
                   MatchRules.play(next, reply)!.result?.winner == SeatId.ivory),
               isFalse);
         });
+        if (count > 2) {
+          test('$level $shape $count blocks a rival beyond the next seat',
+              () async {
+            final config = MatchConfig(
+                shape: shape,
+                size: shape == BoardShape.square ? 5 : 2,
+                seats: SeatId.values.take(count).map(SeatConfig.new).toList());
+            final rival = SeatId.values[count - 1];
+            final game =
+                MatchState.initial(config).copyWith(ply: count, board: {
+              if (shape == BoardShape.square)
+                for (final x in [0, 1, 3, 4])
+                  Cell(x, 2): [Stone(rival, PieceType.flat)]
+              else
+                for (final x in [-2, -1, 1, 2])
+                  Cell(x, 0): [Stone(rival, PieceType.flat)],
+            });
+            final move =
+                await MatchAI(level, yieldDuringSearch: false).choose(game);
+            final next = MatchRules.play(game, move!)!;
+            var ply = next.ply;
+            while (config.turnAt(ply) != rival) {
+              ply++;
+            }
+            final rivalTurn = next.copyWith(ply: ply);
+            expect(
+                MatchRules.legalMoves(rivalTurn).any((reply) =>
+                    MatchRules.play(rivalTurn, reply)!.result?.winner == rival),
+                isFalse);
+          });
+        }
         test(
             '$level $shape $count takes a road win regardless of seat identity',
             () async {

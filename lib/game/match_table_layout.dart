@@ -11,10 +11,12 @@ class MatchTableLayout extends StatelessWidget {
       required this.controls,
       required this.details,
       required this.playerCount,
-      this.invitation});
+      this.invitation,
+      this.expandBoard = false});
   final Widget board, players, status, controls, details;
   final Widget? invitation;
   final int playerCount;
+  final bool expandBoard;
   static double controlsHeight(double width, double scale) =>
       (width >= 1000 && width / scale >= 760
           ? 520
@@ -57,15 +59,17 @@ class MatchTableLayout extends StatelessWidget {
         }
         final playerBudget =
             (playerCount > 2 || bounds.maxWidth < 360 ? 120 : 72) * scale;
-        final side = math.min(
-            math.min(bounds.maxWidth, 760),
-            math.max(
-                240,
-                bounds.maxHeight -
-                    playerBudget -
-                    44 * scale -
-                    (controlsHeight(bounds.maxWidth, scale) + 16) -
-                    (invitation == null ? 0 : 60 * scale)));
+        final side = expandBoard
+            ? math.min(bounds.maxWidth, 760)
+            : math.min(
+                math.min(bounds.maxWidth, 760),
+                math.max(
+                    240,
+                    bounds.maxHeight -
+                        playerBudget -
+                        44 * scale -
+                        (controlsHeight(bounds.maxWidth, scale) + 16) -
+                        (invitation == null ? 0 : 60 * scale)));
         return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: Center(

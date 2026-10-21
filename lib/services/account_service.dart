@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -42,12 +43,28 @@ class FirebaseAccountService implements AccountService {
   Future<void> initialize() async {
     await bootstrap();
     await _auth.authStateChanges().first;
+    unawaited(_publishStatus(_auth.currentUser));
   }
 
   @override
   AccountIdentity? get current => identity(_auth.currentUser);
   @override
-  Stream<AccountIdentity?> get changes => _auth.userChanges().map(identity);
+  Stream<AccountIdentity?> get changes => _auth.userChanges().map((user) {
+        unawaited(_publishStatus(user));
+        return identity(user);
+      });
+  Future<void> _publishStatus(User? user) async {
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('playerAccounts')
+          .doc(user.uid)
+          .set({'registered': !user.isAnonymous}).timeout(
+              const Duration(seconds: 5));
+    } catch (_) {
+      /* Account access must not depend on optional rating metadata. */
+    }
+  }
 
   @override
   Future<AccountIdentity?> signInGoogle(
@@ -78,6 +95,7 @@ class FirebaseAccountService implements AccountService {
             ? await guest!.linkWithCredential(credential)
             : await _auth.signInWithCredential(credential);
       }
+      await _publishStatus(result.user);
       return identity(result.user);
     } on FirebaseAuthException catch (error) {
       if ([
@@ -100,6 +118,7 @@ class FirebaseAccountService implements AccountService {
   Future<AccountIdentity> ensurePlayer() async {
     final user = _auth.currentUser ?? (await _auth.signInAnonymously()).user;
     if (user == null) throw FirebaseAuthException(code: 'missing-user');
+    unawaited(_publishStatus(user));
     return identity(user)!;
   }
 
@@ -129,6 +148,9 @@ String accountErrorMessage(Object error) {
     'network-request-failed' ||
     'network_error' =>
       'Could not reach Google. Check your connection and try again.',
+    'missing-initial-state' ||
+    'web-storage-unsupported' =>
+      'Your browser could not keep the sign-in state. Return to Stones, allow website storage, and try Google sign-in again.',
     'popup-blocked' =>
       'Your browser blocked the sign-in window. Allow popups for Stones, then try again.',
     'unauthorized-domain' =>

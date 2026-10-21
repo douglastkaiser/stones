@@ -83,7 +83,7 @@ void main() {
         MatchSession(game: game, id: 'local-clock', uid: 'alice'),
         moves,
         'alice');
-    expect(evidence!.participants, ['alice', 'ai_shared-search-v1_easy']);
+    expect(evidence!.participants, ['alice', 'ai_shared-search-v2_easy']);
     expect(evidence.ranks, [1, 2]);
     expect(
         RatingEvidence.verify(
@@ -103,7 +103,7 @@ void main() {
     final evidence = RatingEvidence.verify(session, moves, 'alice')!;
     expect(evidence.humans, isEmpty);
     expect(evidence.participants,
-        ['ai_shared-search-v1_expert', 'ai_shared-search-v1_easy']);
+        ['ai_shared-search-v2_expert', 'ai_shared-search-v2_easy']);
     expect(evidence.winner, 0);
     expect(RatingEvidence.verify(session, moves, 'bob'), isNull);
     expect(
@@ -180,7 +180,7 @@ void main() {
           'alice');
       expect(evidence, isNotNull);
       expect(evidence!.participants,
-          ['alice', ...List.filled(count - 1, 'ai_shared-search-v1_hard')]);
+          ['alice', ...List.filled(count - 1, 'ai_shared-search-v2_hard')]);
       expect(evidence.ranks.first, 1);
     });
   }
@@ -209,7 +209,7 @@ void main() {
         MatchSession(game: game, room: room, id: room.code, uid: 'bob');
     final evidence = RatingEvidence.verify(session, event.moves, 'bob');
     expect(
-        evidence!.participants, ['alice', 'bob', 'ai_shared-search-v1_hard']);
+        evidence!.participants, ['alice', 'bob', 'ai_shared-search-v2_hard']);
     final altered =
         game.copyWith(board: {...game.board}..remove(game.board.keys.first));
     expect(

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsKeys {
   static const String hexModeEnabled = 'hex_mode_enabled';
   static const String boardSize = 'board_size';
+  static const String musicVolume = 'music_volume';
   static const String soundMuted = 'sound_muted';
   static const String themeMode = 'theme_mode';
   static const String chessClockEnabled = 'chess_clock_enabled';
@@ -42,6 +43,7 @@ class AppSettings {
   final bool hexModeEnabled;
   final int boardSize;
   final bool isSoundMuted;
+  final double musicVolume;
   final ThemeMode themeMode;
   final bool chessClockEnabled;
   final Map<int, int> chessClockDefaults;
@@ -50,6 +52,7 @@ class AppSettings {
     this.hexModeEnabled = false,
     this.boardSize = 5,
     this.isSoundMuted = false,
+    this.musicVolume = 0,
     this.themeMode = ThemeMode.system,
     this.chessClockEnabled = false,
     this.chessClockDefaults = const {},
@@ -59,6 +62,7 @@ class AppSettings {
     bool? hexModeEnabled,
     int? boardSize,
     bool? isSoundMuted,
+    double? musicVolume,
     ThemeMode? themeMode,
     bool? chessClockEnabled,
     Map<int, int>? chessClockDefaults,
@@ -67,6 +71,7 @@ class AppSettings {
       hexModeEnabled: hexModeEnabled ?? this.hexModeEnabled,
       boardSize: boardSize ?? this.boardSize,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
+      musicVolume: musicVolume ?? this.musicVolume,
       themeMode: themeMode ?? this.themeMode,
       chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
       chessClockDefaults: chessClockDefaults ?? this.chessClockDefaults,
@@ -74,7 +79,8 @@ class AppSettings {
   }
 
   int chessClockSecondsForSize(int boardSize) {
-    return chessClockDefaults[boardSize] ?? ChessClockDefaults.getTimeForBoardSize(boardSize);
+    return chessClockDefaults[boardSize] ??
+        ChessClockDefaults.getTimeForBoardSize(boardSize);
   }
 }
 
@@ -93,6 +99,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       hexModeEnabled: prefs.getBool(SettingsKeys.hexModeEnabled) ?? false,
       boardSize: prefs.getInt(SettingsKeys.boardSize) ?? 5,
       isSoundMuted: prefs.getBool(SettingsKeys.soundMuted) ?? false,
+      musicVolume:
+          (prefs.getDouble(SettingsKeys.musicVolume) ?? 0).clamp(0.0, 1.0),
       themeMode: themeModeIndex != null
           ? ThemeMode.values[themeModeIndex]
           : ThemeMode.system,
@@ -113,6 +121,12 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(boardSize: size);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(SettingsKeys.boardSize, size);
+  }
+
+  Future<void> setMusicVolume(double volume) async {
+    state = state.copyWith(musicVolume: volume.clamp(0.0, 1.0));
+    await (await SharedPreferences.getInstance())
+        .setDouble(SettingsKeys.musicVolume, state.musicVolume);
   }
 
   /// Set sound muted and persist
@@ -146,7 +160,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     updated[boardSize] = seconds;
     state = state.copyWith(chessClockDefaults: Map.unmodifiable(updated));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(SettingsKeys.chessClockDefaults, _encodeChessClockDefaults(updated));
+    await prefs.setString(
+        SettingsKeys.chessClockDefaults, _encodeChessClockDefaults(updated));
   }
 
   /// Reset settings to defaults
@@ -155,6 +170,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     await prefs.remove(SettingsKeys.boardSize);
     await prefs.remove(SettingsKeys.hexModeEnabled);
     await prefs.remove(SettingsKeys.soundMuted);
+    await prefs.remove(SettingsKeys.musicVolume);
     await prefs.remove(SettingsKeys.themeMode);
     await prefs.remove(SettingsKeys.chessClockEnabled);
     await prefs.remove(SettingsKeys.chessClockDefaults);

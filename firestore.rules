@@ -30,7 +30,7 @@ service cloud.firestore {
     }
 
     function validBoardTheme(theme) {
-      return theme in ['classicWood', 'darkStone', 'marble', 'morocco', 'kyoto'];
+      return theme in ['classicWood', 'darkStone', 'marble', 'morocco', 'kyoto', 'celestial'];
     }
 
     // Helper function to validate move object structure
@@ -286,8 +286,7 @@ service cloud.firestore {
       function validSeat(data, index, creating) {
         let seat = data.config.seats[index];
         let owner = data.owners[seat.id];
-        return seat.keys().hasAll(['id', 'control', 'level']) &&
-          seat.keys().hasOnly(['id', 'control', 'level']) && validId(seat.id) &&
+        return seat.keys().hasOnly(['id', 'control', 'level']) && validId(seat.id) &&
           seat.control in ['localHuman', 'onlineHuman', 'ai'] &&
           seat.level in ['easy', 'medium', 'hard', 'expert'] &&
           validPieceStyle(data.styles[seat.id]) &&
@@ -298,8 +297,7 @@ service cloud.firestore {
              (!creating || data.styles[seat.id] == 'standard')));
       }
       function configShape(c) {
-        return c.keys().hasAll(['version', 'shape', 'size', 'seats', 'starter', 'profile']) &&
-          c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion']) && c.get('ratingVersion', 1) in [1, 2, 3] &&
+        return c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion', 'aiEngine']) && c.get('aiEngine', 'shared-search-v1') in ['shared-search-v1','shared-search-v2'] && c.get('ratingVersion', 1) in [1, 2, 3] &&
           c.get('clockSeconds', 0) is int && c.get('clockSeconds', 0) >= 0 && c.get('clockSeconds', 0) <= 59940 &&
           c.version == 1 && c.size is int &&
           ((c.shape == 'square' && c.size >= 3 && c.size <= 8) ||
@@ -348,7 +346,9 @@ service cloud.firestore {
           seat.control == 'onlineHuman' && before.owners[seat.id] == null &&
           after.owners[seat.id] == request.auth.uid && before.host != request.auth.uid &&
           !(request.auth.uid in before.owners.values()) &&
-          after.diff(before).affectedKeys().hasOnly(['owners', 'styles']) &&
+          after.diff(before).affectedKeys().hasOnly(['owners', 'styles', 'startedAt']) &&
+          (after.get('startedAt',null) == before.get('startedAt',null) ||
+           (before.get('startedAt',null) == null && ready(after) && after.startedAt == request.time)) &&
           after.owners.diff(before.owners).affectedKeys().hasOnly([seat.id]) &&
           after.styles.diff(before.styles).affectedKeys().hasOnly([seat.id]) &&
           validSeat(after, index, false);
@@ -390,7 +390,10 @@ service cloud.firestore {
           (before.owners[seat.id] == request.auth.uid ||
            (seat.control == 'ai' && before.aiRunner == request.auth.uid &&
             before.aiLeaseAt is timestamp && request.time < before.aiLeaseAt + duration.value(30, 's'))) &&
-          after.diff(before).affectedKeys().hasOnly(['moves', 'clock']) && clockAppend(before, after, seat.id) &&
+          after.diff(before).affectedKeys().hasOnly(['moves', 'clock', 'lastMoveAt', 'finishedAt']) &&
+          (after.get('lastMoveAt',null) == before.get('lastMoveAt',null) || after.lastMoveAt == request.time) &&
+          (after.get('finishedAt',null) == before.get('finishedAt',null) ||
+           (before.get('finishedAt',null) == null && after.finishedAt == request.time)) && clockAppend(before, after, seat.id) &&
           after.moves is list && after.moves.size() == n + 1 &&
           after.moves == before.moves.concat([after.moves[n]]) && moveShape(after.moves[n], before);
       }
@@ -399,7 +402,8 @@ service cloud.firestore {
         let after = request.resource.data;
         return before.resigned == null && before.timedOut == null && ready(before) && validId(after.resigned) &&
           before.owners[after.resigned] == request.auth.uid &&
-          after.diff(before).affectedKeys().hasOnly(['resigned']);
+          after.diff(before).affectedKeys().hasOnly(['resigned','finishedAt']) &&
+          (after.get('finishedAt',null) == before.get('finishedAt',null) || after.finishedAt == request.time);
       }
       function runnerLease() {
         let before = resource.data;
@@ -449,12 +453,13 @@ service cloud.firestore {
           (before.host == request.auth.uid || request.auth.uid in before.owners.values()) &&
           before.clock.started[current] is timestamp &&
           request.time >= before.clock.started[current] + duration.value(before.clock.bank[current], 'ms') &&
-          request.resource.data.timedOut == current && request.resource.data.diff(before).affectedKeys().hasOnly(['timedOut']);
+          request.resource.data.timedOut == current && request.resource.data.diff(before).affectedKeys().hasOnly(['timedOut','finishedAt']) &&
+          (request.resource.data.get('finishedAt',null) == before.get('finishedAt',null) || request.resource.data.finishedAt == request.time);
       }
       allow get: if isAuthenticated();
       allow list, delete: if false;
       allow create: if isAuthenticated() && code.matches('^U[A-Z]{6}$') &&
-        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt', 'clock', 'timedOut', 'ratingKey']) &&
+        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt', 'clock', 'timedOut', 'ratingKey', 'startedAt', 'lastMoveAt', 'finishedAt']) &&
         (!('ratingKey' in request.resource.data) ||
           (request.resource.data.ratingKey is string && request.resource.data.ratingKey.matches('^[0-9a-f]{64}$'))) &&
         request.resource.data.version == 1 && request.resource.data.code == code &&
@@ -462,7 +467,9 @@ service cloud.firestore {
         validSeats(request.resource.data, true) && validBoardTheme(request.resource.data.boardTheme) &&
         request.resource.data.moves is list && request.resource.data.moves.size() == 0 && request.resource.data.resigned == null &&
         request.resource.data.aiRunner == null && request.resource.data.aiLeaseAt == null &&
-        request.resource.data.timedOut == null && initialClock(request.resource.data);
+        request.resource.data.timedOut == null && initialClock(request.resource.data) &&
+        request.resource.data.get('lastMoveAt',null) == null && request.resource.data.get('finishedAt',null) == null &&
+        request.resource.data.get('startedAt',null) == null;
       allow update: if isAuthenticated() &&
         resource.data.get('ratingReceipt', null) == null &&
         ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingKey']) &&
@@ -472,20 +479,46 @@ service cloud.firestore {
          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingReceipt']) &&
           request.resource.data.ratingReceipt is string &&
           getAfter(/databases/$(database)/documents/ratingResults/$(request.resource.data.ratingReceipt)).data.room == code) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles']) &&
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles', 'startedAt']) &&
           (vacantJoin(0) || vacantJoin(1) ||
            (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
            (resource.data.config.seats.size() > 3 && vacantJoin(3)))) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves', 'clock']) && appendMove()) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resigned']) && resignSeat()) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves', 'clock', 'lastMoveAt', 'finishedAt']) && appendMove()) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resigned', 'finishedAt']) && resignSeat()) ||
          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiRunner', 'aiLeaseAt']) && runnerLease()) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timedOut']) && clockExpiry()));
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timedOut', 'finishedAt']) && clockExpiry()));
+    }
+
+    // Temporary delivery only. Clients never cache message bodies or restore history.
+    match /matches/{code}/chat/{message} {
+      function table() { return get(/databases/$(database)/documents/matches/$(code)).data; }
+      function member() { return isAuthenticated() && request.auth.uid in table().owners.values(); }
+      function open() { return table().get('finishedAt',null) == null && table().resigned == null && table().timedOut == null; }
+      allow get: if member() && open() && resource.data.expiresAt > request.time;
+      allow list: if member() && open() && request.query.limit <= 50 && resource.data.expiresAt > request.time;
+      allow create: if member() && open() && message.matches('^[0-9a-f]{32}$') &&
+        request.resource.data.keys().hasOnly(['sender','text','createdAt','expiresAt']) &&
+        request.resource.data.sender == request.auth.uid && request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 &&
+        request.resource.data.createdAt == request.time && request.resource.data.expiresAt is timestamp &&
+        request.resource.data.expiresAt > request.time && request.resource.data.expiresAt <= request.time + duration.value(6,'m');
+      allow delete: if member() && (resource.data.sender == request.auth.uid ||
+        resource.data.expiresAt <= request.time || !open());
+      allow update: if false;
     }
 
     // Preserve the existing production profile and achievement policies.
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    // Authentication status only; never publish email, tokens or provider profiles.
+    match /playerAccounts/{uid} {
+      allow get: if isAuthenticated();
+      allow list, delete: if false;
+      allow create, update: if isAuthenticated() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['registered']) &&
+        request.resource.data.registered == (request.auth.token.firebase.sign_in_provider != 'anonymous');
     }
     // Public aliases contain no email/profile identity or competitive counters.
     match /playerProfiles/{uid} {
@@ -621,7 +654,7 @@ service cloud.firestore {
     function pIdentity(r, uid, i) {
       let seat = r.config.seats[i];
       return seat.control == 'ai'
-          ? uid == 'ai_shared-search-v1_' + seat.level && seat.level in ['easy','medium','hard','expert'] && r.names[i] == pBotName(seat.level)
+          ? uid == 'ai_' + r.config.get('aiEngine','shared-search-v1') + '_' + seat.level && seat.level in ['easy','medium','hard','expert'] && r.names[i] == pBotName(seat.level)
           : !uid.matches('^ai_.*') && pCount(r,uid) == 1 &&
             (r.room == null ? seat.control == 'localHuman' && uid == r.actor
               : uid == getAfter(/databases/$(database)/documents/matches/$(r.room)).data.owners[seat.id]);
@@ -717,7 +750,7 @@ service cloud.firestore {
         (ai || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 60)) &&
         (ai || r.room == null || (pSameVote(humanVote(r.room,id),r) && r.names[index] == humanVote(r.room,id).name)) &&
         data.displayName == r.names[index] && data.isAi == ai && data.established == (data.gamesPlayed >= 10) &&
-        (ai ? data.engineVersion == 'shared-search-v1' && data.aiDifficulty == seat.level && data.opponents == before.opponents
+        (ai ? data.engineVersion == r.config.get('aiEngine','shared-search-v1') && data.aiDifficulty == seat.level && data.opponents == before.opponents
             : !data.keys().hasAny(['engineVersion','aiDifficulty']) && data.opponents == 0) &&
         getAfter(/databases/$(database)/documents/ratingPools/$(r.pool)/players/$(id)/history/$(string(data.gamesPlayed))).data.timestamp == request.time;
     }
@@ -734,8 +767,8 @@ service cloud.firestore {
          (i < 3 || c.seats[i].id != c.seats[2].id));
     }
     function sConfig(c) {
-      return c.keys().hasOnly(['version','shape','size','seats','starter','profile','clockSeconds','ratingVersion','court']) &&
-        c.version == 1 && c.ratingVersion == 3 && !c.get('court',false) &&
+      return c.keys().hasOnly(['version','shape','size','seats','starter','profile','clockSeconds','ratingVersion','court','aiEngine']) &&
+        c.get('aiEngine','shared-search-v1') in ['shared-search-v1','shared-search-v2'] && c.version == 1 && c.ratingVersion == 3 && !c.get('court',false) &&
         c.size is int && c.seats is list && c.seats.size() >= 2 && c.seats.size() <= 4 &&
         ((c.shape == 'square' && c.size >= 3 && c.size <= 8) || (c.shape == 'hex' && c.size >= 2 && c.size <= 4)) &&
         (c.profile == 'sharedRoads' || (c.profile == 'standardTak' && c.shape == 'square' && c.seats.size() == 2)) &&
@@ -751,7 +784,7 @@ service cloud.firestore {
       let ai = seat.control == 'ai';
       let vote = ai || r.room == null ? {} : humanVote(r.room,uid);
       return ai
-        ? uid == 'ai_shared-search-v1_' + seat.level && name == pBotName(seat.level)
+        ? uid == 'ai_' + r.config.get('aiEngine','shared-search-v1') + '_' + seat.level && name == pBotName(seat.level)
         : uid is string && !uid.matches('^ai_.*') && pCount(r,uid) == 1 &&
           (r.room == null ? seat.control == 'localHuman' && uid == r.actor && name is string && name.size() > 0 && name.size() <= 60
             : owners[seat.id] == uid && vote == {'version':3,'ply':r.ply,'winner':r.winner,'reason':r.reason,'name':name});
@@ -886,7 +919,7 @@ service cloud.firestore {
         after.draws == before.draws + (score == 0.5 ? 1 : 0) &&
         after.displayName == r.names[index] && after.isAi == ai &&
         after.established == (after.gamesPlayed >= 10 && after.deviation <= 150.0) &&
-        (ai ? after.engineVersion == 'shared-search-v1' && after.aiDifficulty == r.config.seats[index].level
+        (ai ? after.engineVersion == r.config.get('aiEngine','shared-search-v1') && after.aiDifficulty == r.config.seats[index].level
             : !after.keys().hasAny(['engineVersion','aiDifficulty'])) &&
         h.before == math.round(before.mean) && h.delta == after.rating-h.before && h.timestamp == request.time &&
         h.score == score && h.opponentName == string(r.participants.size())+'-player game' &&

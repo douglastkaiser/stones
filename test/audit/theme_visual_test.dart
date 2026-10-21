@@ -11,9 +11,9 @@ import 'package:stones/widgets/procedural_painters.dart';
 import 'package:stones/widgets/theme_gallery.dart';
 
 void main() {
-  test('exactly five sets preserve legacy saved indices and paired selection',
+  test('five piece sets and a board-only reward preserve legacy saved indices',
       () async {
-    expect(BoardTheme.values.length, 5);
+    expect(BoardTheme.values.length, 6);
     expect(PieceStyle.values.length, 5);
     for (var i = 0; i < 5; i++) {
       SharedPreferences.setMockInitialValues(
@@ -103,7 +103,7 @@ void main() {
   });
   for (final size in [const Size(320, 568), const Size(1366, 768)]) {
     testWidgets(
-        'five real samples and locked previews fit $size with enlarged text',
+        'six real board samples and locked previews fit $size with enlarged text',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = size;
@@ -121,7 +121,7 @@ void main() {
                       child: Padding(
                           padding: EdgeInsets.all(16),
                           child: ThemeGallery()))))));
-      expect(find.byType(ThemeSample), findsNWidgets(5));
+      expect(find.byType(ThemeSample), findsNWidgets(6));
       for (final sample in find.byType(ThemeSample).evaluate()) {
         expect(tester.getSize(find.byWidget(sample.widget)).width,
             greaterThan(100));

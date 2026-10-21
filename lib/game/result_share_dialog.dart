@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cosmetics.dart';
+import '../providers/elite_theme_provider.dart';
 import '../providers/account_provider.dart';
 import '../providers/player_profile_provider.dart';
 import '../services/result_image_download.dart';
@@ -60,22 +61,27 @@ class _ResultShareDialogState extends ConsumerState<ResultShareDialog> {
         ref.read(matchProvider).id != session.id) {
       return;
     }
-    ref.read(ratingStatusProvider.notifier).state =
-        (session.id!, const RatingSubmission.pending());
+    publishRating(ref.read(ratingStatusProvider.notifier), session.id!,
+        const RatingSubmission.pending());
     try {
       final result = await ref.read(ratingRepositoryProvider).submitResult(
           session, ref.read(matchProvider.notifier).confirmedMoves);
       if (mounted &&
           ref.read(accountProvider).identity?.uid == identity.uid &&
           ref.read(matchProvider).id == session.id) {
-        ref.read(ratingStatusProvider.notifier).state = (session.id!, result);
+        publishRating(
+            ref.read(ratingStatusProvider.notifier), session.id!, result);
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted &&
           ref.read(accountProvider).identity?.uid == identity.uid &&
           ref.read(matchProvider).id == session.id) {
-        ref.read(ratingStatusProvider.notifier).state =
-            (session.id!, const RatingSubmission.failed());
+        publishRating(
+            ref.read(ratingStatusProvider.notifier),
+            session.id!,
+            RatingSubmission(
+                RatingSubmissionState.failed, ratingFailureMessage(error),
+                failure: ratingFailure(error)));
       }
     }
   }
@@ -171,8 +177,10 @@ class _ResultShareDialogState extends ConsumerState<ResultShareDialog> {
         : participant;
     final data =
         ResultShareData(session, names: names, viewer: viewer, rating: rating);
+    final boardTheme = ref.watch(effectiveBoardThemeProvider(
+        (widget.boardTheme, session.room?.host ?? identity?.uid)));
     final signature =
-        '${data.text}|${session.game!.config.ids.map((id) => '${data.name(id)}:${rating.labelFor(id)}').join('|')}';
+        '$boardTheme|${widget.styles}|${data.text}|${session.game!.config.ids.map((id) => '${data.name(id)}:${rating.labelFor(id)}').join('|')}';
     if (_includeBoard) _prepareImage(signature);
     return AlertDialog(
       title: const Text('Share result'),
@@ -208,7 +216,7 @@ class _ResultShareDialogState extends ConsumerState<ResultShareDialog> {
                               child: ResultShareCard(
                                   data: data,
                                   styles: widget.styles,
-                                  boardTheme: widget.boardTheme))))),
+                                  boardTheme: boardTheme))))),
               if (_png == null && _imageError == null)
                 const Padding(
                     padding: EdgeInsets.all(8),

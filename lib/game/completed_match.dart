@@ -8,7 +8,8 @@ import 'match_state.dart';
 /// Immutable, replay-validated local history. Reading never awards a result.
 class CompletedMatch {
   CompletedMatch._(this.id, this.owner, this.config, this.moves, this.result,
-      this.completedAt, this.positions);
+      this.completedAt, this.positions, this.durationMs);
+  final int? durationMs;
   final String id;
   final String? owner;
   final MatchConfig config;
@@ -24,6 +25,7 @@ class CompletedMatch {
       throw StateError('Only completed matches can enter history');
     }
     return CompletedMatch.fromMap({
+      'durationMs': session.elapsed?.at(DateTime.now()).inMilliseconds,
       'version': 1,
       'id': session.id,
       'owner': session.uid,
@@ -84,10 +86,12 @@ class CompletedMatch {
         List.unmodifiable(moves),
         result,
         DateTime.parse(map['completedAt']),
-        List.unmodifiable(positions));
+        List.unmodifiable(positions),
+        map['durationMs'] as int?);
   }
 
   Map<String, dynamic> toMap() => {
+        'durationMs': durationMs,
         'version': 1,
         'id': id,
         'owner': owner,

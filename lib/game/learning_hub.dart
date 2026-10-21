@@ -23,15 +23,6 @@ class _LearningHubState extends ConsumerState<LearningHub> {
     ref.read(achievementProvider.notifier).load();
   }
 
-  Future<void> _solved(MatchStudy study, bool unassisted) async {
-    final awards = ref.read(achievementProvider.notifier);
-    if (study.puzzle) {
-      await awards.completePuzzle(study.id, unassisted: unassisted);
-    } else {
-      await awards.completeTutorial(study.id);
-    }
-  }
-
   Future<void> _practice() async {
     await Navigator.push<void>(
         context,
@@ -40,33 +31,8 @@ class _LearningHubState extends ConsumerState<LearningHub> {
                 shape: BoardShape.square, preset: MatchPreset.learn)));
   }
 
-  Future<void> _openStudy(MatchStudy study) async {
-    var current = study;
-    while (mounted) {
-      final index = squareFundamentals.indexOf(current.id);
-      final next = index >= 0 && index + 1 < squareFundamentals.length
-          ? matchStudies
-              .firstWhere((s) => s.id == squareFundamentals[index + 1])
-          : null;
-      final action = await Navigator.push<StudyExit>(
-          context,
-          MaterialPageRoute(
-              builder: (_) => StudyScreen(
-                  study: current,
-                  onSolved: (study) => _solved(study, false),
-                  onResult: _solved,
-                  nextLesson: next?.title,
-                  offerPractice: index >= 0)));
-      if (!mounted) return;
-      if (action == StudyExit.practice) {
-        // Start from the parent scope, never the lesson's sandbox controller.
-        await _practice();
-        return;
-      }
-      if (action != StudyExit.next || next == null) return;
-      current = next;
-    }
-  }
+  Future<void> _openStudy(MatchStudy study) => Navigator.push<void>(
+      context, MaterialPageRoute(builder: (_) => StudyScreen(study: study)));
 
   @override
   Widget build(BuildContext context) {

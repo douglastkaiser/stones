@@ -70,7 +70,7 @@ void main() {
                   findsOneWidget);
             }
           }
-          if (size.width == 390 && count == 2) {
+          if (shape == BoardShape.square && size.width == 390 && count == 2) {
             final outer =
                 tester.state<ScrollableState>(find.byType(Scrollable).first);
             expect(outer.position.maxScrollExtent, 0);

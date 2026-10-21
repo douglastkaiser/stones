@@ -229,3 +229,16 @@ test('local source cannot smuggle Court, invalid settings, unknown AI, or a lega
  }
  await accept(commit(s.writes));
 });
+
+test('new AI engine identities settle separately and cannot use legacy configuration',async()=>{
+ const participants=['alice','ai_shared-search-v2_expert'];
+ const s=source({participants,local:true});s.receipt.config.aiEngine='shared-search-v2';
+ s.writes[0]=write(`ratingResults/${s.key}`,s.receipt,['at']);
+ await accept(commit(s.writes));
+ const result=settle(s);result.records[participants[1]].engineVersion='shared-search-v2';
+ const profileWrite=result.writes.find(w=>w.update.name.endsWith(`/players/${participants[1]}`));
+ profileWrite.update.fields=value(result.records[participants[1]]).mapValue.fields;
+ await accept(commit(result.writes));
+ await env.clearFirestore();
+ const forged=source({participants,local:true});await reject(commit(forged.writes));
+});

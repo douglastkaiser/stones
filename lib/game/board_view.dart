@@ -16,14 +16,23 @@ import 'seat_appearance.dart';
 class BoardLayout {
   BoardLayout(this.size, this.geometry) {
     final hex = geometry is HexGeometry;
-    unit = math.max(
-        0,
-        hex
-            ? math.min(
-                (size.width - 32) /
-                    (math.sqrt(3) * (2 * geometry.size + 1) + 1),
-                (size.height - 24) / (3 * geometry.size + 3))
-            : math.min(size.width - 24, size.height - 24) / geometry.size / 2);
+    if (hex) {
+      // Fit the actual pointy-top polygons, including the outer half cells.
+      final centers = geometry.cells
+          .map((c) => Offset(math.sqrt(3) * (c.x + c.y / 2), 1.5 * c.y))
+          .toList();
+      final width = centers.map((p) => p.dx).reduce(math.max) -
+          centers.map((p) => p.dx).reduce(math.min) +
+          math.sqrt(3);
+      final height = centers.map((p) => p.dy).reduce(math.max) -
+          centers.map((p) => p.dy).reduce(math.min) +
+          2;
+      unit = math.max(
+          0, math.min((size.width - 24) / width, (size.height - 24) / height));
+    } else {
+      unit = math.max(
+          0, math.min(size.width - 24, size.height - 24) / geometry.size / 2);
+    }
   }
   final Size size;
   final BoardGeometry geometry;

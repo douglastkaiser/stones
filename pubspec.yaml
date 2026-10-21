@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  http: ^1.2.1
   web: ^1.0.0
   flutter_riverpod: ^2.4.9
   riverpod_annotation: ^2.3.3

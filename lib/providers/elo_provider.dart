@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/rating_pool.dart';
 import '../game/match_config.dart';
-import '../game/rating_evidence.dart';
 import '../models/elo_rating.dart';
 import '../services/rating_repository.dart';
 import 'account_provider.dart';
+
+bool _currentOpponent(EloRating player) =>
+    !player.isAi || player.id.startsWith('ai_${MatchConfig.currentAiEngine}_');
 
 class EloState {
   const EloState(
@@ -143,9 +145,11 @@ class EloController extends StateNotifier<EloState> {
     _leaderSubscription = stream.listen((values) async {
       if (!mounted || generation != _generation || !_live) return;
       _request++;
-      final entries = {for (final player in values) player.id: player};
+      final entries = {
+        for (final player in values.where(_currentOpponent)) player.id: player
+      };
       for (final level in BotLevel.values) {
-        final id = 'ai_${RatingEvidence.engine}_${level.name}';
+        final id = 'ai_${MatchConfig.currentAiEngine}_${level.name}';
         entries.putIfAbsent(
             id,
             () => EloRating(
@@ -166,7 +170,10 @@ class EloController extends StateNotifier<EloState> {
           uid: state.uid,
           localPlayerRating: state.localPlayerRating,
           leaderboard: leaders,
-          aiRatings: {for (final p in values.where((p) => p.isAi)) p.id: p},
+          aiRatings: {
+            for (final p in values.where((p) => p.isAi && _currentOpponent(p)))
+              p.id: p
+          },
           rank: state.rank);
       final personal = state.localPlayerRating;
       if (personal == null || personal.provisional) return;
@@ -243,10 +250,12 @@ class EloController extends StateNotifier<EloState> {
           .timeout(requestTimeout);
       if (!mounted || generation != _generation || request != _request) return;
       final combined = {
-        for (final entry in [...values[0], ...values[1]]) entry.id: entry
+        for (final entry
+            in [...values[0], ...values[1]].where(_currentOpponent))
+          entry.id: entry
       };
       for (final level in BotLevel.values) {
-        final id = 'ai_${RatingEvidence.engine}_${level.name}';
+        final id = 'ai_${MatchConfig.currentAiEngine}_${level.name}';
         combined.putIfAbsent(
             id,
             () => EloRating(
@@ -275,7 +284,9 @@ class EloController extends StateNotifier<EloState> {
           uid: state.uid,
           localPlayerRating: state.localPlayerRating,
           leaderboard: leaders,
-          aiRatings: {for (final bot in values[1]) bot.id: bot},
+          aiRatings: {
+            for (final bot in values[1].where(_currentOpponent)) bot.id: bot
+          },
           rank: identical(state.localPlayerRating, personal) &&
                   rankRequest == _rankRequest
               ? rank

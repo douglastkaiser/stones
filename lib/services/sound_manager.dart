@@ -6,6 +6,8 @@ import '../models/cosmetics.dart';
 
 /// Sound types available in the game
 enum GameSound {
+  yourTurn,
+  tak,
   piecePlace,
   stackMove,
   wallFlatten,
@@ -33,12 +35,20 @@ class SoundManager {
   final Map<GameSound, AudioPlayer> _players = {};
   bool _isMuted = false;
   bool _isInitialized = false;
+  Future<void>? _initializing;
 
   /// Whether sounds are muted
   bool get isMuted => _isMuted;
 
   /// Initialize the sound manager and load all sounds
-  Future<void> initialize() async {
+  Future<void> initialize() =>
+      _initializing ??= _initialize().catchError((Object error) async {
+        await dispose();
+        _initializing = null;
+        throw error;
+      });
+
+  Future<void> _initialize() async {
     if (_isInitialized) return;
 
     // Load mute preference
@@ -58,6 +68,10 @@ class SoundManager {
   /// Get the asset path for a sound
   String _getAssetPath(GameSound sound) {
     switch (sound) {
+      case GameSound.yourTurn:
+        return 'sounds/your_turn.wav';
+      case GameSound.tak:
+        return 'sounds/tak.wav';
       case GameSound.piecePlace:
         return 'sounds/piece_place.ogg';
       case GameSound.stackMove:
@@ -155,6 +169,7 @@ class SoundManager {
       BoardTheme.marble => GameSound.piecePlaceMarble,
       BoardTheme.morocco => GameSound.piecePlaceStone,
       BoardTheme.kyoto => GameSound.piecePlaceWood,
+      BoardTheme.celestial => GameSound.piecePlaceMarble,
     };
     return play(sound);
   }

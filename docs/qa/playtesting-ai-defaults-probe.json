@@ -1,0 +1,137 @@
+{
+  "engine": "shared-search-v2",
+  "sourceCommit": "8e38486c4998fe776ff3b4ba9ecd009a4ff16830",
+  "engineSourceSha256": "b096b02930cf3801fc1e085a161e639e2fae297c97fee0f25558996a17a55f41",
+  "verifiedAt": "2026-10-21T15:34:06.460094+00:00",
+  "runtime": "Dart 3.13.5 native AOT, Linux x64; production wall-clock budgets, yielding disabled as in native isolates; shared two-CPU runner.",
+  "command": "dart compile exe -DAI_PAIRS=3 tools/ai_calibration.dart -o build/qa/ai-calibration-probe; build/qa/ai-calibration-probe",
+  "games": 45,
+  "qualified": false,
+  "qualification": "Exploratory only: three seeded starts rotated across all seats per adjacent tier at actual defaults. All 45 finished by 160 plies. This is below the 50-seed qualification gate; Hex Medium vs Easy has equal per-seat win share and Hard vs Medium has only four decisive trials. No claim of complete tier progression or human Expert strength. Not directly comparable to historical JIT/80-ply probes.",
+  "results": [
+    {
+      "engine": "shared-search-v2",
+      "shape": "square",
+      "size": 5,
+      "tier": 0,
+      "pairs": 3,
+      "players": 2,
+      "maxPlies": 160,
+      "strongerWins": 6,
+      "weakerWins": 0,
+      "draws": 0,
+      "unfinished": 0,
+      "strongerWinRate": 1.0,
+      "perSeatWinShare": 1.0,
+      "averageCompletedDepth": {
+        "easy": 0.0,
+        "medium": 0.9615384615384616
+      },
+      "timeouts": {}
+    },
+    {
+      "engine": "shared-search-v2",
+      "shape": "square",
+      "size": 5,
+      "tier": 1,
+      "pairs": 3,
+      "players": 2,
+      "maxPlies": 160,
+      "strongerWins": 4,
+      "weakerWins": 2,
+      "draws": 0,
+      "unfinished": 0,
+      "strongerWinRate": 0.6666666666666666,
+      "perSeatWinShare": 0.6666666666666666,
+      "averageCompletedDepth": {
+        "medium": 0.9813084112149533,
+        "hard": 1.9259259259259258
+      },
+      "timeouts": {}
+    },
+    {
+      "engine": "shared-search-v2",
+      "shape": "square",
+      "size": 5,
+      "tier": 2,
+      "pairs": 3,
+      "players": 2,
+      "maxPlies": 160,
+      "strongerWins": 6,
+      "weakerWins": 0,
+      "draws": 0,
+      "unfinished": 0,
+      "strongerWinRate": 1.0,
+      "perSeatWinShare": 1.0,
+      "averageCompletedDepth": {
+        "hard": 2.0,
+        "expert": 2.8487394957983194
+      },
+      "timeouts": {}
+    },
+    {
+      "engine": "shared-search-v2",
+      "shape": "hex",
+      "size": 2,
+      "tier": 0,
+      "pairs": 3,
+      "players": 3,
+      "maxPlies": 160,
+      "strongerWins": 2,
+      "weakerWins": 4,
+      "draws": 3,
+      "unfinished": 0,
+      "strongerWinRate": 0.3333333333333333,
+      "perSeatWinShare": 0.5,
+      "averageCompletedDepth": {
+        "medium": 0.99,
+        "easy": 0.0
+      },
+      "timeouts": {
+        "easy:defense": 4
+      }
+    },
+    {
+      "engine": "shared-search-v2",
+      "shape": "hex",
+      "size": 2,
+      "tier": 1,
+      "pairs": 3,
+      "players": 3,
+      "maxPlies": 160,
+      "strongerWins": 3,
+      "weakerWins": 1,
+      "draws": 5,
+      "unfinished": 0,
+      "strongerWinRate": 0.75,
+      "perSeatWinShare": 0.8571428571428571,
+      "averageCompletedDepth": {
+        "hard": 1.9701492537313432,
+        "medium": 0.9975
+      },
+      "timeouts": {}
+    },
+    {
+      "engine": "shared-search-v2",
+      "shape": "hex",
+      "size": 2,
+      "tier": 2,
+      "pairs": 3,
+      "players": 3,
+      "maxPlies": 160,
+      "strongerWins": 3,
+      "weakerWins": 2,
+      "draws": 4,
+      "unfinished": 0,
+      "strongerWinRate": 0.6,
+      "perSeatWinShare": 0.75,
+      "averageCompletedDepth": {
+        "expert": 2.9288537549407114,
+        "hard": 1.992063492063492
+      },
+      "timeouts": {
+        "expert:search": 9
+      }
+    }
+  ]
+}
