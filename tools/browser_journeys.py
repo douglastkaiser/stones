@@ -16,7 +16,8 @@ from urllib.request import urlopen
 from playwright.sync_api import sync_playwright, expect, Error as PlaywrightError
 
 
-BASE = 'http://127.0.0.1:4173/stones/'
+PORT = int(os.environ.get('STONES_JOURNEY_PORT', '4173'))
+BASE = f'http://127.0.0.1:{PORT}/stones/'
 EVIDENCE = Path('build/qa/journeys')
 SDK_CACHE = Path('build/qa/firebase-sdk-cache')
 
@@ -57,7 +58,7 @@ def ai_profiles():
         for level in ['easy', 'expert']:
             url = ('http://127.0.0.1:8088/v1/projects/demo-stones-hex/'
                    'databases/(default)/documents/skillPools/' + scope +
-                   '/players/ai_shared-search-v1_' + level)
+                   '/players/ai_shared-search-v2_' + level)
             with urlopen(url, timeout=10) as response:
                 fields = json.load(response)['fields']
             profiles[scope][level] = {
@@ -112,6 +113,12 @@ def tap_target(page, target):
                          bounds['y'] + bounds['height'] / 2)
 
 
+def turn_status(page, seat):
+    # Assert the painted status; live announcements repeat the same text.
+    return page.locator('flt-semantics span').filter(
+        has_text=re.compile(rf'^(?:Your turn · )?{re.escape(seat)} to play'))
+
+
 def cell(page, x, y):
     return page.get_by_role('button', name=re.compile(rf'^Cell {x}, {y},')).first
 
@@ -129,7 +136,7 @@ def main():
     summary = EVIDENCE / 'summary.json'
     summary.write_text(json.dumps({'status': 'running'}, indent=2))
     server = subprocess.Popen(['node', 'tools/serve_web.mjs'],
-                              env={**os.environ, 'WEB_ROOT': 'build/integration-web'},
+                              env={**os.environ, 'WEB_ROOT': 'build/integration-web', 'PORT': str(PORT)},
                               stdout=subprocess.DEVNULL)
     try:
         for attempt in range(50):
@@ -215,10 +222,10 @@ def main():
         ready(guest)
         click(guest, 'Join room')
         expect(cell(guest, 0, 0)).to_be_visible(timeout=30000)
-        expect(host.get_by_text(re.compile('^Ivory to play'))).to_be_visible(timeout=30000)
+        expect(turn_status(host, 'Ivory')).to_be_visible(timeout=30000)
         place(host, 0, 0)
         expect(cell(guest, 0, 0)).to_have_accessible_name(re.compile('Charcoal flat'), timeout=30000)
-        expect(guest.get_by_text(re.compile('^Charcoal to play'))).to_be_visible(timeout=30000)
+        expect(turn_status(guest, 'Charcoal')).to_be_visible(timeout=30000)
         contexts[1].set_offline(True)
         guest.wait_for_timeout(1000)
         contexts[1].set_offline(False)
@@ -226,7 +233,7 @@ def main():
         ready(guest)
         click(guest, 'Join room')
         expect(cell(guest, 0, 0)).to_have_accessible_name(re.compile('Charcoal flat'), timeout=30000)
-        expect(guest.get_by_text(re.compile('^Charcoal to play'))).to_be_visible(timeout=30000)
+        expect(turn_status(guest, 'Charcoal')).to_be_visible(timeout=30000)
         place(guest, 1, 0)
         expect(cell(host, 1, 0)).to_have_accessible_name(re.compile('Ivory flat'), timeout=30000)
         guest.screenshot(path=str(EVIDENCE / 'rejoined-friend-phone.png'))
@@ -239,7 +246,7 @@ def main():
         place(host, 0, 0)
         expect(host.get_by_role('button', name=re.compile(r'^Cell .* flat,')))\
             .to_have_count(2, timeout=30000)
-        expect(host.get_by_text(re.compile('^Ivory to play'))).to_be_visible(timeout=30000)
+        expect(turn_status(host, 'Ivory')).to_be_visible(timeout=30000)
         host.screenshot(path=str(EVIDENCE / 'computer-reply-phone.png'))
 
         reporter = client()
@@ -264,7 +271,7 @@ def main():
             type: 'flat', direction: null, drops: []
           }));
           const snapshot = {id: `local-ci-ai-only-${Date.now()}`, ratingUid: uid,
-            config: {version: 1, ratingVersion: 3, shape: 'square', size: 3,
+            config: {version: 1, ratingVersion: 3, aiEngine: 'shared-search-v2', shape: 'square', size: 3,
               profile: 'standardTak', starter: 'ivory', seats: [
                 {id: 'ivory', control: 'ai', level: 'expert'},
                 {id: 'charcoal', control: 'ai', level: 'easy'}]}, moves};

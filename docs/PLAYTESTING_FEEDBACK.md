@@ -110,10 +110,21 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
   Chromium also verified Home → Settings → browser Back → Forward, Hex width,
   and the independent audio switches. External production Firebase/Analytics
   requests were blocked in offline visual trials.
-- Production Firebase rules initially matched the checkout baseline exactly.
-  The candidate adds one chat index and deletes none. Automatic approval review
-  blocked deployment until the owner explicitly approves the concrete rule change.
-  No production rules, indexes, receipts or account flags have been changed yet.
+- The owner explicitly approved production Firebase deployment on 2026-10-21.
+  Reviewed rules from a72c299 were released at 14:31 UTC to `stones-9a6a0`;
+  a subsequent server read matched the source bytes exactly. All six indexes,
+  including the single added chat index, were READY at 14:35 UTC. No indexes
+  were deleted and billing was unchanged. No receipts or account flags were
+  edited by the deployment. See the [release evidence](qa/playtesting-firebase-release.json).
+- PR CI passed analysis/tests, room authorization, web and Android compilation.
+  Its browser journey exposed a pop/next-lesson race in asynchronous browser
+  history. History writes now wait for traversal acknowledgement; focused
+  regressions cover immediate next-route pushes and successive app Back actions.
+  The journey's turn labels and rated AI fixture also follow the new UI/engine.
+  All 28 focused navigation/startup checks and strict analysis passed. The rebuilt
+  emulator-only app passed the complete nine-scenario Chromium journey with no
+  page errors, including lesson sequencing, durable saves, friend reconnect and
+  v2 AI rating settlement/recovery.
 - Physical iOS sign-in, Android swipe-back and Play-signed audio/sharing remain
   device qualification, not results established by desktop or emulator checks.
 

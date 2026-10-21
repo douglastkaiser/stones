@@ -1,0 +1,17 @@
+{
+  "scope": "Chromium desktop runner with phone viewport; demo emulators only",
+  "journeys": [
+    "guest lesson completion and next lesson",
+    "local save/reload",
+    "completion, read-only review and local rematch",
+    "cold invitation",
+    "independent clients",
+    "disconnect/rejoin",
+    "computer reply",
+    "signed-in AI-only settlement in both scopes",
+    "AI-only duplicate recovery"
+  ],
+  "status": "passed",
+  "verifiedAt": "2026-10-21T14:38:51.479421+00:00",
+  "pageErrors": []
+}

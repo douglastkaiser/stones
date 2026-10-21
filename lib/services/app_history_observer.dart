@@ -1,19 +1,61 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'browser_history_platform.dart' as browser;
 
 /// Keep browser Back/Forward aligned with the visible application route.
 class AppHistoryObserver extends NavigatorObserver {
+  AppHistoryObserver({
+    this.enabled = kIsWeb,
+    void Function(void Function(int)) listen = browser.listenHistory,
+    void Function(int, {bool replace, String? route}) write =
+        browser.writeHistory,
+    void Function(int) move = browser.moveHistory,
+  })  : _listen = listen,
+        _write = write,
+        _move = move;
+  final bool enabled;
+  final void Function(void Function(int)) _listen;
+  final void Function(int, {bool replace, String? route}) _write;
+  final void Function(int) _move;
   final _routes = <Route<dynamic>>[];
   final _forward = <(WidgetBuilder?, RouteSettings)>[];
+  final _pending = <void Function()>[];
   bool _browserNavigation = false;
   int? _expected;
-  void initialize() => browser.listenHistory(_changed);
-  void dispose() => browser.stopHistory();
+  int _browserIndex = 0;
+  void initialize() {
+    if (enabled) _listen(_changed);
+  }
+
+  void dispose() {
+    if (enabled) browser.stopHistory();
+    _pending.clear();
+  }
+
+  // history.go is asynchronous. A lesson can pop and immediately push its next
+  // route; pushing browser history before popstate arrives cancels or redirects
+  // that traversal. Serialize writes until the expected traversal is acknowledged.
+  void _enqueue(void Function() action) {
+    if (!enabled) return;
+    _pending.add(action);
+    _drain();
+  }
+
+  void _drain() {
+    while (_expected == null && _pending.isNotEmpty) {
+      _pending.removeAt(0)();
+    }
+  }
+
   void _changed(int target) {
+    _browserIndex = target;
     if (_expected == target) {
       _expected = null;
+      _drain();
       return;
     }
+    _expected = null;
+    _pending.clear();
     _browserNavigation = true;
     while (_routes.length - 1 > target && _routes.length > 1) {
       navigator?.pop();
@@ -21,7 +63,8 @@ class AppHistoryObserver extends NavigatorObserver {
     while (_routes.length - 1 < target && _forward.isNotEmpty) {
       final route = _forward.removeLast();
       if (route.$1 == null) {
-        browser.writeHistory(_routes.length - 1, replace: true);
+        _browserIndex = _routes.length - 1;
+        _write(_browserIndex, replace: true);
         break;
       }
       navigator?.push(
@@ -35,8 +78,11 @@ class AppHistoryObserver extends NavigatorObserver {
     _routes.add(route);
     if (_browserNavigation) return;
     _forward.clear();
-    browser.writeHistory(_routes.length - 1,
-        replace: previousRoute == null, route: route.settings.name);
+    final index = _routes.length - 1;
+    _enqueue(() {
+      _write(index, replace: previousRoute == null, route: route.settings.name);
+      _browserIndex = index;
+    });
   }
 
   @override
@@ -45,8 +91,13 @@ class AppHistoryObserver extends NavigatorObserver {
     _forward.add(
         (route is MaterialPageRoute ? route.builder : null, route.settings));
     if (_browserNavigation) return;
-    _expected = _routes.length - 1;
-    browser.moveHistory(-1);
+    final target = _routes.length - 1;
+    _enqueue(() {
+      final delta = target - _browserIndex;
+      if (delta == 0) return;
+      _expected = target;
+      _move(delta);
+    });
   }
 
   @override
