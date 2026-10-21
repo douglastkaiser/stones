@@ -1,0 +1,63 @@
+{
+  "engine": "shared-search-v2",
+  "date": "2026-10-21",
+  "qualification": "Exploratory only. Three seeds rotated across three seats, 80-ply bound. Does not establish adjacent-tier strength; many unfinished games and Expert search timeouts.",
+  "command": "flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=3 --dart-define=AI_PLAYERS=3 --dart-define=AI_TOURNAMENT_SHAPE=hex",
+  "results": [
+    {
+      "shape": "hex",
+      "tier": 0,
+      "pairs": 3,
+      "players": 3,
+      "strongerWins": 4,
+      "weakerWins": 2,
+      "draws": 1,
+      "unfinished": 2,
+      "strongerWinRate": 0.6666666666666666,
+      "perSeatWinShare": 0.8,
+      "averageCompletedDepth": {
+        "medium": 0.9795918367346939,
+        "easy": 0.0
+      },
+      "timeouts": {
+        "easy:defense": 3
+      }
+    },
+    {
+      "shape": "hex",
+      "tier": 1,
+      "pairs": 3,
+      "players": 3,
+      "strongerWins": 2,
+      "weakerWins": 2,
+      "draws": 0,
+      "unfinished": 5,
+      "strongerWinRate": 0.5,
+      "perSeatWinShare": 0.6666666666666666,
+      "averageCompletedDepth": {
+        "hard": 1.9811320754716981,
+        "medium": 0.9952718676122931
+      },
+      "timeouts": {}
+    },
+    {
+      "shape": "hex",
+      "tier": 2,
+      "pairs": 3,
+      "players": 3,
+      "strongerWins": 0,
+      "weakerWins": 1,
+      "draws": 2,
+      "unfinished": 6,
+      "strongerWinRate": 0.0,
+      "perSeatWinShare": 0.0,
+      "averageCompletedDepth": {
+        "expert": 2.2714285714285714,
+        "hard": 1.9952267303102624
+      },
+      "timeouts": {
+        "expert:search": 153
+      }
+    }
+  ]
+}

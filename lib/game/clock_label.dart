@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'match_clock.dart';
+import 'match_elapsed.dart';
 import 'match_config.dart';
 
 /// Only the timer label rebuilds on clock ticks; the board stays untouched.
@@ -60,4 +61,32 @@ class _ClockLabelState extends State<ClockLabel> {
         semanticsLabel:
             '${widget.seat.label} clock: ${seconds ~/ 60} minutes ${seconds % 60} seconds');
   }
+}
+
+class ElapsedLabel extends StatefulWidget {
+  const ElapsedLabel({super.key, required this.elapsed});
+  final MatchElapsed elapsed;
+  @override
+  State<ElapsedLabel> createState() => _ElapsedLabelState();
+}
+
+class _ElapsedLabelState extends State<ElapsedLabel> {
+  Timer? _timer;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && widget.elapsed.runningSince != null) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Text('Elapsed ${MatchElapsed.label(widget.elapsed.at(DateTime.now()))}');
 }

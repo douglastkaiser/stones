@@ -1,5 +1,9 @@
 # Development map
 
+The [playtesting feedback implementation](PLAYTESTING_FEEDBACK.md) tracks the
+18 latest feedback items, confirmed production ratings diagnosis, feature changes,
+calibration evidence and remaining device qualification.
+
 The [player-experience implementation](PLAYER_EXPERIENCE.md) documents setup
 presets, the fundamentals path, local history/review/rematch, emulator browser
 journeys and qualified-artifact publication. It includes reproducible checks and

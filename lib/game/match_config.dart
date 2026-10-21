@@ -51,6 +51,7 @@ class MatchConfig {
     this.court = false,
     this.clockSeconds = 0,
     this.ratingVersion = 3,
+    this.aiEngine = 'shared-search-v2',
   })  : seats = List.unmodifiable(seats),
         profile = profile ??
             (shape == BoardShape.square && seats.length == 2
@@ -73,7 +74,8 @@ class MatchConfig {
             seats.any((seat) => seat.id == SeatId.jade))) {
       throw ArgumentError('Legacy Hex requires its original three identities');
     }
-    if (![1, 2, 3].contains(ratingVersion) ||
+    if (!['shared-search-v1', 'shared-search-v2'].contains(aiEngine) ||
+        ![1, 2, 3].contains(ratingVersion) ||
         clockSeconds < 0 ||
         clockSeconds > 59940 ||
         (court && clockSeconds != 0)) {
@@ -97,6 +99,7 @@ class MatchConfig {
 
   /// Version of the new wire format; old room versions are decoded separately.
   static const wireVersion = 1;
+  final String aiEngine;
   final BoardShape shape;
   final int size;
   final List<SeatConfig> seats;
@@ -129,6 +132,7 @@ class MatchConfig {
     final newStarter = starter ?? this.starter;
     return MatchConfig(
         ratingVersion: ratingVersion,
+        aiEngine: aiEngine,
         shape: newShape,
         size: size ??
             (newShape == this.shape
@@ -164,6 +168,7 @@ class MatchConfig {
 
   Map<String, dynamic> toMap() => {
         'version': wireVersion,
+        if (aiEngine != 'shared-search-v1') 'aiEngine': aiEngine,
         if (ratingVersion != 1) 'ratingVersion': ratingVersion,
         'shape': shape.name,
         'size': size,
@@ -180,6 +185,7 @@ class MatchConfig {
     }
     return MatchConfig(
         ratingVersion: map['ratingVersion'] as int? ?? 1,
+        aiEngine: map['aiEngine'] as String? ?? 'shared-search-v1',
         shape: BoardShape.values.byName(map['shape'] as String),
         size: map['size'] as int,
         seats: (map['seats'] as List)

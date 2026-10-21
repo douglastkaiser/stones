@@ -1,3 +1,4 @@
+import 'match_elapsed.dart';
 import 'package:flutter/material.dart';
 import 'board_view.dart';
 import 'completed_match.dart';
@@ -66,6 +67,9 @@ class _MatchReviewScreenState extends State<MatchReviewScreen> {
                     : () => setState(() => _ply = widget.match.moves.length),
                 icon: const Icon(Icons.last_page)),
           ]),
+          if (widget.match.durationMs != null)
+            Text(
+                'Game duration ${MatchElapsed.label(Duration(milliseconds: widget.match.durationMs!))}'),
           if (position.finished)
             Text(explainResult(position), textAlign: TextAlign.center),
         ])));

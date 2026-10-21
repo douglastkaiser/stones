@@ -6,11 +6,13 @@ import '../models/piece.dart';
 import '../models/cosmetics.dart';
 import '../providers/account_provider.dart';
 import '../providers/cosmetics_provider.dart';
+import '../providers/elite_theme_provider.dart';
 import '../providers/elo_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/sound_manager.dart';
 import 'board_view.dart';
 import 'match_table_layout.dart';
+import 'match_threats.dart';
 import '../widgets/open_table_control.dart';
 import 'board_geometry.dart';
 import 'clock_label.dart';
@@ -34,6 +36,7 @@ import 'match_history_provider.dart';
 import 'match_review_screen.dart';
 import '../providers/player_profile_provider.dart';
 import '../widgets/player_rating_label.dart';
+import '../widgets/match_chat.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, this.title, this.studyPanel, this.objective});
@@ -48,12 +51,35 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   final _selection = MoveSelection();
   bool _inspectPicking = false;
   bool _startingAgain = false;
+  String? _lastTurnCue, _threatMatch;
+  Set<SeatId> _announcedThreats = {};
+  void _cueTurn(MatchSession current) {
+    if (current.room == null ||
+        !current.ready ||
+        current.game?.finished != false ||
+        current.room!.owners[current.game!.current] != current.uid) {
+      return;
+    }
+    final key = '${current.id}:${current.game!.ply}';
+    if (_lastTurnCue == key) return;
+    _lastTurnCue = key;
+    if (!ref.read(appSettingsProvider).isSoundMuted) {
+      unawaited(ref
+          .read(soundManagerProvider)
+          .play(GameSound.yourTurn)
+          .catchError((Object _) {}));
+    }
+  }
+
   late MatchController _controller;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _controller = ref.read(matchProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _cueTurn(ref.read(matchProvider));
+    });
     if (widget.objective != null) {
       WidgetsBinding.instance.addPostFrameCallback((time) {
         if (mounted) _objective();
@@ -203,6 +229,35 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   Widget build(BuildContext context) {
     final match = ref.watch(matchProvider);
     final game = match.game;
+    final threats = game != null && game.config.court
+        ? ref.watch(courtThreatsProvider(game)).valueOrNull ?? <SeatId>{}
+        : <SeatId>{};
+    if (_threatMatch != match.id) {
+      _threatMatch = match.id;
+      _announcedThreats = {};
+    }
+    if (game != null && game.config.court) {
+      ref.listen(courtThreatsProvider(game), (previous, next) {
+        final value = next.valueOrNull;
+        if (value == null) return;
+        final appeared = value.difference(_announcedThreats).isNotEmpty;
+        _announcedThreats = value;
+        if (appeared && !ref.read(appSettingsProvider).isSoundMuted) {
+          unawaited(ref
+              .read(soundManagerProvider)
+              .play(GameSound.tak)
+              .catchError((Object _) {}));
+        }
+      });
+    }
+    final myTurn = match.room != null &&
+        match.ready &&
+        game?.finished == false &&
+        match.room!.owners[game!.current] == match.uid;
+    ref.listen(matchProvider.select((s) => (s.id, s.game?.ply, s.ready)),
+        (previous, next) {
+      _cueTurn(ref.read(matchProvider));
+    });
     ref.listen(matchProvider, (previous, next) {
       final before = previous?.game;
       final after = next.game;
@@ -236,6 +291,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       if (previous != next && mounted) {
         setState(() {
           _selection.clear();
+          if (previous?.$1 != next.$1 || previous?.$2?.ply != next.$2?.ply) {
+            _selection.type = PieceType.flat;
+          }
           _inspectPicking = false;
         });
       }
@@ -249,8 +307,16 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           for (final id in game.config.ids)
             id: ref.watch(currentPieceStyleProvider).style
         };
-    final boardTheme =
-        match.room?.boardTheme ?? ref.watch(currentBoardThemeProvider).theme;
+    final BoardTheme selectedBoard =
+        match.room?.boardTheme ?? ref.watch(shareableBoardThemeProvider);
+    final boardTheme = selectedBoard == BoardTheme.celestial &&
+            match.room != null &&
+            ref
+                    .watch(eliteThemeEligibilityProvider(match.room!.host))
+                    .valueOrNull !=
+                true
+        ? BoardTheme.classicWood
+        : selectedBoard;
     final ratingStatus = ref.watch(ratingStatusProvider);
     final ratingMessage =
         ratingStatus?.$1 == match.id ? ratingStatus?.$2 : null;
@@ -268,9 +334,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     ? 'Reconnecting · your board is retained'
                     : !match.connected
                         ? 'Disconnected · your board is retained'
-                        : match.paused &&
-                                match.clock != null &&
-                                match.room == null
+                        : match.paused && match.room == null
                             ? 'Match paused'
                             : match.paused &&
                                     game.config.seat(game.current).control ==
@@ -293,9 +357,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     tooltip: 'Reconnect',
                     onPressed: match.busy ? null : _controller.reconnect,
                     icon: const Icon(Icons.refresh)),
-              if ((game.config.seats.any((s) => s.control == SeatControl.ai) ||
-                      match.clock != null) &&
-                  match.room == null)
+              if (match.room == null)
                 IconButton(
                     tooltip: match.paused ? 'Resume match' : 'Pause match',
                     onPressed: () => _controller.pause(!match.paused),
@@ -351,6 +413,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             ]),
         body: MatchTableLayout(
           playerCount: game.config.seats.length,
+          expandBoard: game.config.shape == BoardShape.hex,
           invitation: match.room == null
               ? null
               : RoomInvitationBar(code: match.room!.code),
@@ -405,7 +468,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                                   SeatControl.ai)
                                                 PlayerRatingLabel(
                                                     uid:
-                                                        'ai_shared-search-v1_${seat.level.name}',
+                                                        'ai_${game.config.aiEngine}_${seat.level.name}',
                                                     pool: RatingPool.forConfig(
                                                         game.config),
                                                     fallback:
@@ -426,9 +489,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                             ])),
                                       ])),
                           ])))),
-          status: Text(status,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium),
+          status: Semantics(
+              liveRegion: true,
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: myTurn
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : null,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Text('${myTurn ? "Your turn · " : ""}$status',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium))),
           board: BoardView(
               game: preview ?? game,
               original: preview == null ? null : game,
@@ -452,6 +525,27 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               padding: const EdgeInsets.all(8),
               child: _controls(match, game, styles)),
           details: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (threats.isNotEmpty)
+              Semantics(
+                  liveRegion: true,
+                  child: Card(
+                      color: Theme.of(context).colorScheme.tertiaryContainer,
+                      child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Text(
+                              'Tak! ${threats.map((s) => s.label).join(", ")} can win next move if the position stays unchanged.')))),
+            if (match.room != null &&
+                match.uid != null &&
+                match.room!.owners.values.contains(match.uid))
+              MatchChat(
+                  key: ValueKey('chat-${match.id}-${match.uid}'),
+                  room: match.id!,
+                  uid: match.uid!,
+                  finished: game.finished,
+                  names: {
+                    for (final e in match.room!.owners.entries)
+                      if (e.value != null) e.value!: e.key.label
+                  }),
             if (match.room != null && match.uid == match.room!.host)
               OpenTableControl(
                   key: ValueKey(match.room!.code),
@@ -529,6 +623,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               MediaQuery.paddingOf(context).horizontal,
           MediaQuery.textScalerOf(context).scale(1)),
       child: Column(children: [
+        if (match.elapsed != null) ElapsedLabel(elapsed: match.elapsed!),
         Expanded(
             child: LayoutBuilder(
                 builder: (context, area) => SingleChildScrollView(

@@ -10,6 +10,7 @@ enum BoardTheme {
   marble,
   morocco,
   kyoto,
+  celestial,
 }
 
 /// Piece style types - each matches a board theme
@@ -69,6 +70,24 @@ class BoardThemeData {
 
 /// All board themes
 const List<BoardThemeData> boardThemes = [
+  BoardThemeData(
+    theme: BoardTheme.celestial,
+    name: 'Celestial',
+    description:
+        'A midnight constellation board for the current top 10% of established human players.',
+    frameOuter: Color(0xFF090C24),
+    frameInner: Color(0xFF7371B9),
+    background: Color(0xFF101632),
+    gridLine: Color(0xFFC4B5FD),
+    gridLineShadow: Color(0xFF080B20),
+    gridLineHighlight: Color(0xFFFFE8B0),
+    cellBackground: Color(0xFF202545),
+    cellBackgroundLight: Color(0xFF34365E),
+    cellBackgroundDark: Color(0xFF171C38),
+    woodGrainAccent: Color(0xFFEEDAA5),
+    placementSound: 'piece_place_marble',
+  ),
+
   // Classic Wood - default, available to all
   BoardThemeData(
     theme: BoardTheme.classicWood,

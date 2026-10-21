@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'feedback_screen.dart';
 import '../widgets/theme_gallery.dart';
+import '../widgets/audio_controls.dart';
 import '../widgets/account_card.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
@@ -54,26 +55,7 @@ class SettingsScreen extends ConsumerWidget {
                   // Sound Section
                   const _SectionHeader(title: 'Audio'),
                   const SizedBox(height: 12),
-                  _SettingsTile(
-                    icon: settings.isSoundMuted
-                        ? Icons.volume_off
-                        : Icons.volume_up,
-                    title: 'Sound Effects',
-                    subtitle: settings.isSoundMuted ? 'Muted' : 'Enabled',
-                    trailing: Switch(
-                      value: !settings.isSoundMuted,
-                      onChanged: (value) async {
-                        await ref
-                            .read(appSettingsProvider.notifier)
-                            .setSoundMuted(!value);
-                        if (!context.mounted) return;
-                        final soundManager = ref.read(soundManagerProvider);
-                        await soundManager.setMuted(!value);
-                        ref.read(isMutedProvider.notifier).state = !value;
-                      },
-                      activeTrackColor: GameColors.boardFrameInner,
-                    ),
-                  ),
+                  const AudioSettingsPanel(),
                   const SizedBox(height: 32),
 
                   // Theme Section
@@ -175,55 +157,6 @@ class _SectionHeader extends StatelessWidget {
 }
 
 /// Generic settings tile widget
-class _SettingsTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Widget trailing;
-
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color:
-              isDark ? colorScheme.onSurfaceVariant : GameColors.subtitleColor,
-        ),
-        title: Text(title),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            color: isDark ? colorScheme.onSurfaceVariant : Colors.grey.shade600,
-          ),
-        ),
-        trailing: Semantics(label: title, child: trailing),
-      ),
-    );
-  }
-}
-
 class _PlayGamesSection extends StatelessWidget {
   final PlayGamesState playGames;
   final Future<void> Function() onManualSignIn;

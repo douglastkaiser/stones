@@ -28,6 +28,11 @@ import 'widgets/board_cell_gestures.dart';
 import 'screens/main_menu_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'game/legacy_achievement_result.dart';
+import 'widgets/audio_controls.dart';
+import 'services/app_history_observer.dart';
+import 'providers/elite_theme_provider.dart';
+import 'game/match_provider.dart' show ratingStatusProvider;
+import 'services/browser_history_platform.dart' show configureBrowserNavigation;
 import 'game/invitation_navigation.dart';
 
 void _debugLog(String message) {
@@ -38,6 +43,7 @@ void _debugLog(String message) {
 }
 
 void main() {
+  configureBrowserNavigation();
   WidgetsFlutterBinding.ensureInitialized();
   // Firebase initialization is deferred to OnlineGameController.initialize()
   // to reduce initial load time when user only plays offline
@@ -51,9 +57,11 @@ class StonesApp extends ConsumerStatefulWidget {
   ConsumerState<StonesApp> createState() => _StonesAppState();
 }
 
-class _StonesAppState extends ConsumerState<StonesApp> {
+class _StonesAppState extends ConsumerState<StonesApp>
+    with WidgetsBindingObserver {
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   final _navigator = GlobalKey<NavigatorState>();
+  final _history = AppHistoryObserver();
   bool _noticeScheduled = false;
   void _announceAwards(List<AchievementType> pending) {
     if (_noticeScheduled || pending.isEmpty) return;
@@ -96,25 +104,47 @@ class _StonesAppState extends ConsumerState<StonesApp> {
   @override
   void initState() {
     super.initState();
+    _history.initialize();
+    WidgetsBinding.instance.addObserver(this);
     // Load settings on app start
     ref.read(appSettingsProvider.notifier).load();
+  }
+
+  @override
+  void dispose() {
+    _history.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(eliteThemeEligibilityProvider);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
 
+    ref.listen(ratingStatusProvider, (previous, next) {
+      if (previous != next) ref.invalidate(eliteThemeEligibilityProvider);
+    });
     ref.listen(achievementProvider.select((s) => s.pending),
         (_, pending) => _announceAwards(pending));
     _announceAwards(ref.read(achievementProvider).pending);
     return MaterialApp(
       scaffoldMessengerKey: _messenger,
       navigatorKey: _navigator,
+      navigatorObservers: [_history],
+      builder: (context, child) =>
+          AudioControls(navigator: _navigator, child: child!),
       title: 'Stones',
       theme: TavernTheme.build(Brightness.light),
       darkTheme: TavernTheme.build(Brightness.dark),
       themeMode: settings.themeMode,
-      home: const MainMenuScreen(),
+      routes: {'/': (_) => const MainMenuScreen()},
       onGenerateInitialRoutes: (route) => initialInvitationRoutes(route,
           home: const MainMenuScreen(), browserUri: kIsWeb ? Uri.base : null),
       onGenerateRoute: invitationRoute,
@@ -504,18 +534,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       unawaited(_maybeTriggerAiTurn(ref.read(gameStateProvider)));
       unawaited(_refreshCourtWarning(ref.read(gameStateProvider)));
     });
-
-    // Set up web back button handler
-    if (kIsWeb) {
-      initWebBackButtonHandler(_handleWebBackButton);
-    }
-  }
-
-  /// Handle web back button press.
-  /// Allow normal navigation back to the menu without changing the move history.
-  bool _handleWebBackButton() {
-    if (mounted) _navigateHome();
-    return false;
   }
 
   /// Check if undo can be performed in current game state

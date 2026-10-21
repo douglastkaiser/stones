@@ -8,6 +8,7 @@ import '../providers/elo_provider.dart';
 import '../providers/saved_rooms_provider.dart';
 import 'match_config.dart';
 import 'rating_submission.dart';
+import 'rating_recovery.dart';
 import 'match_completed.dart';
 import 'match_controller.dart';
 import 'match_room_store.dart';
@@ -61,20 +62,15 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
           ref.read(accountProvider).identity?.uid == identity.uid) {
         ref.read(ratingStatusProvider.notifier).state =
             (event.id, const RatingSubmission.pending());
-        unawaited(ratings.submitResult(session, event.moves).then((message) {
-          if (active &&
+        unawaited(recoverRating(
+          submit: () => ratings.submitResult(session, event.moves),
+          isCurrent: () =>
+              active &&
               controller.currentMatchId == event.id &&
-              ref.read(accountProvider).identity?.uid == identity.uid) {
-            ref.read(ratingStatusProvider.notifier).state = (event.id, message);
-          }
-        }).catchError((Object error) {
-          if (active &&
-              controller.currentMatchId == event.id &&
-              ref.read(accountProvider).identity?.uid == identity.uid) {
-            ref.read(ratingStatusProvider.notifier).state =
-                (event.id, const RatingSubmission.failed());
-          }
-        }));
+              ref.read(accountProvider).identity?.uid == identity.uid,
+          onResult: (result) => ref.read(ratingStatusProvider.notifier).state =
+              (event.id, result),
+        ));
       }
       await achievementWrite;
     },

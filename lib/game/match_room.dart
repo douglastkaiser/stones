@@ -1,12 +1,14 @@
 import '../models/cosmetics.dart';
 import 'match_config.dart';
 import 'match_clock.dart';
+import 'match_elapsed.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
 
 /// A second device confirmed a turn before this client's transaction completed.
 class StaleMatchMove extends StateError {
-  StaleMatchMove() : super('Another move was confirmed first. Refreshing board.');
+  StaleMatchMove()
+      : super('Another move was confirmed first. Refreshing board.');
 }
 
 /// New unified room codec. Existing square/Hex rooms retain their own codecs.
@@ -24,6 +26,9 @@ class MatchRoom {
     this.aiLeaseAt,
     MatchClock? clock,
     this.timedOut,
+    this.startedAt,
+    this.lastMoveAt,
+    this.finishedAt,
   })  : clock = clock ??
             (config.clockSeconds > 0 ? MatchClock.initial(config) : null),
         owners = Map.unmodifiable(owners),
@@ -88,6 +93,18 @@ class MatchRoom {
   final DateTime? aiLeaseAt;
   final MatchClock? clock;
   final SeatId? timedOut;
+  final DateTime? startedAt, lastMoveAt, finishedAt;
+  MatchElapsed? elapsed(bool finished) {
+    if (startedAt == null) return null;
+    final end = finished ? finishedAt ?? lastMoveAt : null;
+    if (finished && end == null) return null;
+    return finished
+        ? MatchElapsed(
+            milliseconds:
+                end!.difference(startedAt!).inMilliseconds.clamp(0, 1 << 53))
+        : MatchElapsed(runningSince: startedAt);
+  }
+
   static const leaseDuration = Duration(seconds: 30);
   bool runnerActive(DateTime now) =>
       aiLeaseAt != null && now.isBefore(aiLeaseAt!.add(leaseDuration));
@@ -101,6 +118,9 @@ class MatchRoom {
       throw StateError('AI lease is unavailable');
     }
     return MatchRoom(
+        startedAt: startedAt,
+        lastMoveAt: lastMoveAt,
+        finishedAt: finishedAt,
         code: code,
         host: host,
         config: config,
@@ -201,6 +221,9 @@ class MatchRoom {
       throw StateError('No clock expiry to claim');
     }
     return MatchRoom(
+        startedAt: startedAt,
+        lastMoveAt: lastMoveAt,
+        finishedAt: finishedAt,
         code: code,
         host: host,
         config: config,
@@ -226,6 +249,9 @@ class MatchRoom {
         .firstOrNull;
     if (seat == null) throw StateError('Room is full');
     return MatchRoom(
+        startedAt: startedAt,
+        lastMoveAt: lastMoveAt,
+        finishedAt: finishedAt,
         code: code,
         host: host,
         config: config,
@@ -243,11 +269,13 @@ class MatchRoom {
       {DateTime? now}) {
     final game = replay();
     if (game.ply != expectedPly) throw StaleMatchMove();
-    if (!canMove(uid, game, now: now) ||
-        MatchRules.play(game, move) == null) {
+    if (!canMove(uid, game, now: now) || MatchRules.play(game, move) == null) {
       throw StateError('Stale, unauthorized or illegal move');
     }
     return MatchRoom(
+        startedAt: startedAt,
+        lastMoveAt: lastMoveAt,
+        finishedAt: finishedAt,
         code: code,
         host: host,
         config: config,
@@ -266,6 +294,9 @@ class MatchRoom {
       throw StateError('Cannot resign this player');
     }
     return MatchRoom(
+        startedAt: startedAt,
+        lastMoveAt: lastMoveAt,
+        finishedAt: finishedAt,
         code: code,
         host: host,
         config: config,
@@ -280,6 +311,9 @@ class MatchRoom {
   }
 
   Map<String, dynamic> toMap() => {
+        'startedAt': startedAt?.toUtc().toIso8601String(),
+        'lastMoveAt': lastMoveAt?.toUtc().toIso8601String(),
+        'finishedAt': finishedAt?.toUtc().toIso8601String(),
         'version': 1,
         'code': code,
         'host': host,
@@ -311,6 +345,14 @@ class MatchRoom {
     final owners = Map<String, dynamic>.from(map['owners']);
     final styles = Map<String, dynamic>.from(map['styles']);
     return MatchRoom(
+        startedAt:
+            map['startedAt'] == null ? null : DateTime.parse(map['startedAt']),
+        lastMoveAt: map['lastMoveAt'] == null
+            ? null
+            : DateTime.parse(map['lastMoveAt']),
+        finishedAt: map['finishedAt'] == null
+            ? null
+            : DateTime.parse(map['finishedAt']),
         code: map['code'] as String,
         host: map['host'] as String,
         config: config,

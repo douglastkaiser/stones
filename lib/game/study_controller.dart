@@ -2,6 +2,7 @@ import 'match_controller.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
 import 'match_storage.dart';
+import 'match_elapsed.dart';
 import 'match_study.dart';
 
 /// Learning uses the match shell and engine, with catalog-specific objectives.
@@ -51,7 +52,10 @@ class StudyController extends MatchController {
     steps = 0;
     solved = false;
     failed = false;
-    state = MatchSession(id: 'study-${study.id}', game: study.initial);
+    state = MatchSession(
+        id: 'study-${study.id}',
+        game: study.initial,
+        elapsed: MatchElapsed(runningSince: DateTime.now()));
   }
 
   @override
@@ -90,6 +94,9 @@ class StudyController extends MatchController {
     state = state.copyWith(
         game: game,
         inputLocked: solved || failed,
+        elapsed: solved || failed
+            ? state.elapsed?.frozen(DateTime.now())
+            : state.elapsed,
         explanation: solved
             ? 'Complete! ${study.explanation}'
             : failed

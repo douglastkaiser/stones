@@ -102,7 +102,7 @@ class FirebaseRatingRepository
         .where('isAi', isEqualTo: true)
         .get(const GetOptions(source: Source.server));
     return result.docs
-        .where((doc) => doc.data()['engineVersion'] == 'shared-search-v1')
+        .where((doc) => doc.data()['engineVersion'] == 'shared-search-v2')
         .map((doc) => EloRating.fromMap(doc.id, _dates(doc.data())))
         .toList();
   }
@@ -362,7 +362,7 @@ class FirebaseRatingRepository
             'opponents': ai ? old['opponents'] as int? ?? 0 : 0,
             'lastResult': receiptId,
             'lastUpdated': FieldValue.serverTimestamp(),
-            if (ai) 'engineVersion': RatingEvidence.engine,
+            if (ai) 'engineVersion': e.game.config.aiEngine,
             if (ai) 'aiDifficulty': seat.level.name,
           };
           final player = _legacyPlayers(e.pool).doc(id);

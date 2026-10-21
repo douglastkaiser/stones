@@ -36,6 +36,9 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
       firestore.collection('matches').doc(code);
   static MatchRoom decodeRoom(Map<String, dynamic> data) => MatchRoom.fromMap({
         ...data,
+        for (final field in ['startedAt', 'lastMoveAt', 'finishedAt'])
+          field:
+              (data[field] as Timestamp?)?.toDate().toUtc().toIso8601String(),
         'aiLeaseAt': (data['aiLeaseAt'] as Timestamp?)
             ?.toDate()
             .toUtc()
@@ -90,8 +93,10 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         if ((await tx.get(ref)).exists) return false;
         tx.set(ref, {
           ...room.toMap(),
-          'ratingKey': List.generate(64, (_) => random.nextInt(16).toRadixString(16))
-              .join()
+          if (room.ready) 'startedAt': FieldValue.serverTimestamp(),
+          'ratingKey':
+              List.generate(64, (_) => random.nextInt(16).toRadixString(16))
+                  .join()
         });
         return true;
       });
@@ -116,7 +121,9 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
           if (!identical(joined, room)) {
             tx.update(ref, {
               'owners': joined.toMap()['owners'],
-              'styles': joined.toMap()['styles']
+              'styles': joined.toMap()['styles'],
+              if (joined.ready && room.startedAt == null)
+                'startedAt': FieldValue.serverTimestamp()
             });
           }
           return joined;
@@ -179,8 +186,13 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
           clock['started'][game.config.next(game.current).name] =
               FieldValue.serverTimestamp();
         }
-        tx.update(
-            ref, {'moves': updated.moves, if (clock != null) 'clock': clock});
+        tx.update(ref, {
+          'moves': updated.moves,
+          'lastMoveAt': FieldValue.serverTimestamp(),
+          if (updated.replay().finished)
+            'finishedAt': FieldValue.serverTimestamp(),
+          if (clock != null) 'clock': clock
+        });
       });
   @override
   Future<void> resign(String code, String uid, SeatId seat) =>
@@ -189,7 +201,10 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
         final updated = decodeRoom(snapshot.data()!).resign(uid, seat);
-        tx.update(ref, {'resigned': updated.resigned!.name});
+        tx.update(ref, {
+          'resigned': updated.resigned!.name,
+          'finishedAt': FieldValue.serverTimestamp()
+        });
       });
   @override
   Future<MatchRoom> claimRunner(String code, String uid) async {
@@ -213,6 +228,9 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         if (!snapshot.exists) throw StateError('Room no longer exists');
         final expired =
             decodeRoom(snapshot.data()!).expire(uid, DateTime.now());
-        tx.update(ref, {'timedOut': expired.timedOut!.name});
+        tx.update(ref, {
+          'timedOut': expired.timedOut!.name,
+          'finishedAt': FieldValue.serverTimestamp()
+        });
       });
 }

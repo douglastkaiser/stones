@@ -89,7 +89,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(evidence.humans, isEmpty);
     expect(evidence.participants,
-        ['ai_shared-search-v1_expert', 'ai_shared-search-v1_easy']);
+        ['ai_shared-search-v2_expert', 'ai_shared-search-v2_easy']);
     expect(container.read(ratingStatusProvider)?.$2.state,
         RatingSubmissionState.confirmed);
     expect(container.read(achievementProvider).totalWins, 0);

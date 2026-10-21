@@ -21,6 +21,17 @@ class _SkillResultRecorder {
 
   Future<RatingSubmission> submit(MatchSession session, RatingEvidence e,
       List<Map<String, dynamic>> moves, String uid, String name) async {
+    if (session.room != null) {
+      final accounts = await Future.wait(e.humans.map((uid) => db
+              .collection('playerAccounts')
+              .doc(uid)
+              .get(const GetOptions(source: Source.server))))
+          .timeout(const Duration(seconds: 8));
+      if (accounts.any((doc) => doc.data()?['registered'] == false)) {
+        return const RatingSubmission(RatingSubmissionState.awaitingAccounts,
+            'A player is using a guest account. Every human must sign in to record ratings. Ask them to sign in, then reopen this room or retry.');
+      }
+    }
     Future<String?> confirm() => _confirm(session, e, moves, uid, name)
         .timeout(const Duration(seconds: 15));
     var key = await confirm();
@@ -42,7 +53,7 @@ class _SkillResultRecorder {
           key = await confirm();
         } on TimeoutException {
           return const RatingSubmission.pending(
-              'Waiting for all players to confirm the result. Reopen the room or retry later.');
+              'Waiting for all players to confirm. Every human must sign in and open the finished game; guest accounts cannot confirm ratings.');
         }
       }
     }
@@ -52,10 +63,11 @@ class _SkillResultRecorder {
       try {
         receipts[pool] =
             await _settle(key, pool).timeout(const Duration(seconds: 15));
-      } catch (_) {
+      } catch (error) {
         // Preserve any confirmed delta; a retry reads its immutable receipt.
-        return RatingSubmission(RatingSubmissionState.failed,
-            'Some rating updates are pending. Retry to finish both ladders.',
+        return RatingSubmission(
+            RatingSubmissionState.failed, ratingFailureMessage(error),
+            failure: ratingFailure(error),
             deltas: _deltas(receipts['overall'], e),
             formatDeltas: _deltas(receipts[e.pool], e),
             skillBased: true);
@@ -207,7 +219,9 @@ class _SkillResultRecorder {
             'established': games >= 10 && next.deviation <= 150,
             'lastResult': key,
             'lastUpdated': FieldValue.serverTimestamp(),
-            if (ai) 'engineVersion': RatingEvidence.engine,
+            if (ai)
+              'engineVersion': (source['config'] as Map)['aiEngine'] ??
+                  RatingEvidence.engine,
             if (ai) 'aiDifficulty': seat['level'],
           });
           tx.set(players.doc(id).collection('history').doc('$games'), {

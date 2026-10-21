@@ -25,6 +25,15 @@ saves retain their exposed-flat placements and Elo contract. See
 [skill ratings](SKILL_RATINGS.md) and the historical
 [result contract](RESULT_SHARING.md) for versioning and qualification.
 
+## Playtesting application features
+
+The shared Court shell now detects any legal win on the player's next move
+(road or flat scoring) if the position is unchanged. It is coaching feedback,
+not a rule requiring a call or guaranteeing a forced win. Core validation stays
+in MatchRules. Court takebacks remain offline, unrated practice. See
+[playtesting feedback](PLAYTESTING_FEEDBACK.md) for timing, cosmetics, chat and
+verification; these features do not amend official two-player Tak.
+
 ## Sources and scope
 
 - [University Edition rules](https://crabfragmentlabs.com/s/UniversityRules.pdf),

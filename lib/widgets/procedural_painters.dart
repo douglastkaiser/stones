@@ -216,6 +216,19 @@ void _ornament(Canvas canvas, BoardTheme theme, {PieceType? type}) {
     canvas.translate(-center.dx, -center.dy);
   }
   switch (theme) {
+    case BoardTheme.celestial:
+      canvas.drawCircle(center, 31, ink);
+      canvas.drawOval(
+          Rect.fromCenter(center: center, width: 76, height: 28), ink);
+      _star(canvas, center, 15, ink);
+      for (var i = 0; i < 9; i++) {
+        final angle = i * 2.399;
+        final point =
+            center + Offset(math.cos(angle), math.sin(angle)) * (20 + i * 2.2);
+        canvas.drawCircle(
+            point, i.isEven ? 1.5 : .9, ink..style = PaintingStyle.fill);
+      }
+      ink.style = PaintingStyle.stroke;
     case BoardTheme.morocco:
       // Interlaced square geometry, a central eight-point rosette and petals.
       for (final radius in [isBoard ? 38.0 : 28.0, isBoard ? 32.0 : 23.0]) {
@@ -381,6 +394,19 @@ class BoardSurfacePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = math.max(.5, size.width / 180);
     switch (theme.theme) {
+      case BoardTheme.celestial:
+        final glow = Paint()
+          ..shader = RadialGradient(colors: [
+            const Color(0xFF6861AA).withValues(alpha: .4),
+            const Color(0x00101632)
+          ]).createShader(Offset.zero & size);
+        canvas.drawRect(Offset.zero & size, glow);
+        for (var i = 0; i < 16; i++) {
+          final point = Offset(size.width * ((i * 37 + seed * 13) % 100) / 100,
+              size.height * ((i * 61 + seed * 7) % 100) / 100);
+          canvas.drawCircle(point, size.shortestSide / (i.isEven ? 100 : 170),
+              Paint()..color = theme.woodGrainAccent.withValues(alpha: .6));
+        }
       case BoardTheme.classicWood:
       case BoardTheme.kyoto:
         for (var i = 0; i < 9; i++) {

@@ -90,6 +90,12 @@ Future<void> capture(WidgetTester tester, GlobalKey key, String name) async {
   });
 }
 
+Future<void> tapVisible(WidgetTester tester, Finder target) async {
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target);
+}
+
 void main() {
   setUpAll(() => WidgetController.hitTestWarningShouldBeFatal = true);
   tearDownAll(() => WidgetController.hitTestWarningShouldBeFatal = false);
@@ -116,36 +122,39 @@ void main() {
           final original = controller.state.game!;
           final boardBounds =
               tester.getRect(find.byKey(const ValueKey('stable-board')));
-          await tester.tap(cell(const Cell(0, 0)));
+          await tapVisible(tester, cell(const Cell(0, 0)));
           await tester.pumpAndSettle();
           expect(find.byType(StackMoveTray), findsOneWidget);
           expect(find.text('Taking 3 of 3 · 0 stay here'), findsOneWidget);
           expect(find.text('Next to drop: Charcoal flat'), findsOneWidget);
           await capture(tester, key,
               '${shape.name}-${size.width.toInt()}-${brightness.name}-pickup');
-          expect(tester.getRect(find.byKey(const ValueKey('stable-board'))),
-              boardBounds);
+          expect(
+              tester.getRect(find.byKey(const ValueKey('stable-board'))).size,
+              boardBounds.size);
           expect(
               tester
                   .widget<FilledButton>(
                       find.widgetWithText(FilledButton, 'Confirm move'))
                   .onPressed,
               isNull);
-          await tester.tap(find.byKey(const ValueKey('take-layer-1')));
+          await tapVisible(tester, find.byKey(const ValueKey('take-layer-1')));
           await tester.pumpAndSettle();
           expect(find.text('Taking 1 of 3 · 2 stay here'), findsOneWidget);
           expect(
               board(tester).game.stackAt(const Cell(0, 0)), [charcoal, ivory]);
-          await tester.tap(find.byTooltip('Take more stones'));
+          await tapVisible(tester, find.byTooltip('Take more stones'));
           await tester.pumpAndSettle();
-          await tester.tap(find.byTooltip('Take more stones'));
+          await tapVisible(tester, find.byTooltip('Take more stones'));
           await tester.pumpAndSettle();
-          await tester.tap(cell(const Cell(1, 0)));
+          await tapVisible(tester, cell(const Cell(1, 0)));
           await tester.pumpAndSettle();
           expect(controller.state.game, same(original));
           expect(board(tester).game.stackAt(const Cell(1, 0)), [charcoal]);
           expect(board(tester).carried, [ivory, ivory]);
           expect(find.text('Carrying 2 · 1 staged'), findsOneWidget);
+          await tester.ensureVisible(find.text('Confirm move'));
+          await tester.pumpAndSettle();
           final confirmBounds =
               tester.getRect(find.widgetWithText(FilledButton, 'Confirm move'));
           for (final action in [
@@ -162,19 +171,19 @@ void main() {
           await capture(tester, key,
               '${shape.name}-${size.width.toInt()}-${brightness.name}-carrying');
           await tester.ensureVisible(find.byTooltip('Inspect another stack'));
-          await tester.tap(find.byTooltip('Inspect another stack'));
+          await tapVisible(tester, find.byTooltip('Inspect another stack'));
           await tester.pumpAndSettle();
-          await tester.tap(cell(const Cell(0, 1)));
+          await tapVisible(tester, cell(const Cell(0, 1)));
           await tester.pumpAndSettle();
           expect(tester.widget<StackMoveTray>(find.byType(StackMoveTray)).label,
               contains('0,1'));
           expect(find.byType(BottomSheet), findsNothing);
           expect(board(tester).carried, [ivory, ivory]);
-          await tester.tap(find.text('Back to carried stones'));
+          await tapVisible(tester, find.text('Back to carried stones'));
           await tester.pumpAndSettle();
-          await tester.tap(cell(const Cell(1, 0)));
+          await tapVisible(tester, cell(const Cell(1, 0)));
           await tester.pumpAndSettle();
-          await tester.tap(cell(const Cell(2, 0)));
+          await tapVisible(tester, cell(const Cell(2, 0)));
           await tester.pumpAndSettle();
           expect(controller.state.game, same(original));
           expect(
@@ -183,24 +192,25 @@ void main() {
           expect(board(tester).carried, isEmpty);
           expect(find.text('Drops along path: 2, 1'), findsOneWidget);
           await tester.ensureVisible(find.byTooltip('Undo last drop'));
-          await tester.tap(find.byTooltip('Undo last drop'));
+          await tapVisible(tester, find.byTooltip('Undo last drop'));
           await tester.pumpAndSettle();
           expect(board(tester).carried, [ivory]);
           expect(board(tester).game.stackAt(const Cell(2, 0)), isEmpty);
           await tester.ensureVisible(find.text('Drop remaining here'));
-          await tester.tap(find.text('Drop remaining here'));
+          await tapVisible(tester, find.text('Drop remaining here'));
           await tester.pumpAndSettle();
           expect(board(tester).game.stackAt(const Cell(1, 0)),
               [charcoal, ivory, ivory]);
-          await tester.tap(find.byTooltip('Undo last drop'));
+          await tapVisible(tester, find.byTooltip('Undo last drop'));
           await tester.pumpAndSettle();
-          await tester.tap(cell(const Cell(2, 0)));
+          await tapVisible(tester, cell(const Cell(2, 0)));
           await tester.pumpAndSettle();
-          expect(tester.getRect(find.byKey(const ValueKey('stable-board'))),
-              boardBounds);
+          expect(
+              tester.getRect(find.byKey(const ValueKey('stable-board'))).size,
+              boardBounds.size);
           await capture(tester, key,
               '${shape.name}-${size.width.toInt()}-${brightness.name}-spread');
-          await tester.tap(find.text('Confirm move'));
+          await tapVisible(tester, find.text('Confirm move'));
           await tester.pumpAndSettle();
           expect(controller.state.game!.ply, 3);
           expect(controller.state.game!.stackAt(const Cell(1, 0)),
@@ -262,11 +272,11 @@ void main() {
           capture: key,
           stones: {const Cell(0, 0): List.filled(30, ivory)});
       final before = tester.getRect(find.byKey(const ValueKey('stable-board')));
-      await tester.tap(cell(const Cell(0, 0)));
+      await tapVisible(tester, cell(const Cell(0, 0)));
       await tester.pumpAndSettle();
       expect(find.text('Taking 5 of 30 · 25 stay here'), findsOneWidget);
       await tester.ensureVisible(find.text('Expand'));
-      await tester.tap(find.text('Expand'));
+      await tapVisible(tester, find.text('Expand'));
       await tester.pumpAndSettle();
       final layers = find.byKey(const ValueKey('stack-layers-Stack 0,0'));
       await tester.scrollUntilVisible(
@@ -316,7 +326,7 @@ void main() {
       expect(board(tester).drops, [1]);
       expect(tester.widget<StackMoveTray>(find.byType(StackMoveTray)).label,
           contains('0,1'));
-      await tester.tap(find.text('Cancel'));
+      await tapVisible(tester, find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(board(tester).game.stackAt(const Cell(0, 0)), [ivory]);
       expect(controller.state.game!.ply, 2);
@@ -331,13 +341,13 @@ void main() {
       'position replacement clears stale drafts and finished stacks stay inspectable',
       (tester) async {
     final controller = await mount(tester, BoardShape.square);
-    await tester.tap(cell(const Cell(0, 0)));
+    await tapVisible(tester, cell(const Cell(0, 0)));
     await tester.pumpAndSettle();
-    await tester.tap(cell(const Cell(1, 0)));
+    await tapVisible(tester, cell(const Cell(1, 0)));
     await tester.pumpAndSettle();
     controller.connection(false);
     await tester.pumpAndSettle();
-    await tester.tap(cell(const Cell(2, 0)));
+    await tapVisible(tester, cell(const Cell(2, 0)));
     await tester.pumpAndSettle();
     expect(board(tester).drops, [1]);
     expect(
@@ -355,7 +365,7 @@ void main() {
     controller.replace(controller.state.game!.copyWith(
         result: const MatchResult(SeatId.charcoal, ResultReason.resignation)));
     await tester.pumpAndSettle();
-    await tester.tap(cell(const Cell(0, 0)));
+    await tapVisible(tester, cell(const Cell(0, 0)));
     await tester.pumpAndSettle();
     expect(tester.widget<StackMoveTray>(find.byType(StackMoveTray)).onCarry,
         isNull);

@@ -129,6 +129,9 @@ class ResultShareData {
 
   /// Only acknowledged/frozen clocks supply a duration. Never use share time.
   Duration? get duration {
+    if (session.elapsed != null && game.finished) {
+      return session.elapsed!.at(DateTime.now());
+    }
     final clock = session.clock;
     if (clock == null || !game.finished) return null;
     DateTime? finish;
@@ -170,6 +173,10 @@ class ResultShareData {
         if (durationLabel != null) durationLabel!,
         if (viewer != null)
           ratingLabel(viewer)
+        else if (rating.deltas.isNotEmpty)
+          ...game.config.ids
+              .where(rating.deltas.containsKey)
+              .map((id) => '${name(id)}: ${ratingLabel(id)}')
         else if (rating.state == RatingSubmissionState.unrated)
           'Unrated',
       ].join(' · ');

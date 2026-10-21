@@ -7,8 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stones/main.dart';
 import 'package:stones/providers/account_provider.dart';
 import 'package:stones/services/account_service.dart';
+import 'package:stones/services/browser_history_platform.dart'
+    show configureBrowserNavigation;
 
 Future<void> main() async {
+  configureBrowserNavigation();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
       options: const FirebaseOptions(
