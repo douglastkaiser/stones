@@ -13,6 +13,8 @@ import 'match_rules.dart';
 import 'match_state.dart';
 import 'match_storage.dart';
 
+const _unchangedElapsed = Object();
+
 class MatchSession {
   const MatchSession(
       {this.game,
@@ -64,7 +66,7 @@ class MatchSession {
           String? explanation,
           bool? inputLocked,
           MatchClock? clock,
-          MatchElapsed? elapsed,
+          Object? elapsed = _unchangedElapsed,
           String? shortcutWarning,
           String? error}) =>
       MatchSession(
@@ -79,7 +81,9 @@ class MatchSession {
           explanation: explanation ?? this.explanation,
           inputLocked: inputLocked ?? this.inputLocked,
           clock: clock ?? this.clock,
-          elapsed: elapsed ?? this.elapsed,
+          elapsed: identical(elapsed, _unchangedElapsed)
+              ? this.elapsed
+              : elapsed as MatchElapsed?,
           shortcutWarning: shortcutWarning ?? this.shortcutWarning,
           error: error);
 }

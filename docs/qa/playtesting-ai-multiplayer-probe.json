@@ -1,8 +1,8 @@
 {
   "engine": "shared-search-v2",
   "date": "2026-10-21",
-  "qualification": "Exploratory only. Three seeds rotated across three seats, 80-ply bound. Does not establish adjacent-tier strength; many unfinished games and Expert search timeouts.",
-  "command": "flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=3 --dart-define=AI_PLAYERS=3 --dart-define=AI_TOURNAMENT_SHAPE=hex",
+  "qualification": "Historical pre-review exploratory probe only. Three seeds rotated across three seats, 80-ply bound. Does not establish adjacent-tier strength or qualify post-review tuning; many unfinished games and Expert search timeouts.",
+  "command": "flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=3 --dart-define=AI_PLAYERS=3 --dart-define=AI_MAX_PLIES=80 --dart-define=AI_TOURNAMENT_SHAPE=hex",
   "results": [
     {
       "shape": "hex",

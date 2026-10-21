@@ -116,7 +116,7 @@ def tap_target(page, target):
 def turn_status(page, seat):
     # Assert the painted status; live announcements repeat the same text.
     return page.locator('flt-semantics span').filter(
-        has_text=re.compile(rf'^(?:Your turn · )?{re.escape(seat)} to play'))
+        has_text=re.compile(rf'^(?:Your turn · |{re.escape(seat)}’s turn · )?{re.escape(seat)} to play'))
 
 
 def cell(page, x, y):
@@ -175,6 +175,15 @@ def main():
         host = client()
         click(host, 'Learn to play')
         click(host, 'Start learning')
+        click(host, 'Let’s play')
+        # Forward must recreate lesson persistence without the disposed hub's ref.
+        host.go_back()
+        expect(host.get_by_role('heading', name='Tutorials & Puzzles', exact=True)).to_be_visible()
+        host.go_back()
+        expect(button(host, 'Learn to play')).to_be_visible()
+        host.go_forward()
+        expect(host.get_by_role('heading', name='Tutorials & Puzzles', exact=True)).to_be_visible()
+        host.go_forward()
         click(host, 'Let’s play')
         # First lesson: the single road gap is displayed in its objective.
         place(host, 1, 3)
@@ -306,7 +315,7 @@ def main():
             raise AssertionError(errors)
         (EVIDENCE / 'summary.json').write_text(json.dumps({
             'scope': 'Chromium desktop runner with phone viewport; demo emulators only',
-            'journeys': ['guest lesson completion and next lesson', 'local save/reload',
+            'journeys': ['browser Back/Forward lesson completion and next lesson', 'local save/reload',
                          'completion, read-only review and local rematch',
                          'cold invitation', 'independent clients', 'disconnect/rejoin',
                          'computer reply', 'signed-in AI-only settlement in both scopes',

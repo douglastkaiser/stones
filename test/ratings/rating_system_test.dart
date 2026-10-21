@@ -183,7 +183,7 @@ void main() {
               gamesPlayed: 10))
       ..botValues = [
         const EloRating(
-            id: 'ai_shared-search-v1_expert',
+            id: 'ai_shared-search-v2_expert',
             displayName: 'Expert AI',
             rating: 1400,
             gamesPlayed: 40,

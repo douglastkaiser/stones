@@ -73,6 +73,14 @@ class RatingSubmission {
           state == RatingSubmissionState.awaitingAccounts ||
           state == RatingSubmissionState.failed);
 
+  /// Immutable receipts remain valid even if a later refresh cannot complete.
+  RatingSubmission retainConfirmed(RatingSubmission? previous) =>
+      RatingSubmission(state, message,
+          failure: failure,
+          skillBased: skillBased || (previous?.skillBased ?? false),
+          deltas: {...?previous?.deltas, ...deltas},
+          formatDeltas: {...?previous?.formatDeltas, ...formatDeltas});
+
   String labelFor(SeatId? seat) {
     final value = deltas[seat];
     if (value != null) {

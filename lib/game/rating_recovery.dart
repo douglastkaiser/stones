@@ -26,13 +26,7 @@ Future<void> recoverRating(
           failure: ratingFailure(error));
     }
     if (!isCurrent()) return;
-    if (next.retryable && previous != null) {
-      next = RatingSubmission(next.state, next.message,
-          failure: next.failure,
-          skillBased: previous.skillBased || next.skillBased,
-          deltas: {...previous.deltas, ...next.deltas},
-          formatDeltas: {...previous.formatDeltas, ...next.formatDeltas});
-    }
+    next = next.retainConfirmed(previous);
     onResult(next);
     previous = next;
     if (!next.retryable) return;

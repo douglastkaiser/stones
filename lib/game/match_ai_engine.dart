@@ -21,6 +21,8 @@ class MatchAI {
   final bool yieldDuringSearch;
   int get depth => [1, 1, 2, 3][level.index];
   int get branching => [4, 8, 12, 16][level.index];
+  int _branching(MatchState game) =>
+      game.config.seats.length > 2 ? [4, 8, 8, 10][level.index] : branching;
   Duration get thinkingLimit =>
       Duration(milliseconds: [200, 500, 1200, 2200][level.index]);
 
@@ -71,8 +73,8 @@ class MatchAI {
         final seed = game.ply * 31 +
             game.board.keys.fold<int>(0, (sum, c) => sum + c.x * 7 + c.y * 13);
         return candidates
-            .take(6)
-            .toList()[seed.abs() % math.min(6, candidates.length)]
+            .take(12)
+            .toList()[seed.abs() % math.min(12, candidates.length)]
             .$1;
       }
       var completedScores = <(MatchMove, double)>[];
@@ -81,7 +83,7 @@ class MatchAI {
         final iterationScores = <(MatchMove, double)>[];
         MatchMove? iterationMove;
         var score = double.negativeInfinity;
-        for (final (move, next, _) in candidates.take(branching)) {
+        for (final (move, next, _) in candidates.take(_branching(game))) {
           final double value;
           if (game.config.seats.length == 2) {
             value = await _duelSearch(next, iteration - 1, game.current, budget,
@@ -173,7 +175,7 @@ class MatchAI {
         onRoot?.call(move, 100000);
         return [(move, next, 100000)];
       }
-      final score = _utility(game, evaluate(next), game.current);
+      final score = _utility(game, _evaluate(next), game.current);
       onRoot?.call(move, score);
       ranked.add((move, next, score));
     }
@@ -204,7 +206,7 @@ class MatchAI {
             ? 200000 - game.ply.toDouble()
             : -200000 + game.ply.toDouble();
       }
-      return _utility(game, evaluate(game), root);
+      return _utility(game, _evaluate(game), root);
     }
     final maximize = game.current == root;
     var best = maximize ? double.negativeInfinity : double.infinity;
@@ -220,14 +222,14 @@ class MatchAI {
       }
       if (beta <= alpha) break;
     }
-    return best.isFinite ? best : _utility(game, evaluate(game), root);
+    return best.isFinite ? best : _utility(game, _evaluate(game), root);
   }
 
   Future<Map<SeatId, double>> _search(
       MatchState game, int depth, SearchBudget budget) async {
     final pause = budget.pauseIfNeeded();
     if (pause != null) await pause;
-    if (game.finished) return evaluate(game);
+    if (game.finished) return _evaluate(game);
     if (depth == 0) {
       if ((pathCost(game, game.current) <= 1 ||
               game.reserves[game.current]!.total <= 1 ||
@@ -238,11 +240,12 @@ class MatchAI {
             id: id == game.current ? 100000 : -100000
         };
       }
-      return evaluate(game);
+      return _evaluate(game);
     }
     Map<SeatId, double>? best;
     var score = double.negativeInfinity;
-    for (final (_, next, _) in (await _ranked(game, budget)).take(branching)) {
+    for (final (_, next, _)
+        in (await _ranked(game, budget)).take(_branching(game))) {
       final values = await _search(next, depth - 1, budget);
       final value = _utility(game, values, game.current);
       if (value > score) {
@@ -250,10 +253,17 @@ class MatchAI {
         score = value;
       }
     }
-    return best ?? evaluate(game);
+    return best ?? _evaluate(game);
   }
 
-  static Map<SeatId, double> evaluate(MatchState game) {
+  static Map<SeatId, double> evaluate(MatchState game) =>
+      _position(game, endgame: true);
+
+  Map<SeatId, double> _evaluate(MatchState game) =>
+      _position(game, endgame: level.index >= BotLevel.hard.index);
+
+  static Map<SeatId, double> _position(MatchState game,
+      {required bool endgame}) {
     if (game.finished) {
       return {
         for (final id in game.config.ids)
@@ -265,10 +275,18 @@ class MatchAI {
       };
     }
     final flats = MatchRules.flatCounts(game);
+    final supply = Reserve.initial(game.config).total;
+    final occupied = game.board.length / game.geometry.cells.length;
+    // Flat control becomes decisive as the board fills; a road-only heuristic
+    // otherwise spends its last reserves chasing blocked paths.
+    final flatWeight = 4 + (endgame ? 40 * occupied * occupied : 0);
     return {
       for (final seat in game.config.ids)
         seat: -80 * pathCost(game, seat) +
-            flats[seat]! * 4.0 +
+            flats[seat]! * flatWeight +
+            // Deploying material breaks equally-valued capture/shuffle cycles.
+            // Road tactics still dominate this small positional preference.
+            (supply - game.reserves[seat]!.total) * 8.0 +
             game.board.values.where((stack) => stack.last.seat == seat).fold(
                 0.0,
                 (sum, stack) =>

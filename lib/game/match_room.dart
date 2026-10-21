@@ -96,7 +96,7 @@ class MatchRoom {
   final DateTime? startedAt, lastMoveAt, finishedAt;
   MatchElapsed? elapsed(bool finished) {
     if (startedAt == null) return null;
-    final end = finished ? finishedAt ?? lastMoveAt : null;
+    final end = finished ? finishedAt : null;
     if (finished && end == null) return null;
     return finished
         ? MatchElapsed(

@@ -54,12 +54,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   String? _lastTurnCue, _threatMatch;
   Set<SeatId> _announcedThreats = {};
   void _cueTurn(MatchSession current) {
-    if (current.room == null ||
-        !current.ready ||
-        current.game?.finished != false ||
-        current.room!.owners[current.game!.current] != current.uid) {
-      return;
-    }
+    if (!_humanTurn(current)) return;
     final key = '${current.id}:${current.game!.ply}';
     if (_lastTurnCue == key) return;
     _lastTurnCue = key;
@@ -69,6 +64,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           .play(GameSound.yourTurn)
           .catchError((Object _) {}));
     }
+  }
+
+  bool _humanTurn(MatchSession current) {
+    final game = current.game;
+    if (widget.studyPanel != null || game == null || !current.canPlay) {
+      return false;
+    }
+    return current.room != null ||
+        game.config.seats.where((s) => s.control != SeatControl.ai).length > 1;
   }
 
   late MatchController _controller;
@@ -250,11 +254,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         }
       });
     }
-    final myTurn = match.room != null &&
-        match.ready &&
-        game?.finished == false &&
-        match.room!.owners[game!.current] == match.uid;
-    ref.listen(matchProvider.select((s) => (s.id, s.game?.ply, s.ready)),
+    final myTurn = _humanTurn(match);
+    ref.listen(matchProvider.select((s) => (s.id, s.game?.ply, s.canPlay)),
         (previous, next) {
       _cueTurn(ref.read(matchProvider));
     });
@@ -309,14 +310,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         };
     final BoardTheme selectedBoard =
         match.room?.boardTheme ?? ref.watch(shareableBoardThemeProvider);
-    final boardTheme = selectedBoard == BoardTheme.celestial &&
-            match.room != null &&
-            ref
-                    .watch(eliteThemeEligibilityProvider(match.room!.host))
-                    .valueOrNull !=
-                true
-        ? BoardTheme.classicWood
-        : selectedBoard;
+    final boardTheme = ref.watch(effectiveBoardThemeProvider((
+      selectedBoard,
+      match.room?.host ?? ref.watch(accountProvider).identity?.uid
+    )));
     final ratingStatus = ref.watch(ratingStatusProvider);
     final ratingMessage =
         ratingStatus?.$1 == match.id ? ratingStatus?.$2 : null;
@@ -499,7 +496,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           ? Theme.of(context).colorScheme.primaryContainer
                           : null,
                       borderRadius: BorderRadius.circular(12)),
-                  child: Text('${myTurn ? "Your turn · " : ""}$status',
+                  child: Text(
+                      '${myTurn ? match.room == null ? "${game.current.label}’s turn · " : "Your turn · " : ""}$status',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium))),
           board: BoardView(
@@ -560,8 +558,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       TextButton(
                           onPressed: () async {
                             final uid = ref.read(accountProvider).identity?.uid;
-                            ref.read(ratingStatusProvider.notifier).state =
-                                (match.id!, const RatingSubmission.pending());
+                            publishRating(
+                                ref.read(ratingStatusProvider.notifier),
+                                match.id!,
+                                const RatingSubmission.pending());
                             try {
                               final message = await ref
                                   .read(ratingRepositoryProvider)
@@ -571,19 +571,23 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                   ref.read(matchProvider).id == match.id &&
                                   ref.read(accountProvider).identity?.uid ==
                                       uid) {
-                                ref.read(ratingStatusProvider.notifier).state =
-                                    (match.id!, message);
+                                publishRating(
+                                    ref.read(ratingStatusProvider.notifier),
+                                    match.id!,
+                                    message);
                               }
-                            } catch (_) {
+                            } catch (error) {
                               if (mounted &&
                                   ref.read(matchProvider).id == match.id &&
                                   ref.read(accountProvider).identity?.uid ==
                                       uid) {
-                                ref.read(ratingStatusProvider.notifier).state =
-                                    (
-                                  match.id!,
-                                  const RatingSubmission.failed()
-                                );
+                                publishRating(
+                                    ref.read(ratingStatusProvider.notifier),
+                                    match.id!,
+                                    RatingSubmission(
+                                        RatingSubmissionState.failed,
+                                        ratingFailureMessage(error),
+                                        failure: ratingFailure(error)));
                               }
                             }
                           },

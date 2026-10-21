@@ -39,13 +39,13 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 | BOARD-03 | Celestial board-only reward, polled established-human Overall rank | Top-decile boundaries, provisional exclusion, cutoff ties; live server queries |
 | UX-01 | App-owned browser history, back to previous screen, forward restoration | Chromium Home → Settings → Back → Forward; Android remains device qualification |
 | UX-02 | New-turn/restored-position Flat selection | Wall-to-next-turn widget regression; normal draft clear preserves same-turn choice |
-| UX-03 | Own-turn banner and dedicated sound, deduplicated by match/ply | Multiplayer transition logic; sound independent of music |
+| UX-03 | Online own-turn and shared-device human-turn banner/sound, deduplicated by match/ply | Three-human and mixed human/AI transitions; pause/disconnect suppression; effects independent of music |
 | UX-04 | Always-available audio control; independent effects/music; bundled loop | Persisted independent settings, enlarged-text phone panel, visual browser check |
 | GAME-01 | Verify existing durable Court takebacks | Square/Hex controller and terminal-takeback regressions |
 | GAME-02 | Court-only legal next-move win scan for each seat; road or flats | Both shapes, placement/spread legality through MatchRules; stale analysis disposal |
 | GAME-03 | Active local elapsed clock; online acknowledged start/finish | Unlimited-game, pause/resume/save/share tests; timestamp authorization tests |
-| AI-01 | Measured adjacent difficulty tuning; separate v2 identity | Paired tournament tool, tactical fixtures, complete playthroughs |
-| AI-02 | Hex-aware goals and multiplayer utility; improved tactical search | Hex 2–4-seat tactics, legal playthroughs, paired Hex calibration |
+| AI-01 | Graded search/endgame understanding; separate v2 identity and current-only AI standings | Tactical/playthrough tests; actual-default benchmark gate; full strength qualification remains open |
+| AI-02 | Hex-aware goals and multiplayer utility; bounded full-round search | Hex 2–4-seat tactics and legal playthroughs; actual three-seat default calibration remains open |
 | ONLINE-01 | Inspect production configuration; actionable storage error copy | Deferred by owner; real iPhone retry still needed |
 | ONLINE-02 | Verified account-status metadata, explicit guest explanation, bounded retries | Three-/four-player settlement emulation, new-player defaults, partial receipts, identity changes |
 | ONLINE-03 | Participant-only temporary chat, 500 characters, aggressive masking | Access, impersonation, edits, expiry, closed-game and cleanup emulator tests |
@@ -60,7 +60,8 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
   matches. Receipt/profile rules bind each engine to its matching AI identity.
 - Local `elapsed.milliseconds` checkpoints active play independently of countdowns;
   local suspension freezes it. Online `startedAt`, `lastMoveAt`, `finishedAt` are
-  server timestamps. Existing games without timing evidence retain unavailable
+  server timestamps. Terminal duration requires `finishedAt`; an earlier move timestamp
+  cannot stand in for the finish. Existing games without timing evidence retain unavailable
   duration. Completed local history keeps the frozen duration.
 - `/playerAccounts/{uid}` contains only `registered: bool`, written by its owner
   and checked against the auth token's anonymous/permanent status. Reads require
@@ -74,7 +75,8 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 - Chat uses Firebase REST delivery so message bodies never enter the native
   Firestore document cache. UI state is memory-only and starts at room entry.
   Five-minute expiry and closed-table rules deny reads. Connected clients delete
-  expired/finished messages. Only pending document IDs/expiry times persist for
+  expired/finished messages. A separate 30-second cleanup timer keeps running
+  while chat is collapsed; receive polling remains opt-in. Only pending document IDs/expiry times persist for
   cleanup. Spark cannot guarantee physical deletion while every client is closed;
   an interrupted send can leave an unreadable expired document.
 - Effects default on and background music off. Browser audio starts after user
@@ -82,6 +84,24 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 - Browser Forward restores standard material routes. Dismissed transient popup
   routes are not recreated; unsupported forward entries normalize to the current
   visible route. Back is navigation and never implicitly undoes a move.
+
+## PR review corrections
+
+All seven P2 findings from the review of aa15870 are addressed:
+
+| Finding | Correction | Regression evidence |
+| --- | --- | --- |
+| Forward restores disposed lesson callbacks | Restored lessons obtain their own achievement notifier and own Next/practice navigation | Real browser Back twice/Forward twice, solve and Next; existing sandbox/progression tests |
+| Terminal online clock keeps running | Nullable elapsed state can be cleared; missing finish evidence stays unavailable | Older-client resignation after a known earlier move clears a running clock |
+| Confirmed deltas disappear during errors/refresh | Recovery and both manual refresh paths merge the latest immutable receipts, including nonretryable errors | Partial Overall → permission denial; pending/manual/interleaved updates preserve both receipts |
+| Same-device multiplayer has no turn cue | Shared-device human turns use the distinctive sound and seat-specific visual banner | Three humans and mixed human/AI tables; rebuild, pause, disconnect and terminal suppression |
+| Current AI duplicates legacy placeholders | Current engine constant drives placeholders and filters live/static AI standings; historical receipts keep their legacy fallback | Exactly four current opponents; live/static mixed-engine inputs; current AI outside top 50 retains its real rank |
+| Collapsed chat stops expiry cleanup | Cleanup has an independent timer, local expiry removal and contained errors | Cleanup/retry while collapsed without receives; finish clears and disposal cancels timers; two-browser no-history journey |
+| Sharing bypasses celestial revocation | Live and exported boards share reactive eligibility policy; theme/styles enter the PNG capture signature | Revoked at open, regained and revoked again while Share stays open |
+
+The audit still tracks all 18 original IDs. ONLINE-01 remains explicitly deferred
+by the owner. AI-01/AI-02 strength qualification and physical-device checks remain
+open acceptance criteria, not completed work hidden by the correctness tests.
 
 ## Validation and publication
 
@@ -98,7 +118,9 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
   50 seeded paired starts per adjacent tier on Square 3×3 and Hex radius 2.
   Stronger-tier decisive win rates were Square 93.8%, 83.5%, 88.7%; Hex 91.8%,
   71.1%, 88.0%. Draws and unfinished trials are reported separately. These are
-  default duel results, not a human skill estimate or multiplayer qualification.
+  historical reduced-board duel results. Square defaults to 5×5 and Hex to three
+  players, so these results do not qualify the real defaults or the subsequent
+  review tuning. They are not a human skill estimate.
 - Additional three-/four-seat tactics cover rivals beyond the immediately next
   seat. A small three-seat Hex probe informed that correction. Multiplayer
   calibration remains [exploratory](qa/playtesting-ai-multiplayer-probe.json):
@@ -130,8 +152,16 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 
 ### Reproducing additional checks
 
-- Duel calibration: `flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50`.
-  `AI_PLAYERS`, `AI_TOURNAMENT_SHAPE` and `AI_TOURNAMENT_TIER` select probes.
+- Actual-default calibration: `flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50`.
+  This now uses Square 5×5/two seats and Hex radius 2/three seats. `AI_SIZE`,
+  `AI_PLAYERS`, `AI_TOURNAMENT_SHAPE`, `AI_TOURNAMENT_TIER` and `AI_MAX_PLIES`
+  select explicit alternatives. Smaller seed counts are exploratory only.
+  Qualification requires at least 50 seeded seat rotations, 80% finished trials,
+  50% decisive trials and stronger-tier per-seat win share above 60%.
+- Native release calibration uses the same runner, rules and wall-clock budgets:
+  `dart compile exe -DAI_PAIRS=50 tools/ai_calibration.dart -o build/qa/ai-calibration`,
+  then `build/qa/ai-calibration`. Keep its results separate from Flutter/JIT and
+  browser/device results; execution speed affects completed search depth.
 - Chat journey: build `tools/integration_app.dart` to `build/integration-web` with
   base href `/stones/`, serve it on localhost:4174, start the demo Auth/Firestore
   emulators (9099/8088), then run `python3 tools/chat_browser_journey.py`.

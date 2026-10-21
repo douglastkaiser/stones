@@ -8,10 +8,12 @@ class MatchChat extends StatefulWidget {
       required this.room,
       required this.uid,
       required this.names,
-      this.finished = false});
+      this.finished = false,
+      this.serviceFactory = MatchChatService.new});
   final String room, uid;
   final Map<String, String> names;
   final bool finished;
+  final MatchChatService Function(String, String) serviceFactory;
   @override
   State<MatchChat> createState() => _MatchChatState();
 }
@@ -21,13 +23,19 @@ class _MatchChatState extends State<MatchChat> {
   final _text = TextEditingController();
   final _scroll = ScrollController();
   final _messages = <String, ChatMessage>{};
-  Timer? _timer;
+  Timer? _timer, _cleanupTimer;
+  bool _cleaning = false;
   String? _error;
   bool _sending = false, _polling = false, _expanded = false;
   @override
   void initState() {
     super.initState();
-    _service = MatchChatService(widget.room, widget.uid);
+    _service = widget.serviceFactory(widget.room, widget.uid);
+    if (!widget.finished) {
+      _cleanupTimer = Timer.periodic(
+          const Duration(seconds: 30), (_) => unawaited(_cleanup()));
+    }
+    unawaited(_cleanup(finished: widget.finished));
   }
 
   @override
@@ -35,8 +43,25 @@ class _MatchChatState extends State<MatchChat> {
     super.didUpdateWidget(oldWidget);
     if (widget.finished && !oldWidget.finished) {
       _timer?.cancel();
+      _cleanupTimer?.cancel();
       _messages.clear();
-      unawaited(_service.cleanup(finished: true));
+      unawaited(_cleanup(finished: true));
+    }
+  }
+
+  Future<void> _cleanup({bool finished = false}) async {
+    if (mounted) {
+      setState(() => _messages.removeWhere(
+          (_, message) => !message.expiresAt.isAfter(DateTime.now())));
+    }
+    if (_cleaning && !finished) return;
+    _cleaning = true;
+    try {
+      await _service.cleanup(finished: finished);
+    } catch (_) {
+      // The persisted cleanup IDs are retried on the next connected attempt.
+    } finally {
+      _cleaning = false;
     }
   }
 
@@ -44,7 +69,6 @@ class _MatchChatState extends State<MatchChat> {
     if (_polling || !_expanded || widget.finished) return;
     _polling = true;
     try {
-      await _service.cleanup();
       final messages = await _service.receive();
       if (!mounted || widget.finished) return;
       final follow = !_scroll.hasClients || _scroll.position.extentAfter < 40;
@@ -93,6 +117,7 @@ class _MatchChatState extends State<MatchChat> {
   @override
   void dispose() {
     _timer?.cancel();
+    _cleanupTimer?.cancel();
     _service.dispose();
     _text.dispose();
     _scroll.dispose();

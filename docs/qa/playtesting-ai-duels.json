@@ -1,8 +1,8 @@
 {
   "engine": "shared-search-v2",
   "date": "2026-10-21",
-  "qualification": "Adjacent tiers, default duel boards only; 50 seeded starts with seat swaps per matchup. Unfinished games are excluded from decisive rates and reported separately. Not a human skill estimate or multiplayer qualification.",
-  "command": "flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50",
+  "qualification": "Historical pre-review reduced-board duels: Square 3\u00d73 and Hex radius 2 with two seats, 50 seeded seat-swapped starts per adjacent tier. Does not qualify the actual defaults or post-review AI tuning, and is not a human skill estimate.",
+  "command": "Explicit historical boards: flutter test tools/ai_tournament_test.dart --dart-define=AI_PAIRS=50 --dart-define=AI_PLAYERS=2 --dart-define=AI_SIZE=3 --dart-define=AI_TOURNAMENT_SHAPE=square; repeat with AI_SIZE=2 and AI_TOURNAMENT_SHAPE=hex.",
   "results": [
     {
       "shape": "square",

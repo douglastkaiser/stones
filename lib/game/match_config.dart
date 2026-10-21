@@ -42,6 +42,7 @@ class SeatConfig {
 }
 
 class MatchConfig {
+  static const currentAiEngine = 'shared-search-v2';
   MatchConfig({
     required this.shape,
     required this.size,
@@ -51,7 +52,7 @@ class MatchConfig {
     this.court = false,
     this.clockSeconds = 0,
     this.ratingVersion = 3,
-    this.aiEngine = 'shared-search-v2',
+    this.aiEngine = currentAiEngine,
   })  : seats = List.unmodifiable(seats),
         profile = profile ??
             (shape == BoardShape.square && seats.length == 2

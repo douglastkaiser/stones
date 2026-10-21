@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../models/cosmetics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,4 +62,15 @@ final eliteThemeEligibilityProvider =
   });
   unawaited(refresh());
   return controller.stream;
+});
+
+/// Shared policy for the live board and exported result images.
+final effectiveBoardThemeProvider = Provider.autoDispose
+    .family<BoardTheme, (BoardTheme, String?)>((ref, selection) {
+  if (selection.$1 != BoardTheme.celestial) return selection.$1;
+  final uid = selection.$2;
+  return uid != null &&
+          ref.watch(eliteThemeEligibilityProvider(uid)).valueOrNull == true
+      ? BoardTheme.celestial
+      : BoardTheme.classicWood;
 });

@@ -102,7 +102,8 @@ class FirebaseRatingRepository
         .where('isAi', isEqualTo: true)
         .get(const GetOptions(source: Source.server));
     return result.docs
-        .where((doc) => doc.data()['engineVersion'] == 'shared-search-v2')
+        .where(
+            (doc) => doc.data()['engineVersion'] == MatchConfig.currentAiEngine)
         .map((doc) => EloRating.fromMap(doc.id, _dates(doc.data())))
         .toList();
   }
