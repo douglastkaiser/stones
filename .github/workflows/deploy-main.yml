@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   qualify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       source: ${{ steps.qualification.outputs.source }}
@@ -78,7 +78,7 @@ jobs:
 
   publish:
     needs: qualify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -141,7 +141,7 @@ jobs:
   verify-hosted:
     name: Verify hosted login (${{ matrix.browser }})
     needs: [qualify, publish]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -155,9 +155,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install browser harness
-        run: |
-          pip install playwright==1.62.0
-          playwright install --with-deps ${{ matrix.browser }}
+        timeout-minutes: 5
+        run: bash scripts/install_browser_harness.sh ${{ matrix.browser }}
       - name: Verify selected hosted source, integrity and Google handoff
         run: python3 tools/hosted_auth_check.py --expected-source "$SOURCE" --wait-seconds 300 --browsers ${{ matrix.browser }}
         env:

@@ -19,7 +19,7 @@ concurrency:
 jobs:
   analyze-and-test:
     name: Analyze & Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -71,7 +71,7 @@ jobs:
     outputs:
       artifact: ${{ steps.artifact-name.outputs.name }}
     name: Build Web
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: analyze-and-test
     timeout-minutes: 20
 
@@ -125,7 +125,7 @@ jobs:
 
   build-android:
     name: Compile Android
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: analyze-and-test
     timeout-minutes: 25
     steps:
@@ -153,7 +153,7 @@ jobs:
     outputs:
       artifact: ${{ steps.artifact-name.outputs.name }}
     name: Build emulator application
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: analyze-and-test
     timeout-minutes: 20
     steps:
@@ -182,7 +182,7 @@ jobs:
 
   browser-journeys:
     name: Browser player journeys
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-integration
     timeout-minutes: 20
     steps:
@@ -203,9 +203,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install browser harness
-        run: |
-          pip install playwright==1.62.0
-          playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: bash scripts/install_browser_harness.sh chromium
       - name: Exercise learning, saved games and independent friend clients
         run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/browser_journeys.py'
       - uses: actions/upload-artifact@v4
@@ -217,7 +216,7 @@ jobs:
 
   account-browsers:
     name: Account checks (${{ matrix.browser }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-integration
     timeout-minutes: 25
     strategy:
@@ -241,9 +240,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install browser harness
-        run: |
-          pip install playwright==1.62.0
-          playwright install --with-deps ${{ matrix.browser }}
+        timeout-minutes: 5
+        run: bash scripts/install_browser_harness.sh ${{ matrix.browser }}
       - name: Independently exercise popup, linking and process restoration
         run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/google_auth_browser_checks.py --browsers ${{ matrix.browser }} --expected-source ${{ github.sha }}'
       - uses: actions/upload-artifact@v4
@@ -255,7 +253,7 @@ jobs:
 
   auth-release:
     name: Production auth recovery (${{ matrix.browser }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-web
     timeout-minutes: 20
     strategy:
@@ -275,9 +273,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install browser harness
-        run: |
-          pip install playwright==1.62.0
-          playwright install --with-deps ${{ matrix.browser }}
+        timeout-minutes: 5
+        run: bash scripts/install_browser_harness.sh ${{ matrix.browser }}
       - name: Verify the exact release artifact and strict recovery outcomes
         run: python3 tools/google_auth_release_checks.py --browsers ${{ matrix.browser }} --expected-source "$GITHUB_SHA"
       - uses: actions/upload-artifact@v4

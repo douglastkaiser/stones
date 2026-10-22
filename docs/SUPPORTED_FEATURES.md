@@ -435,7 +435,9 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   consecutive complete CI qualifications for the selected source, including
   independent three-engine account/recovery checks. Archive and verify the
   previous artifact before publication; check hosted source/integrity/login
-  afterward and daily, reporting publication separately from acceptance.
+  afterward and daily, reporting publication separately from acceptance. Browser
+  qualification pins Ubuntu 24.04 and the browser tooling; dependency setup uses
+  bounded transport retries and cannot substitute for passing application checks.
 
 ## Historical capabilities and compatibility obligations
 

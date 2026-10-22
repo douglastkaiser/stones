@@ -19,7 +19,7 @@ permissions:
 jobs:
   restore:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -105,16 +105,16 @@ jobs:
 
   verify-hosted:
     needs: restore
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: |
-          pip install playwright==1.62.0
-          playwright install --with-deps chromium firefox webkit
+      - name: Install browser harness
+        timeout-minutes: 5
+        run: bash scripts/install_browser_harness.sh chromium firefox webkit
       - name: Verify restored release and Google handoff
         env:
           PREVIOUS_SOURCE: ${{ inputs.previous_source }}

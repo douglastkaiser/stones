@@ -189,3 +189,10 @@ Denied persistence is tested once per engine in the independent credential suite
 after SDK auth readiness; popup UI checks retain their own required outcomes.
 Dependency HTTP errors are recorded only as origins, status codes and resource
 types. These corrections do not change production authentication behavior.
+
+Browser jobs pin Ubuntu 24.04 alongside Playwright 1.62.0. Their shared setup uses
+the official HTTPS Ubuntu archive instead of the Azure archive mirror after an
+observed ten-minute dependency download delayed four jobs. Package operations
+have bounded network retries/timeouts and the setup step has a five-minute limit.
+These retries cover dependency transport only; browser assertions and complete
+qualification outcomes remain unchanged. Setup failure prevents promotion.
