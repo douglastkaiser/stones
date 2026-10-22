@@ -296,9 +296,9 @@ def main():
             expect(reporter.get_by_role('button', name=re.compile(r'\bRating QA\b'))).to_be_visible(timeout=30000)
             click(reporter, 'My games')
             click(reporter, 'Continue saved game')
-            # An AI-only reporter has no human-seat delta. The common receipt
-            # label confirms completion; ai_profiles below checks both scopes.
-            expect(reporter.get_by_text('Elo recorded', exact=True))\
+            # This fixture uses version 3: require its confirmed two-scope
+            # receipt, then independently verify settlement and idempotence.
+            expect(reporter.get_by_text('Overall and format ratings recorded', exact=True))\
                 .to_be_visible(timeout=45000)
         resume_rated_fixture()
         first = ai_profiles()

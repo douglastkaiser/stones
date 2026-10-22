@@ -33,6 +33,12 @@ class GoogleAuthProbePolicyTests(unittest.TestCase):
     def test_production_writes_and_account_reads_are_blocked(self):
         for url, method in [
             ('https://identitytoolkit.googleapis.com/v1/accounts:signUp', 'POST'),
+            ('https://identitytoolkit.googleapis.com/v1/accounts:lookup', 'GET'),
+            ('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo', 'GET'),
+            ('https://accounts.google.com/signin', 'POST'),
+            ('https://evil.example/upload', 'POST'),
+            ('http://identitytoolkit.googleapis.com/v1/accounts:createAuthUri', 'POST'),
+            ('https://identitytoolkit.googleapis.com:444/v1/accounts:createAuthUri', 'POST'),
             ('https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp', 'POST'),
             ('https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyAssertion', 'POST'),
             ('https://firestore.googleapis.com/v1/private', 'GET'),
@@ -48,6 +54,7 @@ class GoogleAuthProbePolicyTests(unittest.TestCase):
     def test_public_config_helpers_and_local_emulator_are_allowed(self):
         for url, method in [
             ('https://identitytoolkit.googleapis.com/v1/projects?key=public', 'GET'),
+            ('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=public', 'GET'),
             ('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig', 'POST'),
             ('https://www.googleapis.com/identitytoolkit/v3/relyingparty/createAuthUri', 'POST'),
             ('https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri', 'POST'),

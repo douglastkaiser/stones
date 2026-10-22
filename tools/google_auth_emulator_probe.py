@@ -75,6 +75,10 @@ def google(page, email):
     with page.expect_popup(timeout=15000) as opened:
         tap(page, button)
     popup = opened.value
+    finish_google(popup, email)
+
+
+def finish_google(popup, email):
     popup.wait_for_load_state('domcontentloaded')
     # Never enter fixtures into a real provider UI.
     target = urlsplit(popup.url)
@@ -131,6 +135,10 @@ def main():
             result = {'browser': name, 'checks': checks, 'status': 'running', 'stage': 'launch'}
             summary['results'].append(result)
             save()
+            def stage(value):
+                result['stage'] = value
+                save()
+                print(name + ': ' + value, flush=True)
             print(name, flush=True)
             try:
                 with browser_session(playwright, name, local=True) as browser:
@@ -143,24 +151,32 @@ def main():
                     # Bind immediately after initializeAuth in this test only.
                     context.add_init_script(EMULATOR_BINDING)
                     page = context.new_page()
-                    result['stage'] = 'load'
+                    result['browser_version'] = browser.version
+                    stage('load')
                     page.goto(BASE)
                     ready(page)
-                    result['stage'] = 'open_settings'
+                    stage('open_settings')
                     open_settings(page)
                     expect(page.get_by_role('button', name='Sign in with Google', exact=True)).to_be_visible()
                     assert identity(page) is None
                     claims = fixture_claims()
-                    result['stage'] = 'fresh_sign_in'
+                    stage('fresh_sign_in')
                     if args.credentials_only:
                         assert credential_fixture(page, 'sign_in', claims) is None
                     else:
+                        before = identity(page)
+                        with page.expect_popup(timeout=15000) as cancelled:
+                            tap(page, page.get_by_role('button', name='Sign in with Google', exact=True))
+                        cancelled.value.close()
+                        expect(page.get_by_role('button', name='Sign in with Google', exact=True)).to_be_visible(timeout=15000)
+                        assert identity(page) == before
+                        checks.append('popup_cancel_keeps_identity')
                         google(page, claims['email'])
                     signed_in(page)
                     registered = identity(page)
                     checks.append('fresh_google_sign_in')
 
-                    result['stage'] = 'restore_google_identity'
+                    stage('restore_google_identity')
                     page.reload()
                     ready(page)
                     open_settings(page)
@@ -168,7 +184,7 @@ def main():
                     assert identity(page) == registered
                     checks.append('google_identity_restored_after_reload')
 
-                    result['stage'] = 'sign_out'
+                    stage('sign_out')
                     tap(page, page.get_by_role('button', name='Sign out', exact=True))
                     page.get_by_role('button', name='Cancel', exact=True).wait_for()
                     tap(page, page.get_by_role('button', name='Sign out', exact=True).last)
@@ -176,7 +192,7 @@ def main():
                     assert identity(page) is None
                     checks.append('sign_out')
 
-                    result['stage'] = 'collision'
+                    stage('collision')
                     page.evaluate(f'async () => {{ await firebase_auth.signInAnonymously(({AUTH})()); }}')
                     guest = identity(page)
                     assert guest['anonymous']
@@ -191,9 +207,26 @@ def main():
                         expect(switch).to_be_visible(timeout=15000)
                     assert identity(page) == guest
                     checks.append('collision_preserves_guest')
+                    if not args.credentials_only:
+                        tap(page, switch)
+                        cancel = page.get_by_role('button', name='Cancel', exact=True)
+                        expect(cancel).to_be_visible()
+                        tap(page, cancel)
+                        assert identity(page) == guest
+                        tap(page, switch)
+                        with page.expect_popup(timeout=15000) as switched:
+                            tap(page, page.get_by_role('button', name='Switch account', exact=True))
+                        finish_google(switched.value, claims['email'])
+                        signed_in(page)
+                        assert identity(page) == registered
+                        checks.append('explicit_switch_requires_confirmation')
+                        # Start another guest to verify a noncolliding link.
+                        page.evaluate(f'async () => {{ await firebase_auth.signOut(({AUTH})()); '
+                                      f'await firebase_auth.signInAnonymously(({AUTH})()); }}')
+                        guest = identity(page)
 
                     # A distinct provider account links to the same guest UID.
-                    result['stage'] = 'guest_link'
+                    stage('guest_link')
                     new_claims = fixture_claims()
                     if args.credentials_only:
                         assert credential_fixture(page, 'link', new_claims) is None
@@ -204,7 +237,7 @@ def main():
                     assert linked['uid'] == guest['uid'] and not linked['anonymous']
                     checks.append('guest_link_preserves_uid')
 
-                    result['stage'] = 'restore_linked_identity'
+                    stage('restore_linked_identity')
                     page.reload()
                     ready(page)
                     open_settings(page)
@@ -212,8 +245,38 @@ def main():
                     assert identity(page) == linked
                     checks.append('linked_identity_restored_after_reload')
                     context.close()
+                    stage('denied_persistent_storage')
+                    fallback = browser.new_context(viewport={'width': 390, 'height': 844},
+                                                   has_touch=name != 'firefox', service_workers='block')
+                    fallback.route('**/*', browser_request)
+                    fallback.add_init_script(EMULATOR_BINDING)
+                    fallback.add_init_script("""(() => {
+                      indexedDB.open = () => { throw new DOMException('Denied', 'SecurityError'); };
+                      const set = Storage.prototype.setItem;
+                      Storage.prototype.setItem = function(key, value) {
+                        if (this === localStorage)
+                          throw new DOMException('Denied', 'SecurityError');
+                        return set.call(this, key, value);
+                      };
+                    })();""")
+                    test_page = fallback.new_page()
+                    test_page.goto(BASE)
+                    ready(test_page)
+                    open_settings(test_page)
+                    stage('denied_storage_sign_in')
+                    assert credential_fixture(test_page, 'sign_in', fixture_claims()) is None
+                    signed_in(test_page)
+                    fallback_identity = identity(test_page)
+                    test_page.reload()
+                    ready(test_page)
+                    open_settings(test_page)
+                    signed_in(test_page)
+                    stage('denied_storage_restoration')
+                    assert identity(test_page) == fallback_identity
+                    checks.append('denied_persistent_storage_keeps_session_usable')
+                    fallback.close()
                 result['status'] = 'passed'
-                result['stage'] = 'completed'
+                stage('completed')
             except Exception as error:
                 result['status'] = 'failed'
                 result['error_type'] = type(error).__name__

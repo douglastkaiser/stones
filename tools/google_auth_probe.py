@@ -25,6 +25,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout,
 
 from browser_journeys import ready
 from google_auth_policy import block_production, origin, validate_probe_base
+from auth_evidence import assert_outcome, validate_results
 
 
 BASE = 'https://www.douglastkaiser.com/stones/'
@@ -110,7 +111,21 @@ def classify(page):
 def sign_in(page):
     button = page.get_by_role('button', name='Sign in with Google', exact=True)
     button.wait_for(state='visible', timeout=25000)
+    home = page.get_by_role('button', name='Settings & account', exact=True).count() > 0
+    before = page.evaluate('window.__authProbe.opens.length')
     tap(page, button)
+    if home:
+        # Flutter handles canvas input asynchronously. Wait for a real popup
+        # attempt or the preparation card, rather than sampling the next frame
+        # and accidentally treating an opening popup as another required tap.
+        page.wait_for_function("""before => {
+          const text = document.body.innerText + [...document.querySelectorAll('[aria-label]')]
+            .map(e => e.getAttribute('aria-label')).join(' ');
+          return window.__authProbe.opens.length > before || text.includes('Your Stones account');
+        }""", arg=before, timeout=25000)
+        if page.evaluate('window.__authProbe.opens.length') == before:
+            button.wait_for(state='visible', timeout=25000)
+            tap(page, button)
 
 
 def tap(page, target):
@@ -143,7 +158,7 @@ def wait_for_popup(context, page, timeout=25000, stop_at_google=True):
     return None
 
 
-def run_case(browser, case, base=BASE, verify_recovery=False):
+def run_case(browser, case, base=BASE, verify_recovery=False, strict=False):
     result = {'case': case, 'observations': [], 'firebase_js_versions': [],
               'blocked_production_requests': 0}
     context = browser.new_context(viewport={'width': 390, 'height': 844},
@@ -257,6 +272,13 @@ def run_case(browser, case, base=BASE, verify_recovery=False):
             page.get_by_role('button', name='Sign in with Google', exact=True).wait_for(
                 state='visible', timeout=15000)
             result['closing_popup_releases_attempt'] = True
+            attempts = page.evaluate('window.__authProbe.opens.length')
+            with page.expect_popup(timeout=15000) as retried:
+                sign_in(page)
+            result['fresh_retry_opens_popup'] = (
+                not retried.value.is_closed()
+                and page.evaluate('window.__authProbe.opens.length') == attempts + 1)
+            retried.value.close()
         if case == 'close_retry' and popup:
             popup.close()
             page.get_by_role('button', name='Sign in with Google', exact=True).wait_for(
@@ -267,7 +289,9 @@ def run_case(browser, case, base=BASE, verify_recovery=False):
         result['app_state'] = classify(page)
         result['page_origins'] = sorted({origin(p.url) for p in context.pages})
         result['popup_attempts'] = page.evaluate('window.__authProbe.opens')
-        result['status'] = 'observed'
+        if strict:
+            assert_outcome(result)
+        result['status'] = 'passed' if strict else 'observed'
     except BrowserTimeout:
         result['status'] = 'timeout'
         result['app_state'] = classify(page)
@@ -277,6 +301,7 @@ def run_case(browser, case, base=BASE, verify_recovery=False):
         result['error_type'] = type(error).__name__
     finally:
         result['firebase_js_versions'] = sorted(versions)
+        result['browser_version'] = browser.version
         context.close()
     return result
 
@@ -292,11 +317,10 @@ def public_json(url):
             time.sleep(0.5)
 
 
-def public_config(base=BASE):
-    if base == BASE:
-        manifest = public_json(BASE + 'release-manifest.json')
-    else:
-        manifest = {'source': 'local working tree', 'flutter': '3.47.7'}
+def public_config(base=BASE, expected_source=None):
+    manifest = public_json(base + 'release-manifest.json?auth-check=' + str(time.time_ns()))
+    if expected_source and manifest.get('source') != expected_source:
+        raise ValueError('Served build is not the expected source')
     # The web API key is a public project identifier, read from checked-in config.
     config = Path('lib/firebase_options.dart').read_text()
     key = re.search(r'web = FirebaseOptions\(\s*apiKey: \'([^\']+)\'', config).group(1)
@@ -312,14 +336,24 @@ def main():
     parser.add_argument('--verify-recovery', action='store_true',
                         help='Assert the 30-second recovery notice and popup-close recovery on a fixed build')
     parser.add_argument('--cases', default=','.join(CASES))
+    parser.add_argument('--assert-outcomes', action='store_true')
+    parser.add_argument('--expected-source')
     parser.add_argument('--output', type=Path, default=Path('build/qa/google-auth/hosted.json'))
     args = parser.parse_args()
     browsers = args.browsers.split(',')
     cases = args.cases.split(',')
-    if not set(browsers) <= {'chromium', 'firefox', 'webkit'} or not set(cases) <= set(CASES):
+    strict_cases = {'cold', 'warm', 'popup_blocked', 'close_retry',
+                    'callback_storage_lost', 'callback_new_context'}
+    if len(set(browsers)) != len(browsers) or len(set(cases)) != len(cases) \
+            or not set(browsers) <= {'chromium', 'firefox', 'webkit'} or not set(cases) <= set(CASES):
         parser.error('Unknown engine or case')
+    if args.assert_outcomes and (not args.expected_source or not set(cases) <= strict_cases):
+        parser.error('Strict checks require an expected source and cases with acceptance contracts')
+    if args.assert_outcomes and set(cases) & {'callback_storage_lost', 'callback_new_context'} \
+            and not args.verify_recovery:
+        parser.error('Strict callback checks require --verify-recovery')
     try:
-        config = public_config(args.base)
+        config = public_config(args.base, args.expected_source)
     except Exception as error:
         config = {'status': 'unavailable', 'error_type': type(error).__name__}
     summary = {'started_utc': datetime.now(timezone.utc).isoformat(),
@@ -344,7 +378,7 @@ def main():
                                      local=urlsplit(args.base).hostname in ('localhost', '127.0.0.1')) as browser:
                     for case in cases:
                         print(f'{name}: {case}', flush=True)
-                        result = run_case(browser, case, args.base, args.verify_recovery)
+                        result = run_case(browser, case, args.base, args.verify_recovery, args.assert_outcomes)
                         result['browser'] = name
                         summary['results'].append(result)
                         save()
@@ -354,8 +388,16 @@ def main():
                                            'error_type': type(error).__name__})
                 save()
     summary['completed_utc'] = datetime.now(timezone.utc).isoformat()
+    summary['status'] = 'observed'
+    if args.assert_outcomes:
+        try:
+            validate_results(summary, browsers, cases=cases)
+            summary['status'] = 'passed'
+        except ValueError:
+            summary['status'] = 'failed'
     save()
-    if any(r['status'] != 'observed' for r in summary['results']):
+    if summary['status'] == 'failed' or any(
+            r['status'] not in ('observed', 'passed') for r in summary['results']):
         raise SystemExit(1)
 
 

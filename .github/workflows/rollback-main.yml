@@ -1,0 +1,127 @@
+name: Rollback Main
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_run_id:
+        description: 'Deploy Main run that preserved the rollback artifact'
+        required: true
+        type: string
+      previous_source:
+        description: 'Full previous source SHA from rollback-source.json'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  restore:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: stones-gh-pages-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - id: archive
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_RUN: ${{ inputs.deployment_run_id }}
+          PREVIOUS_SOURCE: ${{ inputs.previous_source }}
+        with:
+          script: |
+            const repo = {...context.repo};
+            if (!/^[0-9]+$/.test(process.env.DEPLOYMENT_RUN) ||
+                !/^[a-f0-9]{40}$/.test(process.env.PREVIOUS_SOURCE)) {
+              throw new Error('Use a numeric deployment run and full previous source SHA');
+            }
+            const run_id = Number(process.env.DEPLOYMENT_RUN);
+            const run = (await github.rest.actions.getWorkflowRun({...repo, run_id})).data;
+            if (run.path !== '.github/workflows/deploy-main.yml' ||
+                run.event !== 'workflow_dispatch' || run.head_branch !== 'main' ||
+                run.head_repository.full_name !== `${repo.owner}/${repo.repo}`) {
+              throw new Error('Rollback must come from this repository main deployment');
+            }
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts,
+              {...repo, run_id, per_page: 100});
+            const archive = artifacts.filter(item => !item.expired &&
+              /^rollback-[a-f0-9]{40}-[0-9]+-[0-9]+$/.test(item.name))
+              .sort((a,b) => b.id - a.id)[0];
+            if (!archive) throw new Error('No retained rollback archive for this deployment');
+            core.setOutput('name', archive.name);
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.archive.outputs.name }}
+          run-id: ${{ inputs.deployment_run_id }}
+          github-token: ${{ github.token }}
+          path: restore
+      - name: Require the explicitly selected previous source and verified bytes
+        env:
+          PREVIOUS_SOURCE: ${{ inputs.previous_source }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads(Path('restore/rollback-source.json').read_text())
+          if data['previous_source'] != os.environ['PREVIOUS_SOURCE']:
+              raise SystemExit('Rollback archive is not the explicitly selected source')
+          PY
+          python3 scripts/web_artifact.py verify restore/build/rollback --source "$PREVIOUS_SOURCE"
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: published
+      - name: Preserve the current release before deliberately rolling back
+        run: |
+          git -C published pull --ff-only origin gh-pages
+          python3 scripts/rollback_artifact.py published build/before-rollback > before-rollback-source.json
+          git -C published rev-parse HEAD > before-rollback-publishing-commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: before-rollback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/before-rollback
+            before-rollback-source.json
+            before-rollback-publishing-commit.txt
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
+      - name: Restore the verified artifact without rewriting history
+        env:
+          PREVIOUS_SOURCE: ${{ inputs.previous_source }}
+        run: |
+          python3 scripts/publish_web.py --source restore/build/rollback --target published
+          git -C published config user.name 'github-actions[bot]'
+          git -C published config user.email 'github-actions[bot]@users.noreply.github.com'
+          git -C published add -A
+          git -C published diff --staged --quiet || git -C published commit -m "Restore verified release $PREVIOUS_SOURCE [skip ci]"
+          git -C published push origin HEAD:gh-pages
+
+  verify-hosted:
+    needs: restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          pip install playwright==1.62.0
+          playwright install --with-deps chromium firefox webkit
+      - name: Verify restored release and Google handoff
+        env:
+          PREVIOUS_SOURCE: ${{ inputs.previous_source }}
+        run: python3 tools/hosted_auth_check.py --expected-source "$PREVIOUS_SOURCE" --wait-seconds 300
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rollback-hosted-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/qa/hosted-auth
+          if-no-files-found: warn

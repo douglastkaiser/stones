@@ -78,18 +78,23 @@ def main():
             result = {'browser': name, 'checks': [], 'status': 'running', 'stage': 'sign_in'}
             summary['results'].append(result)
             save()
+            def stage(value):
+                result['stage'] = value
+                save()
+                print(name + ': ' + value, flush=True)
             print(name, flush=True)
             try:
                 with tempfile.TemporaryDirectory(prefix='stones-remember-') as directory:
                     profile = Path(directory)
                     with open_profile(playwright, name, profile) as page:
+                        result['browser_version'] = page.context.browser.version
                         open_settings(page)
                         assert credential_fixture(page, 'sign_in', fixture_claims()) is None
                         signed_in(page)
                         first = identity(page)
                         result['checks'].append('first_account_signed_in')
 
-                    result['stage'] = 'restart_restore'
+                    stage('restart_restore')
                     with open_profile(playwright, name, profile) as page:
                         assert identity(page) == first
                         page.get_by_role('button', name='Sign in with Google', exact=True).wait_for(
@@ -104,7 +109,7 @@ def main():
                         assert identity(page) is None
                         result['checks'].append('explicit_sign_out')
 
-                    result['stage'] = 'restart_after_sign_out'
+                    stage('restart_after_sign_out')
                     with open_profile(playwright, name, profile) as page:
                         assert identity(page) is None
                         result['checks'].append('sign_out_survives_browser_restart')
@@ -114,14 +119,14 @@ def main():
                         last = identity(page)
                         assert last['uid'] != first['uid']
 
-                    result['stage'] = 'restart_last_account'
+                    stage('restart_last_account')
                     with open_profile(playwright, name, profile) as page:
                         assert identity(page) == last
                         page.get_by_role('button', name='Sign in with Google', exact=True).wait_for(
                             state='hidden', timeout=15000)
                         result['checks'].append('last_account_restored_after_browser_restart')
                 result['status'] = 'passed'
-                result['stage'] = 'completed'
+                stage('completed')
             except Exception as error:
                 result['status'] = 'failed'
                 result['error_type'] = type(error).__name__

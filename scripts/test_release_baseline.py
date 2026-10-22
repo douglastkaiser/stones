@@ -58,6 +58,31 @@ class BaselineTests(unittest.TestCase):
             self.assertTrue(inspect_live('https://www.douglastkaiser.com/stones/',
                                          expected_source='abcdef1')['previewSource'].startswith('abcdef1'))
 
+    def test_main_release_source_is_checked(self):
+        responses = self.fixture()
+        responses[0].data = responses[0].data.replace(b'stones-preview-source', b'stones-release-source')
+        with patch('scripts.release_baseline.urlopen', side_effect=responses):
+            self.assertEqual(inspect_live('https://www.douglastkaiser.com/stones/',
+                                         expected_source='abcdef1')['integrity'], 'passed')
+
+    def test_old_main_without_html_marker_requires_manifest_hash_proof(self):
+        responses = self.fixture()
+        responses[0].data = responses[0].data.split(b'>', 1)[1]
+        pairs = json.loads(responses[1].data)
+        manifest = {'source': 'abcdef1' + '0' * 33, 'files': {
+            'index.html': hashlib.sha256(responses[0].data).hexdigest(),
+            pairs[0][0]: hashlib.sha256(responses[2].data).hexdigest(),
+            pairs[0][1]: hashlib.sha256(responses[3].data).hexdigest(),
+        }}
+        with patch('scripts.release_baseline.urlopen', side_effect=responses):
+            self.assertEqual(inspect_live('https://www.douglastkaiser.com/stones/',
+                                         expected_source='abcdef1', expected_manifest=manifest)['integrity'], 'passed')
+        manifest['files']['index.html'] = '0' * 64
+        with patch('scripts.release_baseline.urlopen', side_effect=responses):
+            with self.assertRaises(ValueError):
+                inspect_live('https://www.douglastkaiser.com/stones/',
+                             expected_source='abcdef1', expected_manifest=manifest)
+
     def test_coherent_but_old_preview_is_rejected(self):
         with patch('scripts.release_baseline.urlopen', side_effect=self.fixture()):
             with self.assertRaisesRegex(ValueError, 'not the requested source'):

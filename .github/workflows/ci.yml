@@ -64,10 +64,12 @@ jobs:
       - name: Save coverage evidence
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ github.sha }}
+          name: coverage-${{ github.sha }}-${{ github.run_attempt }}
           path: coverage/lcov.info
 
   build-web:
+    outputs:
+      artifact: ${{ steps.artifact-name.outputs.name }}
     name: Build Web
     runs-on: ubuntu-latest
     needs: analyze-and-test
@@ -101,18 +103,22 @@ jobs:
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
-      - name: Build web
-        run: flutter build web --release --base-href "/stones/"
+      - name: Clean and build web
+        run: |
+          rm -rf build/web
+          flutter build web --release --base-href "/stones/"
       - name: Fingerprint web startup assets
         run: |
           python3 -m unittest scripts.test_prepare_web_release
           python3 scripts/prepare_web_release.py
           python3 scripts/web_artifact.py create build/web
 
+      - id: artifact-name
+        run: echo "name=web-build-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: web-build-${{ github.sha }}
+          name: web-build-${{ github.sha }}-${{ github.run_attempt }}
           path: build/web
           include-hidden-files: true
           retention-days: 14
@@ -138,13 +144,15 @@ jobs:
       - run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:
-          name: stones-android-debug-${{ github.sha }}
+          name: stones-android-debug-${{ github.sha }}-${{ github.run_attempt }}
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
 
-  browser-journeys:
-    name: Browser player journeys
+  build-integration:
+    outputs:
+      artifact: ${{ steps.artifact-name.outputs.name }}
+    name: Build emulator application
     runs-on: ubuntu-latest
     needs: analyze-and-test
     timeout-minutes: 20
@@ -155,6 +163,35 @@ jobs:
           flutter-version: '3.47.7'
           channel: stable
           cache: true
+      - run: flutter pub get
+      - name: Clean and build the emulator-only entry point
+        run: |
+          rm -rf build/integration-web
+          flutter build web --release --target tools/integration_app.dart --base-href /stones/ --output build/integration-web --no-web-resources-cdn
+          python3 scripts/prepare_web_release.py build/integration-web
+          python3 scripts/web_artifact.py create build/integration-web --kind emulator
+      - id: artifact-name
+        run: echo "name=emulator-build-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emulator-build-${{ github.sha }}-${{ github.run_attempt }}
+          path: build/integration-web
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  browser-journeys:
+    name: Browser player journeys
+    runs-on: ubuntu-latest
+    needs: build-integration
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-integration.outputs.artifact }}
+          path: build/integration-web
+      - run: python3 scripts/web_artifact.py verify build/integration-web --source "$GITHUB_SHA" --kind emulator
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -165,20 +202,87 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: flutter pub get
-      - name: Build a separate emulator-only application
-        run: flutter build web --release --target tools/integration_app.dart --base-href /stones/ --output build/integration-web --no-web-resources-cdn
       - name: Install browser harness
         run: |
           pip install playwright==1.62.0
           playwright install --with-deps chromium
       - name: Exercise learning, saved games and independent friend clients
-        run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/browser_journeys.py && python3 tools/google_auth_browser_checks.py'
+        run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/browser_journeys.py'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: browser-journeys-${{ github.sha }}
-          path: |
-            build/qa/journeys
-            build/qa/google-auth
+          name: browser-journeys-${{ github.sha }}-${{ github.run_attempt }}
+          path: build/qa/journeys
+          if-no-files-found: warn
+
+  account-browsers:
+    name: Account checks (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: build-integration
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-integration.outputs.artifact }}
+          path: build/integration-web
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser harness
+        run: |
+          pip install playwright==1.62.0
+          playwright install --with-deps ${{ matrix.browser }}
+      - name: Independently exercise popup, linking and process restoration
+        run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/google_auth_browser_checks.py --browsers ${{ matrix.browser }} --expected-source ${{ github.sha }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: account-${{ matrix.browser }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: build/qa/google-auth
+          if-no-files-found: warn
+
+  auth-release:
+    name: Production auth recovery (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: build-web
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-web.outputs.artifact }}
+          path: build/web
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser harness
+        run: |
+          pip install playwright==1.62.0
+          playwright install --with-deps ${{ matrix.browser }}
+      - name: Verify the exact release artifact and strict recovery outcomes
+        run: python3 tools/google_auth_release_checks.py --browsers ${{ matrix.browser }} --expected-source "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-release-${{ matrix.browser }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: build/qa/auth-release
           if-no-files-found: warn

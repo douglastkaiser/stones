@@ -335,5 +335,13 @@
     ],
     "status": "passed"
   },
-  "release_web_main_sha256": "6a8961d4467fafd2540968f8ca8894ecf0769dd17227cd0acf0c77bc57adf2fc"
+  "release_web_main_sha256": "6a8961d4467fafd2540968f8ca8894ecf0769dd17227cd0acf0c77bc57adf2fc",
+  "qualification_correction": {
+    "first_pushed_commit": "8ffde24b246f87590f0523269bb978e877b81b04",
+    "ci_run": 39837544685,
+    "ci_status": "failed_player_journey_expected_wrong_rating_label",
+    "account_ci": "not_run_after_player_journey_failure",
+    "prior_local_browser_evidence": "historical_only_missing_immutable_artifact_provenance",
+    "superseded_for_release_qualification": true
+  }
 }

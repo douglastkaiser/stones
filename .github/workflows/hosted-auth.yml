@@ -1,0 +1,41 @@
+name: Hosted login monitor
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-login-monitor
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Hosted login (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser harness
+        run: |
+          pip install playwright==1.62.0
+          playwright install --with-deps ${{ matrix.browser }}
+      - name: Check the deployed source and pre-credential login
+        run: python3 tools/hosted_auth_check.py --browsers ${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hosted-monitor-${{ matrix.browser }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/qa/hosted-auth
+          if-no-files-found: warn
+          retention-days: 30

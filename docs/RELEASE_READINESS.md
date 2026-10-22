@@ -1,5 +1,16 @@
 # Current release qualification
 
+## Google login hardening, 2026-10-22
+
+[The login recovery contract](GOOGLE_SIGN_IN_FIX.md#durable-qualification-and-deployment)
+records independent three-engine CI, exact-artifact recovery checks, the
+version-3 rating-selector correction, two-attempt qualification, verified
+rollback preservation and post-publication/daily hosted checks. `8ffde24` failed
+its hosted player journey; it is not a qualified release. Follow the new
+candidate's actual Actions runs and hosted evidence rather than earlier local
+browser results without artifact provenance. Physical iPhone/Google acceptance
+remains pending; desktop WebKit and fake emulator credentials are distinct.
+
 ## October 20 main promotion
 
 The owner authorized committing/pushing the audited candidate to main, publishing

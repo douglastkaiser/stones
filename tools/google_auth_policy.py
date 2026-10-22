@@ -29,9 +29,13 @@ def origin(url):
 def block_production(request):
     parsed = urlsplit(request.url)
     host = parsed.hostname or ''
+    if parsed.username or parsed.password:
+        return True
+    if parsed.scheme == 'http' and host in ('localhost', '127.0.0.1'):
+        return False
     # The hosted Firebase helper still uses public, read-only setup APIs via
     # POST. Allow generating an OAuth URL; keep identity exchanges blocked.
-    if request.method == 'POST' and (
+    if parsed.scheme == 'https' and parsed.port in (None, 443) and request.method == 'POST' and (
         (host == 'www.googleapis.com' and parsed.path in (
             '/identitytoolkit/v3/relyingparty/getProjectConfig',
             '/identitytoolkit/v3/relyingparty/createAuthUri'))
@@ -39,10 +43,15 @@ def block_production(request):
             and parsed.path == '/v1/accounts:createAuthUri')
     ):
         return False
+    public_config = (
+        (host == 'identitytoolkit.googleapis.com' and parsed.path == '/v1/projects')
+        or (host == 'www.googleapis.com' and parsed.path ==
+            '/identitytoolkit/v3/relyingparty/getProjectConfig'))
     return (
         host.endswith(('google-analytics.com', 'googletagmanager.com'))
         or host in ('firestore.googleapis.com', 'securetoken.googleapis.com',
                     'firebaseappcheck.googleapis.com')
-        or (host.endswith('.googleapis.com')
-            and request.method not in ('GET', 'OPTIONS'))
+        or (host.endswith('.googleapis.com') and host != 'fonts.googleapis.com'
+            and not (public_config and request.method in ('GET', 'OPTIONS')))
+        or request.method not in ('GET', 'HEAD', 'OPTIONS')
     )

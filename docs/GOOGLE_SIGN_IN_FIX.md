@@ -96,3 +96,81 @@ application now recovers from the demonstrated helper-state failure; this does
 not establish which device/browser condition caused the original report.
 No redirect-flow or same-origin hosting migration is assumed to be necessary,
 and nothing has been deployed by these workspace changes.
+
+## Durable qualification and deployment
+
+Account regressions run independently of the player journeys in Chromium,
+Firefox and WebKit. A source-labelled emulator build is shared by those jobs;
+each engine exercises the application popup, direct emulator credentials and
+actual browser-process restarts. Popup cancellation and explicit collision
+confirmation are checked through the UI. Denied IndexedDB/local persistence is
+fault-injected to verify usable session fallback; this is not iOS private-mode
+qualification. Failure in one suite does not suppress the others.
+
+A second matrix downloads the production web artifact from the same CI attempt,
+verifies its manifest, build kind and authentication source hashes, then checks
+strict pre-credential outcomes. Cold/prepared login must reach Google, blocked
+popups must show help, and cancellation must allow another chooser. Both helper
+state-loss faults must show delayed help, keep the attempt locked, and allow a
+new popup only after closing the failed attempt and tapping again. These checks
+never exchange real credentials. Observation-only and incomplete reports fail
+qualification. Public setup assets may retry transient transport failures up to
+three times; behavioral assertions are never retried to manufacture a pass.
+
+Deploy Main requires two consecutive successful **complete CI attempts** for the
+selected main commit, successful rules checks, and every required browser job.
+Use a full workflow rerun for the second qualification; a failed-jobs-only rerun
+is not a substitute. Artifacts carry their attempt number. Before publishing,
+the workflow preserves the previous canonical artifact and publishing commit,
+verifies every rollback file, and uploads a 90-day rollback archive. Publication
+keeps the existing shared lock and bounded cached-startup retention.
+
+After publication, three engine jobs wait up to five minutes for the selected
+source, verify hosted HTML/bootstrap/main-script integrity, and check Google
+handoff without entering an account. Publication and hosted acceptance have
+separate statuses. The daily/manual Hosted login monitor checks the currently
+deployed source and the same pre-credential outcomes. A provider/network failure
+fails verification; it does not automatically replace production. All evidence
+remains in Actions artifacts, without account data or OAuth URLs.
+
+For a broken published application, run **Rollback Main** with the Deploy Main
+run ID and the full previous SHA recorded in `rollback-source.json`. It accepts
+only this repository's deployment archive, verifies the explicitly chosen source
+and all bytes, preserves the current release, and republishes through the same
+`stones-gh-pages-publication` lock. It preserves previews/startup assets, commits
+normally and repeats hosted checks against the previous SHA. Backend contract
+mismatches fail closed; an app rollback does not roll back Firebase rules. Do not force-push or rebuild an old release and call it
+the verified artifact. Rollback is a deliberate release action, not a response
+to an isolated Google outage.
+
+### Evidence correction
+
+The first pushed fix, `8ffde24`, passed hosted analysis/tests, Android compilation,
+web build and rules authorization, but its player journey failed: the version-3
+fixture correctly displayed “Overall and format ratings recorded” while the
+probe expected “Elo recorded”. Because the account checks followed it with `&&`,
+they did not run in that CI attempt. Earlier local browser passes did not carry
+an immutable manifest proving their build/source correspondence and do not
+qualify the hardened release. The new clean-build and manifest checks supersede
+that evidence for release qualification; the original reports remain historical.
+
+```sh
+# Build fresh output directories with the pinned Flutter SDK first.
+python3 scripts/prepare_web_release.py build/integration-web
+python3 scripts/web_artifact.py create build/integration-web --kind emulator
+# Inside demo-stones-hex auth/firestore emulators:exec:
+python3 tools/google_auth_browser_checks.py --browsers chromium,firefox,webkit \
+  --expected-source "$(git rev-parse HEAD)"
+
+python3 scripts/prepare_web_release.py build/web
+python3 scripts/web_artifact.py create build/web
+python3 tools/google_auth_release_checks.py --browsers chromium,firefox,webkit \
+  --expected-source "$(git rev-parse HEAD)"
+python3 tools/hosted_auth_check.py --expected-source <full-published-sha>
+```
+
+Physical iPhone Safari/Chrome, real Google exchange, native Android chooser
+behavior, app suspension, home-screen launch and embedded-browser returns remain
+separate device acceptance. Record versions, launch surface, source SHA and
+pass/fail for each case in the investigation checklist; never record callback
+queries or clear an existing player's website data to make a check pass.

@@ -26,7 +26,7 @@ def fingerprint_name(name, prefix, suffix):
     return name.split('.')[1]
 
 
-def inspect_live(base, *, fresh=False, expected_source=None):
+def inspect_live(base, *, fresh=False, expected_source=None, expected_manifest=None):
     parsed = urlparse(base)
     if parsed.scheme != 'https' or parsed.hostname not in {
             'www.douglastkaiser.com', 'douglastkaiser.com',
@@ -49,14 +49,23 @@ def inspect_live(base, *, fresh=False, expected_source=None):
             observations.append({'path': path, 'url': response.url,
                                  'bytes': len(data),
                                  'transferMs': round((perf_counter() - start) * 1000)})
+        if expected_manifest is not None and path != 'startup-assets.json':
+            expected = expected_manifest['files'].get(path or 'index.html')
+            if expected != hashlib.sha256(data).hexdigest():
+                raise ValueError('Hosted content differs from the selected artifact manifest')
         return data
 
     index = fetch('').decode('utf-8')
-    source = re.search(r'name="stones-preview-source" content="([a-f0-9]{40})"', index)
+    source = re.search(r'name="stones-(?:release|preview)-source" content="([a-f0-9]{40})"', index)
+    source_value = source[1] if source else None
+    if source_value is None and expected_manifest is not None:
+        # Earlier qualified main artifacts predate HTML source metadata. Their
+        # verified index hash still binds the page to the manifest's source.
+        source_value = expected_manifest.get('source')
     if expected_source is not None:
         if not re.fullmatch(r'[a-f0-9]{7,40}', expected_source):
             raise ValueError('Expected source must be a Git revision prefix')
-        if source is None or not source[1].startswith(expected_source):
+        if source_value is None or not source_value.startswith(expected_source):
             raise ValueError('The hosted preview is not the requested source revision')
     pairs = json.loads(fetch('startup-assets.json'))
     if not isinstance(pairs, list) or not 1 <= len(pairs) <= 3:
@@ -81,7 +90,7 @@ def inspect_live(base, *, fresh=False, expected_source=None):
     main = fetch(main_name)
     if hashlib.sha256(main).hexdigest()[:20] != fingerprint_name(main_name, 'main', '.dart.js'):
         raise ValueError('Main script content does not match its fingerprint')
-    return {'base': base, 'previewSource': source[1] if source else None,
+    return {'base': base, 'previewSource': source_value,
             'currentPair': pairs[0], 'retainedPairCount': len(pairs) - 1,
             'integrity': 'passed', 'observations': observations,
             'timingScope': 'HTTP transfer only; not browser startup, input or frame rate'}

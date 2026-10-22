@@ -298,7 +298,9 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   recovery help after 30 seconds and stays locked until completion/cancellation;
   close a failed Google tab and retry in the same browser without clearing guest
   data. Optional status publication cannot delay a successful sign-in. Physical
-  iOS and real Google credential exchange remain unqualified.
+  iOS and real Google credential exchange remain unqualified. Independent
+  Chromium/Firefox/WebKit emulator and production-artifact checks protect the
+  recovery contract; credential-only fixtures do not qualify popup UI behavior.
 - **ACCOUNT-02 · Public Stones name:** edit a name independently of Google profile data;
   it appears consistently in games, profiles and standings across devices.
 - **ACCOUNT-03 · Overall and format ratings:** eligible new games contribute once to both
@@ -349,6 +351,8 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   clearing/evicting data, another browser/profile/origin or a revoked session can
   require another sign-in. Local play remains available during restoration or
   failure; achievements, themes and settings retain their device-local limits.
+  Browser-process restart and denied-persistent-storage checks cover restoration,
+  last-account replacement, explicit sign-out and usable session fallback.
 
 ## Preferences, presentation and accessible input
 
@@ -427,7 +431,11 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   base paths/cold invitation routes and previous-save readers. CI, room rules,
   web/Android builds and previews must remain usable. Qualify the exact artifact,
   verify required backend rules/indexes before dependent clients, preserve
-  bounded cached startup assets, and keep rollback possible.
+  bounded cached startup assets, and keep rollback possible. Require two
+  consecutive complete CI qualifications for the selected source, including
+  independent three-engine account/recovery checks. Archive and verify the
+  previous artifact before publication; check hosted source/integrity/login
+  afterward and daily, reporting publication separately from acceptance.
 
 ## Historical capabilities and compatibility obligations
 

@@ -19,6 +19,7 @@ jobs:
     outputs:
       source: ${{ steps.qualification.outputs.source }}
       run: ${{ steps.qualification.outputs.run }}
+      artifact: ${{ steps.qualification.outputs.artifact }}
     steps:
       - name: Require successful CI and rules for the selected main commit
         id: qualification
@@ -47,7 +48,31 @@ jobs:
                   run.head_sha !== source || run.head_repository.full_name !== `${repo.owner}/${repo.repo}`) {
                 throw new Error(`${workflow_id} has not qualified ${source}`);
               }
-              if (workflow_id === 'ci.yml') core.setOutput('run', String(run.id));
+              if (workflow_id === 'ci.yml') {
+                if (run.run_attempt < 2) throw new Error('Require two consecutive successful CI attempts');
+                for (const attempt_number of [run.run_attempt - 1, run.run_attempt]) {
+                  const attempt = (await github.rest.actions.getWorkflowRunAttempt({
+                    ...repo, run_id: run.id, attempt_number
+                  })).data;
+                  if (attempt.status !== 'completed' || attempt.conclusion !== 'success') {
+                    throw new Error(`CI attempt ${attempt_number} has not qualified ${source}`);
+                  }
+                }
+                const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                  ...repo, run_id: run.id, filter: 'latest', per_page: 100
+                });
+                const required = ['Browser player journeys',
+                  ...['chromium', 'firefox', 'webkit'].flatMap(browser => [
+                    `Account checks (${browser})`, `Production auth recovery (${browser})`
+                  ])];
+                for (const name of required) {
+                  if (!jobs.some(job => job.name === name && job.conclusion === 'success')) {
+                    throw new Error(`Missing successful qualification job: ${name}`);
+                  }
+                }
+                core.setOutput('run', String(run.id));
+                core.setOutput('artifact', `web-build-${source}-${run.run_attempt}`);
+              }
             }
             core.setOutput('source', source);
 
@@ -67,18 +92,34 @@ jobs:
           ref: ${{ needs.qualify.outputs.source }}
       - uses: actions/download-artifact@v4
         with:
-          name: web-build-${{ needs.qualify.outputs.source }}
+          name: ${{ needs.qualify.outputs.artifact }}
           run-id: ${{ needs.qualify.outputs.run }}
           github-token: ${{ github.token }}
           path: build/web
       - name: Verify the qualified artifact
-        run: python3 scripts/web_artifact.py verify build/web --source "$SOURCE"
+        run: python3 scripts/web_artifact.py verify build/web --source "$SOURCE" --kind production
         env:
           SOURCE: ${{ needs.qualify.outputs.source }}
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: published
+      - name: Preserve and verify the previous release before publication
+        run: |
+          git -C published pull --ff-only origin gh-pages
+          git -C published rev-parse HEAD > rollback-publishing-commit.txt
+          python3 scripts/rollback_artifact.py published build/rollback > rollback-source.json
+          python3 scripts/web_artifact.py verify build/rollback --source "$(python3 -c 'import json; print(json.load(open("rollback-source.json"))["previous_source"])')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rollback-${{ needs.qualify.outputs.source }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/rollback
+            rollback-source.json
+            rollback-publishing-commit.txt
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
       - name: Publish the verified build while preserving previews and cached startup
         run: |
           git -C published pull --ff-only origin gh-pages
@@ -92,7 +133,50 @@ jobs:
         run: |
           echo "Published source: $SOURCE" >> "$GITHUB_STEP_SUMMARY"
           echo "Qualified CI run: $RUN" >> "$GITHUB_STEP_SUMMARY"
-          echo 'Artifact verified before bounded cached-startup retention. Play distribution and real-device qualification are separate.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Publication completed; hosted verification is a separate required job. Rollback artifact retained for 90 days. Physical iOS and real Google exchange remain pending.' >> "$GITHUB_STEP_SUMMARY"
         env:
           SOURCE: ${{ needs.qualify.outputs.source }}
           RUN: ${{ needs.qualify.outputs.run }}
+
+  verify-hosted:
+    name: Verify hosted login (${{ matrix.browser }})
+    needs: [qualify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.qualify.outputs.source }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser harness
+        run: |
+          pip install playwright==1.62.0
+          playwright install --with-deps ${{ matrix.browser }}
+      - name: Verify selected hosted source, integrity and Google handoff
+        run: python3 tools/hosted_auth_check.py --expected-source "$SOURCE" --wait-seconds 300 --browsers ${{ matrix.browser }}
+        env:
+          SOURCE: ${{ needs.qualify.outputs.source }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hosted-${{ matrix.browser }}-${{ needs.qualify.outputs.source }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/qa/hosted-auth
+          if-no-files-found: warn
+      - name: Record hosted verification
+        if: always()
+        run: |
+          python3 - <<'PYREPORT'
+          import json, os
+          from pathlib import Path
+          report = Path('build/qa/hosted-auth/summary.json')
+          data = json.loads(report.read_text()) if report.exists() else {'status': 'not_run'}
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as target:
+              target.write('Hosted verification: ' + data['status'] + '\n')
+              target.write('Physical iOS and real Google credential exchange remain unverified.\n')
+          PYREPORT
