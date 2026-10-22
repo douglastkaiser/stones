@@ -173,10 +173,12 @@ jobs:
           pip install playwright==1.62.0
           playwright install --with-deps chromium
       - name: Exercise learning, saved games and independent friend clients
-        run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/browser_journeys.py'
+        run: npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-stones-hex 'python3 tools/browser_journeys.py && python3 tools/google_auth_browser_checks.py'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-journeys-${{ github.sha }}
-          path: build/qa/journeys
+          path: |
+            build/qa/journeys
+            build/qa/google-auth
           if-no-files-found: warn

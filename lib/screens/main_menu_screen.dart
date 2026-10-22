@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,6 +47,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
   @override
   void initState() {
     super.initState();
+    // Restore the remembered Firebase account independently of audio and optional
+    // Play Games. Neither restoration nor a network failure blocks local play.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(ref.read(accountProvider.notifier).initialize());
+    });
     _initialize();
   }
 
@@ -142,23 +149,34 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                                     Align(
                                         alignment: Alignment.centerLeft,
                                         child: FilledButton.icon(
-                                            onPressed: accountState.busy
+                                            onPressed: accountState.busy ||
+                                                    accountState.preparing
                                                 ? null
-                                                : () => ref
-                                                    .read(accountProvider
-                                                        .notifier)
-                                                    .signInGoogle(),
+                                                : !accountState.ready
+                                                    ? _profile
+                                                    : () => ref
+                                                        .read(accountProvider
+                                                            .notifier)
+                                                        .signInGoogle(),
                                             icon: const Icon(
                                                 Icons.account_circle_outlined),
                                             label: Text(accountState.busy
                                                 ? 'Signing in…'
-                                                : 'Sign in with Google'))),
+                                                : accountState.preparing
+                                                    ? 'Connecting…'
+                                                    : 'Sign in with Google'))),
                                     const Text('Or keep playing as a guest.'),
                                   ],
                                   if (accountState.error != null)
                                     TextButton(
                                         onPressed: _profile,
                                         child: Text(accountState.error!)),
+                                  if (accountState.notice != null)
+                                    Semantics(
+                                        liveRegion: true,
+                                        child: TextButton(
+                                            onPressed: _profile,
+                                            child: Text(accountState.notice!))),
                                   const SizedBox(height: 28),
                                   GameMenu(
                                       onOpenTables: () =>

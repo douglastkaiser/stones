@@ -13,6 +13,7 @@ import 'package:stones/providers/player_profile_provider.dart';
 import 'package:stones/services/player_profile_repository.dart';
 import 'package:stones/services/account_service.dart';
 import 'package:stones/widgets/player_name.dart';
+import 'package:stones/widgets/account_card.dart';
 import 'package:stones/widgets/player_name_editor.dart';
 import 'package:stones/widgets/room_invitation_actions.dart';
 import 'package:stones/game/match_table_layout.dart';
@@ -36,6 +37,12 @@ class Profiles implements PlayerProfileRepository {
     names[uid] = validatePlayerName(name);
     changes.add(null);
   }
+}
+
+class _DeferredSound extends QuietRatingSound {
+  final loading = Completer<void>();
+  @override
+  Future<void> initialize() => loading.future;
 }
 
 void main() {
@@ -94,6 +101,75 @@ void main() {
     expect(find.text('Edit player name'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await account.events.close();
+    await profiles.changes.close();
+    for (final stream in ratings.streams.values) {
+      await stream.close();
+    }
+  });
+
+  testWidgets(
+      'home restores the remembered account while audio is still loading',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final account = FakeAccount()
+      ..current = const AccountIdentity(
+          uid: 'remembered', guest: false, name: 'Remembered player');
+    final sound = _DeferredSound();
+    final profiles = Profiles();
+    final ratings = FakeRatings();
+    await tester.pumpWidget(ProviderScope(overrides: [
+      accountServiceProvider.overrideWithValue(account),
+      playerProfileRepositoryProvider.overrideWithValue(profiles),
+      ratingRepositoryProvider.overrideWithValue(ratings),
+      soundManagerProvider.overrideWithValue(sound),
+    ], child: const MaterialApp(home: MainMenuScreen())));
+    await tester.pumpAndSettle();
+    expect(sound.loading.isCompleted, isFalse);
+    expect(find.text('Remembered player'), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsNothing);
+    expect(account.initializations, 1);
+    expect(account.googleCalls, 0);
+    expect(account.guestCalls, 0);
+    sound.loading.complete();
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await account.events.close();
+    await profiles.changes.close();
+    for (final stream in ratings.streams.values) {
+      await stream.close();
+    }
+  });
+
+  testWidgets('cold home sign-in prepares the card and waits for a fresh tap',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final account = FakeAccount()..initialization = Completer<void>();
+    final profiles = Profiles();
+    final ratings = FakeRatings();
+    await tester.pumpWidget(ProviderScope(overrides: [
+      accountServiceProvider.overrideWithValue(account),
+      playerProfileRepositoryProvider.overrideWithValue(profiles),
+      ratingRepositoryProvider.overrideWithValue(ratings),
+      soundManagerProvider.overrideWithValue(QuietRatingSound()),
+    ], child: const MaterialApp(home: MainMenuScreen())));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in with Google'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(AccountCard), findsOneWidget);
+    expect(account.googleCalls, 0);
+    account.initialization!.complete();
+    await tester.pumpAndSettle();
+    expect(account.googleCalls, 0);
+    expect(account.initializations, 1);
+    await tester.tap(find.descendant(
+        of: find.byType(AccountCard),
+        matching: find.text('Sign in with Google')));
+    await tester.pumpAndSettle();
+    expect(account.googleCalls, 1);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
     await account.events.close();

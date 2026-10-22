@@ -1,0 +1,339 @@
+{
+  "observed_at_utc": "2026-10-22T18:59:24.841950+00:00",
+  "source": {
+    "base_commit": "fc31e801b48c9e0b3b689826e961c9f2d5fff8f7",
+    "working_tree_changes": true,
+    "sha256": {
+      "lib/providers/account_provider.dart": "a95e099d140e2f921a75dc8a5666dada8201479e574dda010dcd822d11c6723a",
+      "lib/services/account_service.dart": "f18cd052af0b0d857a4d9ad1aaa21d8c70e244c91b8855e2ab78fe5764475382",
+      "lib/screens/main_menu_screen.dart": "24eb3b19ee0b6e201167c01883e2b77f740d4c6881fc503eff7b722cab16cb05",
+      "lib/widgets/account_card.dart": "37a324e147410ba98d180d10f5cbffbdb5afd28fd6a6b32a2921ab53a511b60d"
+    }
+  },
+  "implementation": [
+    "early_nonblocking_remembered_account_restoration",
+    "web_popup_requires_fresh_gesture_after_preparation",
+    "delayed_help_preserves_single_in_flight_attempt",
+    "guest_and_active_room_identity_guards_preserved",
+    "sdk_managed_persistent_sessions_no_duplicate_credential_store"
+  ],
+  "toolchain": {
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "playwright": "1.62.0"
+  },
+  "validation": {
+    "flutter_full_regression_suite": {
+      "status": "passed",
+      "tests": 1644
+    },
+    "final_account_regressions": {
+      "status": "passed",
+      "tests": 31
+    },
+    "account_and_home_regressions": {
+      "status": "passed",
+      "tests": 41
+    },
+    "python_release_and_probe_checks": {
+      "status": "passed",
+      "tests": 34
+    },
+    "flutter_analyze_fatal_infos": "passed",
+    "release_web_build": "passed",
+    "emulator_web_build": "passed",
+    "ci_yaml_parse": "passed",
+    "player_browser_journeys": "passed",
+    "player_browser_page_errors": []
+  },
+  "production_deployment": "not_performed",
+  "physical_ios": "unverified_no_device",
+  "real_google_credential_exchange": "unverified_no_test_account",
+  "limitations": [
+    "Emulator Google claims are fake and do not qualify real Google credential exchange.",
+    "Desktop WebKit does not qualify physical iOS.",
+    "The original device-specific cause is unconfirmed; recovery from the demonstrated helper failure is covered."
+  ],
+  "emulator_credentials": {
+    "started_utc": "2026-10-22T18:51:36.293486+00:00",
+    "scope": "local_emulator_credentials_only",
+    "physical_ios": "unverified",
+    "real_google_exchange": "unverified",
+    "results": [
+      {
+        "browser": "chromium",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "browser": "firefox",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "browser": "webkit",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      }
+    ],
+    "completed_utc": "2026-10-22T18:53:17.995179+00:00"
+  },
+  "remembered_accounts_browser_restarts": {
+    "started_utc": "2026-10-22T18:53:18.264641+00:00",
+    "scope": "emulator_accounts_browser_process_restarts",
+    "physical_ios": "unverified",
+    "real_google_exchange": "unverified",
+    "results": [
+      {
+        "browser": "chromium",
+        "checks": [
+          "first_account_signed_in",
+          "restored_on_home_after_browser_restart",
+          "explicit_sign_out",
+          "sign_out_survives_browser_restart",
+          "last_account_restored_after_browser_restart"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "browser": "firefox",
+        "checks": [
+          "first_account_signed_in",
+          "restored_on_home_after_browser_restart",
+          "explicit_sign_out",
+          "sign_out_survives_browser_restart",
+          "last_account_restored_after_browser_restart"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "browser": "webkit",
+        "checks": [
+          "first_account_signed_in",
+          "restored_on_home_after_browser_restart",
+          "explicit_sign_out",
+          "sign_out_survives_browser_restart",
+          "last_account_restored_after_browser_restart"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      }
+    ],
+    "completed_utc": "2026-10-22T18:54:48.156269+00:00"
+  },
+  "controlled_helper_recovery": {
+    "started_utc": "2026-10-22T18:51:22.361121+00:00",
+    "scope": "desktop_pre_credential_only",
+    "physical_ios": "unverified",
+    "credential_exchange": "unverified",
+    "base_origin": "http://localhost:4174",
+    "public_config": {
+      "deployed_source": "local working tree",
+      "flutter": "3.47.7",
+      "authorized_domains": [
+        "localhost",
+        "stones-9a6a0.firebaseapp.com",
+        "stones-9a6a0.web.app",
+        "douglastkaiser.github.io",
+        "douglastkaiser.com",
+        "www.douglastkaiser.com"
+      ]
+    },
+    "results": [
+      {
+        "case": "callback_storage_lost",
+        "observations": [],
+        "firebase_js_versions": [
+          "11.9.1",
+          "12.6.0"
+        ],
+        "blocked_production_requests": 2,
+        "first_popup": "missing_initial_state",
+        "synthetic_callback_used": true,
+        "recovery_notice_visible": true,
+        "second_attempt_locked": true,
+        "closing_popup_releases_attempt": true,
+        "app_state": "other",
+        "page_origins": [
+          "http://localhost:4174"
+        ],
+        "popup_attempts": [
+          {
+            "active": true,
+            "opened": true,
+            "afterInputMs": 717
+          }
+        ],
+        "status": "observed",
+        "browser": "chromium"
+      },
+      {
+        "case": "callback_new_context",
+        "observations": [],
+        "firebase_js_versions": [
+          "11.9.1",
+          "12.6.0"
+        ],
+        "blocked_production_requests": 2,
+        "first_popup": "missing_initial_state",
+        "synthetic_callback_used": true,
+        "recovery_notice_visible": true,
+        "second_attempt_locked": true,
+        "closing_popup_releases_attempt": true,
+        "app_state": "other",
+        "page_origins": [
+          "http://localhost:4174"
+        ],
+        "popup_attempts": [
+          {
+            "active": true,
+            "opened": true,
+            "afterInputMs": 1810
+          }
+        ],
+        "status": "observed",
+        "browser": "chromium"
+      }
+    ],
+    "completed_utc": "2026-10-22T18:53:02.512470+00:00"
+  },
+  "controlled_helper_recovery_final_release_build": {
+    "started_utc": "2026-10-22T18:58:34.038480+00:00",
+    "scope": "desktop_pre_credential_only",
+    "physical_ios": "unverified",
+    "credential_exchange": "unverified",
+    "base_origin": "http://localhost:4174",
+    "public_config": {
+      "deployed_source": "local working tree",
+      "flutter": "3.47.7",
+      "authorized_domains": [
+        "localhost",
+        "stones-9a6a0.firebaseapp.com",
+        "stones-9a6a0.web.app",
+        "douglastkaiser.github.io",
+        "douglastkaiser.com",
+        "www.douglastkaiser.com"
+      ]
+    },
+    "results": [
+      {
+        "case": "callback_storage_lost",
+        "observations": [],
+        "firebase_js_versions": [
+          "11.9.1",
+          "12.6.0"
+        ],
+        "blocked_production_requests": 2,
+        "first_popup": "missing_initial_state",
+        "synthetic_callback_used": true,
+        "recovery_notice_visible": true,
+        "second_attempt_locked": true,
+        "closing_popup_releases_attempt": true,
+        "app_state": "other",
+        "page_origins": [
+          "http://localhost:4174"
+        ],
+        "popup_attempts": [
+          {
+            "active": true,
+            "opened": true,
+            "afterInputMs": 684
+          }
+        ],
+        "status": "observed",
+        "browser": "chromium"
+      }
+    ],
+    "completed_utc": "2026-10-22T18:59:20.122220+00:00"
+  },
+  "emulator_service_popup_checks": {
+    "scope": "local_emulator_service_popup",
+    "real_google_exchange": "unverified",
+    "results": [
+      {
+        "source_run": "emulator-service-fix-retry.json",
+        "browser": "chromium",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "source_run": "emulator-service-fix.json",
+        "browser": "webkit",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "source_run": "emulator-service-firefox-fix.json",
+        "browser": "firefox",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      }
+    ]
+  },
+  "player_browser_journeys": {
+    "scope": "Chromium desktop runner with phone viewport; demo emulators only",
+    "journeys": [
+      "browser Back/Forward lesson completion and next lesson",
+      "local save/reload",
+      "completion, read-only review and local rematch",
+      "cold invitation",
+      "independent clients",
+      "disconnect/rejoin",
+      "computer reply",
+      "signed-in AI-only settlement in both scopes",
+      "AI-only duplicate recovery"
+    ],
+    "status": "passed"
+  },
+  "release_web_main_sha256": "6a8961d4467fafd2540968f8ca8894ecf0769dd17227cd0acf0c77bc57adf2fc"
+}

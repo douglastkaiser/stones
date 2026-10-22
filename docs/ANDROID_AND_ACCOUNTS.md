@@ -4,6 +4,11 @@ Audited 2026-10-10. These are application features, separate from Tak mechanics.
 
 ## Account ownership
 
+The [Google sign-in recovery implementation](GOOGLE_SIGN_IN_FIX.md) adds early
+remembered-account restoration, fresh web gestures, delayed sign-in help and
+browser-restart regressions. Guest ownership, explicit account switching and
+active-room protections remain in place.
+
 Firebase Authentication owns square and Hex multiplayer seats. Play Games is an
 optional Android integration with a different identity; it must not gate room
 creation or Google account sign-in. Settings now has a shared Account card.
@@ -28,6 +33,13 @@ transaction/agreement protocol; see [the ratings contract](RATINGS.md). They are
 separate from device-local achievements and cosmetic ownership.
 
 ## Production Firebase observations and change
+
+For the 2026-10-22 iOS browser missing-state report, see the
+[Google sign-in investigation](GOOGLE_SIGN_IN_INVESTIGATION.md). It reproduces
+the helper error under lost storage and a fresh callback tab, records live domain
+authorization, and separates desktop/emulator evidence from pending device
+qualification. The affected device's cause and real Google exchange remain
+unverified; changing the allowlist again is not an established fix.
 
 Console verified Google and Anonymous providers enabled. Authorized domains
 initially included only localhost and the two Firebase default domains. The

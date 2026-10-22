@@ -88,7 +88,7 @@ class _AccountCardState extends ConsumerState<AccountCard> {
               ],
               const SizedBox(height: 8),
               Text(signedIn
-                  ? 'Use this account on another device to rejoin your online rooms by code. Achievements, unlocked themes and settings currently save on each device.'
+                  ? 'This device keeps you signed in until you sign out. Private browsing or clearing website data can end the session. Resume rooms on other devices with this account. Achievements, themes and settings stay on each device.'
                   : 'Play without an account. Link Google to keep your guest identity and resume online rooms on another device. Achievements and settings save on this device.'),
               if (account.error != null)
                 Padding(
@@ -98,19 +98,26 @@ class _AccountCardState extends ConsumerState<AccountCard> {
                         child: Text(account.error!,
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.error)))),
+              if (account.notice != null)
+                Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Semantics(
+                        liveRegion: true, child: Text(account.notice!))),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
-                if (account.busy || (!account.ready && account.error == null))
-                  const Wrap(
+                if (account.busy ||
+                    account.preparing ||
+                    (!account.ready && account.error == null))
+                  Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2)),
-                        Text('Connecting…')
+                        Text(account.busy ? 'Signing in…' : 'Connecting…')
                       ])
                 else if (!account.ready)
                   OutlinedButton(
@@ -125,7 +132,7 @@ class _AccountCardState extends ConsumerState<AccountCard> {
                       onPressed: () => controller.signInGoogle(),
                       icon: const Icon(Icons.account_circle_outlined),
                       label: const Text('Sign in with Google')),
-                if (account.conflict && !account.busy)
+                if (account.conflict && !account.busy && !account.preparing)
                   OutlinedButton(
                       onPressed: () => _confirm(switchAccount: true),
                       child: const Text('Use existing account')),

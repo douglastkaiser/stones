@@ -42,6 +42,10 @@ class FirebaseAccountService implements AccountService {
   @override
   Future<void> initialize() async {
     await bootstrap();
+    // FlutterFire's web initializer restores IndexedDB/localStorage identities
+    // before falling back to session storage when persistent storage is denied.
+    // Keep that SDK-managed policy: forcing another store here can discard an
+    // existing guest or fail in private browsers. Native sessions persist too.
     await _auth.authStateChanges().first;
     unawaited(_publishStatus(_auth.currentUser));
   }
@@ -95,7 +99,7 @@ class FirebaseAccountService implements AccountService {
             ? await guest!.linkWithCredential(credential)
             : await _auth.signInWithCredential(credential);
       }
-      await _publishStatus(result.user);
+      unawaited(_publishStatus(result.user));
       return identity(result.user);
     } on FirebaseAuthException catch (error) {
       if ([
@@ -150,7 +154,7 @@ String accountErrorMessage(Object error) {
       'Could not reach Google. Check your connection and try again.',
     'missing-initial-state' ||
     'web-storage-unsupported' =>
-      'Your browser could not keep the sign-in state. Return to Stones, allow website storage, and try Google sign-in again.',
+      'Your browser could not keep the sign-in state. Close the Google sign-in tab, return to Stones in the same browser, and try again. Keep sign-in in that browser; do not clear website data, which can remove your guest games.',
     'popup-blocked' =>
       'Your browser blocked the sign-in window. Allow popups for Stones, then try again.',
     'unauthorized-domain' =>

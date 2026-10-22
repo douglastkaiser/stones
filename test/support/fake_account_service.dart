@@ -14,6 +14,8 @@ class FakeAccount extends AccountService {
   bool cancelled = false;
   Completer<void>? initialization;
   Completer<void>? google;
+  Completer<void>? guest;
+  Object? guestFailure;
   @override
   Stream<AccountIdentity?> get changes => events.stream;
   @override
@@ -26,6 +28,8 @@ class FakeAccount extends AccountService {
   @override
   Future<AccountIdentity> ensurePlayer() async {
     guestCalls++;
+    if (guest != null) await guest!.future;
+    if (guestFailure != null) throw guestFailure!;
     return current ??= const AccountIdentity(uid: 'guest', guest: true);
   }
 

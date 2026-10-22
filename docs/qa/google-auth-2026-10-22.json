@@ -1,0 +1,285 @@
+{
+  "date": "2026-10-22",
+  "workspace_source": "fc31e80",
+  "deployed_source": "2b72e84bb51c4e8d16fb024c571f71b7539bb795",
+  "physical_ios": "unverified_no_device",
+  "real_google_credential_exchange": "unverified_no_test_account",
+  "root_cause_on_reported_device": "unconfirmed",
+  "evidence_scope": "Sanitized observations; successful observations do not imply end-to-end authentication success.",
+  "hosted_observations": [
+    {
+      "case": "warm",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "other",
+      "browser": "chromium"
+    },
+    {
+      "case": "popup_blocked",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "none",
+      "app_state": "popup_blocked_message",
+      "browser": "chromium"
+    },
+    {
+      "case": "storage_denied",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "other",
+      "browser": "chromium"
+    },
+    {
+      "case": "close_retry",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "retry_popup": "google_account_chooser",
+      "app_state": "other",
+      "browser": "chromium"
+    },
+    {
+      "case": "offline_retry",
+      "observations": [
+        "network_restored"
+      ],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "other",
+      "browser": "chromium"
+    },
+    {
+      "case": "background_resume",
+      "observations": [
+        "desktop_tab_switch_only"
+      ],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "other",
+      "browser": "chromium"
+    },
+    {
+      "case": "cold",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "waiting",
+      "browser": "firefox"
+    },
+    {
+      "case": "warm",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "none",
+      "app_state": "other",
+      "browser": "firefox"
+    },
+    {
+      "case": "popup_blocked",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "none",
+      "app_state": "other",
+      "browser": "firefox"
+    },
+    {
+      "case": "close_retry",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "retry_popup": "google_account_chooser",
+      "app_state": "other",
+      "browser": "firefox"
+    },
+    {
+      "case": "cold",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "waiting",
+      "browser": "chromium"
+    },
+    {
+      "case": "cold",
+      "observations": [],
+      "firebase_js_versions": [
+        "11.9.1",
+        "12.6.0"
+      ],
+      "first_popup": "google_account_chooser",
+      "app_state": "waiting",
+      "browser": "webkit"
+    }
+  ],
+  "controlled_callbacks": [
+    {
+      "case": "original_context_storage_intact",
+      "source": "interactive controlled probe",
+      "provider_response": "synthetic_invalid_code",
+      "production_exchange": "blocked",
+      "observed": [
+        "connection_error_message_in_parent"
+      ]
+    },
+    {
+      "case": "callback_storage_cleared",
+      "source": "interactive controlled probe and hosted callback probe",
+      "provider_response": "synthetic_invalid_code",
+      "production_exchange": "blocked",
+      "observed": [
+        "missing_initial_state_in_helper",
+        "parent_remained_waiting"
+      ]
+    },
+    {
+      "case": "callback_in_fresh_top_level_tab",
+      "source": "hosted callback probe before proxy failure",
+      "provider_response": "synthetic_invalid_code",
+      "production_exchange": "blocked",
+      "observed": [
+        "missing_initial_state_in_helper"
+      ]
+    }
+  ],
+  "limitations": [
+    "Source manifest and asset names were observed; full live hash re-verification was blocked by proxy transport failure.",
+    "Desktop WebKit is not physical iOS qualification.",
+    "Helper storage denial is fault injection, not Safari ITP simulation.",
+    "Public credential exchange, OAuth console settings, and current App Check enforcement are unverified.",
+    "Later outbound requests to all tested public hosts failed at the environment proxy with Cloudflare tunnel transport errors; late timeouts are inconclusive.",
+    "Emulator service-popup tests require the public iframe SDK and were blocked before popup launch."
+  ],
+  "validation": {
+    "toolchain": {
+      "flutter": "3.47.7",
+      "dart": "3.13.5",
+      "playwright": "1.62.0"
+    },
+    "account_regressions": {
+      "status": "passed",
+      "tests": 20
+    },
+    "python_release_tools_and_probe_policy": {
+      "status": "passed",
+      "tests": 33
+    },
+    "flutter_analyze_fatal_infos": "passed",
+    "release_web_build": "passed",
+    "emulator_web_build": "passed",
+    "full_flutter_suite": {
+      "status": "failed",
+      "passed": 1631,
+      "failed": 1,
+      "failure": "test/audit/online_recovery_test.dart: fresh Hex host and guest return to existing seats and identical saved state",
+      "detail": "Expected ply 3, got 2 within the test recovery wait; isolated rerun passed. No gameplay source changed."
+    },
+    "isolated_hex_recovery_rerun": "passed"
+  },
+  "public_configuration": {
+    "authorized_domains": [
+      "localhost",
+      "stones-9a6a0.firebaseapp.com",
+      "stones-9a6a0.web.app",
+      "douglastkaiser.github.io",
+      "douglastkaiser.com",
+      "www.douglastkaiser.com"
+    ],
+    "firebase_helper_iframe_status": 200,
+    "same_origin_helper_iframe_status": 404,
+    "current_startup_assets": [
+      "flutter_bootstrap.1fcc3c15d82822347c53.js",
+      "main.70ad0479cfab6619ced0.dart.js"
+    ],
+    "retained_startup_pairs": 2,
+    "startup_hash_integrity": "not_reverified_transport_blocked",
+    "game_html_security_headers_observed_absent": [
+      "Content-Security-Policy",
+      "Cross-Origin-Opener-Policy",
+      "Cross-Origin-Embedder-Policy",
+      "X-Frame-Options"
+    ]
+  },
+  "emulator_credentials_only": {
+    "started_utc": "2026-10-22T18:10:58.072657+00:00",
+    "scope": "local_emulator_credentials_only",
+    "physical_ios": "unverified",
+    "real_google_exchange": "unverified",
+    "results": [
+      {
+        "browser": "chromium",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "browser": "firefox",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      },
+      {
+        "browser": "webkit",
+        "checks": [
+          "fresh_google_sign_in",
+          "google_identity_restored_after_reload",
+          "sign_out",
+          "collision_preserves_guest",
+          "guest_link_preserves_uid",
+          "linked_identity_restored_after_reload"
+        ],
+        "status": "passed",
+        "stage": "completed"
+      }
+    ],
+    "completed_utc": "2026-10-22T18:11:36.134584+00:00"
+  }
+}

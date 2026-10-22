@@ -114,9 +114,10 @@ def tap_target(page, target):
 
 
 def turn_status(page, seat):
-    # Assert the painted status; live announcements repeat the same text.
-    return page.locator('flt-semantics span').filter(
-        has_text=re.compile(rf'^(?:Your turn · |{re.escape(seat)}’s turn · )?{re.escape(seat)} to play'))
+    # The compact strip now says "Your turn" for an owned seat. Assert the
+    # seat-specific current-player indicator instead of the old prose label.
+    return page.get_by_role('button', name=re.compile(
+        rf'\b{re.escape(seat)}, .*current player$'))
 
 
 def cell(page, x, y):
@@ -206,7 +207,9 @@ def main():
         host.get_by_role('button', name=re.compile('Continue saved game')).tap()
         expect(cell(host, 0, 0)).to_have_accessible_name(re.compile('Charcoal flat'))
         host.screenshot(path=str(EVIDENCE / 'resumed-local-phone.png'))
-        click(host, 'Resign')
+        # Compact match commands now live in the phone's overflow menu.
+        click(host, 'Match options')
+        tap_target(host, host.get_by_role('menuitem', name='Resign', exact=True))
         click(host, 'Ivory resigns')
         expect(button(host, 'Play again')).to_be_enabled()
         click(host, 'Review game')
@@ -293,7 +296,9 @@ def main():
             expect(reporter.get_by_role('button', name=re.compile(r'\bRating QA\b'))).to_be_visible(timeout=30000)
             click(reporter, 'My games')
             click(reporter, 'Continue saved game')
-            expect(reporter.get_by_text('Overall and format ratings recorded', exact=True))\
+            # An AI-only reporter has no human-seat delta. The common receipt
+            # label confirms completion; ai_profiles below checks both scopes.
+            expect(reporter.get_by_text('Elo recorded', exact=True))\
                 .to_be_visible(timeout=45000)
         resume_rated_fixture()
         first = ai_profiles()

@@ -4,6 +4,14 @@ The [feature inventory and regression contract](SUPPORTED_FEATURES.md) covers th
 full project history, current and intended capabilities, historical parity gaps
 and regression journeys. Read affected feature IDs before implementation and
 keep them current in the same change as player-facing behavior.
+
+The [Google sign-in investigation](GOOGLE_SIGN_IN_INVESTIGATION.md) records the
+iOS browser missing-state report, reproducible storage/context faults, account
+regressions, sanitized probes, remediation specification and pending device checks.
+The [implemented recovery and remembered-account behavior](GOOGLE_SIGN_IN_FIX.md)
+records early restoration, fresh web gestures, safe delayed-sign-in help and
+browser-restart checks included in CI.
+
 The [adaptive gameplay UX](ADAPTIVE_GAMEPLAY_UX.md) records compact move controls,
 landscape layout, precision zoom, measured before/after tasks and device
 qualification still needed.

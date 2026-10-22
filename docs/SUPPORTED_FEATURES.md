@@ -8,6 +8,9 @@ tests and product plans. Related fixes are grouped by feature. Commit references
 explain provenance; the current behavior below takes precedence over an older
 commit's design or an audit's historical status.
 
+The 2026-10-22 Google sign-in update below extends this baseline; see
+[its implementation and qualification limits](GOOGLE_SIGN_IN_FIX.md).
+
 The main sections describe current implementation contracts. The later tables
 explicitly retain historical capabilities with incomplete shared-engine parity,
 planned capabilities, and intentional exclusions. Implementation, usability
@@ -284,12 +287,18 @@ History: `9c1114a`, `b81e5a8`, `25888f1`, `603c86d`, `45d2946`, `2651001`,
 
 Sources: [accounts](ANDROID_AND_ACCOUNTS.md), [community](COMMUNITY_AND_LAYOUT.md),
 [skill ratings](SKILL_RATINGS.md), [achievements](ACHIEVEMENTS.md),
-[themes](THEMES.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md).
+[themes](THEMES.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md),
+[Google sign-in recovery and remembered accounts](GOOGLE_SIGN_IN_FIX.md).
 History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
 `2b914c7`, `84e90a2`, `4886cc5`, `e6c2319`.
 
 - **ACCOUNT-01 · Guest or Google account:** play as a guest, sign in from Home/Settings,
-  view account status, and sign out with active-room protections intact.
+  view account status, and sign out with active-room protections intact. Web
+  sign-in requires a fresh tap after account preparation. A pending attempt shows
+  recovery help after 30 seconds and stays locked until completion/cancellation;
+  close a failed Google tab and retry in the same browser without clearing guest
+  data. Optional status publication cannot delay a successful sign-in. Physical
+  iOS and real Google credential exchange remain unqualified.
 - **ACCOUNT-02 · Public Stones name:** edit a name independently of Google profile data;
   it appears consistently in games, profiles and standings across devices.
 - **ACCOUNT-03 · Overall and format ratings:** eligible new games contribute once to both
@@ -317,7 +326,9 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
 - **ACCOUNT-10 · Safe identity transitions:** restore an existing Firebase identity
   before creating a guest. Linking a guest to a new Google account preserves UID
   and rooms; a collision with an existing account needs an explicit switch.
-  Cancellation preserves the current identity. Keep Play Games identity separate
+  Cancellation preserves the current identity. Active rooms block sign-out and
+  switching an already registered account, including direct sign-in requests;
+  linking a guest remains available. Keep Play Games identity separate
   from Stones/Firebase identity; neither optional service gates local play.
 - **ACCOUNT-11 · Progress durability and eligibility:** save learning, achievement
   evidence and unlock notices without overlapping writes losing progress. Dedup
@@ -331,6 +342,13 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   Reconnect does not rewrite those choices. Missing or unknown metadata falls
   back safely to Classic; viewing a locked opponent set never writes local
   entitlements. Cosmetic entitlement remains client-enforced.
+- **ACCOUNT-13 · Remembered account:** restore the last Firebase session on Home
+  independently of audio and optional Play Games startup, without a new guest or
+  Google chooser. SDK-managed persistence remembers the last successful login;
+  explicit sign-out survives browser restart. Denied storage, private browsing,
+  clearing/evicting data, another browser/profile/origin or a revoked session can
+  require another sign-in. Local play remains available during restoration or
+  failure; achievements, themes and settings retain their device-local limits.
 
 ## Preferences, presentation and accessible input
 
@@ -513,6 +531,7 @@ Deployment/device claims need their own evidence.
 | SAVE | `match_controller.dart`, `match_storage.dart`, `completed_match.dart`, `match_clock.dart`, `match_elapsed.dart`, `result_share_data.dart` | `test/game/match_controller_test.dart`, `match_clock_test.dart`, `completed_match_test.dart`, `result_explanation_test.dart`, `result_sharing_test.dart`, `result_share_widget_test.dart` |
 | ONLINE | `match_room_store.dart`, `room_navigation.dart`, `room_invitation.dart`, `open_tables.dart`; `lib/services/match_chat_service.dart`; `firestore.rules` | `test/game/match_room_test.dart`, `multiplayer_recovery_regression_test.dart`, `multiplayer_resilience_test.dart`; `test/open_tables_test.dart`, `match_chat_lifecycle_test.dart`; `tools/hex_rules/`; `tools/chat_browser_journey.py` |
 | ACCOUNT, COMPAT, PLAN-01 | `lib/providers/account_provider.dart`, `achievements_provider.dart`, `elite_theme_provider.dart`; `lib/progression/`; `lib/services/play_games_service.dart` | `test/account_test.dart`, `play_games_save_test.dart`, `community_ui_test.dart`; `test/achievements/`; `test/ratings/`; Firestore emulator authorization trials |
+| ACCOUNT-01/10/13 | `lib/providers/account_provider.dart`, `lib/services/account_service.dart`, `lib/screens/main_menu_screen.dart`, `lib/widgets/account_card.dart`; [sign-in recovery](GOOGLE_SIGN_IN_FIX.md) | Account/home tests; `tools/google_auth_browser_checks.py` for emulator linking and browser-process restart/sign-out; `tools/google_auth_probe.py` for helper-state loss/new-tab recovery; physical iOS and real Google verification remain separate |
 | APP delivery/performance | `.github/workflows/`, `scripts/`, `web/`; [release readiness](RELEASE_READINESS.md) | Python release/preflight checks; `tools/browser_journeys.py`; `tools/shared_performance_probe_test.dart`; native/browser/device trials appropriate to the artifact |
 
 ## Journeys and combinations to preserve
@@ -527,7 +546,8 @@ the whole matrix passed because a single configuration worked.
 | Play → pause/background → reload → continue | Confirmed moves, local pause/time banks and active elapsed time survive correctly; online clocks/seat ownership remain authoritative. |
 | Invitation/QR/open table → join | Cold/warm routes and canonical/legacy codes work; cancel/full/stale/invalid/failed joins preserve active play and identity. No implicit seat claim. |
 | Mixed online table → disconnect → reconnect | Last confirmed board stays visible, retry is bounded, AI lease can recover, no lost/duplicate move, correct turn cue and no stale subscriptions. |
-| Guest → Google → account switch/cancel | UID-safe link/collision behavior, correct room/profile/rating visibility, optional Play Games isolation and no mistaken progress-sync promise. |
+| Guest → Google → account switch/cancel | UID-safe link/collision/cancel behavior, fresh web tap after preparation, delayed helper recovery without overlapping attempts, active-room identity guards, correct room/profile/rating visibility, optional Play Games isolation and no mistaken progress-sync promise. |
+| Sign in → close browser → reopen → sign out → reopen | Last account restores on Home without waiting for audio; explicit sign-out persists; a subsequent login replaces the remembered account. Denied/private storage retains usable local play and honest session limits. |
 | Finish → rewards/ratings → review → share → again | Correct reason, one settlement/award, stable deltas/duration, read-only review, no lost result on save failure, new rematch identity. |
 | Change appearance/audio/navigation | Light/dark/system, locked/earned mixed sets, Celestial revocation, independent effects/music, Back/Forward and lesson callbacks preserve the live game and clear status. |
 

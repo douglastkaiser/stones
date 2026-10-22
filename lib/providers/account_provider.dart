@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../hex/hex_match_provider.dart';
 import '../game/match_provider.dart';
@@ -10,24 +11,31 @@ class AccountState {
   const AccountState(
       {this.ready = false,
       this.busy = false,
+      this.preparing = false,
       this.identity,
       this.error,
+      this.notice,
       this.conflict = false});
   final bool ready;
   final bool busy;
+  final bool preparing;
   final AccountIdentity? identity;
   final String? error;
+  final String? notice;
   final bool conflict;
 }
 
 class AccountController extends StateNotifier<AccountState> {
-  AccountController(this.service, {required this.hasActiveRoom})
+  AccountController(this.service,
+      {required this.hasActiveRoom, this.requireFreshGesture = kIsWeb})
       : super(const AccountState());
   final AccountService service;
   final bool Function() hasActiveRoom;
+  final bool requireFreshGesture;
   Future<void>? _initialization;
   Future<AccountIdentity>? _guest;
   StreamSubscription<AccountIdentity?>? _subscription;
+  Timer? _signInNoticeTimer;
 
   Future<void> initialize() =>
       _initialization ??= _initialize().whenComplete(() {
@@ -39,33 +47,79 @@ class AccountController extends StateNotifier<AccountState> {
     try {
       await service.initialize().timeout(const Duration(seconds: 20));
       if (!mounted) return;
-      state = AccountState(ready: true, identity: service.current);
+      state = AccountState(
+          ready: true,
+          busy: state.busy,
+          preparing: state.preparing,
+          notice: state.notice,
+          identity: service.current);
       _subscription ??= service.changes.listen((user) {
         if (mounted) {
-          state = AccountState(ready: true, busy: state.busy, identity: user);
+          state = AccountState(
+              ready: true,
+              busy: state.busy,
+              preparing: state.preparing,
+              notice: state.notice,
+              identity: user);
         }
       }, onError: (Object error) {
         if (mounted) {
           state = AccountState(
               ready: true,
               busy: state.busy,
+              preparing: state.preparing,
+              notice: state.notice,
               identity: state.identity,
               error: accountErrorMessage(error));
         }
       });
     } catch (error) {
-      if (mounted) state = AccountState(error: accountErrorMessage(error));
+      if (mounted) {
+        state = AccountState(
+            busy: state.busy,
+            preparing: state.preparing,
+            notice: state.notice,
+            identity: state.identity,
+            error: accountErrorMessage(error));
+      }
     }
   }
 
   Future<void> retry() async {
-    if (state.busy) return;
+    if (state.busy || state.preparing) return;
     _initialization = null;
     await initialize();
   }
 
   Future<void> signInGoogle({bool useExistingAccount = false}) async {
-    if (state.busy) return;
+    if (state.busy || state.preparing) return;
+    if (requireFreshGesture && (!state.ready || _guest != null)) {
+      // A popup must follow a fresh tap, not asynchronous bootstrap or guest
+      // creation. Prepare now; the user can tap again after it finishes.
+      state = AccountState(
+          ready: state.ready, preparing: true, identity: state.identity);
+      try {
+        await _guest;
+        if (!mounted) return;
+        await initialize();
+        if (!mounted) return;
+        state = AccountState(
+            ready: state.ready,
+            identity: state.identity,
+            error: state.error,
+            notice: state.ready && state.identity?.guest != false
+                ? 'Ready. Tap Sign in with Google to continue.'
+                : null);
+      } catch (error) {
+        if (mounted) {
+          state = AccountState(
+              ready: state.ready,
+              identity: state.identity,
+              error: accountErrorMessage(error));
+        }
+      }
+      return;
+    }
     try {
       if (_guest != null) await _guest;
     } catch (error) {
@@ -80,7 +134,8 @@ class AccountController extends StateNotifier<AccountState> {
     if (!mounted) return;
     if (!state.ready) await initialize();
     if (!mounted || !state.ready || state.busy) return;
-    if (useExistingAccount && hasActiveRoom()) {
+    if ((useExistingAccount || service.current?.guest == false) &&
+        hasActiveRoom()) {
       state = AccountState(
           ready: true,
           identity: state.identity,
@@ -89,6 +144,29 @@ class AccountController extends StateNotifier<AccountState> {
       return;
     }
     state = AccountState(ready: true, busy: true, identity: state.identity);
+    late final Timer noticeTimer;
+    noticeTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted ||
+          !identical(_signInNoticeTimer, noticeTimer) ||
+          !state.busy) {
+        return;
+      }
+      // Do not time out authentication: a Dart timeout cannot cancel Firebase's
+      // popup, and a late result could change identity after a second attempt.
+      state = AccountState(
+          ready: true,
+          busy: true,
+          identity: state.identity,
+          error: state.error,
+          conflict: state.conflict,
+          notice: requireFreshGesture
+              ? 'Sign-in is taking longer than expected. Check the Google '
+                  'sign-in tab. If it shows an error, close that tab, return to '
+                  'Stones in the same browser, and try again.'
+              : 'Sign-in is taking longer than expected. Return to the Google '
+                  'account chooser to finish or cancel, then try again.');
+    });
+    _signInNoticeTimer = noticeTimer;
     try {
       await service.signInGoogle(useExistingAccount: useExistingAccount);
       if (mounted) state = AccountState(ready: true, identity: service.current);
@@ -102,6 +180,9 @@ class AccountController extends StateNotifier<AccountState> {
                 ['credential-already-in-use', 'email-already-in-use']
                     .contains(error.code));
       }
+    } finally {
+      noticeTimer.cancel();
+      if (identical(_signInNoticeTimer, noticeTimer)) _signInNoticeTimer = null;
     }
   }
 
@@ -115,12 +196,19 @@ class AccountController extends StateNotifier<AccountState> {
       throw StateError('Finish account sign-in before joining a match.');
     }
     final player = await service.ensurePlayer();
-    if (mounted) state = AccountState(ready: true, identity: player);
+    if (mounted) {
+      state = AccountState(
+          ready: true,
+          busy: state.busy,
+          preparing: state.preparing,
+          notice: state.notice,
+          identity: player);
+    }
     return player;
   }
 
   Future<void> signOut() async {
-    if (state.busy || !state.ready || _guest != null) return;
+    if (state.busy || state.preparing || !state.ready || _guest != null) return;
     if (hasActiveRoom()) {
       state = AccountState(
           ready: true,
@@ -144,6 +232,7 @@ class AccountController extends StateNotifier<AccountState> {
 
   @override
   void dispose() {
+    _signInNoticeTimer?.cancel();
     _subscription?.cancel();
     super.dispose();
   }
