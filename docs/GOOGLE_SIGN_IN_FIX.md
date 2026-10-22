@@ -67,11 +67,15 @@ use disposable profiles and fake provider credentials.
 
 [The qualification record](qa/google-auth-qualification-2026-10-22.json) binds
 those results to the source, CI attempts, job IDs and artifact digests.
-Publication remains pending because the managed workspace became unavailable
-after outbound HTTP 503 errors. The connector can record evidence but cannot
-dispatch workflows. Deploy Main's rollback capture and three hosted acceptance
-jobs have not run for this source; the first manual monitor execution is also
-pending. Physical iPhone and real Google exchange remain separate acceptance.
+After connectivity recovered, [Deploy Main](https://github.com/douglastkaiser/stones/actions/runs/39873007245)
+published the exact attempt-2 artifact. The previous release was verified and
+archived for 90 days before publication. All three hosted jobs passed source and
+startup integrity plus 12 pre-credential login cases. The first
+[Hosted login monitor](https://github.com/douglastkaiser/stones/actions/runs/39873375971)
+also passed in all three engines; daily monitoring is scheduled for 06:23 UTC.
+The published application source remains `56cb6fb`; later documentation commits
+do not rebuild or replace that qualified artifact. Physical iPhone and real
+Google exchange remain separate acceptance, and no production rollback was run.
 
 ```sh
 flutter analyze --fatal-infos

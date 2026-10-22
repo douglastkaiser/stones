@@ -1,5 +1,5 @@
 {
-  "observed_at_utc": "2026-10-22 23:01:37 UTC",
+  "observed_at_utc": "2026-10-22 23:43:28 UTC",
   "source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
   "feature_ids": [
     "ACCOUNT-01",
@@ -271,25 +271,163 @@
     }
   ],
   "deployment": {
-    "status": "not_dispatched",
+    "status": "published_and_hosted_verified",
     "selected_source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
     "selected_artifact": "web-build-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
-    "blocker": "Managed workspace returned HTTP 503 from its outbound proxy and then became unavailable/offline. GitHub connector can observe Actions and update repository files but has no workflow-dispatch operation.",
-    "previous_last_observed_source": "2b72e84bb51c4e8d16fb024c571f71b7539bb795",
-    "previous_publishing_commit": "ce06ab96bba74ded126104979aa4bfef2b14966e",
-    "hosted_verification": "not_run_for_selected_source",
-    "rollback_capture": "not_run; occurs before publication in Deploy Main",
-    "next_action": "Dispatch deploy-main.yml on main with source_sha set to selected_source; monitor all three hosted verification jobs."
+    "workflow_source": "4146ad9c9f18fc27779600301484e2b0bae8e471",
+    "run": 39873007245,
+    "url": "https://github.com/douglastkaiser/stones/actions/runs/39873007245",
+    "publishing_commit": "5a6a7557f05ff524c6e1249f3739d8ee44a134fd",
+    "hosted_url": "https://www.douglastkaiser.com/stones/",
+    "pages": {
+      "id": 39873072745,
+      "status": "completed",
+      "conclusion": "success",
+      "source": "5a6a7557f05ff524c6e1249f3739d8ee44a134fd"
+    },
+    "jobs": [
+      {
+        "id": 120151740662,
+        "name": "qualify",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120151799105,
+        "name": "publish",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120151967236,
+        "name": "Verify hosted login (firefox)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120151967318,
+        "name": "Verify hosted login (chromium)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120151967526,
+        "name": "Verify hosted login (webkit)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "hosted_verification": {
+      "status": "passed",
+      "browsers": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "cases_per_browser": 4,
+      "total_cases": 12,
+      "scope": "Selected source and hosted startup integrity, visible Google entry, blocked popup and close/retry; no real credential exchange"
+    },
+    "rollback_capture": {
+      "status": "verified_and_archived_before_publication",
+      "previous_source": "2b72e84bb51c4e8d16fb024c571f71b7539bb795",
+      "previous_publishing_commit": "ce06ab96bba74ded126104979aa4bfef2b14966e",
+      "files_verified_at_capture": 81,
+      "retention_days": 90,
+      "artifact": {
+        "id": 12467565672,
+        "name": "rollback-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-39873007245-1",
+        "digest": "sha256:190ac4109889cd286ae34a84ec29621258f5ed5ed1174b6df310d1160513f6fd",
+        "expires_at": "2027-01-20T23:37:28Z"
+      },
+      "production_rollback_executed": false
+    },
+    "artifacts": [
+      {
+        "id": 12467565672,
+        "name": "rollback-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-39873007245-1",
+        "digest": "sha256:190ac4109889cd286ae34a84ec29621258f5ed5ed1174b6df310d1160513f6fd",
+        "expires_at": "2027-01-20T23:37:28Z"
+      },
+      {
+        "id": 12467506124,
+        "name": "hosted-webkit-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-39873007245-1",
+        "digest": "sha256:01c5fa88d855e92def6981d15da260586bc2c9a74d9ec537e43b00c9ceac0ba1",
+        "expires_at": "2027-01-20T23:37:28Z"
+      },
+      {
+        "id": 12467481066,
+        "name": "hosted-firefox-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-39873007245-1",
+        "digest": "sha256:4a53176d77d048b3163f3bd26b66baa7bba39359341427416f04806a475c790d",
+        "expires_at": "2027-01-20T23:37:28Z"
+      },
+      {
+        "id": 12466623027,
+        "name": "hosted-chromium-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-39873007245-1",
+        "digest": "sha256:98b5570eec48b61d2fc9ce2ca1876e17929d1e8b2f0538ca35e16a2aad2fcc6c",
+        "expires_at": "2027-01-20T23:37:28Z"
+      }
+    ]
   },
   "monitor": {
     "workflow": ".github/workflows/hosted-auth.yml",
     "daily_utc": "06:23",
-    "manual_first_run": "not_dispatched_environment_unavailable"
+    "manual_first_run": "passed",
+    "run": 39873375971,
+    "url": "https://github.com/douglastkaiser/stones/actions/runs/39873375971",
+    "checker_source": "4146ad9c9f18fc27779600301484e2b0bae8e471",
+    "deployed_source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+    "jobs": [
+      {
+        "id": 120152946592,
+        "name": "Hosted login (chromium)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120152946864,
+        "name": "Hosted login (webkit)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120152946895,
+        "name": "Hosted login (firefox)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 12466984094,
+        "name": "hosted-monitor-webkit-39873375971-1",
+        "digest": "sha256:8ea5ddb2d11d7f307031e1bd063ad908a4690bca2ee1f0c6b12ab1cbffa63995",
+        "expires_at": "2026-11-21T23:42:36Z"
+      },
+      {
+        "id": 12466834078,
+        "name": "hosted-monitor-chromium-39873375971-1",
+        "digest": "sha256:e857419d77cb456e4ae1d7dafb9cfb9427363dc73a47d4db5dd6ff366e94fc6e",
+        "expires_at": "2026-11-21T23:41:59Z"
+      },
+      {
+        "id": 12466619572,
+        "name": "hosted-monitor-firefox-39873375971-1",
+        "digest": "sha256:ba67a7dea620bd6f8e6ceb18607bedc101168cc1d6635192f5cff889f0a13f49",
+        "expires_at": "2026-11-21T23:42:12Z"
+      }
+    ]
   },
   "limits": [
     "Physical iPhone Safari/Chrome acceptance remains pending; desktop WebKit is not an iOS device.",
     "Real Google credential exchange remains pending; emulator credentials and pre-credential probes do not qualify it.",
     "Native Android chooser, app suspension, home-screen launch, private-mode and embedded-browser returns remain device acceptance work.",
-    "This record proves CI qualification, not publication or hosted acceptance of the selected source."
-  ]
+    "Published-source integrity and pre-credential browser checks passed; they do not establish physical iOS acceptance or real Google credential exchange."
+  ],
+  "qualification_observed_at_utc": "2026-10-22 23:01:37 UTC",
+  "initial_publication_block": {
+    "observed_at_utc": "2026-10-22 23:01:37 UTC",
+    "reason": "Managed workspace returned HTTP 503 from its outbound proxy and then became unavailable/offline. GitHub connector can observe Actions and update repository files but has no workflow-dispatch operation.",
+    "status": "resolved; connection recovered and both workflows completed successfully"
+  }
 }

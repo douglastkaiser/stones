@@ -15,19 +15,23 @@ All 11 CI jobs passed in both attempts: 1,645 Flutter tests, strict analysis,
 player journeys, 60 emulator account checks and 18 exact-artifact production
 recovery cases across Chromium, Firefox and WebKit.
 
-**Publication is pending.** The workspace's outbound proxy returned HTTP 503 and
-the environment then became unavailable. The GitHub connector retained read and
-repository-write access but has no workflow-dispatch operation. No deployment
-was dispatched, rollback archive captured or hosted acceptance claimed for this
-source. See [the qualification record](qa/google-auth-qualification-2026-10-22.json)
-for attempt IDs, job results, artifact IDs/digests and remaining device checks.
+**Published and hosted-verified.** After connectivity recovered,
+[Deploy Main](https://github.com/douglastkaiser/stones/actions/runs/39873007245)
+published attempt 2's exact production artifact. Publishing commit
+`5a6a7557f05ff524c6e1249f3739d8ee44a134fd` passed Pages deployment; the
+[main site](https://www.douglastkaiser.com/stones/) serves the qualified source.
+Chromium, Firefox and WebKit verified hosted startup integrity and all 12
+pre-credential login cases. The previous `2b72e84` release was verified and
+archived before publication, with a 90-day rollback artifact retained in that run.
+No production rollback was performed.
 
-Dispatch **Deploy Main** on main with `source_sha` set to the full qualified SHA
-above. It selects attempt 2's exact production artifact, archives the previous
-release and requires three hosted verification jobs. Then dispatch **Hosted login
-monitor** once; its daily schedule is 06:23 UTC. Physical iPhone and real Google
-exchange remain pending. Earlier `8ffde24` and unbound local reports do not qualify
-this release.
+The first [Hosted login monitor](https://github.com/douglastkaiser/stones/actions/runs/39873375971)
+also passed in all three engines; daily checks run at 06:23 UTC.
+[The qualification and publication record](qa/google-auth-qualification-2026-10-22.json)
+contains job results, artifact IDs/digests, the resolved environment blocker and
+remaining acceptance limits. Physical iPhone and real Google credential exchange
+remain pending, including browser context, private-mode and app-suspension cases.
+Earlier `8ffde24` and unbound local reports do not qualify this release.
 
 ## October 20 main promotion
 
