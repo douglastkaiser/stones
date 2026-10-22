@@ -14,10 +14,14 @@ Win detection follows the [US Tak Association rules](https://ustak.org/play-beau
 
 ## Development
 
-An experimental **Three-player Hex** mode can be enabled in Settings. It is off
-by default and supports three local/remote human or AI seats. See the
-[variant rules and setup guide](docs/HEX_MODE.md), including the required online
-backend rules deployment.
+Review the [feature inventory and regression contract](docs/SUPPORTED_FEATURES.md)
+for current and intended capabilities, full-history references, compatibility
+obligations and regression journeys to preserve during future changes.
+
+Square and Hex share setup and controls for two to four local/remote human or AI
+seats. Two-player Square follows standard Tak; other configurations are Stones
+variants. See the [shared play contract](docs/UNIFIED_PLAY_PLAN.md) for current
+behavior and [legacy Hex guide](docs/HEX_MODE.md) for older room compatibility.
 
 See the [rules audit](docs/TAK_RULES.md) for official sources, verified mechanics,
 and remaining gaps, and the [development map](docs/DEVELOPMENT.md) for architecture

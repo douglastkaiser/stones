@@ -1,5 +1,9 @@
 # Development map
 
+The [feature inventory and regression contract](SUPPORTED_FEATURES.md) covers the
+full project history, current and intended capabilities, historical parity gaps
+and regression journeys. Read affected feature IDs before implementation and
+keep them current in the same change as player-facing behavior.
 The [adaptive gameplay UX](ADAPTIVE_GAMEPLAY_UX.md) records compact move controls,
 landscape layout, precision zoom, measured before/after tasks and device
 qualification still needed.

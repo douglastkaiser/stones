@@ -13,6 +13,11 @@ flutter build apk              # Build for Android
 
 ## Code Quality Rules
 
+Follow the feature inventory maintenance requirements in [AGENTS.md](AGENTS.md).
+Keep [supported features](docs/SUPPORTED_FEATURES.md) current in the same change
+as player-facing implementation work, including stable feature IDs, regression
+journeys, compatibility obligations and known limits.
+
 ### Dart Analyzer
 The project uses `flutter analyze --fatal-infos` which treats warnings AND infos as errors. Before committing:
 
