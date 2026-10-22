@@ -15,6 +15,7 @@ import 'package:stones/game/match_screen.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/game/stack_move_tray.dart';
 import 'package:stones/models/piece.dart';
+import 'package:stones/widgets/audio_controls.dart';
 import 'package:stones/theme/tavern_theme.dart';
 import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
@@ -40,6 +41,7 @@ BoardView board(WidgetTester tester) =>
 Future<PositionController> mount(WidgetTester tester, BoardShape shape,
     {Size size = const Size(390, 844),
     double scale = 1,
+    bool audioOverlay = false,
     Brightness brightness = Brightness.light,
     Map<Cell, List<Stone>>? stones,
     GlobalKey? capture}) async {
@@ -57,17 +59,21 @@ Future<PositionController> mount(WidgetTester tester, BoardShape shape,
             const Cell(0, 0): [charcoal, ivory, ivory],
             const Cell(0, 1): [charcoal],
           }));
+  final navigator = GlobalKey<NavigatorState>();
   await tester.pumpWidget(RepaintBoundary(
       key: capture,
       child: ProviderScope(
           overrides: [matchProvider.overrideWith((ref) => controller)],
           child: MaterialApp(
+              navigatorKey: navigator,
               debugShowCheckedModeBanner: false,
               theme: TavernTheme.build(brightness),
               builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context)
                       .copyWith(textScaler: TextScaler.linear(scale)),
-                  child: child!),
+                  child: audioOverlay
+                      ? AudioControls(navigator: navigator, child: child!)
+                      : child!),
               home: const MatchScreen()))));
   await tester.pumpAndSettle();
   return controller;
@@ -153,13 +159,14 @@ void main() {
           expect(board(tester).game.stackAt(const Cell(1, 0)), [charcoal]);
           expect(board(tester).carried, [ivory, ivory]);
           expect(find.text('Carrying 2 · 1 staged'), findsOneWidget);
+          expect(
+              find.byTooltip('Undo last drop').hitTestable(), findsOneWidget);
           await tester.ensureVisible(find.text('Confirm move'));
           await tester.pumpAndSettle();
           final confirmBounds =
               tester.getRect(find.widgetWithText(FilledButton, 'Confirm move'));
           for (final action in [
             find.widgetWithText(TextButton, 'Drop remaining here'),
-            find.byTooltip('Undo last drop'),
             find.byTooltip('Inspect another stack')
           ]) {
             // Secondary actions scroll; confirmation stays pinned.
@@ -169,7 +176,8 @@ void main() {
             expect(find.text('Confirm move').hitTestable(), findsOneWidget);
             expect(tester.getRect(action).bottom,
                 lessThanOrEqualTo(confirmBounds.top),
-                reason: 'Scrolled draft actions must clear the pinned confirmation');
+                reason:
+                    'Scrolled draft actions must clear the pinned confirmation');
           }
 
           await capture(tester, key,

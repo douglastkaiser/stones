@@ -9,6 +9,22 @@ import '../services/sound_manager.dart';
 class AudioControls extends ConsumerStatefulWidget {
   const AudioControls(
       {super.key, required this.child, required this.navigator});
+
+  /// Gameplay supplies an inline audio command instead of an overlapping button.
+  static VoidCallback hideFloatingButton(BuildContext context) {
+    final owner = context.findAncestorStateOfType<_AudioControlsState>();
+    if (owner == null) return () {};
+    owner._inlineOwners++;
+    owner._refreshButton();
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      owner._inlineOwners--;
+      owner._refreshButton();
+    };
+  }
+
   final Widget child;
   final GlobalKey<NavigatorState> navigator;
   @override
@@ -17,6 +33,13 @@ class AudioControls extends ConsumerStatefulWidget {
 
 class _AudioControlsState extends ConsumerState<AudioControls>
     with WidgetsBindingObserver {
+  int _inlineOwners = 0;
+  void _refreshButton() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   final _music = AudioPlayer();
   bool _unlocked = false, _foreground = true;
   Future<void> _updates = Future.value();
@@ -93,19 +116,21 @@ class _AudioControlsState extends ConsumerState<AudioControls>
         child: Overlay.wrap(
             child: Stack(children: [
           widget.child,
-          Positioned(
-              right: 12,
-              bottom: 12,
-              child: SafeArea(
-                  child: Material(
-                      color:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                      elevation: 2,
-                      borderRadius: BorderRadius.circular(24),
-                      child: IconButton(
-                          tooltip: 'Audio settings',
-                          onPressed: _settings,
-                          icon: const Icon(Icons.volume_up_outlined))))),
+          if (_inlineOwners == 0)
+            Positioned(
+                right: 12,
+                bottom: 12,
+                child: SafeArea(
+                    child: Material(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(24),
+                        child: IconButton(
+                            tooltip: 'Audio settings',
+                            onPressed: _settings,
+                            icon: const Icon(Icons.volume_up_outlined))))),
         ])));
   }
 }

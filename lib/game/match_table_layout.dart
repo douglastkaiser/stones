@@ -2,7 +2,35 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Both shapes use viewport width in portrait; actions never cover the board.
+/// Geometry and typography determine capacity, never the current move contents.
+class MatchLayoutPolicy {
+  const MatchLayoutPolicy(this.size, this.panelWidth);
+  final Size size;
+  final double panelWidth;
+  bool get beside =>
+      (size.width >= 1000 || size.width > size.height) &&
+      size.width >= panelWidth + 224 + 40 &&
+      size.height >= 248;
+  double get boardSide => beside
+      ? math.min(760, math.min(size.width - panelWidth - 40, size.height - 24))
+      : math.min(size.width, 760);
+
+  static double measurePanel(BuildContext context) {
+    final text = TextPainter(
+      text: TextSpan(
+        text: 'Cancel   Confirm move',
+        style: Theme.of(context).textTheme.labelLarge,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final width = math.max(280.0, text.width + 104);
+    text.dispose();
+    return width;
+  }
+}
+
+/// Portrait retains full width; the move dock never overlays board targets.
 class MatchTableLayout extends StatelessWidget {
   const MatchTableLayout({
     super.key,
@@ -13,9 +41,13 @@ class MatchTableLayout extends StatelessWidget {
     required this.details,
     this.invitation,
     this.primaryActions,
+    this.moveDock,
+    this.boardTools,
+    this.controlsBuilder,
   });
   final Widget board, players, status, controls, details;
-  final Widget? invitation, primaryActions;
+  final Widget? invitation, primaryActions, moveDock, boardTools;
+  final Widget Function(BuildContext, double)? controlsBuilder;
 
   Widget _board(double side) => SizedBox(
         key: const ValueKey('stable-board'),
@@ -24,101 +56,88 @@ class MatchTableLayout extends StatelessWidget {
         child: board,
       );
 
-  Widget _actions() => Material(
+  Widget _dock(double availableHeight) => Material(
         key: const ValueKey('primary-actions'),
         elevation: 4,
-        child: SizedBox(
-          width: double.infinity,
-          child:
-              Padding(padding: const EdgeInsets.all(8), child: primaryActions),
-        ),
+        child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: availableHeight),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (moveDock != null)
+                Flexible(
+                    child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                            maxHeight: math.max(0, availableHeight * .3)),
+                        child: SingleChildScrollView(
+                            key: const PageStorageKey('move-dock-content'),
+                            child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child: moveDock)))),
+              if (primaryActions != null)
+                Padding(
+                    padding: const EdgeInsets.all(8), child: primaryActions),
+            ])),
       );
 
+  Widget _scroll(Widget Function(double) content, String key) => Expanded(
+      child: LayoutBuilder(
+          builder: (context, bounds) => SingleChildScrollView(
+              key: PageStorageKey(key),
+              physics: const ClampingScrollPhysics(),
+              child: content(bounds.maxHeight))));
+
   @override
-  Widget build(BuildContext context) => SafeArea(
-        child: LayoutBuilder(
-          builder: (context, bounds) {
-            final scale = MediaQuery.textScalerOf(context).scale(1);
-            if (bounds.maxWidth >= 1000 && bounds.maxWidth / scale >= 760) {
-              return Padding(
+  Widget build(BuildContext context) => SafeArea(child: LayoutBuilder(
+        builder: (context, bounds) {
+          final policy = MatchLayoutPolicy(
+              bounds.biggest, MatchLayoutPolicy.measurePanel(context));
+          final dock = primaryActions != null || moveDock != null;
+          if (policy.beside) {
+            return Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          if (invitation != null) invitation!,
-                          ConstrainedBox(
-                            constraints: BoxConstraints(minHeight: 44 * scale),
-                            child: Center(child: status),
-                          ),
-                          Expanded(
-                            child: LayoutBuilder(
-                              builder: (_, area) => Center(
-                                child: _board(
-                                  math.min(
-                                    760,
-                                    math.min(area.maxWidth, area.maxHeight),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 310,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              physics: const ClampingScrollPhysics(),
-                              child: Column(
-                                  children: [players, controls, details]),
-                            ),
-                          ),
-                          if (primaryActions != null) _actions(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    key: const PageStorageKey('match-content'),
-                    physics: const ClampingScrollPhysics(),
-                    child: Center(
-                      child: ConstrainedBox(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                          child: Align(
+                              alignment: Alignment.topCenter,
+                              child: _board(policy.boardSide))),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                          width: policy.panelWidth,
+                          child: Column(children: [
+                            _scroll(
+                                (height) => Column(children: [
+                                      players,
+                                      status,
+                                      if (invitation != null) invitation!,
+                                      if (boardTools != null) boardTools!,
+                                      controlsBuilder?.call(context, height) ??
+                                          controls,
+                                      details
+                                    ]),
+                                'match-sidebar'),
+                            if (dock) _dock(bounds.maxHeight - 24),
+                          ])),
+                    ]));
+          }
+          return Column(children: [
+            _scroll(
+                (height) => Center(
+                    child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 760),
-                        child: Column(
-                          children: [
-                            if (invitation != null) invitation!,
-                            players,
-                            ConstrainedBox(
-                              constraints:
-                                  BoxConstraints(minHeight: 44 * scale),
-                              child: Center(child: status),
-                            ),
-                            _board(math.min(bounds.maxWidth, 760)),
-                            controls,
-                            details,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (primaryActions != null) _actions(),
-              ],
-            );
-          },
-        ),
-      );
+                        child: Column(children: [
+                          players,
+                          _board(policy.boardSide),
+                          if (boardTools != null) boardTools!,
+                          status,
+                          if (invitation != null) invitation!,
+                          controlsBuilder?.call(context, height) ?? controls,
+                          details
+                        ]))),
+                'match-content'),
+            if (dock) _dock(bounds.maxHeight),
+          ]);
+        },
+      ));
 }

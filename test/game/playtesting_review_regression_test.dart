@@ -228,7 +228,7 @@ void main() {
         .update(controller.state.copyWith(game: initial.copyWith(ply: 2)));
     await tester.pump();
     expect(cues(), 2);
-    expect(find.textContaining('Copper’s turn · '), findsOneWidget);
+    expect(find.textContaining('Copper to play'), findsOneWidget);
     controller.update(controller.state
         .copyWith(paused: true, game: initial.copyWith(ply: 3)));
     await tester.pump();

@@ -1,5 +1,9 @@
 # Development map
 
+The [adaptive gameplay UX](ADAPTIVE_GAMEPLAY_UX.md) records compact move controls,
+landscape layout, precision zoom, measured before/after tasks and device
+qualification still needed.
+
 The [playtesting feedback implementation](PLAYTESTING_FEEDBACK.md) tracks the
 18 latest feedback items, confirmed production ratings diagnosis, feature changes,
 calibration evidence and remaining device qualification.

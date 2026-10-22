@@ -16,6 +16,7 @@ import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_provider.dart';
 import 'package:stones/game/match_screen.dart';
+import 'package:stones/game/match_table_layout.dart';
 
 import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
@@ -113,155 +114,163 @@ void main() {
     }
   }
   for (final shape in BoardShape.values) {
-    for (final count in [2, 3, 4]) {
-      for (final scale in [1.0, 1.5, 2.0]) {
-        for (final size in [
-          const Size(320, 568),
-          const Size(390, 844),
-          const Size(844, 390),
-          const Size(768, 1024),
-          const Size(999, 800),
-          const Size(1000, 800),
-          const Size(1366, 900),
-        ]) {
-          testWidgets(
-            'actual $shape $count-seat table fits $size at $scale with stable controls',
-            (tester) async {
-              tester.view.physicalSize = size;
-              tester.view.devicePixelRatio = 1;
-              addTearDown(tester.view.resetPhysicalSize);
-              addTearDown(tester.view.resetDevicePixelRatio);
-              addTearDown(tester.view.resetViewInsets);
-              final controller = MatchController(
-                storage: MemoryMatchStorage(),
-                authenticate: () async => 'host',
-                store: () => MemoryMatchRoomStore(),
-              );
-              await controller.start(
-                MatchConfig(
-                  shape: shape,
-                  size: shape == BoardShape.square
-                      ? (size.width < 400 ? 3 : 8)
-                      : (size.width < 400 ? 2 : 4),
-                  seats: [
-                    for (final id in SeatId.values.take(count)) SeatConfig(id),
-                  ],
-                ),
-              );
-              final capture = GlobalKey();
-              await tester.pumpWidget(
-                ProviderScope(
-                  overrides: [matchProvider.overrideWith((ref) => controller)],
-                  child: RepaintBoundary(
-                    key: capture,
-                    child: MaterialApp(
-                      theme: TavernTheme.build(Brightness.light),
-                      builder: (context, child) => MediaQuery(
-                        data: MediaQuery.of(context).copyWith(
-                          textScaler: TextScaler.linear(scale),
-                          padding: const EdgeInsets.only(bottom: 24),
+    for (final configuredSize in MatchConfig.sizesFor(shape)) {
+      for (final count in [2, 3, 4]) {
+        for (final scale in [1.0, 1.5, 2.0]) {
+          for (final size in [
+            const Size(320, 568),
+            const Size(390, 844),
+            const Size(844, 390),
+            const Size(768, 1024),
+            const Size(999, 800),
+            const Size(1000, 800),
+            const Size(1366, 900),
+          ]) {
+            testWidgets(
+              'actual $shape size $configuredSize $count-seat table fits $size at $scale with stable controls',
+              (tester) async {
+                tester.view.physicalSize = size;
+                tester.view.devicePixelRatio = 1;
+                addTearDown(tester.view.resetPhysicalSize);
+                addTearDown(tester.view.resetDevicePixelRatio);
+                addTearDown(tester.view.resetViewInsets);
+                final controller = MatchController(
+                  storage: MemoryMatchStorage(),
+                  authenticate: () async => 'host',
+                  store: () => MemoryMatchRoomStore(),
+                );
+                await controller.start(
+                  MatchConfig(
+                    shape: shape,
+                    size: configuredSize,
+                    seats: [
+                      for (final id in SeatId.values.take(count))
+                        SeatConfig(id),
+                    ],
+                  ),
+                );
+                final capture = GlobalKey();
+                await tester.pumpWidget(
+                  ProviderScope(
+                    overrides: [
+                      matchProvider.overrideWith((ref) => controller)
+                    ],
+                    child: RepaintBoundary(
+                      key: capture,
+                      child: MaterialApp(
+                        theme: TavernTheme.build(Brightness.light),
+                        builder: (context, child) => MediaQuery(
+                          data: MediaQuery.of(context).copyWith(
+                            textScaler: TextScaler.linear(scale),
+                            padding: const EdgeInsets.only(bottom: 24),
+                          ),
+                          child: child!,
                         ),
-                        child: child!,
+                        home: const MatchScreen(),
                       ),
-                      home: const MatchScreen(),
                     ),
                   ),
-                ),
-              );
-              await tester.pumpAndSettle();
-              final board = find.byKey(const ValueKey('stable-board'));
-              final before = tester.getRect(board);
-              if (size.width > 1000 && size.width / scale >= 760) {
-                expect(before.width, greaterThan(680));
-                if (count == 4) {
-                  expect(
-                    find
-                        .textContaining('${SeatId.values.last.label}:')
-                        .hitTestable(),
-                    findsOneWidget,
-                  );
+                );
+                await tester.pumpAndSettle();
+                final board = find.byKey(const ValueKey('stable-board'));
+                final before = tester.getRect(board);
+                if (size.width > 1000 && size.width / scale >= 760) {
+                  expect(before.width, greaterThan(680));
+                  if (count == 4) {
+                    expect(
+                      find
+                          .textContaining('${SeatId.values.last.label}:')
+                          .hitTestable(),
+                      findsOneWidget,
+                    );
+                  }
                 }
-              }
-              if (size.width < 1000 || size.width / scale < 760) {
-                expect(before.width, size.width.clamp(0, 760));
-                final view = tester.widget<BoardView>(find.byType(BoardView));
-                final layout = BoardLayout(before.size, view.game.geometry);
-                if (shape == BoardShape.square) {
-                  final first = layout.bounds(const Cell(0, 0));
-                  final last = layout.bounds(Cell(
-                      view.game.config.size - 1, view.game.config.size - 1));
-                  expect(last.right - first.left, closeTo(before.width - 24, .01));
+                {
+                  final policy = MatchLayoutPolicy(
+                      Size(size.width, size.height - 80),
+                      MatchLayoutPolicy.measurePanel(
+                          tester.element(find.byType(MatchTableLayout))));
+                  expect(before.width, closeTo(policy.boardSide, .01));
+                  final view = tester.widget<BoardView>(find.byType(BoardView));
+                  final layout = BoardLayout(before.size, view.game.geometry);
+                  if (shape == BoardShape.square) {
+                    final first = layout.bounds(const Cell(0, 0));
+                    final last = layout.bounds(Cell(
+                        view.game.config.size - 1, view.game.config.size - 1));
+                    expect(last.right - first.left,
+                        closeTo(before.width - 24, .01));
+                  }
+                  for (final cell in view.game.geometry.cells) {
+                    final bounds = layout.polygon(cell).getBounds();
+                    expect(bounds.left, greaterThanOrEqualTo(0));
+                    expect(bounds.top, greaterThanOrEqualTo(0));
+                    expect(bounds.right, lessThanOrEqualTo(before.width));
+                    expect(bounds.bottom, lessThanOrEqualTo(before.height));
+                  }
                 }
-                for (final cell in view.game.geometry.cells) {
-                  final bounds = layout.polygon(cell).getBounds();
-                  expect(bounds.left, greaterThanOrEqualTo(0));
-                  expect(bounds.top, greaterThanOrEqualTo(0));
-                  expect(bounds.right, lessThanOrEqualTo(before.width));
-                  expect(bounds.bottom, lessThanOrEqualTo(before.height));
-                }
-              }
-              final cell = find.byKey(const ValueKey('cell-0-0'));
-              await tester.ensureVisible(cell);
-              final boardSize = tester.getSize(board);
-              await tester.tap(cell);
-              await tester.pumpAndSettle();
-              expect(tester.getSize(board), boardSize);
-              final confirm = find.widgetWithText(FilledButton, 'Confirm');
-              expect(confirm.hitTestable(), findsOneWidget);
-              expect(
-                tester.getRect(confirm).bottom,
-                lessThanOrEqualTo(size.height - 24),
-              );
-              expect(find.text('Cancel').hitTestable(), findsOneWidget);
-              tester.view.physicalSize = Size(size.height, size.width);
-              await tester.pumpAndSettle();
-              expect(confirm.hitTestable(), findsOneWidget);
-              expect(
-                tester.getRect(confirm).bottom,
-                lessThanOrEqualTo(size.width - 24),
-              );
-              tester.view.physicalSize = size;
-              await tester.pumpAndSettle();
-              if (size == const Size(390, 844)) {
-                tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+                final cell = find.byKey(const ValueKey('cell-0-0'));
+                await tester.ensureVisible(cell);
+                final boardSize = tester.getSize(board);
+                await tester.tap(cell);
+                await tester.pumpAndSettle();
+                expect(tester.getSize(board), boardSize);
+                final confirm = find.widgetWithText(FilledButton, 'Confirm');
+                expect(confirm.hitTestable(), findsOneWidget);
+                expect(
+                  tester.getRect(confirm).bottom,
+                  lessThanOrEqualTo(size.height - 24),
+                );
+                expect(find.text('Cancel').hitTestable(), findsOneWidget);
+                tester.view.physicalSize = Size(size.height, size.width);
                 await tester.pumpAndSettle();
                 expect(confirm.hitTestable(), findsOneWidget);
-                expect(tester.getRect(confirm).bottom,
-                    lessThanOrEqualTo(size.height - 280 - 24));
-                expect(tester.getSize(board), boardSize);
-                tester.view.resetViewInsets();
+                expect(
+                  tester.getRect(confirm).bottom,
+                  lessThanOrEqualTo(size.width - 24),
+                );
+                tester.view.physicalSize = size;
                 await tester.pumpAndSettle();
-              }
-              await tester.tap(find.text('Cancel'));
-              await tester.pumpAndSettle();
-              expect(confirm, findsNothing);
-              await tester.ensureVisible(cell);
-              await tester.tap(cell);
-              await tester.pumpAndSettle();
-              await tester.tap(confirm);
-              await tester.pumpAndSettle();
-              expect(confirm, findsNothing);
-              expect(tester.takeException(), isNull);
-              if (const bool.fromEnvironment('STONES_CAPTURE_LAYOUT')) {
-                await tester.runAsync(() async {
-                  final boundary = capture.currentContext!.findRenderObject()!
-                      as RenderRepaintBoundary;
-                  final picture = await boundary.toImage();
-                  final data = await picture.toByteData(
-                    format: ui.ImageByteFormat.png,
-                  );
-                  final output = File(
-                    'build/qa/community/${shape.name}-$count-${size.width.toInt()}.png',
-                  );
-                  await output.parent.create(recursive: true);
-                  await output.writeAsBytes(data!.buffer.asUint8List());
-                  picture.dispose();
-                });
-              }
-              await tester.pumpWidget(const SizedBox());
-              await tester.pump();
-            },
-          );
+                if (size == const Size(390, 844)) {
+                  tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+                  await tester.pumpAndSettle();
+                  expect(confirm.hitTestable(), findsOneWidget);
+                  expect(tester.getRect(confirm).bottom,
+                      lessThanOrEqualTo(size.height - 280 - 24));
+                  expect(tester.getSize(board), boardSize);
+                  tester.view.resetViewInsets();
+                  await tester.pumpAndSettle();
+                }
+                await tester.tap(find.text('Cancel'));
+                await tester.pumpAndSettle();
+                expect(confirm, findsNothing);
+                await tester.ensureVisible(cell);
+                await tester.tap(cell);
+                await tester.pumpAndSettle();
+                await tester.tap(confirm);
+                await tester.pumpAndSettle();
+                expect(confirm, findsNothing);
+                expect(tester.takeException(), isNull);
+                if (const bool.fromEnvironment('STONES_CAPTURE_LAYOUT')) {
+                  await tester.runAsync(() async {
+                    final boundary = capture.currentContext!.findRenderObject()!
+                        as RenderRepaintBoundary;
+                    final picture = await boundary.toImage();
+                    final data = await picture.toByteData(
+                      format: ui.ImageByteFormat.png,
+                    );
+                    final output = File(
+                      'build/qa/community/${shape.name}-$count-${size.width.toInt()}.png',
+                    );
+                    await output.parent.create(recursive: true);
+                    await output.writeAsBytes(data!.buffer.asUint8List());
+                    picture.dispose();
+                  });
+                }
+                await tester.pumpWidget(const SizedBox());
+                await tester.pump();
+              },
+            );
+          }
         }
       }
     }
