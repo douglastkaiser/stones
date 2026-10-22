@@ -88,7 +88,12 @@ def classify(page):
         return 'closed'
     host = urlsplit(page.url).hostname
     if host == 'accounts.google.com':
-        return 'google_account_chooser'
+        # A navigation to Google can still be a loading/error page. Require
+        # the provider's visible identifier or account-selection surface.
+        choices = page.locator('input[type="email"], input[autocomplete="username"], [data-identifier]')
+        if any(choices.nth(index).is_visible() for index in range(choices.count())):
+            return 'google_account_chooser'
+        return 'google_provider_not_ready'
     # Inspect text only in memory; never save it to the report.
     text = page.locator('body').evaluate("""e => e.innerText + '\\n' +
       [...e.querySelectorAll('[aria-label]')].map(n => n.getAttribute('aria-label')).join('\\n')
@@ -143,9 +148,11 @@ def wait_for_popup(context, page, timeout=25000, stop_at_google=True):
     while time.monotonic() < deadline:
         for popup in context.pages:
             if popup != page and not popup.is_closed():
-                if stop_at_google and urlsplit(popup.url).hostname == 'accounts.google.com':
-                    return popup
                 try:
+                    if stop_at_google and urlsplit(popup.url).hostname == 'accounts.google.com':
+                        if classify(popup) == 'google_account_chooser':
+                            return popup
+                        continue
                     if 'missing initial state' in popup.locator('body').inner_text(timeout=3000).lower():
                         return popup
                 except BrowserError:
