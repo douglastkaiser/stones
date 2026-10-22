@@ -1,0 +1,295 @@
+{
+  "observed_at_utc": "2026-10-22 23:01:37 UTC",
+  "source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+  "feature_ids": [
+    "ACCOUNT-01",
+    "ACCOUNT-10",
+    "ACCOUNT-13",
+    "APP-09"
+  ],
+  "qualification": {
+    "ci_run": 39865940116,
+    "ci_url": "https://github.com/douglastkaiser/stones/actions/runs/39865940116",
+    "consecutive_complete_attempts": [
+      {
+        "id": 39865940116,
+        "source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+        "status": "completed",
+        "conclusion": "success",
+        "attempt": 1,
+        "updated_at": "2026-10-22T22:46:58Z"
+      },
+      {
+        "id": 39865940116,
+        "source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+        "status": "completed",
+        "conclusion": "success",
+        "attempt": 2,
+        "updated_at": "2026-10-22T23:00:45Z"
+      }
+    ],
+    "latest_jobs": [
+      {
+        "id": 120133414218,
+        "name": "Analyze & Test",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120135872427,
+        "name": "Build emulator application",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120135872434,
+        "name": "Build Web",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120135872438,
+        "name": "Compile Android",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136408045,
+        "name": "Browser player journeys",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136408075,
+        "name": "Account checks (chromium)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136408136,
+        "name": "Account checks (webkit)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136408193,
+        "name": "Account checks (firefox)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136512061,
+        "name": "Production auth recovery (firefox)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136512075,
+        "name": "Production auth recovery (chromium)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120136512133,
+        "name": "Production auth recovery (webkit)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "flutter_tests_per_attempt": 1645,
+    "python_release_tool_tests_per_attempt": 44,
+    "strict_analysis": "passed",
+    "production_web_build": "passed",
+    "emulator_web_build": "passed",
+    "android_debug_compilation": "passed",
+    "player_browser_journeys": "passed",
+    "account_checks": {
+      "browsers": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "per_engine": {
+        "popup": 8,
+        "credentials": 7,
+        "process_restart": 5
+      },
+      "total_per_attempt": 60,
+      "status": "passed",
+      "scope": "demo Firebase emulators; fake provider credentials; disposable browser profiles"
+    },
+    "production_auth_recovery": {
+      "browsers": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "cases_per_engine": 6,
+      "total_per_attempt": 18,
+      "status": "passed",
+      "scope": "Exact production CI artifact; pre-credential Google entry and controlled invalid-code helper faults; no real identity exchange"
+    },
+    "firestore_rules": {
+      "run": 39865940202,
+      "url": "https://github.com/douglastkaiser/stones/actions/runs/39865940202",
+      "source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+      "status": "passed"
+    }
+  },
+  "artifacts": [
+    {
+      "id": 12465680985,
+      "name": "browser-journeys-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:3851e102df651d0b412a687884df234443145827602e54952fde6d3fdc0345a1",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12465546575,
+      "name": "auth-release-firefox-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:b3596a549512b7a3b7e62a0e4a15ebd96ffc2ef6d53a94956cfefa60ce35beff",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12465302161,
+      "name": "account-webkit-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:5cfab5d64c1a5f7edb8389e307ae3213f88710da648bbb14c6ad214a9a44729b",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12465272112,
+      "name": "account-firefox-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:512b94d7aef09762e6d3dc26e245f7d1cb7e706b87198a42bf8eaf6c7fce0c42",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12465236675,
+      "name": "emulator-build-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:eed65e64adaf7521308f002d23be6f728b290cbc7edfad771aa700a03c7e0666",
+      "expires_at": "2026-11-05T22:55:56Z"
+    },
+    {
+      "id": 12465157405,
+      "name": "account-chromium-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:b4b32c3373022cc2dc9a8d2236fb665dddc1e69a47de9d59a89c2385dfe90175",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12465152544,
+      "name": "auth-release-webkit-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:0172ad61ffe0b38ece2fe5b384df8e01e13cde11e546e88d649fa32845b2b249",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12465098014,
+      "name": "stones-android-debug-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:15e68f565a79c24808261e2aec6aa50f620f3aeeda470d6e1a076d3c9f3515f9",
+      "expires_at": "2026-11-05T23:00:35Z"
+    },
+    {
+      "id": 12465000288,
+      "name": "auth-release-chromium-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:7a80ee2d0c9d534d5298e736d65aff0ef696366f99a698be7cdcc61aa9c7d340",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12464930410,
+      "name": "web-build-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:5397471bbe8578767d36a32b967e1b9fc55050c08f30f5ecba8c03d0f9ab389b",
+      "expires_at": "2026-11-05T22:42:11Z"
+    },
+    {
+      "id": 12464875681,
+      "name": "auth-release-webkit-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:0dda5da86b1d4004558593a1f7b36e92a6b95101d50024478db2a6842226b33e",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12464870826,
+      "name": "auth-release-firefox-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:6b93b424ce6a9d0bd30c9a85fdb8e957dbeb7c77384a70df8539341f26c62839",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12464708225,
+      "name": "web-build-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:d90c8a3c9ce52a6a33ac2ffb7f631e3ca8406388a4a109a0e8f35de8a4eeceaa",
+      "expires_at": "2026-11-05T22:56:11Z"
+    },
+    {
+      "id": 12464701013,
+      "name": "account-chromium-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:69a8d19ce6579be0c8e0652d187b9f9d84fde639b6203e3dd869bd247254971c",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12464636450,
+      "name": "stones-android-debug-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:e40b87f9b0b0497ce60eb17225a1b182494318922a5757569f02b41e4cd884d3",
+      "expires_at": "2026-11-05T22:46:48Z"
+    },
+    {
+      "id": 12464534054,
+      "name": "auth-release-chromium-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:0b26ae6754f3b7a152d054c2cb0ac8c23b9f63b9e5356760b4c68d7bd871c0a2",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12464492792,
+      "name": "coverage-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+      "digest": "sha256:1ccd59c6f84ca52219c0003f763fddbe1c98d953f73570d3f7afaaea62e8e65c",
+      "expires_at": "2027-01-20T22:48:08Z"
+    },
+    {
+      "id": 12464467091,
+      "name": "browser-journeys-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:fe4db0b38c231652a8ca9b8cd78bf3dafa652914a029c893986d28b401707a9f",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12464008105,
+      "name": "coverage-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:f430fd88da8925cb8eea9f28f8a44ebc17dc127d17f9b264413e6ceb4deb5f41",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12463958108,
+      "name": "account-firefox-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:ab3d2d9f04be73f0a99484c70d669087e200ef61fd2d77c683388d2e65778e9e",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12463743591,
+      "name": "account-webkit-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:e2632d3908fc0e2ce59e516788d1e4c5f3f51aef85a1f9a81268f3fd149358b3",
+      "expires_at": "2027-01-20T22:34:27Z"
+    },
+    {
+      "id": 12463274963,
+      "name": "emulator-build-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-1",
+      "digest": "sha256:a2fad2e15c8ee6792a0d3836779afd971dbc51f9018a97a5245572df4d2bec22",
+      "expires_at": "2026-11-05T22:42:08Z"
+    }
+  ],
+  "deployment": {
+    "status": "not_dispatched",
+    "selected_source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+    "selected_artifact": "web-build-56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1-2",
+    "blocker": "Managed workspace returned HTTP 503 from its outbound proxy and then became unavailable/offline. GitHub connector can observe Actions and update repository files but has no workflow-dispatch operation.",
+    "previous_last_observed_source": "2b72e84bb51c4e8d16fb024c571f71b7539bb795",
+    "previous_publishing_commit": "ce06ab96bba74ded126104979aa4bfef2b14966e",
+    "hosted_verification": "not_run_for_selected_source",
+    "rollback_capture": "not_run; occurs before publication in Deploy Main",
+    "next_action": "Dispatch deploy-main.yml on main with source_sha set to selected_source; monitor all three hosted verification jobs."
+  },
+  "monitor": {
+    "workflow": ".github/workflows/hosted-auth.yml",
+    "daily_utc": "06:23",
+    "manual_first_run": "not_dispatched_environment_unavailable"
+  },
+  "limits": [
+    "Physical iPhone Safari/Chrome acceptance remains pending; desktop WebKit is not an iOS device.",
+    "Real Google credential exchange remains pending; emulator credentials and pre-credential probes do not qualify it.",
+    "Native Android chooser, app suspension, home-screen launch, private-mode and embedded-browser returns remain device acceptance work.",
+    "This record proves CI qualification, not publication or hosted acceptance of the selected source."
+  ]
+}

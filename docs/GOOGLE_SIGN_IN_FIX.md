@@ -57,22 +57,21 @@ recovery, remembered identity restoration, sign-out and active-room protections.
 UI checks include narrow screens and large text. Results are recorded in
 [the implementation QA summary](qa/google-auth-fix-2026-10-22.json).
 
-The full Flutter run passed 1,644 tests; the final account suite passed 31 tests,
-with 41 account/home checks also passing. Strict analysis, 34 Python checks and
-the release web build passed. All three desktop engines passed 18 emulator
-credential/linking checks and 15 browser-restart checks. Controlled callback
-faults verified the recovery notice, single-attempt lock and popup-close recovery.
-The player browser journeys also passed local save/resume, review/rematch,
-independent friend clients, disconnect/rejoin, computer replies and idempotent
-rating settlement, with no page errors.
+The release candidate `56cb6fb` passed two complete hosted CI attempts:
+1,645 Flutter tests, strict analysis, 44 Python release-tool checks,
+production/emulator web builds, Android debug compilation and player journeys.
+Independent Chromium, Firefox and WebKit jobs passed 60 account checks per
+attempt (popup, direct emulator credentials and browser-process restarts) and
+18 strict recovery cases against the exact production artifact. Emulator checks
+use disposable profiles and fake provider credentials.
 
-The browser regression job now runs credential/linking checks and full browser
-process restart checks in Chromium alongside existing player journeys. The same
-harness was also exercised locally in Firefox and WebKit. It uses the demo
-emulators and disposable profiles containing fake provider credentials.
-The existing player-journey selectors were updated for the current phone Match
-options menu, current-player seat indicator and completed-rating label; their
-underlying gameplay and backend assertions remain in place.
+[The qualification record](qa/google-auth-qualification-2026-10-22.json) binds
+those results to the source, CI attempts, job IDs and artifact digests.
+Publication remains pending because the managed workspace became unavailable
+after outbound HTTP 503 errors. The connector can record evidence but cannot
+dispatch workflows. Deploy Main's rollback capture and three hosted acceptance
+jobs have not run for this source; the first manual monitor execution is also
+pending. Physical iPhone and real Google exchange remain separate acceptance.
 
 ```sh
 flutter analyze --fatal-infos

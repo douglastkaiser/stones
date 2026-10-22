@@ -5,11 +5,29 @@
 [The login recovery contract](GOOGLE_SIGN_IN_FIX.md#durable-qualification-and-deployment)
 records independent three-engine CI, exact-artifact recovery checks, the
 version-3 rating-selector correction, two-attempt qualification, verified
-rollback preservation and post-publication/daily hosted checks. `8ffde24` failed
-its hosted player journey; it is not a qualified release. Follow the new
-candidate's actual Actions runs and hosted evidence rather than earlier local
-browser results without artifact provenance. Physical iPhone/Google acceptance
-remains pending; desktop WebKit and fake emulator credentials are distinct.
+rollback preservation and post-publication/daily hosted checks.
+
+Source `56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1` passed
+[two complete CI attempts](https://github.com/douglastkaiser/stones/actions/runs/39865940116)
+and [Firestore Rules](https://github.com/douglastkaiser/stones/actions/runs/39865940202).
+All 11 CI jobs passed in both attempts: 1,645 Flutter tests, strict analysis,
+44 Python checks, production/emulator web builds, Android debug compilation,
+player journeys, 60 emulator account checks and 18 exact-artifact production
+recovery cases across Chromium, Firefox and WebKit.
+
+**Publication is pending.** The workspace's outbound proxy returned HTTP 503 and
+the environment then became unavailable. The GitHub connector retained read and
+repository-write access but has no workflow-dispatch operation. No deployment
+was dispatched, rollback archive captured or hosted acceptance claimed for this
+source. See [the qualification record](qa/google-auth-qualification-2026-10-22.json)
+for attempt IDs, job results, artifact IDs/digests and remaining device checks.
+
+Dispatch **Deploy Main** on main with `source_sha` set to the full qualified SHA
+above. It selects attempt 2's exact production artifact, archives the previous
+release and requires three hosted verification jobs. Then dispatch **Hosted login
+monitor** once; its daily schedule is 06:23 UTC. Physical iPhone and real Google
+exchange remain pending. Earlier `8ffde24` and unbound local reports do not qualify
+this release.
 
 ## October 20 main promotion
 
