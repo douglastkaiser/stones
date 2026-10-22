@@ -67,6 +67,18 @@
   <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin="">
 
   <style>
+    /* Flutter's semantic labels must not intercept adjacent cell touches when
+       their text overflows a small cell. Match the rendered polygon hit area. */
+    flt-semantics[flt-semantics-identifier^="board-cell-"] {
+      overflow: hidden !important;
+    }
+    flt-semantics[flt-semantics-identifier^="board-cell-square-"] {
+      clip-path: inset(2%);
+    }
+    flt-semantics[flt-semantics-identifier^="board-cell-hex-"] {
+      clip-path: polygon(50% 3%, 90.7032% 26.5%, 90.7032% 73.5%,
+                         50% 97%, 9.2968% 73.5%, 9.2968% 26.5%);
+    }
     /* Loading indicator styles */
     .loading-container {
       display: flex;
@@ -167,6 +179,7 @@
       document.body.style.background = "transparent";
     }
   </script>
+<meta name="stones-release-source" content="56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1">
 </head>
 <body>
   <picture id="splash-branding">
@@ -199,7 +212,7 @@
     });
   </script>
 
-  <script src="flutter_bootstrap.1fcc3c15d82822347c53.js" async=""></script>
+  <script src="flutter_bootstrap.5482d513850c643c3e32.js" async=""></script>
 
   <!-- Firebase SDK (deferred for INP optimization) -->
   <script type="module">
