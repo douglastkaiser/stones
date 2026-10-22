@@ -1,10 +1,24 @@
 from types import SimpleNamespace
 import unittest
 
-from tools.google_auth_policy import block_production, origin, validate_probe_base
+from tools.google_auth_policy import (
+    block_production, controlled_callback_document, origin, validate_probe_base,
+)
 
 
 class GoogleAuthProbePolicyTests(unittest.TestCase):
+    def test_synthetic_callback_keeps_same_window_and_only_accepts_invalid_code(self):
+        callback = ('https://stones-9a6a0.firebaseapp.com/__/auth/handler'
+                    '?state=controlled&code=stones-probe-invalid-code')
+        document = controlled_callback_document(callback)
+        self.assertIn('location.replace(', document)
+        self.assertNotIn('window.open', document)
+        for invalid in (callback.replace('stones-9a6a0.firebaseapp.com', 'evil.example'),
+                        callback.replace('stones-probe-invalid-code', 'actual-code'),
+                        callback + '&id_token=private', callback + '#fragment'):
+            with self.subTest(callback=invalid), self.assertRaises(ValueError):
+                controlled_callback_document(invalid)
+
     def test_probe_only_visits_the_public_app_or_a_loopback_build(self):
         for url in ('https://www.douglastkaiser.com/stones/',
                     'http://localhost:4174/stones/', 'http://127.0.0.1:4174/stones/'):

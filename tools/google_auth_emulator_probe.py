@@ -245,36 +245,42 @@ def main():
                     assert identity(page) == linked
                     checks.append('linked_identity_restored_after_reload')
                     context.close()
-                    stage('denied_persistent_storage')
-                    fallback = browser.new_context(viewport={'width': 390, 'height': 844},
-                                                   has_touch=name != 'firefox', service_workers='block')
-                    fallback.route('**/*', browser_request)
-                    fallback.add_init_script(EMULATOR_BINDING)
-                    fallback.add_init_script("""(() => {
-                      indexedDB.open = () => { throw new DOMException('Denied', 'SecurityError'); };
-                      const set = Storage.prototype.setItem;
-                      Storage.prototype.setItem = function(key, value) {
-                        if (this === localStorage)
-                          throw new DOMException('Denied', 'SecurityError');
-                        return set.call(this, key, value);
-                      };
-                    })();""")
-                    test_page = fallback.new_page()
-                    test_page.goto(BASE)
-                    ready(test_page)
-                    open_settings(test_page)
-                    stage('denied_storage_sign_in')
-                    assert credential_fixture(test_page, 'sign_in', fixture_claims()) is None
-                    signed_in(test_page)
-                    fallback_identity = identity(test_page)
-                    test_page.reload()
-                    ready(test_page)
-                    open_settings(test_page)
-                    signed_in(test_page)
-                    stage('denied_storage_restoration')
-                    assert identity(test_page) == fallback_identity
-                    checks.append('denied_persistent_storage_keeps_session_usable')
-                    fallback.close()
+                    # Persistence denial uses SDK credentials; qualify it once
+                    # in the independent credential suite, not again in popup UI.
+                    if args.credentials_only:
+                        stage('denied_persistent_storage')
+                        fallback = browser.new_context(viewport={'width': 390, 'height': 844},
+                                                       has_touch=name != 'firefox', service_workers='block')
+                        fallback.route('**/*', browser_request)
+                        fallback.add_init_script(EMULATOR_BINDING)
+                        fallback.add_init_script("""(() => {
+                          indexedDB.open = () => { throw new DOMException('Denied', 'SecurityError'); };
+                          const set = Storage.prototype.setItem;
+                          Storage.prototype.setItem = function(key, value) {
+                            if (this === localStorage)
+                              throw new DOMException('Denied', 'SecurityError');
+                            return set.call(this, key, value);
+                          };
+                        })();""")
+                        test_page = fallback.new_page()
+                        test_page.goto(BASE)
+                        ready(test_page)
+                        open_settings(test_page)
+                        test_page.evaluate(f'async () => {{ await ({AUTH})().authStateReady(); }}')
+                        stage('denied_storage_sign_in')
+                        assert credential_fixture(test_page, 'sign_in', fixture_claims()) is None
+                        stage('denied_storage_identity')
+                        assert identity(test_page) is not None and not identity(test_page)['anonymous']
+                        signed_in(test_page)
+                        fallback_identity = identity(test_page)
+                        test_page.reload()
+                        ready(test_page)
+                        open_settings(test_page)
+                        signed_in(test_page)
+                        stage('denied_storage_restoration')
+                        assert identity(test_page) == fallback_identity
+                        checks.append('denied_persistent_storage_keeps_session_usable')
+                        fallback.close()
                 result['status'] = 'passed'
                 stage('completed')
             except Exception as error:

@@ -174,3 +174,18 @@ behavior, app suspension, home-screen launch and embedded-browser returns remain
 separate device acceptance. Record versions, launch surface, source SHA and
 pass/fail for each case in the investigation checklist; never record callback
 queries or clear an existing player's website data to make a check pass.
+
+
+### Browser harness portability
+
+The first hardened candidate's hosted CI passed the full 1,644-test Flutter suite,
+builds and player journeys. Additional cross-engine qualification exposed harness
+differences: Firefox's Google identifier is a visible text field rather than an
+email-type input, and WebKit cannot fulfill a routed request with synthetic HTTP
+302. The probe checks the actual identifier control and uses a validated
+same-popup JavaScript navigation for its invalid-code callback fixture. This
+keeps helper-state loss real while avoiding the unsupported interception API.
+Denied persistence is tested once per engine in the independent credential suite
+after SDK auth readiness; popup UI checks retain their own required outcomes.
+Dependency HTTP errors are recorded only as origins, status codes and resource
+types. These corrections do not change production authentication behavior.

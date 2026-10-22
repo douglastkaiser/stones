@@ -1,5 +1,19 @@
 """Evidence redaction and production request policy for the auth probe."""
-from urllib.parse import urlsplit
+import json
+from urllib.parse import parse_qs, urlsplit
+
+
+def controlled_callback_document(callback):
+    """Navigate the same popup without WebKit's unsupported synthetic HTTP 302."""
+    parsed = urlsplit(callback)
+    query = parse_qs(parsed.query)
+    if (parsed.scheme, parsed.netloc, parsed.path) != (
+            'https', 'stones-9a6a0.firebaseapp.com', '/__/auth/handler') \
+            or parsed.fragment or set(query) != {'state', 'code'} \
+            or len(query['state']) != 1 or query['code'] != ['stones-probe-invalid-code']:
+        raise ValueError('Only the controlled invalid-code callback is allowed')
+    target = json.dumps(callback).replace('<', '\\u003c')
+    return '<script>location.replace(' + target + ');</script>'
 
 
 def validate_probe_base(url):

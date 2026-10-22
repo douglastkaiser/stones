@@ -24,7 +24,9 @@ from urllib.error import HTTPError
 from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout, Error as BrowserError
 
 from browser_journeys import ready
-from google_auth_policy import block_production, origin, validate_probe_base
+from google_auth_policy import (
+    block_production, controlled_callback_document, origin, validate_probe_base,
+)
 from auth_evidence import assert_outcome, validate_results
 
 
@@ -90,7 +92,8 @@ def classify(page):
     if host == 'accounts.google.com':
         # A navigation to Google can still be a loading/error page. Require
         # the provider's visible identifier or account-selection surface.
-        choices = page.locator('input[type="email"], input[autocomplete="username"], [data-identifier]')
+        choices = page.locator('input[type="email"], input[autocomplete~="username"], '
+                               'input[name="identifier"], #identifierId, [data-identifier]')
         if any(choices.nth(index).is_visible() for index in range(choices.count())):
             return 'google_account_chooser'
         return 'google_provider_not_ready'
@@ -167,6 +170,7 @@ def wait_for_popup(context, page, timeout=25000, stop_at_google=True):
 
 def run_case(browser, case, base=BASE, verify_recovery=False, strict=False):
     result = {'case': case, 'observations': [], 'firebase_js_versions': [],
+              'dependency_failures': [],
               'blocked_production_requests': 0}
     context = browser.new_context(viewport={'width': 390, 'height': 844},
                                   has_touch=browser.browser_type.name != 'firefox',
@@ -199,13 +203,21 @@ def run_case(browser, case, base=BASE, verify_recovery=False, strict=False):
             if case == 'callback_new_context':
                 request_route.fulfill(status=200, body='Controlled context-switch probe')
             else:
-                request_route.fulfill(status=302, headers={'location': callback})
+                request_route.fulfill(status=200, content_type='text/html',
+                                      body=controlled_callback_document(callback))
         elif helper_blocked and '/__/auth/iframe' in request.url:
             request_route.abort()
         else:
             request_route.continue_()
 
     context.route('**/*', route)
+    def dependency_response(response):
+        if response.status >= 400 and not block_production(response.request):
+            failure = {'origin': origin(response.url), 'status': response.status,
+                       'resource': response.request.resource_type}
+            if failure not in result['dependency_failures']:
+                result['dependency_failures'].append(failure)
+    context.on('response', dependency_response)
     context.add_init_script(f'({INSTRUMENT})();')
     if case == 'storage_denied':
         # This is a controlled fault on the helper, not a simulation of ITP.

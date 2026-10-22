@@ -16,6 +16,10 @@ CREDENTIAL_CHECKS = (
     'sign_out', 'collision_preserves_guest', 'guest_link_preserves_uid',
     'linked_identity_restored_after_reload', 'denied_persistent_storage_keeps_session_usable',
 )
+POPUP_CHECKS = tuple(check for check in CREDENTIAL_CHECKS
+                     if check != 'denied_persistent_storage_keeps_session_usable') + (
+    'popup_cancel_keeps_identity', 'explicit_switch_requires_confirmation',
+)
 REMEMBER_CHECKS = (
     'first_account_signed_in', 'restored_on_home_after_browser_restart',
     'explicit_sign_out', 'sign_out_survives_browser_restart',
@@ -64,8 +68,7 @@ def main():
                 else:
                     raise RuntimeError('Auth regression server was not ready')
                 for name, script, flags, checks in (
-                    ('popup', 'google_auth_emulator_probe.py', [],
-                     (*CREDENTIAL_CHECKS, 'popup_cancel_keeps_identity', 'explicit_switch_requires_confirmation')),
+                    ('popup', 'google_auth_emulator_probe.py', [], POPUP_CHECKS),
                     ('credentials', 'google_auth_emulator_probe.py', ['--credentials-only'], CREDENTIAL_CHECKS),
                     ('remembered', 'google_auth_remember_probe.py', [], REMEMBER_CHECKS),
                 ):
