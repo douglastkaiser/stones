@@ -22,6 +22,8 @@ abstract class RatingRepository {
   Stream<EloRating?> watchPlayer(String pool, String uid);
   Future<List<EloRating>> leaders(String pool);
   Future<List<EloRating>> bots(String pool);
+
+  /// Competition rank among established humans in the selected pool.
   Future<int> rank(String pool, int rating);
   Future<List<EloHistoryEntry>> history(String pool, String uid);
   Future<RatingSubmission> submitResult(
@@ -102,8 +104,8 @@ class FirebaseRatingRepository
         .where('isAi', isEqualTo: true)
         .get(const GetOptions(source: Source.server));
     return result.docs
-        .where(
-            (doc) => doc.data()['engineVersion'] == MatchConfig.currentAiEngine)
+        .where((doc) =>
+            doc.id.startsWith('ai_${MatchConfig.currentAiRatingEngine}_'))
         .map((doc) => EloRating.fromMap(doc.id, _dates(doc.data())))
         .toList();
   }
@@ -114,6 +116,7 @@ class FirebaseRatingRepository
         .collection('skillPools')
         .doc(pool)
         .collection('players')
+        .where('isAi', isEqualTo: false)
         .where('established', isEqualTo: true)
         .where('rating', isGreaterThan: rating)
         .count()

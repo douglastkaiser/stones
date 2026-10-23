@@ -1,6 +1,9 @@
 # Feature inventory and regression contract
 
-Updated 2026-10-22 against `fc31e80`. This is the durable reference for what Stones
+Updated 2026-10-23 against main baseline `5053a0f` plus the ranking/large-board
+follow-up in [skill ratings](SKILL_RATINGS.md#ranking-and-large-board-ai-follow-up-2026-10-23)
+and [v3 AI upgrades](AI_UPGRADES.md).
+This is the durable reference for what Stones
 does, what it is intended to do, and what future changes must preserve. Its scope
 is the **entire available history**: 489 reachable commits from the initial
 2025-12-05 commit through the `fc31e80` gameplay update, checked against current screens, services,
@@ -171,13 +174,35 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
 ## AI, practice and learning
 
 Sources: [shared play](UNIFIED_PLAY_PLAN.md), [puzzle audit](PUZZLE_AUDIT.md),
-[player experience](PLAYER_EXPERIENCE.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md).
+[player experience](PLAYER_EXPERIENCE.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md),
+[large-board follow-up](SKILL_RATINGS.md#ranking-and-large-board-ai-follow-up-2026-10-23).
 History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
 `2df1b28`, `a72c299`, `8e38486`.
 
 - **LEARN-01 · Four AI choices:** Easy, Medium, Hard and Expert make legal moves on both
   shapes and mixed two-to-four-seat tables without blocking normal interaction.
-  New games use the v2 search; old saved configurations retain their engine.
+  New games use the v3 search with connected-road development and central access
+  as secondary preferences. Multiplayer values each rival's progress and near-road
+  threats instead of only the strongest rival, to encourage timely interference.
+  Winning/blocking placements are examined first and known placement defenses
+  survive positional-search timeout. Indexed path evaluation shares cached
+  geometry across search positions. Saved v1/v2 configurations retain their strategy and recorded engine version.
+  New v3 AI continue the existing v2 rating profiles. Lookahead targets count
+  full table rounds: Easy/Medium one, Hard two, Expert three. Every difficulty
+  completes a bounded, selective first round that models every rival's turn;
+  wider/deeper refinements use the remaining thinking budget. Easy varies among
+  near-equal choices evaluated over that round. Saved v1/v2 search is unchanged.
+  V3 uses bounded decision-local score/move/transposition caches, exact legal
+  horizon tactics and at most one extra forcing round within the refinement
+  deadline. Forks are proven only after joint multiplayer defenses fail; incomplete
+  verification is unknown. Small legal material probes are capped below a road
+  unit; cap mobility currently has zero weight after a connected-development
+  regression in pilot checks. Confirmed position history discourages repeated
+  near-equal root moves without adding a repetition draw rule. History rebuilds
+  after load/reconnect/takeback and reaches native/browser search consistently.
+  See [AI upgrades and qualification](AI_UPGRADES.md) for weights and remaining gates.
+  Immediate wins and blocks are covered at Square 8 and Hex radius 4 for all four
+  difficulties at two/four seats; broad strength and device timing remain unqualified.
   Difficulty-strength acceptance is still open (see limits below).
 - **LEARN-02 · Court practice:** play untimed, unrated coached games with free takebacks,
   including recovery of a finished practice position. Inspect legal next-move
@@ -304,11 +329,17 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
 - **ACCOUNT-02 · Public Stones name:** edit a name independently of Google profile data;
   it appears consistently in games, profiles and standings across devices.
 - **ACCOUNT-03 · Overall and format ratings:** eligible new games contribute once to both
-  ladders. Show provisional status, uncertainty and exact established rank;
+  ladders. Show provisional status, uncertainty and exact established human rank;
+  AI and provisional players do not consume rank numbers, and tied human ratings
+  share a rank consistently across home, standings and profiles;
   distinguish unavailable data from an unrated account.
 - **ACCOUNT-04 · Human and AI standings:** use All/Humans/AI filters, inspect player details
-  and history, and refresh standings. Current AI identities do not duplicate
-  historical placeholders. Eligible AI-only reports do not award the observer.
+  and history, and refresh standings. AI rows remain sorted by rating without a
+  human rank number. The signed-in “Your standing” card opens that player’s
+  profile in the selected ladder, including an unrated account. New skill-history
+  entries preserve the game’s AI engine version, shown in AI profiles; old missing
+  metadata stays unlabelled. Current AI
+  identities do not duplicate historical placeholders. Eligible AI-only reports do not award the observer.
 - **ACCOUNT-05 · Rating eligibility and recovery:** explain guest/practice/shared-seat
   exclusions and pending peer confirmation. Retry interrupted settlement without
   duplicate awards or losing already-confirmed deltas.
@@ -453,7 +484,7 @@ adapter, deleting an old implementation, or calling a replacement complete.
 | COMPAT-03 · Keyboard play | Legacy Square has arrow navigation, Enter activation and Escape cancellation. Shared BoardView now provides arrow-based directional focus traversal with focusable InkWell/actions and zoom-aware cell reveal. Legacy Escape-cancel parity still needs explicit qualification; do not drop accessible actions during navigation changes. | `dff1883`, `fc31e80`; [legacy board](../lib/main.dart), [shared board](../lib/game/board_view.dart), [adaptive UX](ADAPTIVE_GAMEPLAY_UX.md) |
 | COMPAT-04 · Optional Android Play Games | Compile-time-enabled Android integration has separate sign-in, legacy untimed Square cloud-save/explicit restore, achievement and score hooks. It is unavailable on web and does not synchronize shared-game progression. Safe restore cannot silently replace active play; native service configuration/IDs and Play-device qualification are separate prerequisites. | `23d3e84`, `d6c654c`, `4ddf3b1`; [service](../lib/services/play_games_service.dart), [save codec](../lib/services/play_games_save.dart), [tests](../test/play_games_save_test.dart) |
 | COMPAT-05 · Old rooms and saves | Preserve supported old Square, H-prefixed Hex and unified invitation dispatch, codecs, recorded goals, seat ownership and result semantics. Replay through the correct adapter; missing metadata must use its documented fallback rather than current defaults. | `cf126b9`, `b81e5a8`, `401e393`; [room navigation](../lib/game/room_navigation.dart), [shared play](UNIFIED_PLAY_PLAN.md) |
-| COMPAT-06 · Rating generations | Original Elo/history, version-1 settlement and version-2 placement Elo remain historical contracts. New games use version 3 Overall/format skill and unordered losses, with v2 AI engine identities. Never resettle old receipts, reinterpret old placements or merge distinct engine identities. | `461dc71`, `8cff17f`, `2b914c7`, `84e90a2`, `a72c299`; [ratings](RATINGS.md), [sharing](RESULT_SHARING.md), [current skill](SKILL_RATINGS.md) |
+| COMPAT-06 · Rating generations | Original Elo/history, version-1 settlement and version-2 placement Elo remain historical contracts. New games use version 3 Overall/format skill and unordered losses, with recorded v1/v2/v3 game engines. The v3 engine continues existing v2 AI ratings as requested; historical v1 ratings remain separate. Never resettle old receipts, reinterpret old placements or rewrite historical engine versions. | `461dc71`, `8cff17f`, `2b914c7`, `84e90a2`, `a72c299`; [ratings](RATINGS.md), [sharing](RESULT_SHARING.md), [current skill](SKILL_RATINGS.md) |
 | COMPAT-07 · Learning and cosmetic migration | Old chapter/prerequisite metadata, completed IDs, achievement ledgers and saved cosmetic indices carry user progress. Preserve known ownership even when content or earning requirements change; obsolete puzzles/placeholder badges need not be restored as current content. | `215e300`, `6a4f5d4`, `cea2f44`, `5263b31`, `a078f04`; [achievements](ACHIEVEMENTS.md), [themes](THEMES.md) |
 | COMPAT-08 · Retired interaction designs | Browser Back-as-undo, QR auto-join, Hex hidden behind an opt-in toggle, automatic spread submission and old carry/drop-cycling controls have been superseded. Current navigation, explicit join and staged confirmation contracts take precedence. Historical commits are not instructions to restore these designs. | `dda35e8`, `3e6d65a`, `cf126b9`, `87f40d9`, `2f82bba`, `aa15870` |
 
@@ -473,7 +504,7 @@ must stay explicit until implementation and acceptance evidence justify changing
 | PLAN-07 · Visual and performance finish | Core menu/table styling exists. Complete coherent learning/account/history/collection surfaces, dense mixed-theme readability, reduced-motion/audio behavior and measured performance on reference phones. Keep five coordinated sets. | [Finishing plan](FINISHING_PLAN.md), packet 10 |
 | PLAN-08 · Account lifecycle and disclosures | Feedback exists. Account/data deletion needs discoverable app/web entry points, reauthentication, retryable cleanup and treatment of shared histories/rooms. Align actual Analytics/retention, privacy text and store disclosures before public release. | [Feedback](FEEDBACK.md), finishing packet 11 |
 | PLAN-09 · Release baseline and parity | Continue exact-source/artifact/backend qualification and rollback. Qualify one source across web and Play Android, actual update/install, old saves, independent accounts and a long-running friend game. Store-track publication and production-access requirements remain separate gates. | [Release readiness](RELEASE_READINESS.md), finishing packets 1 and 12 |
-| PLAN-10 · AI strength | Four tiers are implemented. Actual-default 50-seed qualification and the human Expert-strength target remain open. Reduced-board duel results do not establish multiplayer strength; exploratory probes must remain labelled. | [Playtesting feedback](PLAYTESTING_FEEDBACK.md) |
+| PLAN-10 · AI strength | Four tiers and resumable paired-reference qualification tooling are implemented. Default/max-board 50-seed qualification, the full material-weight pilot grid and the human Expert-strength target remain open. Partial matrices and exploratory probes cannot qualify; native timings do not establish browser/device performance. | [AI upgrades](AI_UPGRADES.md), [Playtesting feedback](PLAYTESTING_FEEDBACK.md) |
 | PLAN-11 · Device and usability acceptance | Physical iPhone web sign-in retry, Android back gestures, Play-signed invitations/audio/sharing, native safe areas, keyboard/screen readers, large text and unfamiliar-player trials remain acceptance work. Browser viewport tests do not establish these. | [Release readiness](RELEASE_READINESS.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md) |
 
 Current constraints also remain visible:
@@ -537,7 +568,7 @@ Deployment/device claims need their own evidence.
 | PLAY-08/11, PREF-05 | `lib/game/board_viewport.dart`, `board_view.dart`, `match_table_layout.dart`; [adaptive gameplay](ADAPTIVE_GAMEPLAY_UX.md) | `test/game/board_viewport_test.dart`, `adaptive_interaction_test.dart`, `adaptive_capture_test.dart`; `tools/adaptive_browser_probe.py`; physical-device and screen-reader trials |
 | SETUP, PREF, APP navigation | `match_config.dart`, `match_setup_form.dart`, `match_table_layout.dart`; `lib/widgets/game_menu.dart`; `lib/services/app_history_observer.dart` | `test/game/match_setup_test.dart`, `setup_recovery_test.dart`, `community_layout_test.dart`, `first_game_flow_test.dart`; `test/browser_history_observer_test.dart`, `audio_settings_test.dart`, `widgets/piece_stack_view_test.dart` |
 | LEARN | `study_controller.dart`, `study_screen.dart`, `study_catalog.dart`, `learning_hub.dart`, `match_coaching.dart`, `match_threats.dart` | `test/game/shared_study_test.dart`, `multiplayer_studies_test.dart`, `first_game_journey_test.dart`, `playtesting_feedback_test.dart`; `test/audit/puzzle_contract_test.dart`, `puzzle_authoring_test.dart`; `test/models/scenario_library_test.dart` |
-| LEARN AI | `match_ai.dart`, `match_ai_engine.dart`; historical `lib/services/ai/` | `test/game/shared_ai_tactics_test.dart`, `shared_ai_playthrough_test.dart`, `match_ai_test.dart`; `tools/ai_tournament_test.dart`; [strength qualification](PLAYTESTING_FEEDBACK.md) |
+| LEARN AI | `match_ai.dart`, `match_ai_engine.dart`; historical `lib/services/ai/` | `test/game/shared_ai_tactics_test.dart`, `shared_ai_playthrough_test.dart`, `match_ai_test.dart`, `ai_round_search_test.dart`, `large_board_ai_test.dart`, `ai_upgrade_test.dart`, `ai_qualification_test.dart`; `tools/ai_qualification.dart`, `tools/ai_latency.dart`; [qualification and open gates](AI_UPGRADES.md) |
 | SAVE | `match_controller.dart`, `match_storage.dart`, `completed_match.dart`, `match_clock.dart`, `match_elapsed.dart`, `result_share_data.dart` | `test/game/match_controller_test.dart`, `match_clock_test.dart`, `completed_match_test.dart`, `result_explanation_test.dart`, `result_sharing_test.dart`, `result_share_widget_test.dart` |
 | ONLINE | `match_room_store.dart`, `room_navigation.dart`, `room_invitation.dart`, `open_tables.dart`; `lib/services/match_chat_service.dart`; `firestore.rules` | `test/game/match_room_test.dart`, `multiplayer_recovery_regression_test.dart`, `multiplayer_resilience_test.dart`; `test/open_tables_test.dart`, `match_chat_lifecycle_test.dart`; `tools/hex_rules/`; `tools/chat_browser_journey.py` |
 | ACCOUNT, COMPAT, PLAN-01 | `lib/providers/account_provider.dart`, `achievements_provider.dart`, `elite_theme_provider.dart`; `lib/progression/`; `lib/services/play_games_service.dart` | `test/account_test.dart`, `play_games_save_test.dart`, `community_ui_test.dart`; `test/achievements/`; `test/ratings/`; Firestore emulator authorization trials |

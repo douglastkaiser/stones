@@ -115,12 +115,18 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
 
 ## Architecture Notes
 
-### AI System (`lib/services/ai/`)
-- `ai.dart` - Base class, difficulty enum, factory
-- `lookahead_ai.dart` - Shared search engine for every difficulty; depths 2/2/3/4
-- `board_analysis.dart` - Road detection and evaluation analysis
-- `move_generator.dart` - Legal move generation
-- `lib/models/game_rules.dart` - Shared placement/spread validation and flat results
+### AI System (`lib/game/`)
+- `match_ai.dart` - Shared AI entry point, native/web dispatch and optional confirmed-position history
+- `match_ai_engine.dart` - Versioned search; v3 targets 1/1/2/3 full table rounds for Easy/Medium/Hard/Expert, with selective mandatory first-round coverage
+- `ai_search_cache.dart`, `ai_tactics.dart`, `ai_material.dart` - Decision-local reuse, bounded forcing analysis and legal material probes
+- `ai_position.dart` - Canonical repetition identity; no new draw rule
+- `match_rules.dart` - Shared legal placement/spread generation and results
+
+Saved v1/v2 configurations retain their engines. V3 continues v2 rating identities
+and records its actual engine on games and new rating history. See
+[AI upgrades](docs/AI_UPGRADES.md) for budgets, qualification limits and benchmarks.
+`lib/services/ai/` remains the historical square compatibility implementation;
+its individual-ply depths are not the current shared-engine difficulty contract.
 
 See [the rules audit](docs/TAK_RULES.md) and [development map](docs/DEVELOPMENT.md)
 for current mechanics, regression coverage, and known online/puzzle gaps.

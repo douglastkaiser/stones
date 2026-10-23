@@ -1,3 +1,4 @@
+import 'ai_position.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
@@ -121,11 +122,14 @@ class MatchController extends StateNotifier<MatchSession> {
   final Duration networkTimeout;
   final List<Duration> recoveryDelays;
   final Future<MatchMove?> Function(MatchState, BotLevel)? _searchOverride;
+  final _aiHistory = AiPositionHistory();
   Future<MatchMove?> search(MatchState game, BotLevel level) {
     if (_searchOverride != null) return _searchOverride!(game, level);
     final epoch = _epoch;
     final token = _searchToken;
     return selectMatchMove(game, level,
+        recentPositionKeys:
+            _aiHistory.keysFor(state.id, game.config, confirmedMoves, game),
         cancelled: () => !mounted || epoch != _epoch || token != _searchToken);
   }
 
@@ -150,6 +154,7 @@ class MatchController extends StateNotifier<MatchSession> {
   List<Map<String, dynamic>> _localMoves = [];
 
   void leave() {
+    _aiHistory.clear();
     _epoch++;
     _searchToken++;
     _timer?.cancel();

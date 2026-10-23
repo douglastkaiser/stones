@@ -155,8 +155,9 @@ void main() {
     expect(calibrated.calibrated, isTrue);
     expect(EloRating.fromMap('bot', calibrated.toMap()).opponents, 10);
   });
-  test('equal established human and AI scores share competition rank', () {
+  test('human ranks skip AI and provisional players and preserve ties', () {
     const players = [
+      EloRating(id: 'new', displayName: 'New', rating: 2200),
       EloRating(id: 'a', displayName: 'a', rating: 1500, gamesPlayed: 10),
       EloRating(id: 'b', displayName: 'b', rating: 1500, gamesPlayed: 10),
       EloRating(id: 'c', displayName: 'c', rating: 1400, gamesPlayed: 10),
@@ -167,10 +168,10 @@ void main() {
           isAi: true,
           gamesPlayed: 100)
     ];
-    expect(competitionRank(1500, players), 2);
-    expect(competitionRank(1400, players), 4);
+    expect(competitionRank(1500, players), 1);
+    expect(competitionRank(1400, players), 3);
   });
-  testWidgets('AI outside the top 50 uses its actual global rank',
+  testWidgets('AI outside the top 50 stays visible without a human rank',
       (tester) async {
     final repo = FakeRatings()
       ..standing = 87
@@ -200,9 +201,89 @@ void main() {
     await tester.tap(find.text('AI'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Expert AI'));
-    expect(find.text('#87'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^#')), findsNothing);
+    await tester.tap(find.text('Expert AI'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerDetailScreen), findsOneWidget);
+    expect(find.textContaining('Rank #'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('home, leaderboard and own profile share the human rank',
+      (tester) async {
+    final accountService = FakeAccount()
+      ..current =
+          const AccountIdentity(uid: 'alice', guest: false, name: 'Alice');
+    final account =
+        AccountController(accountService, hasActiveRoom: () => false);
+    await account.initialize();
+    const alice = EloRating(
+        id: 'alice',
+        displayName: 'Alice',
+        pool: 'overall',
+        rating: 1500,
+        gamesPlayed: 20);
+    final repo = FakeRatings()
+      ..standing = 1
+      ..values = [
+        const EloRating(
+            id: 'ai_shared-search-v2_expert',
+            displayName: 'Expert AI',
+            pool: 'overall',
+            rating: 2000,
+            gamesPlayed: 40,
+            isAi: true),
+        alice,
+      ];
+    final controller = EloController(repo)..bind('alice', guest: false);
+    repo.streams['alice']!.add(alice);
+    await tester.pumpWidget(ProviderScope(overrides: [
+      accountProvider.overrideWith((ref) => account),
+      ratingRepositoryProvider.overrideWithValue(repo),
+      eloProvider.overrideWith((ref) => controller),
+      soundManagerProvider.overrideWithValue(QuietRatingSound()),
+    ], child: const MaterialApp(home: MainMenuScreen())));
+    await tester.pumpAndSettle();
+    expect(find.text('Overall · 1500 · #1'), findsOneWidget);
+    await tester.tap(find.byTooltip('Leaderboard'));
+    await tester.pumpAndSettle();
+    expect(find.text('1500 · Rank #1'), findsOneWidget);
+    expect(find.text('#1'), findsOneWidget);
+    expect(find.text('#2'), findsNothing);
+    await tester.tap(find.text('Your standing'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerDetailScreen), findsOneWidget);
+    expect(
+        tester
+            .widget<PlayerDetailScreen>(find.byType(PlayerDetailScreen))
+            .player
+            .id,
+        'alice');
+    expect(find.text('Rank #1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unrated standing opens own profile in the selected pool',
+      (tester) async {
+    final repo = FakeRatings();
+    final controller = EloController(repo)
+      ..bind('new-player', guest: false)
+      ..selectPool(RatingPool.standard);
+    await tester.pumpWidget(ProviderScope(overrides: [
+      ratingRepositoryProvider.overrideWithValue(repo),
+      eloProvider.overrideWith((ref) => controller),
+    ], child: const MaterialApp(home: LeaderboardScreen())));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Your standing'));
+    await tester.tap(find.text('Your standing'));
+    await tester.pumpAndSettle();
+    final profile =
+        tester.widget<PlayerDetailScreen>(find.byType(PlayerDetailScreen));
+    expect(profile.player.id, 'new-player');
+    expect(profile.player.pool, RatingPool.standard.id);
+    expect(find.text('Unrated'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('invalid scores and counters rejected by calculator', () {
     expect(
         () => EloCalculator.calculateNewRatings(

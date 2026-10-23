@@ -3,7 +3,23 @@
 Tracks all 18 requirement IDs in the supplied brief (which called them 17).
 New gameplay uses the shared match engine. Firebase remains on Spark.
 
-## Verified findings
+## Current follow-up, 2026-10-23
+
+The [AI upgrade record](AI_UPGRADES.md) supersedes the original v2 strategy and
+qualification checkpoint below. New configurations use v3; saved v1/v2 games keep
+their engines. V3 continues v2 AI ratings and records the actual engine per game
+and new rating-history item. Human rank numbers exclude AI; home/profile and
+leaderboard ranks agree, and Your standing opens the player's profile.
+
+Local evidence: 1,765 Flutter tests before final performance optimization,
+216 affected AI tests after it, 20 focused tests after runner recovery changes,
+a final four qualification tests, 146 rules tests, strict analysis and emulator
+web/browser checks. Full strength, native timing and device qualification remain
+open. See [release readiness](RELEASE_READINESS.md) for publication prerequisites.
+The dated validation and original production diagnosis below are historical.
+For subsequent sign-in remediation, see [Google login recovery](GOOGLE_SIGN_IN_FIX.md).
+
+## Original verified findings
 
 - BOARD-01: Hex's hand-written fitting denominator overestimated its extent.
   Sizing now measures actual cell centers and polygon extents. Narrow Hex tables
@@ -27,8 +43,8 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
   logic. Paired probes reproduced non-monotonic strength when increasing depth
   alone. New search includes alpha-beta for duels, horizon win checks, retained
   root fallback, all-tier tactical defense and controlled lower-tier choices.
-  Historical configs keep the v1 engine and rating identities; new configs bind
-  the v2 engine and independent ratings.
+  That original checkpoint introduced v2 with independent ratings from v1.
+  The current v3 follow-up retains v2 ratings, as described above.
 
 ## Requirement traceability
 
@@ -44,7 +60,7 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 | GAME-01 | Verify existing durable Court takebacks | Square/Hex controller and terminal-takeback regressions |
 | GAME-02 | Court-only legal next-move win scan for each seat; road or flats | Both shapes, placement/spread legality through MatchRules; stale analysis disposal |
 | GAME-03 | Active local elapsed clock; online acknowledged start/finish | Unlimited-game, pause/resume/save/share tests; timestamp authorization tests |
-| AI-01 | Graded search/endgame understanding; separate v2 identity and current-only AI standings | Tactical/playthrough tests; actual-default benchmark gate; full strength qualification remains open |
+| AI-01 | Graded v3 search/endgame understanding; continue v2 rating identities; AI standings consume no human rank | Tactical/playthrough tests; actual-default benchmark gate; full strength qualification remains open |
 | AI-02 | Hex-aware goals and multiplayer utility; bounded full-round search | Hex 2–4-seat tactics and legal playthroughs; actual three-seat default calibration remains open |
 | ONLINE-01 | Inspect production configuration; actionable storage error copy | Deferred by owner; real iPhone retry still needed |
 | ONLINE-02 | Verified account-status metadata, explicit guest explanation, bounded retries | Three-/four-player settlement emulation, new-player defaults, partial receipts, identity changes |
@@ -55,9 +71,10 @@ New gameplay uses the shared match engine. Firebase remains on Spark.
 
 ## Contracts and limits
 
-- New config `aiEngine` defaults to `shared-search-v2`; missing saved metadata
-  decodes to `shared-search-v1`. The original engine remains available for old
-  matches. Receipt/profile rules bind each engine to its matching AI identity.
+- New config `aiEngine` defaults to `shared-search-v3`; missing saved metadata
+  decodes to `shared-search-v1`. Explicit v2 saves stay v2. V3 uses established
+  `ai_shared-search-v2_<difficulty>` rating identities; game/receipt/history
+  engine stamps retain the actual version. See [skill ratings](SKILL_RATINGS.md).
 - Local `elapsed.milliseconds` checkpoints active play independently of countdowns;
   local suspension freezes it. Online `startedAt`, `lastMoveAt`, `finishedAt` are
   server timestamps. Terminal duration requires `finishedAt`; an earlier move timestamp
@@ -96,7 +113,7 @@ All seven P2 findings from the review of aa15870 are addressed:
 | Terminal online clock keeps running | Nullable elapsed state can be cleared; missing finish evidence stays unavailable | Older-client resignation after a known earlier move clears a running clock |
 | Confirmed deltas disappear during errors/refresh | Recovery and both manual refresh paths merge the latest immutable receipts, including nonretryable errors | Partial Overall → permission denial; pending/manual/interleaved updates preserve both receipts |
 | Same-device multiplayer has no turn cue | Shared-device human turns use the distinctive sound and seat-specific visual banner | Three humans and mixed human/AI tables; rebuild, pause, disconnect and terminal suppression |
-| Current AI duplicates legacy placeholders | Current engine constant drives placeholders and filters live/static AI standings; historical receipts keep their legacy fallback | Exactly four current opponents; live/static mixed-engine inputs; current AI outside top 50 retains its real rank |
+| Current AI duplicates legacy placeholders | Canonical rating engine drives placeholders and filters live/static AI standings; historical receipts keep their legacy fallback | Exactly four current opponents; live/static mixed-engine inputs; AI outside top 50 remains visible; the later human-only ranking contract removes AI rank numbers |
 | Collapsed chat stops expiry cleanup | Cleanup has an independent timer, local expiry removal and contained errors | Cleanup/retry while collapsed without receives; finish clears and disposal cancels timers; two-browser no-history journey |
 | Sharing bypasses celestial revocation | Live and exported boards share reactive eligibility policy; theme/styles enter the PNG capture signature | Revoked at open, regained and revoked again while Share stays open |
 

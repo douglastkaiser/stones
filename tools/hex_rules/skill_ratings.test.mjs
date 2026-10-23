@@ -83,9 +83,9 @@ function settle(s,pool='overall',prior={}) {
  for(const id of new Set(participants)) {
   const index=participants.indexOf(id),b=before[id],next=after[id],score=winner===-1?.5:participants[winner]===id?1:0;
   const rating=Math.round(next.mean),games=b.gamesPlayed+1,ai=id.startsWith('ai_');
-  records[id]={pool,displayName:s.receipt.names[index],...next,rating,gamesPlayed:games,wins:b.wins+(score===1?1:0),losses:b.losses+(score===0?1:0),draws:b.draws+(score===.5?1:0),isAi:ai,established:games>=10&&next.deviation<=150,lastResult:s.key,...(ai?{engineVersion:'shared-search-v1',aiDifficulty:s.receipt.config.seats[index].level}:{})};
+  records[id]={pool,displayName:s.receipt.names[index],...next,rating,gamesPlayed:games,wins:b.wins+(score===1?1:0),losses:b.losses+(score===0?1:0),draws:b.draws+(score===.5?1:0),isAi:ai,established:games>=10&&next.deviation<=150,lastResult:s.key,...(ai?{engineVersion:s.receipt.config.aiEngine??'shared-search-v1',aiDifficulty:s.receipt.config.seats[index].level}:{})};
   writes.push(write(`skillPools/${pool}/players/${id}`,records[id],['lastUpdated']));
-  writes.push(write(`skillPools/${pool}/players/${id}/history/${games}`,{...next,rating,before:Math.round(b.mean),delta:rating-Math.round(b.mean),score,opponentName:`${n}-player game`,seat:index,appearances:participants.filter(p=>p===id).length},['timestamp']));
+  writes.push(write(`skillPools/${pool}/players/${id}/history/${games}`,{...next,rating,before:Math.round(b.mean),delta:rating-Math.round(b.mean),score,opponentName:`${n}-player game`,aiEngine:s.receipt.config.aiEngine??'shared-search-v1',seat:index,appearances:participants.filter(p=>p===id).length},['timestamp']));
  }
  return {writes,records,receipt};
 }
@@ -230,15 +230,73 @@ test('local source cannot smuggle Court, invalid settings, unknown AI, or a lega
  await accept(commit(s.writes));
 });
 
-test('new AI engine identities settle separately and cannot use legacy configuration',async()=>{
+for(const engine of ['shared-search-v2','shared-search-v3']) test(`${engine} uses its permitted rating identity and records its game engine`,async()=>{
  const participants=['alice','ai_shared-search-v2_expert'];
- const s=source({participants,local:true});s.receipt.config.aiEngine='shared-search-v2';
+ const s=source({participants,local:true});s.receipt.config.aiEngine=engine;
  s.writes[0]=write(`ratingResults/${s.key}`,s.receipt,['at']);
  await accept(commit(s.writes));
- const result=settle(s);result.records[participants[1]].engineVersion='shared-search-v2';
+ const result=settle(s);result.records[participants[1]].engineVersion=engine;
  const profileWrite=result.writes.find(w=>w.update.name.endsWith(`/players/${participants[1]}`));
  profileWrite.update.fields=value(result.records[participants[1]]).mapValue.fields;
  await accept(commit(result.writes));
  await env.clearFirestore();
  const forged=source({participants,local:true});await reject(commit(forged.writes));
+});
+
+
+test('human rank aggregation excludes AI and provisional players and shares ties',async()=>{
+ for(const [id,rating,isAi,established] of [
+  ['leader',1800,false,true],['tied',1500,false,true],
+  ['expert',2000,true,true],['new',2100,false,false],
+ ]) await seed(`skillPools/overall/players/${id}`,{rating,isAi,established});
+ const result=await request('/skillPools/overall:runAggregationQuery','POST',{
+  structuredAggregationQuery:{
+   structuredQuery:{from:[{collectionId:'players'}],where:{compositeFilter:{op:'AND',filters:[
+    {fieldFilter:{field:{fieldPath:'isAi'},op:'EQUAL',value:{booleanValue:false}}},
+    {fieldFilter:{field:{fieldPath:'established'},op:'EQUAL',value:{booleanValue:true}}},
+    {fieldFilter:{field:{fieldPath:'rating'},op:'GREATER_THAN',value:{integerValue:'1500'}}},
+   ]}}},aggregations:[{alias:'higherHumans',count:{}}]
+  }
+ },'alice');
+ assert(result.ok,result.raw);
+ assert.equal(JSON.parse(result.raw)[0].result.aggregateFields.higherHumans.integerValue,'1');
+});
+
+
+test('v3 continues established v2 priors in both ladders with engine-stamped history',async()=>{
+ const bot='ai_shared-search-v2_expert',participants=['alice',bot];
+ const s=source({participants,local:true});s.receipt.config.aiEngine='shared-search-v3';
+ s.writes[0]=write(`ratingResults/${s.key}`,s.receipt,['at']);await accept(commit(s.writes));
+ for(const pool of ['overall',s.pool]) {
+  const prior={alice:{...empty},[bot]:{...empty,mean:1600,deviation:80,gamesPlayed:20,wins:10,losses:10}};
+  await seed(`skillPools/${pool}/players/${bot}`,{...prior[bot],rating:1600,isAi:true,engineVersion:'shared-search-v2',aiDifficulty:'expert'});
+  const result=settle(s,pool,prior);
+  assert.equal(result.receipt.before[bot].mean,1600);
+  assert.equal(result.records[bot].gamesPlayed,21);
+  const suffix=`/players/${bot}/history/21`;
+  const history=result.writes.find(w=>w.update.name.endsWith(suffix));
+  assert.equal(history.update.fields.aiEngine.stringValue,'shared-search-v3');
+  const wrong=structuredClone(result.writes);
+  wrong.find(w=>w.update.name.endsWith(suffix)).update.fields.aiEngine.stringValue='shared-search-v2';
+  await reject(commit(wrong));
+  const missing=structuredClone(result.writes);
+  delete missing.find(w=>w.update.name.endsWith(suffix)).update.fields.aiEngine;
+  await reject(commit(missing));
+  await accept(commit(result.writes));
+ }
+});
+
+test('saved v2 games and older clients may omit history engine metadata',async()=>{
+ const s=source({participants:['alice','ai_shared-search-v2_expert'],local:true});
+ s.receipt.config.aiEngine='shared-search-v2';s.writes[0]=write(`ratingResults/${s.key}`,s.receipt,['at']);
+ await accept(commit(s.writes));
+ const result=settle(s);
+ for(const w of result.writes) if(w.update.name.includes('/history/')) delete w.update.fields.aiEngine;
+ await accept(commit(result.writes));
+});
+
+test('v3 cannot create a reset profile with a v3-specific rating ID',async()=>{
+ const s=source({participants:['alice','ai_shared-search-v3_expert'],local:true});
+ s.receipt.config.aiEngine='shared-search-v3';s.writes[0]=write(`ratingResults/${s.key}`,s.receipt,['at']);
+ await reject(commit(s.writes));
 });

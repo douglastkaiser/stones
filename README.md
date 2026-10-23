@@ -23,6 +23,11 @@ seats. Two-player Square follows standard Tak; other configurations are Stones
 variants. See the [shared play contract](docs/UNIFIED_PLAY_PLAN.md) for current
 behavior and [legacy Hex guide](docs/HEX_MODE.md) for older room compatibility.
 
+The [AI upgrade record](docs/AI_UPGRADES.md) describes v3 multiplayer search,
+engine-version history, reproducible benchmarks and open strength/timing gates.
+The [skill-rating contract](docs/SKILL_RATINGS.md) covers human-only rank numbers,
+clickable personal standings and continued AI ratings across strategy upgrades.
+
 See the [rules audit](docs/TAK_RULES.md) for official sources, verified mechanics,
 and remaining gaps, and the [development map](docs/DEVELOPMENT.md) for architecture
 and local testing notes.

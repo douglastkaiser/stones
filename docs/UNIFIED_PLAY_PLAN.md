@@ -7,7 +7,12 @@ has already shipped. The user explicitly requests replacing the previous
 square/Hex architectural isolation with a shared engine. Legacy rules and saved
 rooms must remain interpretable throughout that replacement.
 
-## Current readiness
+For the latest shared AI and ranking contracts, see [AI upgrades](AI_UPGRADES.md)
+and [skill ratings](SKILL_RATINGS.md). The dated rollout and test counts below
+record the original unification; [release readiness](RELEASE_READINESS.md) tracks
+newer qualification and publication.
+
+## Original unification readiness
 
 Shared setup, rules, gestures, rendering, local/online controllers, AI, recovery,
 Court, clocks, progression attribution and learning are implemented on main.

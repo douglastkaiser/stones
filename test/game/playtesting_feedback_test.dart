@@ -103,12 +103,19 @@ void main() {
     expect(after.durationMs, before.durationMs);
     controller.dispose();
   });
-  test('new AI identity is versioned; missing saved metadata stays v1', () {
+  test('game engines are versioned while v3 retains the v2 rating identity',
+      () {
     final current = MatchConfig.defaults(BoardShape.hex);
-    expect(current.aiEngine, 'shared-search-v2');
-    expect(MatchConfig.fromMap(current.toMap()).aiEngine, 'shared-search-v2');
+    expect(current.aiEngine, 'shared-search-v3');
+    expect(current.aiRatingEngine, 'shared-search-v2');
+    expect(MatchConfig.fromMap(current.toMap()).aiEngine, 'shared-search-v3');
+    final v2 = current.toMap()..['aiEngine'] = 'shared-search-v2';
+    expect(MatchConfig.fromMap(v2).aiEngine, 'shared-search-v2');
+    expect(MatchConfig.fromMap(v2).aiRatingEngine, current.aiRatingEngine);
+    expect(MatchConfig.fromMap(v2).toMap()['aiEngine'], 'shared-search-v2');
     final old = current.toMap()..remove('aiEngine');
     expect(MatchConfig.fromMap(old).aiEngine, 'shared-search-v1');
+    expect(MatchConfig.fromMap(old).aiRatingEngine, 'shared-search-v1');
   });
   test('chat filter intentionally masks substrings and markup stays plain text',
       () {

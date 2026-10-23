@@ -20,11 +20,13 @@ class LiveRatings extends FakeRatings implements LiveRatingRepository {
   Future<List<EloHistoryEntry>> history(String pool, String uid) async => [
         EloHistoryEntry(
             rating: 1280,
+            aiEngine: 'shared-search-v2',
             timestamp: DateTime(2026, 10),
             score: 1,
             skill: const SkillEstimate(mean: 1280, deviation: 200)),
         EloHistoryEntry(
             rating: 1300,
+            aiEngine: 'shared-search-v3',
             timestamp: DateTime(2026, 10, 2),
             score: 1,
             skill: const SkillEstimate(mean: 1300, deviation: 100)),
@@ -168,6 +170,10 @@ void main() {
             home: const PlayerDetailScreen(player: bot))));
     await tester.pumpAndSettle();
     expect(find.text('Estimated skill range 1104–1496 (95%)'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('AI v2'), 200);
+    await tester.pumpAndSettle();
+    expect(find.text('AI v2'), findsOneWidget);
+    expect(find.text('AI v3'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -283,7 +283,7 @@ def main():
             type: 'flat', direction: null, drops: []
           }));
           const snapshot = {id: `local-ci-ai-only-${Date.now()}`, ratingUid: uid,
-            config: {version: 1, ratingVersion: 3, aiEngine: 'shared-search-v2', shape: 'square', size: 3,
+            config: {version: 1, ratingVersion: 3, aiEngine: 'shared-search-v3', shape: 'square', size: 3,
               profile: 'standardTak', starter: 'ivory', seats: [
                 {id: 'ivory', control: 'ai', level: 'expert'},
                 {id: 'charcoal', control: 'ai', level: 'easy'}]}, moves};

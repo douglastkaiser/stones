@@ -297,7 +297,7 @@ service cloud.firestore {
              (!creating || data.styles[seat.id] == 'standard')));
       }
       function configShape(c) {
-        return c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion', 'aiEngine']) && c.get('aiEngine', 'shared-search-v1') in ['shared-search-v1','shared-search-v2'] && c.get('ratingVersion', 1) in [1, 2, 3] &&
+        return c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion', 'aiEngine']) && c.get('aiEngine', 'shared-search-v1') in ['shared-search-v1','shared-search-v2','shared-search-v3'] && c.get('ratingVersion', 1) in [1, 2, 3] &&
           c.get('clockSeconds', 0) is int && c.get('clockSeconds', 0) >= 0 && c.get('clockSeconds', 0) <= 59940 &&
           c.version == 1 && c.size is int &&
           ((c.shape == 'square' && c.size >= 3 && c.size <= 8) ||
@@ -768,7 +768,7 @@ service cloud.firestore {
     }
     function sConfig(c) {
       return c.keys().hasOnly(['version','shape','size','seats','starter','profile','clockSeconds','ratingVersion','court','aiEngine']) &&
-        c.get('aiEngine','shared-search-v1') in ['shared-search-v1','shared-search-v2'] && c.version == 1 && c.ratingVersion == 3 && !c.get('court',false) &&
+        c.get('aiEngine','shared-search-v1') in ['shared-search-v1','shared-search-v2','shared-search-v3'] && c.version == 1 && c.ratingVersion == 3 && !c.get('court',false) &&
         c.size is int && c.seats is list && c.seats.size() >= 2 && c.seats.size() <= 4 &&
         ((c.shape == 'square' && c.size >= 3 && c.size <= 8) || (c.shape == 'hex' && c.size >= 2 && c.size <= 4)) &&
         (c.profile == 'sharedRoads' || (c.profile == 'standardTak' && c.shape == 'square' && c.seats.size() == 2)) &&
@@ -777,6 +777,10 @@ service cloud.firestore {
         (c.starter == c.seats[0].id || c.starter == c.seats[1].id ||
          (c.seats.size() > 2 && c.starter == c.seats[2].id) || (c.seats.size() > 3 && c.starter == c.seats[3].id));
     }
+    function sAiRatingEngine(c) {
+      return c.get('aiEngine','shared-search-v1') == 'shared-search-v3'
+        ? 'shared-search-v2' : c.get('aiEngine','shared-search-v1');
+    }
     function sIdentity(r,owners,i) {
       let uid = r.participants[i];
       let seat = r.config.seats[i];
@@ -784,7 +788,7 @@ service cloud.firestore {
       let ai = seat.control == 'ai';
       let vote = ai || r.room == null ? {} : humanVote(r.room,uid);
       return ai
-        ? uid == 'ai_' + r.config.get('aiEngine','shared-search-v1') + '_' + seat.level && name == pBotName(seat.level)
+        ? uid == 'ai_' + sAiRatingEngine(r.config) + '_' + seat.level && name == pBotName(seat.level)
         : uid is string && !uid.matches('^ai_.*') && pCount(r,uid) == 1 &&
           (r.room == null ? seat.control == 'localHuman' && uid == r.actor && name is string && name.size() > 0 && name.size() <= 60
             : owners[seat.id] == uid && vote == {'version':3,'ply':r.ply,'winner':r.winner,'reason':r.reason,'name':name});
@@ -906,7 +910,10 @@ service cloud.firestore {
       let index = pIndex(r,id);
       let ai = r.config.seats[index].control == 'ai';
       let score = sScore(r,id);
-      return sFresh(key,pool) && h.keys().hasOnly(['mean','deviation','rating','before','delta','timestamp','score','opponentName','seat','appearances']) &&
+      return sFresh(key,pool) && h.keys().hasOnly(['mean','deviation','rating','before','delta','timestamp','score','opponentName','seat','appearances','aiEngine']) &&
+        (r.config.get('aiEngine','shared-search-v1') == 'shared-search-v3'
+          ? h.aiEngine == 'shared-search-v3'
+          : h.get('aiEngine',r.config.get('aiEngine','shared-search-v1')) == r.config.get('aiEngine','shared-search-v1')) &&
         entry == string(after.gamesPlayed) && h.mean == after.mean && h.deviation == after.deviation && h.rating == after.rating &&
         after.rating is int && after.rating == math.round(after.mean) &&
         s.before[id].keys().hasOnly(['mean','deviation']) && s.after[id].keys().hasOnly(['mean','deviation']) &&

@@ -7,7 +7,8 @@ import '../services/rating_repository.dart';
 import 'account_provider.dart';
 
 bool _currentOpponent(EloRating player) =>
-    !player.isAi || player.id.startsWith('ai_${MatchConfig.currentAiEngine}_');
+    !player.isAi ||
+    player.id.startsWith('ai_${MatchConfig.currentAiRatingEngine}_');
 
 class EloState {
   const EloState(
@@ -149,7 +150,7 @@ class EloController extends StateNotifier<EloState> {
         for (final player in values.where(_currentOpponent)) player.id: player
       };
       for (final level in BotLevel.values) {
-        final id = 'ai_${MatchConfig.currentAiEngine}_${level.name}';
+        final id = 'ai_${MatchConfig.currentAiRatingEngine}_${level.name}';
         entries.putIfAbsent(
             id,
             () => EloRating(
@@ -255,7 +256,7 @@ class EloController extends StateNotifier<EloState> {
           entry.id: entry
       };
       for (final level in BotLevel.values) {
-        final id = 'ai_${MatchConfig.currentAiEngine}_${level.name}';
+        final id = 'ai_${MatchConfig.currentAiRatingEngine}_${level.name}';
         combined.putIfAbsent(
             id,
             () => EloRating(

@@ -1,0 +1,133 @@
+{
+  "date": "2026-10-23",
+  "engine": "shared-search-v3",
+  "canonicalAiRatingEngine": "shared-search-v2",
+  "published": false,
+  "strengthQualified": false,
+  "timingQualified": false,
+  "sourceHashes": {
+    "lib/game/match_ai_engine.dart": "6029541b440dbcb1c0b957f338239d6e9abaf7f21a084aa1bd6a045d60f9e6ba",
+    "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+    "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+    "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+    "lib/game/ai_tactics.dart": "5e57fb7cd9f718f52e6268640150fdf4f868f37a30256094b0d6b580000b0d6e",
+    "lib/game/match_ai.dart": "11b5fff4c81f4a6de5beac9349b91ea2a6f5df878a532adf6cd572e3c0ce78b5",
+    "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+    "tools/ai_qualification.dart": "5975e5dc6ad5111c02be9e341a977063f46a3ea29146079838c7d1fc5783aa58"
+  },
+  "nativeCandidateSha256": "ba6b83cbb773cf54b712c4f02406babd32a9aab7099bb9941cdeceb6fd76ce37",
+  "nativeBaselineSha256": "c26e507da9f8f294c557668f8999c576ddf6f17fd3ce164a8a4d36ec4acbc977",
+  "environment": {
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "platform": "Linux",
+    "browser": "Chromium with phone viewport, emulator-only release entry point"
+  },
+  "checks": [
+    {
+      "name": "full Flutter suite",
+      "passed": 1765,
+      "stage": "before final compact-key, cap-probe and conditional-root-window optimization"
+    },
+    {
+      "name": "affected AI regression suite",
+      "passed": 216,
+      "stage": "after final performance optimization",
+      "includes": [
+        "six complete mixed-difficulty matches",
+        "largest-board tactics",
+        "complete-round modeling",
+        "legacy compatibility",
+        "cache and repetition checks"
+      ]
+    },
+    {
+      "name": "final cache/key/material/history/qualification tests",
+      "passed": 20,
+      "stage": "after streaming and interrupted-write recovery changes"
+    },
+    {
+      "name": "final qualification gate tests",
+      "passed": 4,
+      "stage": "after lint cleanup"
+    },
+    {
+      "name": "Firestore rules",
+      "passed": 146,
+      "includes": [
+        "AI rating continuity",
+        "actual engine history",
+        "human-only ranks"
+      ]
+    },
+    {
+      "name": "strict Flutter analysis",
+      "result": "passed, no issues"
+    },
+    {
+      "name": "Dart format check",
+      "result": "passed for all new/changed implementation and regression files; frozen reference source preserved"
+    },
+    {
+      "name": "release emulator web build",
+      "result": "passed after performance optimization"
+    },
+    {
+      "name": "Chromium player journeys",
+      "result": "passed after performance optimization",
+      "evidence": "build/qa/journeys/summary.json"
+    },
+    {
+      "name": "native qualification harness",
+      "result": "two games completed, resume did not duplicate, source mismatch rejected",
+      "evidence": "ai-upgrade-runner-smoke.json"
+    }
+  ],
+  "maxHexExploratoryTrial": {
+    "evidence": "ai-upgrade-max-hex-smoke.json",
+    "stage": "before final performance optimization",
+    "levels": [
+      "medium",
+      "hard",
+      "expert"
+    ],
+    "size": 4,
+    "plies": 252,
+    "finished": false,
+    "opposingTopsCaptured": 156,
+    "multiDropSpreads": 58,
+    "trackedRepeats": 0,
+    "timingCaveat": "overlapped regression work; not a timing comparison"
+  },
+  "latencyExploration": {
+    "initial": "ai-upgrade-latency-pilot.json",
+    "afterOptimization": "ai-upgrade-latency-square-optimized-pilot.json",
+    "measurementsPerGroup": 2,
+    "result": "overhead reduced, but sampled decisions remain slower on several positions; no timing gate passed"
+  },
+  "weights": {
+    "mobility": 0,
+    "crush": 4,
+    "exposure": 4,
+    "access": 4,
+    "aggregateCap": 40,
+    "reasonMobilityDisabled": "weight 4 regressed connected development in a maximum-Square fixture"
+  },
+  "openAcceptance": [
+    "complete single-feature 0/4/8/12 material pilot grid",
+    "3450 adjacent-tier held-out games",
+    "4000 same-tier reference regression games",
+    "50-seed paired native timing gates",
+    "browser/device latency qualification",
+    "human Expert-strength target"
+  ],
+  "featureIdsUpdated": [
+    "LEARN-01",
+    "PLAN-10"
+  ],
+  "compatibilityProtected": [
+    "COMPAT-06",
+    "ACCOUNT-03",
+    "ACCOUNT-04"
+  ]
+}

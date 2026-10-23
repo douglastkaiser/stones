@@ -1,5 +1,25 @@
 # Current release qualification
 
+## AI and human standings source candidate, 2026-10-23
+
+The [AI upgrade record](AI_UPGRADES.md) and [skill-rating contract](SKILL_RATINGS.md)
+cover human-only ranks, clickable Your standing, v3 multiplayer search and
+continued AI ratings with actual per-game engine history. The source candidate
+is based on main `5053a0f`; it has not been published.
+
+Local validation passed: 1,765 Flutter tests before final performance optimization;
+216 affected AI tests after it; 20 focused cache/history/runner tests after recovery
+changes; four final qualification tests; 146 Firestore rules tests; strict analysis;
+and a release emulator web build with Chromium phone-viewport journeys. The
+[source-bound verification record](qa/ai-upgrade-verification.json) preserves
+stages and limitations. These checks do not establish complete strength or timing
+qualification: the material pilot grid, held-out tier/reference tournaments,
+paired native timing gates and physical-device acceptance remain open.
+
+Publish the updated Firestore rules before publishing a client that creates v3
+online games/results. Pushing main runs CI; Deploy Main remains manual. The
+Google login publication below is the last recorded deployed web qualification.
+
 ## Google login hardening, 2026-10-22
 
 [The login recovery contract](GOOGLE_SIGN_IN_FIX.md#durable-qualification-and-deployment)

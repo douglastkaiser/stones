@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:stones/game/match_ai_engine.dart';
+import 'package:stones/game/ai_position.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
@@ -33,7 +34,13 @@ Future<Map<String, Object?>> calibrateAi(BoardShape shape, int tier) async {
   final players =
       calibrationPlayers == 0 ? defaults.seats.length : calibrationPlayers;
   final size = calibrationSize == 0 ? defaults.size : calibrationSize;
-  const pairs = calibrationPairs, maxPlies = calibrationMaxPlies;
+  const pairs = calibrationPairs;
+  final initialSupply = Reserve.initial(MatchConfig(
+          shape: shape,
+          size: size,
+          seats: SeatId.values.take(players).map(SeatConfig.new).toList()))
+      .total;
+  final maxPlies = max(calibrationMaxPlies, 2 * players * initialSupply);
   if (pairs < 1 || players < 2 || players > 4 || tier < 0 || tier > 2) {
     throw ArgumentError('Use positive pairs, 2–4 seats and adjacent tiers 0–2');
   }
@@ -53,11 +60,15 @@ Future<Map<String, Object?>> calibrateAi(BoardShape shape, int tier) async {
       ]);
       var game = MatchState.initial(config);
       final random = Random(seed);
+      final moves = <Map<String, dynamic>>[];
+      final history = <String>[aiPositionKey(game)];
       for (var opening = 0; opening < players; opening++) {
         final legal = MatchRules.legalMoves(game).toList();
-        game = MatchRules.play(game, legal[random.nextInt(legal.length)])!;
+        final move = legal[random.nextInt(legal.length)];
+        moves.add(move.toMap(game.current));
+        game = MatchRules.play(game, move)!;
+        history.add(aiPositionKey(game));
       }
-      final moves = <Map<String, dynamic>>[];
       while (!game.finished && game.ply < maxPlies) {
         final level = config.seat(game.current).level;
         final move = await MatchAI(level, yieldDuringSearch: false,
@@ -67,10 +78,12 @@ Future<Map<String, Object?>> calibrateAi(BoardShape shape, int tier) async {
             timeouts.update('${level.name}:${stats.stage}', (v) => v + 1,
                 ifAbsent: () => 1);
           }
-        }).choose(game);
+        }).choose(game, recentPositionKeys: history);
         if (move == null) throw StateError('AI returned no move');
         moves.add(move.toMap(game.current));
         game = MatchRules.play(game, move)!;
+        history.add(aiPositionKey(game));
+        if (history.length > 64) history.removeAt(0);
       }
       if (!game.finished) {
         unfinished++;
@@ -90,6 +103,10 @@ Future<Map<String, Object?>> calibrateAi(BoardShape shape, int tier) async {
             'swap': swap,
             'winner': game.result?.winner?.name,
             'stronger': stronger.name,
+            'config': config.toMap(),
+            'maxPlies': maxPlies,
+            'finished': game.finished,
+            'finalPosition': aiPositionKey(game),
             'moves': moves
           })}');
     }

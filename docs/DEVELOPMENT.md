@@ -37,6 +37,11 @@ records the approved product direction and staged work. Older sections below
 retain historical verification notes; their SDK paths/test counts are not current
 release claims. New gameplay uses the shared `lib/game/` architecture described next.
 
+The [2026-10-23 AI upgrades](AI_UPGRADES.md) describe the current v3 source
+candidate, full-round multiplayer search, cache/tactics/material/repetition work,
+frozen reference tooling and remaining strength/timing qualification. Human-only
+rank numbers and clickable personal standings are tracked in the rating contract.
+
 See [skill ratings](SKILL_RATINGS.md) for the version 3 Overall/format ladders,
 shared human/AI Glicko-based ratings, uncertainty UI, unordered multiplayer losses
 and Spark settlement/recovery protocol. [Ratings and competition](RATINGS.md)
@@ -67,8 +72,9 @@ Check the plan and [release record](releases/ANDROID_403.md) for actual rollout 
 
 The [result sharing and placement Elo contract](RESULT_SHARING.md) documents
 version 2 standings, globally rated AI, the combined leaderboard, persisted Elo
-deltas, native/SMS/copy sharing and final-board PNG export. New configurations
-use this contract; missing saved metadata preserves the legacy rating protocol.
+deltas, native/SMS/copy sharing and final-board PNG export. Its placement-Elo
+protocol remains for version 2 saves; new configurations use version 3 skill
+ratings. Missing saved metadata preserves the legacy rating protocol.
 
 The current shared path is `MatchSetupScreen` → `MatchController` →
 `MatchRules`/`MoveSelection` → `MatchScreen`/`BoardView`. `BoardGeometry` supplies
@@ -81,7 +87,7 @@ an isolated sandbox. `MatchCompleted` drives an idempotent achievement ledger.
 wire formats. Old providers/screens remain only for old session compatibility;
 `GameRules` and `HexRules` now forward validation/generation to `MatchRules`.
 
-Updated 2026-10-10. Read [the Tak rules audit](TAK_RULES.md) before changing game
+Historical baseline, 2026-10-10. Read [the Tak rules audit](TAK_RULES.md) before changing game
 mechanics; it includes the prioritized follow-up findings.
 
 ## Repository and local state

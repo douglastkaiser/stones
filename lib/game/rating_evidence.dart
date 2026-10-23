@@ -18,7 +18,7 @@ class RatingEvidence {
   List<String> get participants => [
         for (final seat in game.config.seats)
           seat.control == SeatControl.ai
-              ? 'ai_${game.config.aiEngine}_${seat.level.name}'
+              ? 'ai_${game.config.aiRatingEngine}_${seat.level.name}'
               : humans[game.config.seats
                   .where((s) => s.control != SeatControl.ai)
                   .toList()

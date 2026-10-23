@@ -51,8 +51,10 @@ intervals describe the estimate at its last rated result. No performance-stat,
 flat-margin or mode-transfer learning is claimed.
 
 Public ratings are rounded means. Leaderboards sort by that rating, with
-competition rank for equal established ratings; rank counts all established
-records, including those outside the visible top 50. Provisional status lasts
+competition rank for equal established human ratings; rank counts established
+human records, including those outside the visible top 50. AI remain interleaved
+by rating but neither receive nor consume human rank numbers. Home, standings,
+player labels and human profiles use the same human-only policy. Provisional status lasts
 at least ten distinct matches and until RD is at most 150. Provisional entries
 remain visible with a question mark but have no official rank. The approximate
 95% skill interval is mean +/- 1.96*RD; profiles and leaderboard rows show it,
@@ -65,10 +67,21 @@ account/scope changes and screen disposal cancel old listeners.
 ## Shared AI identities
 
 Humans and AI use exactly the same model and eligibility/calibration thresholds.
-AI IDs remain ai_shared-search-v1_<difficulty> and are shared across all users
-and devices. Every eligible human/AI or mixed game changes these shared profiles
-in both scopes; no ten-game human anchor or daily sampling gate applies to v3.
-An engine strategy change requires a new engine identity.
+Current AI rating IDs remain ai_shared-search-v2_<difficulty>, shared across
+all users and devices. The v3 engine continues those existing ratings, game counts
+and uncertainty rather than starting new profiles; subsequent results adjust
+strength over time. Historical v1 profiles remain separate. Saved games and
+immutable result receipts retain their actual v1/v2/v3 engine configuration.
+New skill-history entries also store aiEngine, and AI profiles label the engine
+used for each result. Older entries lacking that field stay unlabelled; no engine
+is guessed and no historical receipt is rewritten. Every eligible human/AI or
+mixed game changes these shared profiles in both scopes; no ten-game human
+anchor or daily sampling gate applies to version-3 skill ratings.
+
+The rating-continuity policy explicitly follows the owner's 2026-10-23 direction:
+update the AI and let ratings settle while retaining per-game engine versions.
+It supersedes the earlier policy of creating a rating identity for every strategy
+change. Game engine versions remain distinct; v2/v3 rating identities are shared.
 
 If an AI occupies multiple seats, average its seat evidence and skip comparisons
 against its own identity. Write one posterior and count one match, with one
@@ -219,3 +232,117 @@ checks did not write or change any player records or game data.
 This publication changes the Firebase backend. The version 3 web/Android client
 has not been published by this action. Real signed-in result settlement and
 physical-device qualification remain separate release checks.
+
+
+## Ranking and large-board AI follow-up (2026-10-23)
+
+ACCOUNT-03/04: the server rank aggregate now excludes AI, matching the local
+human competition-rank calculation. AI rows and profiles show ratings without a
+human rank. “Your standing” opens the signed-in player’s profile for the selected
+pool, including a not-yet-rated account. Existing isAi/established/rating composite
+indexes cover the query; this change adds no index requirement.
+
+LEARN-01/COMPAT-06: new configurations use shared-search-v3. It adds a small
+connected-road/central-access preference below the primary road-distance score.
+Multiplayer considers each rival's score instead of only the maximum, and adds
+nonlinear urgency for near-complete roads. Winning/blocking placements are
+examined before unrelated moves; known immediate placement threats cannot be
+ignored by the positional fallback if the full defense pass times out. The
+full pass continues to cover stack-spread wins and defenses.
+Existing v1/v2 saves keep their strategy and recorded engine version. New v3
+skill results use the existing v2 rating IDs, carrying forward mean/RD, counters
+and history; the game/receipt engine remains v3. New history writes are bound to
+the receipt's engine by security rules. Old v1/v2 clients may omit the new history
+field, while v3 receipts require it. Geometry-indexed shortest paths reuse
+neighbor and boundary tables, avoid repeated Cell-map traversal and allocate distance buckets
+only when used. This optimization retains path costs for every supported size.
+
+Before changes, four sparse central-development fixtures (Hard/Expert, Square 8
+and Hex radius 4) all scattered material. With v3 all four extend the central
+road. In the same local native/JIT run, the Hex Expert fixture changed from
+2.2 seconds/depth 2/timeout to about 0.5 seconds/depth 3; this is one diagnostic
+position, not a browser/device benchmark or a general playing-strength claim.
+Regression coverage also includes immediate wins/blocks at the largest sizes,
+independent shortest-path comparison, old configuration roundtrips and v2/v3
+rating continuity with explicit game engine metadata. A specific three-seat radius-4 fixture covers
+Medium/Hard/Expert responding to a leading rival's two-move approach. With
+full-round lookahead the regression checks the complete table cycle: the leading
+road must not progress uncontested, allowing a later rival's defense or a leader
+changing its plan instead of prescribing which player blocks on the first move.
+
+A full native Dart/JIT engine trial used the reported setup: Hex radius 4,
+three AI seats in Medium/Hard/Expert order, Ivory starting. Before the subsequent full-round lookahead update,
+the working-tree engine finished at ply 159 with Expert/Copper winning by road.
+The probe counted 102 opposing-top captures and 58 increases in a rival's
+previously two/three-move road distance; no board/reserve/side-to-move position
+repeated (maximum count 1). All moves were applied through MatchRules. It took
+about 153 seconds locally. This is one full-game qualification, not a strength
+ranking or browser/device acceptance result.
+
+Publication prerequisite: deploy the updated Firestore engine allowlist before
+publishing a client that creates v3 online games or submits v3 AI results.
+This working-tree change does not establish backend/client publication, browser
+usability acceptance, physical-device timing or broad strategy qualification.
+
+
+Local verification used Flutter 3.47.7 / Dart 3.13.5 on Linux. The AI/ranking
+checkpoint passed the full 1,687-test Flutter suite. After the owner's final
+rating-continuity direction, all 72 affected rating/feedback/review tests and
+31 match-screen/completed-history tests passed, including engine-history labels
+on a 320px phone at 200% text. The full suite was not repeated after that final
+identity/history update. All 146 Firestore emulator authorization checks,
+strict analysis and the release web build passed. Formatting and diff checks
+passed. No production data was migrated or written; browser/physical-device
+acceptance and publication remain unverified.
+
+
+## Full-round AI lookahead (2026-10-23)
+
+LEARN-01: the owner clarified that a lookahead of one means one round, including
+every opponent before the AI's next turn. Unreleased v3 now uses round targets
+of 1/1/2/3 for Easy/Medium/Hard/Expert; saved v1/v2 searches retain their original
+strategy. This changes no rating identity or per-game version policy.
+
+Every nonterminal, uncancelled choice completes a selective first-round baseline,
+even if initial ranking/defense consumes the refinement deadline. It evaluates
+up to the tier's root width, then one plausible reply by each other seat in the
+actual turn order. Each reply samples at most 48 legal moves, prioritizing
+immediate winning/blocking placements, connected/central candidates and short
+stack spreads (up to three stones in this mandatory sample). A terminal result
+ends a line earlier. The baseline uses bounded work and cooperative yielding;
+it may extend past the normal wall-clock deadline to finish the round. It is
+not exhaustive examination of every legal response combination.
+
+Easy's former positional-only shortcut is removed for v3. Its variation is
+limited to near-equal choices already evaluated over a complete round. Other
+tiers refine the first round and attempt deeper whole rounds under their
+existing time budget; completed results replace the baseline only after every
+root in the iteration finishes. Refinements retain full legal carry generation.
+Hard/Expert round counts are targets, not guaranteed completed depth on all
+boards/devices. Search statistics now distinguish completed rounds, individual
+moves and the seats actually considered by the baseline.
+
+Regression requirements include every tier at two-to-four seats on both shapes,
+Easy with rotated starters, forced deadline exhaustion on the maximum boards,
+cancellation, legacy v2 Easy behavior, existing tactical/fork checks, legal
+full-match playthroughs and the maximum-board full-round road response.
+
+
+The final round-search change passed 198 focused AI regressions, including all
+60 new round/seat/deadline/cancellation checks and the existing tactics, forced
+fork, largest-board and complete-match checks. Strict analysis, Dart formatting,
+diff checks and the release web build passed on Flutter 3.47.7 / Dart 3.13.5,
+Linux. The full unrelated application suite was not repeated for this follow-up.
+
+A native engine stress trial on radius-4 Hex with four Easy seats applied 240
+legal moves; all 240 choices covered a complete round and all four seats. It
+recorded 155 opposing-top captures and remained unfinished when the trial stopped.
+On the host running concurrent tests/builds, total time was about 86 seconds and
+the slowest choice about 1.1 seconds, illustrating the baseline's soft deadline;
+this is not a browser/device latency or game-completion qualification. Physical
+and browser responsiveness/strength acceptance remain open. Nothing was deployed.
+
+The subsequent five-part AI upgrade implementation, frozen reference engine,
+repetition context, material-weight limits and qualification commands are recorded
+in [AI upgrades](AI_UPGRADES.md). That audit distinguishes the latest verification
+from these earlier round-search probes.

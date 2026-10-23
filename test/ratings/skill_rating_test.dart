@@ -11,6 +11,18 @@ import 'package:stones/models/elo_rating.dart';
 import '../game/result_sharing_test.dart' show position;
 
 void main() {
+  test('rating history preserves each engine without inventing old metadata',
+      () {
+    for (final version in [1, 2, 3]) {
+      final entry = EloHistoryEntry(
+          rating: 1400,
+          timestamp: DateTime(2026),
+          aiEngine: 'shared-search-v$version');
+      expect(EloHistoryEntry.fromMap(entry.toMap()).aiEngine, entry.aiEngine);
+    }
+    expect(EloHistoryEntry.fromMap({'rating': 1400}).aiEngine, isNull);
+  });
+
   test('Glickman published reference example matches independently', () {
     final result = SkillCalculator.update(
         const SkillEstimate(mean: 1500, deviation: 200), const [

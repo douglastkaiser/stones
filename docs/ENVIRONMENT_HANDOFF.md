@@ -1,5 +1,22 @@
 # Stones environment handoff
 
+## Current handoff, 2026-10-23
+
+Continue from main. This candidate follows main baseline `5053a0f` and includes
+human-only rank numbers, matching home/profile/leaderboard standings, clickable
+Your standing and versioned v3 multiplayer AI upgrades. See [AI upgrades](AI_UPGRADES.md),
+[skill ratings](SKILL_RATINGS.md) and [release readiness](RELEASE_READINESS.md).
+Feature inventory entries updated: LEARN-01, PLAN-10, ACCOUNT-03, ACCOUNT-04 and
+COMPAT-06. Saved v1/v2 strategies remain compatible; v3 continues v2 AI ratings.
+
+The user requested documentation maintenance and commit/push to main. This does
+not publish the website, Firestore rules or Android. Updated rules must precede
+publication of a v3 online client. Full strength/timing qualification and physical
+device acceptance remain open; exact local evidence and stage limits are in
+[the verification record](qa/ai-upgrade-verification.json).
+
+## Historical handoff, 2026-10-18
+
 Updated 2026-10-18. Continue the existing finishing effort; do not restart the audit.
 The user is moving to a better coding environment and explicitly requested that
 all remaining finishing work be merged and pushed to main before closing this

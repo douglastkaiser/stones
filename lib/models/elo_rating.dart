@@ -126,6 +126,7 @@ class EloHistoryEntry {
   final int? before, delta;
   final List<int> placements;
   final int seat, appearances;
+  final String? aiEngine;
   final SkillEstimate? skill;
 
   const EloHistoryEntry({
@@ -138,6 +139,7 @@ class EloHistoryEntry {
     this.placements = const [],
     this.seat = 0,
     this.appearances = 1,
+    this.aiEngine,
     this.skill,
   });
 
@@ -152,6 +154,7 @@ class EloHistoryEntry {
         if (placements.isNotEmpty) 'placements': placements,
         if (placements.isNotEmpty) 'seat': seat,
         if (placements.isNotEmpty) 'appearances': appearances,
+        if (aiEngine != null) 'aiEngine': aiEngine,
       };
 
   factory EloHistoryEntry.fromMap(Map<String, dynamic> map) {
@@ -161,6 +164,7 @@ class EloHistoryEntry {
           ? DateTime.fromMillisecondsSinceEpoch(map['timestamp'] as int)
           : DateTime.now(),
       opponentName: map['opponentName'] as String?,
+      aiEngine: map['aiEngine'] as String?,
       score: (map['score'] as num?)?.toDouble(),
       before: map['before'] as int?,
       delta: map['delta'] as int?,
@@ -222,6 +226,7 @@ class EloCalculator {
   }
 }
 
-/// Competition rank is independent of list position and includes tied scores.
+/// Human competition rank excludes AI and provisional players; ties share rank.
 int competitionRank(int rating, Iterable<EloRating> players) =>
-    1 + players.where((p) => !p.provisional && p.rating > rating).length;
+    1 +
+    players.where((p) => !p.isAi && !p.provisional && p.rating > rating).length;

@@ -42,7 +42,9 @@ class SeatConfig {
 }
 
 class MatchConfig {
-  static const currentAiEngine = 'shared-search-v2';
+  static const currentAiEngine = 'shared-search-v3';
+  // Keep the established shared profiles while recording the engine per game.
+  static const currentAiRatingEngine = 'shared-search-v2';
   MatchConfig({
     required this.shape,
     required this.size,
@@ -75,7 +77,8 @@ class MatchConfig {
             seats.any((seat) => seat.id == SeatId.jade))) {
       throw ArgumentError('Legacy Hex requires its original three identities');
     }
-    if (!['shared-search-v1', 'shared-search-v2'].contains(aiEngine) ||
+    if (!['shared-search-v1', 'shared-search-v2', 'shared-search-v3']
+            .contains(aiEngine) ||
         ![1, 2, 3].contains(ratingVersion) ||
         clockSeconds < 0 ||
         clockSeconds > 59940 ||
@@ -101,6 +104,10 @@ class MatchConfig {
   /// Version of the new wire format; old room versions are decoded separately.
   static const wireVersion = 1;
   final String aiEngine;
+  String get aiRatingEngine =>
+      ratingVersion == 3 && aiEngine == 'shared-search-v3'
+          ? currentAiRatingEngine
+          : aiEngine;
   final BoardShape shape;
   final int size;
   final List<SeatConfig> seats;

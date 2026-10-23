@@ -52,7 +52,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   'The winner beats every other seat. All other players receive a loss, without being ranked against one another. Larger games carry proportionally smaller loss penalties. A drawn game counts as a draw for everyone. '
                   'Changes depend on skill estimates and uncertainty.\n\n'
                   'Profiles show an approximate 95% skill range. It narrows as evidence accumulates and describes skill, not a range of leaderboard positions. '
-                  'Ratings are provisional for at least ten games and until uncertainty is sufficiently low. Equal established ratings share a rank.\n\n'
+                  'Ratings are provisional for at least ten games and until uncertainty is sufficiently low. Only humans receive rank numbers; equal established human ratings share a rank.\n\n'
                   'Signed-in players can record completed human, AI and mixed games. Online humans confirm the result. '
                   'Guest games, learning, Court Mode, abandoned games and shared human seats are unrated. '
                   'AI results are reported by the player’s device. '
@@ -180,27 +180,34 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                           ])))
                             else
                               Card(
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Your standing',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium),
-                                            Text(own == null
-                                                ? 'Unrated · complete a rated game'
-                                                : '${own.ratingLabel} · ${own.provisional ? "Provisional · ${own.gamesPlayed} games" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
-                                            if (own?.uncertaintyLabel != null)
-                                              Text(own!.uncertaintyLabel!),
-                                            if (own?.skill != null)
-                                              Text(own!.confidenceLabel),
-                                            if (own != null)
-                                              Text(
-                                                  '${own.wins} wins · ${own.losses} losses · ${own.draws} draws'),
-                                          ]))),
+                                  child: InkWell(
+                                      onTap: () => _openPlayer(own ??
+                                          EloRating(
+                                              id: state.uid!,
+                                              displayName: 'You',
+                                              pool: pool.id)),
+                                      child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Your standing',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium),
+                                                Text(own == null
+                                                    ? 'Unrated · complete a rated game'
+                                                    : '${own.ratingLabel} · ${own.provisional ? "Provisional · ${own.gamesPlayed} games" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
+                                                if (own?.uncertaintyLabel !=
+                                                    null)
+                                                  Text(own!.uncertaintyLabel!),
+                                                if (own?.skill != null)
+                                                  Text(own!.confidenceLabel),
+                                                if (own != null)
+                                                  Text(
+                                                      '${own.wins} wins · ${own.losses} losses · ${own.draws} draws'),
+                                              ])))),
                             if (state.loading) const LinearProgressIndicator(),
                             if (state.errorMessage != null)
                               Card(
@@ -239,7 +246,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                             for (final player in entries)
                               _entry(
                                   player,
-                                  player.provisional
+                                  player.isAi || player.provisional
                                       ? null
                                       : competitionRank(
                                           player.rating, state.leaderboard),
@@ -276,29 +283,20 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               onChanged: (next) {
                 if (next != null) onChanged(next);
               }));
+  void _openPlayer(EloRating player) => Navigator.push<void>(context,
+      MaterialPageRoute(builder: (_) => PlayerDetailScreen(player: player)));
+
   Widget _entry(EloRating rating, int? rank, String? uid) {
-    // AI rows can be merged from outside the bounded top-player query.
-    final displayRank = rating.isAi && !rating.provisional
-        ? ref
-            .watch(playerRankProvider((rating.pool, rating.rating)))
-            .asData
-            ?.value
-        : rank;
     return Card(
         child: InkWell(
-            onTap: rating.gamesPlayed == 0
-                ? null
-                : () => Navigator.push<void>(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => PlayerDetailScreen(player: rating))),
+            onTap: rating.gamesPlayed == 0 ? null : () => _openPlayer(rating),
             child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Wrap(spacing: 12, runSpacing: 6, children: [
-                        if (displayRank != null) Text('#$displayRank'),
+                        if (rank != null) Text('#$rank'),
                         PlayerName(
                             uid: rating.id,
                             fallback: rating.displayName,

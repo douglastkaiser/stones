@@ -1108,7 +1108,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               if (seat.control == SeatControl.ai)
                                 PlayerRatingLabel(
                                   uid:
-                                      'ai_${game.config.aiEngine}_${seat.level.name}',
+                                      'ai_${game.config.aiRatingEngine}_${seat.level.name}',
                                   pool: RatingPool.forConfig(game.config),
                                   fallback: '${seat.level.name} AI',
                                 ),

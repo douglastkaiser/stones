@@ -20,7 +20,7 @@ class PlayerRatingLabel extends ConsumerWidget {
     final name = ref.watch(playerNameProvider(uid)).asData?.value ??
         rating?.displayName ??
         fallback;
-    final rank = rating == null || rating.provisional
+    final rank = rating == null || rating.isAi || rating.provisional
         ? null
         : ref.watch(playerRankProvider((pool.id, rating.rating))).asData?.value;
     return Text(

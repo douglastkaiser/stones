@@ -8,7 +8,7 @@ const project='demo-stones-hex';
 const root=`http://${process.env.FIRESTORE_EMULATOR_HOST??'127.0.0.1:8088'}/v1/projects/${project}/databases/(default)/documents`;
 const room=uid=>doc(uid,'matches','UCHATTT');
 const message=(uid,id='a'.repeat(32))=>doc(uid,'matches/UCHATTT/chat',id);
-const base=()=>({version:1,code:'UCHATTT',host:'host',config:{version:1,ratingVersion:3,aiEngine:'shared-search-v2',shape:'hex',size:2,starter:'ivory',profile:'sharedRoads',seats:[
+const base=()=>({version:1,code:'UCHATTT',host:'host',config:{version:1,ratingVersion:3,aiEngine:'shared-search-v3',shape:'hex',size:2,starter:'ivory',profile:'sharedRoads',seats:[
  {id:'ivory',control:'localHuman',level:'easy'},{id:'charcoal',control:'onlineHuman',level:'easy'}]},
  owners:{ivory:'host',charcoal:null},styles:{ivory:'morocco',charcoal:'standard'},boardTheme:'celestial',moves:[],resigned:null,timedOut:null,aiRunner:null,aiLeaseAt:null,clock:null,
  startedAt:null,lastMoveAt:null,finishedAt:null});

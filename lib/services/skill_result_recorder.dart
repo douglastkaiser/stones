@@ -234,6 +234,8 @@ class _SkillResultRecorder {
             'opponentName': '${participants.length}-player game',
             'seat': index,
             'appearances': participants.where((p) => p == id).length,
+            'aiEngine':
+                (source['config'] as Map)['aiEngine'] ?? RatingEvidence.engine,
           });
         }
         return receipt;

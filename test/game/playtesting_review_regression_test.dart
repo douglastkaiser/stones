@@ -97,13 +97,15 @@ void main() {
     expect(updates.first.deltas, isNotEmpty);
     expect(updates.last.deltas[SeatId.ivory]!.delta, 10);
   });
-  test('current v2 AI replaces historical leaderboard profiles', () async {
+  test(
+      'updated AI keeps existing rating profiles and hides historical placeholders',
+      () async {
     final repo = FakeRatings();
     const bot = EloRating(
         id: 'ai_shared-search-v2_expert',
         displayName: 'Expert AI',
         isAi: true,
-        engineVersion: 'shared-search-v2',
+        engineVersion: 'shared-search-v3',
         gamesPlayed: 1);
     repo.values = [
       bot,
@@ -135,7 +137,7 @@ void main() {
           id: 'ai_shared-search-v2_expert',
           displayName: 'Expert AI',
           isAi: true,
-          engineVersion: 'shared-search-v2',
+          engineVersion: 'shared-search-v3',
           gamesPlayed: 10),
     ]);
     await Future<void>.delayed(Duration.zero);

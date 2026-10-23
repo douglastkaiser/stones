@@ -1,0 +1,11 @@
+{
+  "engine": "shared-search-v3",
+  "source": "lib/game/match_ai_engine.dart",
+  "sha256": "c5cec1340ba4bf3eae138d749cbb4d4d76bdc15bf011d16399e2db67641ab1fb",
+  "frozenSource": "tools/ai_baseline/engine.dart",
+  "qualification": "not yet run",
+  "frozenSourceSha256": "71f9aece1b7ef200eb5788c386b7b4fcf69d2826ce98064808220de9449ac0f7",
+  "nativeExecutableSha256": "c26e507da9f8f294c557668f8999c576ddf6f17fd3ce164a8a4d36ec4acbc977",
+  "nativeExecutablePath": "/tmp/stones-ai-baseline",
+  "dependenciesManifest": "tools/ai_baseline/dependencies.sha256"
+}

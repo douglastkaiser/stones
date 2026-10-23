@@ -106,7 +106,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     final pool = player.pool == 'overall'
         ? const RatingPool.overall()
         : RatingPool.all.where((pool) => pool.id == player.pool).firstOrNull;
-    final rank = player.provisional
+    final rank = player.isAi || player.provisional
         ? null
         : ref
             .watch(playerRankProvider((player.pool, player.rating)))
@@ -149,7 +149,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                 Text(player.uncertaintyLabel!),
                 Text(player.confidenceLabel),
                 const Text(
-                    'The range estimates skill uncertainty. Rank is your current leaderboard position.'),
+                    'The range estimates skill uncertainty. Rank is your current position among established human players.'),
               ],
               const SizedBox(height: 16),
               Wrap(spacing: 24, runSpacing: 16, children: [
@@ -257,25 +257,34 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                           : Colors.grey,
                 ),
                 const SizedBox(width: 8),
-                // Opponent name
+                // Opponent name and the engine used for this rating result.
                 Expanded(
-                  child: Text(
-                    entry.placements.isNotEmpty &&
-                            entry.seat < entry.placements.length
-                        ? entry.appearances > 1
-                            ? '${entry.appearances} AI seats · ${entry.opponentName}'
-                            : 'Placed ${ResultShareData.ordinal(entry.placements[entry.seat])} · ${entry.opponentName}'
-                        : entry.score == 1.0
-                            ? 'Won vs ${entry.opponentName ?? "Unknown"}'
-                            : entry.score == 0.0
-                                ? 'Lost vs ${entry.opponentName ?? "Unknown"}'
-                                : 'Drew vs ${entry.opponentName ?? "Unknown"}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color:
-                          isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.placements.isNotEmpty &&
+                                entry.seat < entry.placements.length
+                            ? entry.appearances > 1
+                                ? '${entry.appearances} AI seats · ${entry.opponentName}'
+                                : 'Placed ${ResultShareData.ordinal(entry.placements[entry.seat])} · ${entry.opponentName}'
+                            : entry.score == 1.0
+                                ? 'Won vs ${entry.opponentName ?? "Unknown"}'
+                                : entry.score == 0.0
+                                    ? 'Lost vs ${entry.opponentName ?? "Unknown"}'
+                                    : 'Drew vs ${entry.opponentName ?? "Unknown"}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? Colors.grey.shade300
+                              : Colors.grey.shade700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (widget.player.isAi && entry.aiEngine != null)
+                        Text('AI ${entry.aiEngine!.split('-').last}',
+                            style: Theme.of(context).textTheme.labelSmall),
+                    ],
                   ),
                 ),
                 // Rating after game
