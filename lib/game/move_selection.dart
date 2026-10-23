@@ -14,13 +14,14 @@ class MoveSelection {
   Step? direction;
   MatchMove? _placement;
   final List<int> _drops = [];
-  final List<List<int>> _history = [];
+  final List<(List<int>, Step?)> _history = [];
   String? feedback;
 
   List<int> get drops => List.unmodifiable(_drops);
   int get dropped => _drops.fold(0, (sum, value) => sum + value);
   int get remaining => source == null ? 0 : carry - dropped;
   bool get started => _drops.isNotEmpty;
+  bool get canUndoDrop => _history.isNotEmpty;
   Cell? get current {
     var cell = source;
     for (final _ in _drops) {
@@ -75,6 +76,9 @@ class MoveSelection {
 
   void setCarry(int value) {
     if (started || value < 1 || value > _maximum) return;
+    // A changed pickup starts a new draft history; old drops used a different
+    // hand and must never be restored by Undo after returning to pickup.
+    if (carry != value) _history.clear();
     carry = value;
     feedback = null;
   }
@@ -91,7 +95,7 @@ class MoveSelection {
     direction = move.direction;
     for (final drop in move.drops) {
       for (var i = 0; i < drop; i++) {
-        _history.add(List.of(_drops));
+        _history.add((List.of(_drops), direction));
         if (i == 0) {
           _drops.add(1);
         } else {
@@ -117,6 +121,7 @@ class MoveSelection {
     if (source != null) {
       if (cell == source && !started) {
         inspected = source;
+        setCarry(carry == 1 ? _maximum : carry - 1);
         return false;
       }
       stage(game, cell);
@@ -187,11 +192,37 @@ class MoveSelection {
       feedback = candidate.error;
       return;
     }
-    _history.add(List.of(_drops));
+    _history.add((List.of(_drops), direction));
     _drops
       ..clear()
       ..addAll(nextDrops);
     direction = step;
+    inspected = source;
+    feedback = null;
+  }
+
+  /// Whether changing the current destination preserves a legal spread prefix.
+  bool canAdjustDrop(MatchState game, int delta) {
+    if (!started || (delta != -1 && delta != 1)) return false;
+    final next = List<int>.of(_drops);
+    next[next.length - 1] += delta;
+    if (next.last == 0) next.removeLast();
+    return MatchRules.previewSpread(
+          game,
+          source!,
+          carry,
+          next.isEmpty ? null : direction,
+          next,
+        ).position !=
+        null;
+  }
+
+  void adjustDrop(MatchState game, int delta) {
+    if (!canAdjustDrop(game, delta)) return;
+    _history.add((List.of(_drops), direction));
+    _drops[_drops.length - 1] += delta;
+    if (_drops.last == 0) _drops.removeLast();
+    if (!started) direction = null;
     inspected = source;
     feedback = null;
   }
@@ -202,10 +233,11 @@ class MoveSelection {
 
   void undoDrop() {
     if (_history.isEmpty) return;
+    final (drops, previousDirection) = _history.removeLast();
     _drops
       ..clear()
-      ..addAll(_history.removeLast());
-    if (!started) direction = null;
+      ..addAll(drops);
+    direction = started ? previousDirection : null;
     inspected = source;
     feedback = null;
   }

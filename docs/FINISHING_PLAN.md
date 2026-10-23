@@ -17,6 +17,12 @@ remain pending. The owner-requested [feedback flow](FEEDBACK.md) implements the
 support part of packet 11; account lifecycle and release gates remain pending.
 Later packets have not been represented as complete.
 
+The 2026-10-23 [stack-control follow-up](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
+implements the owner's piece-depth, on-board hold expansion and simultaneous
+board/count-control requests. These refinements preserve the full tray and atomic
+confirmation. They do not complete a finishing packet or establish physical-device,
+new-player or deployment acceptance; see the current release record.
+
 ## Product promise
 
 **A beautiful, welcoming place to learn and play Tak with friends, together or

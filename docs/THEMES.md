@@ -14,6 +14,13 @@ with ornamental inlays and engravings contained within each playing square.
 | Morocco | Cedar/brass frame, teal trim, interlaced zellige geometry | Glazed ivory/teal with brass eight-point rosettes and petal inlays | Pointed architectural arch |
 | Kyoto | Indigo frame, bamboo grain, seigaiha wave pattern | Cream/indigo lacquer with gold blossom medallions | Tiered crown with gilt roof bands |
 
+The 2026-10-23 shared painter adds bounded side thickness, beveled face lighting
+and contact shadows to every piece set. Ownership palettes, type silhouettes,
+ornamentation, saved indices and preview opacity remain intact. The same painter
+serves gameplay, carried/preview stones, inspection and settings samples; the
+[stack interaction record](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
+contains current verification and device/performance limits.
+
 Settings presents paired sets with real board/piece previews. All five can be
 inspected while locked. Either old board or piece achievement unlocks the full
 corresponding set; achievement reward copy names the full set. Selecting Use

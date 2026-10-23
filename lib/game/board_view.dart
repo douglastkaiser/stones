@@ -269,6 +269,7 @@ class _BoardViewState extends State<BoardView> {
                             enabled: onCell != null,
                             selected: selected == cell,
                             child: StackInspection(
+                              expandOnHold: true,
                               label: 'Stack ${cell.x}, ${cell.y}',
                               onInspect: widget.onInspect == null
                                   ? null
@@ -313,7 +314,11 @@ class _BoardViewState extends State<BoardView> {
                                         Positioned.fill(
                                           child: RepaintBoundary(
                                             child: PieceStackView(
-                                              pieces: _visuals(cell),
+                                              pieces: expanded &&
+                                                      original != null &&
+                                                      selected == cell
+                                                  ? _visuals(cell, before: true)
+                                                  : _visuals(cell),
                                               expanded: expanded,
                                             ),
                                           ),

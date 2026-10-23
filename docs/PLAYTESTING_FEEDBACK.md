@@ -19,6 +19,12 @@ open. See [release readiness](RELEASE_READINESS.md) for publication prerequisite
 The dated validation and original production diagnosis below are historical.
 For subsequent sign-in remediation, see [Google login recovery](GOOGLE_SIGN_IN_FIX.md).
 
+The subsequent 2026-10-23 [stack-control revision](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
+adds solid piece depth, restores hold-to-expand in place and makes board taps and
+minus/plus available together for pickup and current-drop revision. Its pre-commit
+audit, lifecycle repair and fresh source validation are recorded in that contract;
+the AI test counts above remain evidence for their own earlier checkpoint.
+
 ## Original verified findings
 
 - BOARD-01: Hex's hand-written fitting denominator overestimated its extent.

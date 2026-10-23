@@ -1,5 +1,36 @@
 # Current release qualification
 
+## Piece depth and stack controls source candidate, 2026-10-23
+
+Audited source revision based on `7e0cd72`; the owner approved committing and
+pushing it to main after the final audit. The
+[stack interaction contract](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
+records the implementation and verification: solid piece depth for all five sets,
+on-board hold expansion with the persistent full tray retained, and simultaneous
+board/minus-plus pickup and current-drop controls. PLAY-02–05, PREF-04–05 and
+COMPAT-08 are updated. Current instructions distinguish shared play from legacy
+inspectors and old pending-drop controls.
+
+The original revision passed 1,778 Flutter tests, strict analysis and production
+web compilation on Linux with Flutter 3.47.7 / Dart 3.13.5. The pre-commit audit
+reproduced and repaired an inspection-content lifecycle edge case and empty-cell
+hold callbacks consuming taps. Added checks cover both repairs, hold/right-click
+during drafts and direction restoration through undo.
+
+The final unchanged candidate passes 1,784 full-suite tests with two concurrent
+test processes, 99 focused checks, strict analysis, production web compilation,
+formatting and diff whitespace checks. The
+[source-bound audit record](qa/stack-controls-verification.json) records exact
+commands, source/log hashes and remaining acceptance limits; the stack contract
+preserves the initial and final stages separately.
+
+These results establish local source qualification. Source promotion to main is
+authorized; hosted CI results remain separate evidence. No hosted deployment,
+Android build, browser-runtime/device trial or online multi-client trial is
+claimed for this UI revision.
+Existing v3 AI/backend publication gates below still apply; these UI changes do
+not change room/save schemas, authentication, ratings or Firestore rules.
+
 ## AI and human standings source candidate, 2026-10-23
 
 The [AI upgrade record](AI_UPGRADES.md) and [skill-rating contract](SKILL_RATINGS.md)

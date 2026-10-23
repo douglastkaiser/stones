@@ -163,8 +163,8 @@ class PieceStackView extends StatelessWidget {
   }
 }
 
-/// Hover previews never capture movement. Hold/right-click opens a persistent,
-/// scrollable inspector, so fingers do not obscure the pieces being inspected.
+/// Shared boards can fan layers while held; explicit inspection remains available.
+/// Legacy callers retain their persistent hold inspector.
 class StackInspection extends StatefulWidget {
   const StackInspection(
       {super.key,
@@ -172,10 +172,12 @@ class StackInspection extends StatefulWidget {
       required this.label,
       required this.builder,
       this.inspectionPieces,
+      this.expandOnHold = false,
       this.onInspect});
   final List<StackVisualPiece> pieces;
   final List<StackVisualPiece>? inspectionPieces;
   final VoidCallback? onInspect;
+  final bool expandOnHold;
   final String label;
   final Widget Function(bool expanded) builder;
   @override
@@ -189,11 +191,18 @@ class _StackInspectionState extends State<StackInspection> {
   final Set<int> _pointers = {};
   bool _inspecting = false;
   late List<StackVisualPiece> _contents;
+  late List<StackVisualPiece> _inspectionContents;
+
+  bool get _canHoldExpand =>
+      widget.expandOnHold &&
+      (widget.inspectionPieces ?? widget.pieces).isNotEmpty;
 
   @override
   void initState() {
     super.initState();
     _contents = List.unmodifiable(widget.pieces);
+    _inspectionContents =
+        List.unmodifiable(widget.inspectionPieces ?? widget.pieces);
   }
 
   void _expand(bool value) {
@@ -226,9 +235,12 @@ class _StackInspectionState extends State<StackInspection> {
     super.didUpdateWidget(oldWidget);
     // Value comparison includes cosmetics and preview state, even if callers
     // mutate or recreate their lists. Reset pending timers as well as expansion.
-    if (!listEquals(_contents, widget.pieces)) {
+    final inspection = widget.inspectionPieces ?? widget.pieces;
+    if (!listEquals(_contents, widget.pieces) ||
+        !listEquals(_inspectionContents, inspection)) {
       _timer?.cancel();
       _contents = List.unmodifiable(widget.pieces);
+      _inspectionContents = List.unmodifiable(inspection);
       _expanded = false;
       _schedule();
     }
@@ -313,7 +325,9 @@ class _StackInspectionState extends State<StackInspection> {
           (widget.inspectionPieces ?? widget.pieces).isEmpty ? null : _inspect,
       hint: (widget.inspectionPieces ?? widget.pieces).isEmpty
           ? null
-          : 'Hold or right-click to inspect the stack',
+          : widget.expandOnHold
+              ? 'Hold to expand; right-click or use Inspect stack for details'
+              : 'Hold or right-click to inspect the stack',
       customSemanticsActions: (widget.inspectionPieces ?? widget.pieces).isEmpty
           ? null
           : {const CustomSemanticsAction(label: 'Inspect stack'): _inspect},
@@ -331,15 +345,26 @@ class _StackInspectionState extends State<StackInspection> {
                 _pointers.add(event.pointer);
                 _expand(false);
               },
-              onPointerUp: (event) => _pointers.remove(event.pointer),
-              onPointerCancel: (event) => _pointers.remove(event.pointer),
+              onPointerUp: (event) {
+                _pointers.remove(event.pointer);
+                if (widget.expandOnHold) _expand(false);
+              },
+              onPointerCancel: (event) {
+                _pointers.remove(event.pointer);
+                if (widget.expandOnHold) _expand(false);
+              },
               child: GestureDetector(
                   excludeFromSemantics: true,
                   behavior: HitTestBehavior.opaque,
-                  onLongPress:
-                      (widget.inspectionPieces ?? widget.pieces).isEmpty
-                          ? null
-                          : _inspect,
+                  onLongPress: widget.expandOnHold ||
+                          (widget.inspectionPieces ?? widget.pieces).isEmpty
+                      ? null
+                      : _inspect,
+                  onLongPressStart:
+                      _canHoldExpand ? (_) => _expand(true) : null,
+                  onLongPressEnd: _canHoldExpand ? (_) => _expand(false) : null,
+                  onLongPressCancel:
+                      _canHoldExpand ? () => _expand(false) : null,
                   onSecondaryTap:
                       (widget.inspectionPieces ?? widget.pieces).isEmpty
                           ? null

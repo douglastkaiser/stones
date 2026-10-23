@@ -93,6 +93,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+      'held source collapses when its original inspection layers change',
+      (tester) async {
+    var original = [visual(PieceType.flat), visual(PieceType.capstone)];
+    late StateSetter update;
+    await tester.pumpWidget(MaterialApp(
+        home: Center(
+            child: SizedBox(
+                width: 80,
+                height: 80,
+                child: StatefulBuilder(builder: (context, setState) {
+                  update = setState;
+                  return StackInspection(
+                      label: 'Lifted source',
+                      pieces: const [],
+                      inspectionPieces: original,
+                      expandOnHold: true,
+                      builder: (expanded) =>
+                          Text(expanded ? 'Expanded' : 'Collapsed'));
+                })))));
+    final held = await tester
+        .startGesture(tester.getCenter(find.byType(StackInspection)));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Expanded'), findsOneWidget);
+    update(() => original = [visual(PieceType.standing)]);
+    await tester.pump();
+    expect(find.text('Collapsed'), findsOneWidget);
+    await held.up();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('hold expansion does not consume taps on empty cells',
+      (tester) async {
+    var taps = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: Material(
+            child: Center(
+                child: SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: StackInspection(
+                      label: 'Empty cell',
+                      pieces: const [],
+                      expandOnHold: true,
+                      builder: (_) => InkWell(
+                          onTap: () => taps++, child: const SizedBox.expand()),
+                    ))))));
+    await tester.longPress(find.byType(InkWell));
+    await tester.pumpAndSettle();
+    expect(taps, 1,
+        reason: 'An empty cell retains its original tap recognizer');
+    expect(find.byType(BottomSheet), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('repeated inspection requests open just one snapshot',
       (tester) async {
     final pieces = [visual(PieceType.flat), visual(PieceType.capstone)];

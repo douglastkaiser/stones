@@ -1,5 +1,26 @@
 # Shared piece stacks
 
+## Current shared controls (2026-10-23)
+
+New Square and Hex matches and learning use `lib/game/`, with the same two-to-four
+seat engine and controls. [Stack inspection and movement](STACK_INTERACTION.md)
+is the current interaction contract; [supported features](SUPPORTED_FEATURES.md)
+tracks PLAY-02–05, PREF-04–05 and COMPAT-08.
+
+- Select a stack at its legal maximum. Repeated source taps take one fewer stone,
+  wrapping from one to maximum; layer selection and minus/plus remain available.
+- Hold fans up to five top layers inside the cell until release/cancel. Tap,
+  right-click or accessible inspection retains access to the full scrollable tray.
+  Legacy boards keep their hold-to-open-sheet behavior.
+- Tap/drag to stage one bottom stone; tap the current destination or use plus to
+  add one. Minus returns one to hand and removes an empty destination. Removing
+  all drops restores pickup selection; Undo can restore that removal. Changing
+  the pickup amount starts fresh drop history.
+- Confirm submits a spread only after the hand is empty. Board taps/releases
+  never submit spreads. Placement retains preview/second-tap confirmation.
+
+## Historical and legacy implementation record
+
 The 2026-10-19 shared-play implementation is documented in
 [Stack inspection and movement](STACK_INTERACTION.md). It replaces the old
 complete-move preview with explicit carried/staged stones and a persistent tray.

@@ -256,9 +256,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             'During the opening exchange each player places the next player’s flat. '
             'Then place your own flat, wall or cap on an empty cell, or move a stack you control.\n\n'
             'Tap an empty cell to preview; tap it again to place. Tap a stack to see its stones '
-            'and choose the top portion to take. Tap a neighbor to drop one bottom stone in preview. '
+            'and choose the top portion to take with +/−, a layer, or repeated source taps (fewer, then wrap). Hold a stack to expand it on the board. Tap a neighbor to drop one bottom stone in preview. '
             'Tap there again to add another, or tap the next cell to continue straight. '
-            'Drop remaining here stages the rest. Confirm move commits the displayed result. '
+            'Use +/− to revise the current drop, or tap it to add one. Drop remaining here stages the rest. Confirm move commits the displayed result. '
             'Undo last drop revises; Cancel discards the draft. Inspect lets you examine another stack.\n\n'
             'Square has four directions; Hex has six. Carry is limited by the board’s longest row. '
             'A lone capstone can flatten a wall only at the final drop.\n\n'
@@ -777,7 +777,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         spacing: 4,
         alignment: WrapAlignment.center,
         children: [
-          if (source != null && _selection.started)
+          if (source != null && _selection.canUndoDrop)
             IconButton(
               tooltip: 'Undo last drop',
               onPressed:
@@ -1053,7 +1053,28 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               inspect,
             ],
           )
-        else if (hand.isEmpty)
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Drop fewer stones',
+                onPressed: match.canPlay && _selection.canAdjustDrop(game, -1)
+                    ? () => setState(() => _selection.adjustDrop(game, -1))
+                    : null,
+                icon: const Icon(Icons.remove),
+              ),
+              Flexible(child: Text('Drop ${_selection.drops.last}')),
+              IconButton(
+                tooltip: 'Drop more stones',
+                onPressed: match.canPlay && _selection.canAdjustDrop(game, 1)
+                    ? () => setState(() => _selection.adjustDrop(game, 1))
+                    : null,
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+        if (_selection.started && hand.isEmpty)
           const Text('All stones staged · ready to confirm'),
         if (hand.isNotEmpty)
           StackMoveTray.nextDrop(hand.first, styles,

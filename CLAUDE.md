@@ -115,6 +115,11 @@ The project uses `flutter analyze --fatal-infos` which treats warnings AND infos
 
 ## Architecture Notes
 
+Use Flutter 3.47.7, as pinned in CI. For board controls/rendering, follow the
+[shared interaction regression requirements](AGENTS.md#shared-interaction-regression-contract)
+and [current stack contract](docs/STACK_INTERACTION.md); use historical Square/Hex
+control descriptions only for their legacy adapters.
+
 ### AI System (`lib/game/`)
 - `match_ai.dart` - Shared AI entry point, native/web dispatch and optional confirmed-position history
 - `match_ai_engine.dart` - Versioned search; v3 targets 1/1/2/3 full table rounds for Easy/Medium/Hard/Expert, with selective mandatory first-round coverage
@@ -132,6 +137,10 @@ See [the rules audit](docs/TAK_RULES.md) and [development map](docs/DEVELOPMENT.
 for current mechanics, regression coverage, and known online/puzzle gaps.
 
 ### Key Directories
+- `lib/game/` - Primary shared Square/Hex engine, controller, move drafts and UI
+- `lib/widgets/piece_stack_view.dart`, `procedural_painters.dart` - Shared layers,
+  inspection gestures and piece rendering for gameplay and cosmetic previews
+- `lib/hex/` - Legacy Hex compatibility adapters and old-room controls
 - `lib/models/` - Game state, board, pieces
 - `lib/providers/` - Riverpod state management
 - `lib/screens/` - UI screens

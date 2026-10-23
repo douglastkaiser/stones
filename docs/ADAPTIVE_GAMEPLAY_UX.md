@@ -17,8 +17,9 @@ unchanged. This is engineering validation, not an A+ usability-study result.
   Tapping a tile opens its details. Narrow app bars group secondary commands.
   During play, audio settings live in the toolbar/menu instead of floating over
   the move buttons; leaving the match restores the app-wide audio button.
-- Confirm, Cancel and spread Undo stay outside the scrolling content. Carry,
-  next-drop guidance and Drop remaining sit immediately above them. This compact
+- Confirm, Cancel and spread Undo stay outside the scrolling content. Undo also
+  remains available after minus removes the last destination. Pickup/current-drop
+  minus/plus, next-drop guidance and Drop remaining sit immediately above them. This compact
   section can scroll at large text sizes or with a keyboard; the expanded stack
   inspector stays in secondary content and uses the available height.
 - A fit view provides an overview. Zoom in initially targets a 48-logical-pixel
@@ -38,6 +39,12 @@ unchanged. This is engineering validation, not an A+ usability-study result.
 `MatchTableLayout` adds optional move-dock, board-tools and height-aware controls
 slots. `BoardViewportController` owns presentation-only zoom and focus state;
 `BoardView` exposes a cell-focus callback. Existing engine contracts are retained.
+
+The [2026-10-23 stack control revision](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
+adds source-tap pickup cycling and temporary hold-to-expand inside the board,
+while keeping the persistent tray and stable viewport. The measurements below
+remain evidence for the original adaptive-layout revision, not new measurements
+of these added interactions.
 
 ## Measured before/after
 

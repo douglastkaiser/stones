@@ -16,6 +16,7 @@ import 'package:stones/game/match_state.dart';
 import 'package:stones/game/stack_move_tray.dart';
 import 'package:stones/models/piece.dart';
 import 'package:stones/widgets/audio_controls.dart';
+import 'package:stones/widgets/piece_stack_view.dart';
 import 'package:stones/theme/tavern_theme.dart';
 import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
@@ -117,6 +118,115 @@ void main() {
   });
 
   for (final shape in BoardShape.values) {
+    testWidgets('$shape hold fans layers without selecting or staging',
+        (tester) async {
+      final controller = await mount(tester, shape);
+      final original = controller.state.game;
+      final bounds = tester.getRect(find.byType(BoardView));
+      Finder view(Cell target) => find.descendant(
+          of: cell(target), matching: find.byType(PieceStackView));
+      final gesture =
+          await tester.startGesture(tester.getCenter(cell(const Cell(0, 0))));
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(tester.widget<PieceStackView>(view(const Cell(0, 0))).expanded,
+          isTrue);
+      expect(board(tester).selected, isNull);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.widget<PieceStackView>(view(const Cell(0, 0))).expanded,
+          isFalse);
+      await tapVisible(tester, cell(const Cell(0, 0)));
+      await tester.pumpAndSettle();
+      final held =
+          await tester.startGesture(tester.getCenter(cell(const Cell(0, 0))));
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(tester.widget<PieceStackView>(view(const Cell(0, 0))).expanded,
+          isTrue);
+      expect(tester.widget<PieceStackView>(view(const Cell(0, 0))).pieces,
+          hasLength(3));
+      await held.cancel();
+      await tester.pumpAndSettle();
+      expect(tester.widget<PieceStackView>(view(const Cell(0, 0))).expanded,
+          isFalse);
+      expect(board(tester).carried, hasLength(3));
+      expect(board(tester).drops, isEmpty);
+      expect(tester.getRect(find.byType(BoardView)), bounds);
+      expect(controller.state.game, same(original));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('$shape held movement and right-click preserve a staged draft',
+        (tester) async {
+      final controller = await mount(tester, shape);
+      await tapVisible(tester, cell(const Cell(0, 0)));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, cell(const Cell(1, 0)));
+      await tester.pumpAndSettle();
+      final held =
+          await tester.startGesture(tester.getCenter(cell(const Cell(0, 0))));
+      await tester.pump(const Duration(milliseconds: 600));
+      await held.moveBy(const Offset(35, 0));
+      await held.up();
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, [1]);
+      expect(board(tester).carried, hasLength(2));
+      final right = await tester.startGesture(
+          tester.getCenter(cell(const Cell(0, 1))),
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryMouseButton);
+      await right.up();
+      await tester.pumpAndSettle();
+      expect(tester.widget<StackMoveTray>(find.byType(StackMoveTray)).label,
+          contains('0,1'));
+      expect(board(tester).drops, [1]);
+      expect(board(tester).carried, hasLength(2));
+      expect(controller.state.game!.ply, 2);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('$shape pickup and drop buttons stay interchangeable with taps',
+        (tester) async {
+      final controller = await mount(tester, shape);
+      await tapVisible(tester, cell(const Cell(0, 0)));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, cell(const Cell(0, 0)));
+      await tester.pumpAndSettle();
+      expect(board(tester).carried, hasLength(2));
+      await tapVisible(tester, find.byTooltip('Take more stones'));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, cell(const Cell(1, 0)));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byTooltip('Drop more stones'));
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, [2]);
+      await tapVisible(tester, cell(const Cell(2, 0)));
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, [2, 1]);
+      expect(
+          tester
+              .widget<IconButton>(find.byWidgetPredicate(
+                  (w) => w is IconButton && w.tooltip == 'Drop more stones'))
+              .onPressed,
+          isNull);
+      await tapVisible(tester, find.byTooltip('Drop fewer stones'));
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, [2]);
+      await tapVisible(tester, find.byTooltip('Drop fewer stones'));
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, [1]);
+      await tapVisible(tester, find.byTooltip('Drop fewer stones'));
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, isEmpty);
+      expect(find.byTooltip('Take more stones'), findsOneWidget);
+      await tapVisible(tester, find.byTooltip('Undo last drop'));
+      await tester.pumpAndSettle();
+      expect(board(tester).drops, [1]);
+      expect(controller.state.game!.ply, 2);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
     for (final size in [const Size(390, 844), const Size(1366, 900)]) {
       for (final brightness in Brightness.values) {
         testWidgets(
@@ -312,8 +422,7 @@ void main() {
     });
   }
 
-  testWidgets(
-      'semantic taps and hold inspect without submitting a single-stone spread',
+  testWidgets('semantic taps and inspection retain a single-stone draft',
       (tester) async {
     final semantics = tester.ensureSemantics();
     try {
@@ -334,7 +443,8 @@ void main() {
       tapSemantic(const Cell(1, 0));
       await tester.pumpAndSettle();
       expect(controller.state.game!.ply, 2);
-      await tester.longPress(cell(const Cell(0, 1)));
+      final target = tester.getSemantics(cell(const Cell(0, 1)));
+      target.owner!.performAction(target.id, SemanticsAction.longPress);
       await tester.pumpAndSettle();
       expect(find.byType(BottomSheet), findsNothing);
       expect(board(tester).drops, [1]);

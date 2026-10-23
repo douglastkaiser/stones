@@ -1,5 +1,30 @@
 # Common play selection and controls
 
+## Current shared controls (2026-10-23)
+
+New Square and Hex matches and learning use `lib/game/`, with the same two-to-four
+seat engine and controls. [Stack inspection and movement](STACK_INTERACTION.md)
+is the current interaction contract; [supported features](SUPPORTED_FEATURES.md)
+tracks PLAY-02–05, PREF-04–05 and COMPAT-08.
+
+- Select a stack at its legal maximum. Repeated source taps take one fewer stone,
+  wrapping from one to maximum; layer selection and minus/plus remain available.
+- Hold fans up to five top layers inside the cell until release/cancel. Tap,
+  right-click or accessible inspection retains access to the full scrollable tray.
+  Legacy boards keep their hold-to-open-sheet behavior.
+- Tap/drag to stage one bottom stone; tap the current destination or use plus to
+  add one. Minus returns one to hand and removes an empty destination. Removing
+  all drops restores pickup selection; Undo can restore that removal. Changing
+  the pickup amount starts fresh drop history.
+- Confirm submits a spread only after the hand is empty. Board taps/releases
+  never submit spreads. Placement retains preview/second-tap confirmation.
+
+## Historical selector and legacy control record (2026-10-10)
+
+The defaults, isolated Hex controls and verification counts below describe the
+October 10 implementation. For current setup defaults and shared seat controls,
+use [unified play](UNIFIED_PLAY_PLAN.md) and the feature inventory above.
+
 Updated 2026-10-10. These are application features, not changes to game legality.
 
 The home screen asks **Choose your board** (Square / Hex), followed by

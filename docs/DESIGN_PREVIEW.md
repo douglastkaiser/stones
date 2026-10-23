@@ -5,6 +5,12 @@ The preview is isolated from real accounts, preferences, rooms and achievements:
 Its startup page does not load the production Analytics bootstrap. UI typography
 is bundled with its open-source licenses, with no runtime font requests.
 
+The hosted URLs below identify historical preview builds. Current local source
+uses the [2026-10-23 stack contract](STACK_INTERACTION.md): hold expands on-board
+top layers, the full tray remains available, and board taps/minus-plus work
+together for pickup and drop revision. Shared painters give pieces visible depth.
+This source update does not update those hosted previews or establish deployment.
+
 ## What to review
 
 1. Home: the visual identity, Square/Hex hierarchy, Join/My games visibility and

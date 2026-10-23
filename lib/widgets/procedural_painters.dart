@@ -23,7 +23,7 @@ class ThemedPiecePainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.scale(size.width / 100, size.height / 100);
-    final path = Path();
+    var path = Path();
     if (type == PieceType.flat) {
       if (isLightPlayer) {
         path.moveTo(16, 9);
@@ -82,8 +82,28 @@ class ThemedPiecePainter extends CustomPainter {
           path.close();
       }
     }
-    canvas.drawPath(path.shift(const Offset(2, 5)),
-        Paint()..color = Colors.black.withValues(alpha: .25));
+    // Reserve space for thickness and a contact shadow inside every caller's
+    // bounds. The upper face keeps the established owner/type silhouette.
+    path = path
+        .transform(Matrix4.diagonal3Values(.96, .88, 1).storage)
+        .shift(const Offset(1, 1));
+    canvas.drawPath(
+        path.shift(const Offset(2, 10)),
+        Paint()
+          ..color = Colors.black.withValues(alpha: .32)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+    final sidePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color.lerp(colors.secondary, Colors.black, .18)!,
+          Color.lerp(colors.border, Colors.black, .45)!,
+        ],
+      ).createShader(const Rect.fromLTWH(0, 0, 100, 100));
+    for (var depth = 8; depth > 0; depth--) {
+      canvas.drawPath(path.shift(Offset(1, depth.toDouble())), sidePaint);
+    }
     canvas.drawPath(
         path,
         Paint()
@@ -127,6 +147,22 @@ class ThemedPiecePainter extends CustomPainter {
       case PieceStyle.kyoto:
         _ornament(canvas, BoardTheme.kyoto, type: type);
     }
+    // An inset light rim and darker lower bevel separate the face from its
+    // sides without washing out material engraving or ownership colors.
+    canvas.drawPath(
+      path.shift(const Offset(1.5, 2)),
+      Paint()
+        ..color = Colors.white.withValues(alpha: .30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+    canvas.drawPath(
+      path.shift(const Offset(-1, -2)),
+      Paint()
+        ..color = colors.border.withValues(alpha: .45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
     canvas.restore();
     canvas.drawPath(
         path,
@@ -154,11 +190,11 @@ class ThemedPiecePainter extends CustomPainter {
     if (type == PieceType.capstone) {
       canvas.drawRRect(
           RRect.fromRectAndRadius(
-              const Rect.fromLTWH(10, 81, 80, 12), const Radius.circular(4)),
+              const Rect.fromLTWH(11, 72, 77, 10), const Radius.circular(4)),
           Paint()..color = colors.secondary);
       canvas.drawLine(
-          const Offset(12, 82),
-          const Offset(88, 82),
+          const Offset(13, 73),
+          const Offset(86, 73),
           Paint()
             ..color = colors.border
             ..strokeWidth = 2);

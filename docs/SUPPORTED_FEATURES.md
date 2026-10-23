@@ -3,6 +3,11 @@
 Updated 2026-10-23 against main baseline `5053a0f` plus the ranking/large-board
 follow-up in [skill ratings](SKILL_RATINGS.md#ranking-and-large-board-ai-follow-up-2026-10-23)
 and [v3 AI upgrades](AI_UPGRADES.md).
+The 2026-10-23 [stack-control revision](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
+adds bounded piece depth, restores on-board hold expansion and supports board
+taps alongside pickup/current-drop minus-plus controls. Its implementation and
+local qualification are distinct from publication and device acceptance.
+
 This is the durable reference for what Stones
 does, what it is intended to do, and what future changes must preserve. Its scope
 is the **entire available history**: 489 reachable commits from the initial
@@ -130,15 +135,26 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
   A new turn/restored position defaults the piece choice to Flat.
 - **PLAY-02 · Inspectable stacks:** inspect either player's stack, even when it is not
   your turn or the game is finished. Read every layer in order, with ownership,
-  piece type and theme intact; expand/scroll without resizing the board.
+  piece type and theme intact; expand/scroll without resizing the board. In shared
+  Square/Hex play, hold fans up to five top layers directly on the board until
+  release/cancel; changed display or original inspection layers reset expansion.
+  Empty cells retain their tap recognition. Explicit inspection and the full
+  scrollable tray remain available.
 - **PLAY-03 · Explicit pickup:** select a top portion by layer or minus/plus, respecting
-  the carry limit. Repeated source taps do not unexpectedly change the quantity.
+  the carry limit. Initial selection takes the legal maximum; subsequent source
+  taps take one fewer and wrap from one to maximum. Buttons and layer selection
+  remain available together until dropping begins.
 - **PLAY-04 · Draft a spread:** tap neighbors or drag to stage bottom-first drops along
   a straight path. See the carried hand, pieces left behind and staged counts.
-  Release never silently commits a spread.
+  Release never silently commits a spread. Current-drop minus/plus controls stay
+  available alongside board taps, including after the hand empties. Minus returns
+  a stone to hand and removes an empty destination, restoring pickup controls if
+  the path becomes empty.
 - **PLAY-05 · Correct a draft:** undo a drop, drop the remainder, inspect another stack
   and return, or cancel. Blocked/off-path taps explain the constraint and preserve
-  the draft. Confirm is available only for a complete legal move.
+  the draft. Undo also restores a destination removed with minus; changing the
+  pickup quantity starts fresh drop history. Confirm is available only for a
+  complete legal move.
 - **PLAY-06 · Consistent rules:** previews, live play, AI, learning and replay agree on
   ownership, carry limits, blockers and capstone crushing. No partial spread
   prematurely resolves a win.
@@ -410,10 +426,14 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
   layer transitions and result feedback across both shapes. Shared layer
   animations respect reduced motion. Use bounded, deterministic ornament and
   shared painters for gameplay/previews; no visual effect can change legality.
+  Pieces share bounded side thickness, bevels and contact shadows across all five
+  sets, retaining owner colors and flat/wall/capstone identities.
 - **PREF-05 · Accessible interaction:** retain focusable actions, descriptive cell
   and stack semantics, an explicit inspect action, status announcements and
   visible selection/focus. Touch and click alternatives must expose everything
-  otherwise available by hover/drag. Enlarged text and scrollable content must
+  otherwise available by hover/drag. On-board hold expansion is optional: the
+  persistent tray and accessible Inspect stack action retain full-layer access.
+  Enlarged text and scrollable content must
   retain essential actions. Shared boards provide directional focus traversal and
   reveal focused cells when zoomed. Escape-cancel parity and physical screen-reader
   qualification remain tracked below rather than assumed complete.
@@ -486,7 +506,7 @@ adapter, deleting an old implementation, or calling a replacement complete.
 | COMPAT-05 · Old rooms and saves | Preserve supported old Square, H-prefixed Hex and unified invitation dispatch, codecs, recorded goals, seat ownership and result semantics. Replay through the correct adapter; missing metadata must use its documented fallback rather than current defaults. | `cf126b9`, `b81e5a8`, `401e393`; [room navigation](../lib/game/room_navigation.dart), [shared play](UNIFIED_PLAY_PLAN.md) |
 | COMPAT-06 · Rating generations | Original Elo/history, version-1 settlement and version-2 placement Elo remain historical contracts. New games use version 3 Overall/format skill and unordered losses, with recorded v1/v2/v3 game engines. The v3 engine continues existing v2 AI ratings as requested; historical v1 ratings remain separate. Never resettle old receipts, reinterpret old placements or rewrite historical engine versions. | `461dc71`, `8cff17f`, `2b914c7`, `84e90a2`, `a72c299`; [ratings](RATINGS.md), [sharing](RESULT_SHARING.md), [current skill](SKILL_RATINGS.md) |
 | COMPAT-07 · Learning and cosmetic migration | Old chapter/prerequisite metadata, completed IDs, achievement ledgers and saved cosmetic indices carry user progress. Preserve known ownership even when content or earning requirements change; obsolete puzzles/placeholder badges need not be restored as current content. | `215e300`, `6a4f5d4`, `cea2f44`, `5263b31`, `a078f04`; [achievements](ACHIEVEMENTS.md), [themes](THEMES.md) |
-| COMPAT-08 · Retired interaction designs | Browser Back-as-undo, QR auto-join, Hex hidden behind an opt-in toggle, automatic spread submission and old carry/drop-cycling controls have been superseded. Current navigation, explicit join and staged confirmation contracts take precedence. Historical commits are not instructions to restore these designs. | `dda35e8`, `3e6d65a`, `cf126b9`, `87f40d9`, `2f82bba`, `aa15870` |
+| COMPAT-08 · Retired interaction designs | Browser Back-as-undo, QR auto-join, Hex hidden behind an opt-in toggle, automatic spread submission and old pending-drop cycling have been superseded. Source-tap pickup cycling is explicitly restored alongside minus/plus controls; current-drop editing remains a reversible draft. Current navigation, explicit join and staged confirmation contracts take precedence. Historical commits are not instructions to restore these designs. | `dda35e8`, `3e6d65a`, `cf126b9`, `87f40d9`, `2f82bba`, `aa15870` |
 
 ## Intended capabilities and remaining acceptance
 

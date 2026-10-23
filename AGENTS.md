@@ -32,6 +32,19 @@ its maintenance to a later documentation task.
   identify the feature IDs updated, or state that no inventory update was needed
   because supported behavior and its documented limits are unchanged.
 
+## Shared interaction regression contract
+
+Before changing piece rendering or board gestures, read
+[stack interaction](docs/STACK_INTERACTION.md) and
+[adaptive gameplay UX](docs/ADAPTIVE_GAMEPLAY_UX.md). Shared Square/Hex matches
+and learning must retain hold-to-expand, the full inspection tray, simultaneous
+board/count controls, reversible bottom-first drops and explicit spread confirmation.
+Legacy callers retain their documented inspector behavior. Test both geometries,
+carry limits, draft revision/undo, gesture arbitration and stable board bounds;
+include lifecycle and accessible inspection checks when changing hold behavior.
+Older dated movement proposals and handoffs are historical evidence; use the
+current contract and current session authorization for implementation/publication.
+
 ## Implementation conventions
 
 - Put new placement and spread validation in `lib/game/match_rules.dart`.

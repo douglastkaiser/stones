@@ -39,8 +39,15 @@ void main() {
         expect(selection.hand(game), [charcoal, ivory, ivory]);
         expect(selection.preview(game)!.stackAt(const Cell(0, 0)), isEmpty);
         selection.tap(game, const Cell(0, 0));
-        expect(selection.carry, 3,
-            reason: 'Selecting again never cycles carry');
+        expect(selection.carry, 2);
+        selection.tap(game, const Cell(0, 0));
+        expect(selection.carry, 1);
+        selection.tap(game, const Cell(0, 0));
+        expect(
+          selection.carry,
+          3,
+          reason: 'Pickup wraps to the carry maximum',
+        );
         expect(selection.tap(game, const Cell(1, 0)), isFalse);
         expect(selection.drops, [1]);
         expect(selection.remaining, 2);
@@ -96,6 +103,85 @@ void main() {
         expect(selection.remaining, 2);
       });
     }
+
+    test('$shape mixed board and button drops can be revised and undone', () {
+      final game = position(shape);
+      final selection = MoveSelection()..tap(game, const Cell(0, 0));
+      selection.tap(game, const Cell(1, 0));
+      selection.adjustDrop(game, 1);
+      expect(selection.drops, [2]);
+      selection.tap(game, const Cell(2, 0));
+      expect(selection.planned, isNotNull);
+      expect(selection.canAdjustDrop(game, 1), isFalse);
+      selection.adjustDrop(game, -1);
+      expect(selection.drops, [2]);
+      expect(selection.hand(game), [ivory]);
+      selection.adjustDrop(game, -1);
+      expect(selection.drops, [1]);
+      selection.adjustDrop(game, -1);
+      expect(selection.started, isFalse);
+      expect(selection.direction, isNull);
+      selection.undoDrop();
+      expect(selection.drops, [1]);
+      expect(selection.direction, Step.east);
+      selection.undoDrop();
+      expect(selection.drops, [2]);
+      selection.undoDrop();
+      expect(selection.planned!.drops, [2, 1]);
+      expect(game.stackAt(const Cell(0, 0)), [charcoal, ivory, ivory]);
+    });
+
+    test('$shape a changed pickup cannot undo drops made with an older hand',
+        () {
+      final game = position(shape);
+      final selection = MoveSelection()..tap(game, const Cell(0, 0));
+      selection.tap(game, const Cell(1, 0));
+      selection.adjustDrop(game, -1);
+      selection.setCarry(1);
+      selection.undoDrop();
+      expect(selection.started, isFalse);
+      expect(selection.hand(game), [ivory]);
+      expect(selection.direction, isNull);
+    });
+
+    test('$shape undo restores the old direction after restarting a spread',
+        () {
+      final game = position(shape);
+      final selection = MoveSelection()..tap(game, const Cell(0, 0));
+      selection.tap(game, const Cell(1, 0));
+      selection.adjustDrop(game, -1);
+      selection.tap(game, const Cell(0, 1));
+      expect(selection.current, const Cell(0, 1));
+      selection.undoDrop();
+      expect(selection.started, isFalse);
+      selection.undoDrop();
+      expect(selection.current, const Cell(1, 0));
+      expect(selection.direction, Step.east);
+      expect(selection.preview(game)!.stackAt(const Cell(1, 0)), [charcoal]);
+      expect(selection.preview(game)!.stackAt(const Cell(0, 1)), isEmpty);
+      selection.clear();
+      expect(selection.canUndoDrop, isFalse);
+      expect(selection.source, isNull);
+    });
+
+    test('$shape decrement restores a crushed wall and can be undone', () {
+      final game = position(
+        shape,
+        board: {
+          const Cell(0, 0): [ivory, cap],
+          const Cell(2, 0): [wall],
+        },
+      );
+      final selection = MoveSelection()..tap(game, const Cell(0, 0));
+      selection.tap(game, const Cell(1, 0));
+      expect(selection.canAdjustDrop(game, 1), isTrue);
+      selection.tap(game, const Cell(2, 0));
+      selection.adjustDrop(game, -1);
+      expect(selection.preview(game)!.topAt(const Cell(2, 0)), wall);
+      selection.undoDrop();
+      expect(selection.preview(game)!.topAt(const Cell(2, 0)), cap);
+      expect(selection.canAdjustDrop(game, 1), isFalse);
+    });
 
     test('$shape partial pickup preserves buried stones and piece identity',
         () {

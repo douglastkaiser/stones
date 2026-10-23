@@ -1,6 +1,44 @@
 # Stones environment handoff
 
-## Current handoff, 2026-10-23
+## Current stack-controls audit handoff, 2026-10-23
+
+The owner approved committing and pushing this audited piece-depth and
+stack-control revision to main on 2026-10-23. Its audited base is `7e0cd72`;
+remote main matched that base before promotion. Continue from the latest main
+and preserve any local changes. The source-bound verification record retains
+branch/state at validation time, before commit/push authorization.
+
+This source promotion does not publish the website, Firebase rules or Android.
+Existing CI and deployment qualification gates still apply. Earlier handoff
+authorizations below describe their own sessions.
+
+Use [stack interaction](STACK_INTERACTION.md) for the current Square/Hex controls:
+hold expands up to five top layers on the board until release/cancel; the full
+tray remains; source taps cycle pickup downward; minus/plus and board taps work
+together for pickup/current drops. Spread submission remains explicit and atomic.
+All five piece sets share bounded thickness, bevels and contact shadows.
+
+Updated contracts: PLAY-02–05, PREF-04–05 and COMPAT-08. AGENTS.md and CLAUDE.md
+now point to the current shared controls; old movement/research documents retain
+clearly labelled historical behavior. The audit also fixes a reproduced lifecycle
+edge case: changing original inspection layers resets a held expansion even when
+the lifted preview is empty. A second reproduced regression is fixed by registering
+all hold callbacks only for nonempty stacks, preserving empty-cell tap recognition.
+Added tests cover both cases, direction restoration through undo, and hold
+movement/right-click during a draft.
+
+The first revision passed 1,778 tests, strict analysis and a production web build.
+The final audit candidate passes 1,784 full-suite tests (two concurrent test
+processes), 99 focused checks, strict analysis and a production web build.
+Formatting, diff whitespace and documentation link checks are clean. The
+[source-bound audit record](qa/stack-controls-verification.json) binds that evidence
+to all eight changed Dart files; [release readiness](RELEASE_READINESS.md) and the
+stack record preserve stage-specific qualification.
+Browser-runtime, physical-device, screen-reader and novice acceptance remain
+unverified for these UI changes. Preserve the existing AI/backend publication
+gates below; this UI revision introduces no schema/rules migration.
+
+## Earlier AI and standings handoff, 2026-10-23
 
 Continue from main. This candidate follows main baseline `5053a0f` and includes
 human-only rank numbers, matching home/profile/leaderboard standings, clickable

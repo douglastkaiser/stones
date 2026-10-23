@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-23",
+  "base_commit": "7e0cd728c88c2d5d02b301cc6c10af754abfc5f9",
+  "branch_at_validation": "work",
+  "candidate_state_at_validation": "uncommitted working tree; no commit, push or deployment performed",
+  "environment": {
+    "platform": "Linux",
+    "flutter": "3.47.7",
+    "dart": "3.13.5"
+  },
+  "feature_ids": [
+    "PLAY-02",
+    "PLAY-03",
+    "PLAY-04",
+    "PLAY-05",
+    "PREF-04",
+    "PREF-05",
+    "COMPAT-08"
+  ],
+  "changed_dart_sha256": {
+    "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+    "lib/game/match_screen.dart": "20481db2edb72f4b47ac8f18f0d4da1b3d66393a42fc73633a5567b971d58855",
+    "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+    "lib/widgets/piece_stack_view.dart": "8f740d1d3cdd5dff6d61c74f49542ca2fd8e4f6ee4afa315f23669c119a7d0d9",
+    "lib/widgets/procedural_painters.dart": "f57402ebf0b31b21fba1347ea7334e530f98e98efb8f718ea2bd678901b71701",
+    "test/game/move_selection_test.dart": "40d19d3c6121aba539599a7f978ae0a838c43002f4379d66a8409be09e517b4e",
+    "test/game/stack_interaction_test.dart": "1605d7a8db1782d304c1be758b293feb22588ac7e65e3a8a112d3828c4be3942",
+    "test/widgets/piece_stack_view_test.dart": "aeb7140d7b012697831d06be937be25f5fb33cf018b0164ce5ebfda6d77e34e6"
+  },
+  "source_unchanged_during_final_checks": true,
+  "checks": {
+    "full_suite": {
+      "command": "flutter test --no-pub --concurrency=2",
+      "result": "passed",
+      "tests": 1784
+    },
+    "focused_suite": {
+      "command": "flutter test --no-pub test/game/move_selection_test.dart test/game/stack_interaction_test.dart test/widgets/piece_stack_view_test.dart test/game/board_viewport_test.dart test/widgets/stack_gesture_test.dart test/audit/theme_visual_test.dart",
+      "result": "passed",
+      "tests": 99
+    },
+    "analysis": {
+      "command": "flutter analyze --no-pub --fatal-infos",
+      "result": "passed; no issues"
+    },
+    "web_build": {
+      "command": "flutter build web --no-pub",
+      "result": "passed; default JavaScript release build",
+      "warnings": [
+        "Existing secure-storage WebAssembly incompatibilities",
+        "Existing Cupertino icon-font warning"
+      ]
+    },
+    "documentation_links": {
+      "result": "passed",
+      "changed_markdown_files": 18,
+      "local_targets_checked": 212
+    },
+    "formatting": {
+      "command": "dart format --output=none --set-exit-if-changed <8 changed Dart files>",
+      "result": "passed; 0 changes"
+    },
+    "diff_whitespace": {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  },
+  "regressions_reproduced_and_fixed": [
+    {
+      "test": "held source collapses when its original inspection layers change",
+      "before_fix": "failed as expected",
+      "after_fix": "passed"
+    },
+    {
+      "test": "hold expansion does not consume taps on empty cells",
+      "before_fix": "failed as expected",
+      "after_fix": "passed"
+    }
+  ],
+  "additional_regressions": [
+    "Undo restores the old direction after restarting a spread",
+    "Held movement and right-click preserve a staged draft"
+  ],
+  "local_log_sha256": {
+    "build/qa/stack-controls-audit/full.log": "cfbbf0a4e5f41fb28265c33e12a152bb01530eb1b2445e77da07ad244c638962",
+    "build/qa/stack-controls-audit/focused.log": "95549aba06c4a9c0b37a3c8148aab9a54bc7dcb1cb2f88693edd35d4329cf5d3",
+    "build/qa/stack-controls-audit/analyze.log": "b3918629612ed6625b1df392c88ad3d43947dc8f2fabfe963c09573ce58f7985",
+    "build/qa/stack-controls-audit/web_build.log": "b86d359ddbfd086b14b81ca63b710730e37841ba5aaafe39e3aaec868e384a74",
+    "build/qa/stack-controls-audit/inspection_reproduction.log": "cf042b9f073bbf3a8000a504c16b5ca891b6c105330d5664c6508ed18a0da57c",
+    "build/qa/stack-controls-audit/empty_cell_reproduction.log": "008c9cf42097ed6080d482c97cdddde33825289e83aefc5764ef538673aa2190"
+  },
+  "web_main_sha256": "f47eabc662b9d67cf7f16fac5663f59baf26dcb11ab18e640ae1328bcf749ad6",
+  "limits": [
+    "No new browser-runtime or online multi-client trial",
+    "No physical-device, screen-reader or unfamiliar-player acceptance",
+    "No new Android build or Wasm qualification",
+    "No physical-device performance or AI strength qualification",
+    "Local build/log artifacts are ignored and may not survive workspace cleanup"
+  ]
+}

@@ -1,7 +1,8 @@
 # Stack inspection and movement
 
-Implemented 2026-10-19 in the shared `lib/game/` play path for Square and Hex,
-including shared learning screens. This is an application interaction change;
+Introduced 2026-10-19 in the shared `lib/game/` play path for Square and Hex,
+including shared learning screens; the current contract includes the 2026-10-23
+piece-depth and control revision. This is an application interaction change;
 Tak rules, Hex variant rules, room records, and confirmed-move storage are preserved.
 The [research and proposal](STACK_INTERACTION_RESEARCH.md) records the precedents
 and the problems found in the previous controls.
@@ -9,8 +10,9 @@ and the problems found in the previous controls.
 ## Interaction contract
 
 - Tap an owned stack to inspect it and select its maximum legal top portion.
-  A repeated tap on the source keeps the same quantity. Tap an opponent's stack
-  to inspect it without beginning a move. Inspection also works when input is
+  A repeated tap on the source takes one fewer stone, wrapping from one back
+  to the maximum. Minus/plus and layer selection remain available alongside taps.
+  Tap an opponent's stack to inspect it without beginning a move. Inspection also works when input is
   locked or the match is finished.
 - The persistent tray lists stones top first, preserving their owner and piece
   theme. A continuous selection border identifies carried stones. Rows distinguish
@@ -18,7 +20,7 @@ and the problems found in the previous controls.
   row shows the bottom carried stone even when it is below the visible list.
 - Select a layer to take it and everything above it. Minus/plus provides large,
   discrete controls. Carry selection respects the geometry's carry limit and is
-  locked once drops begin; undo the drops to change the pickup.
+  locked once drops begin; undo or remove the drops to change the pickup.
 - Expand makes the ordered list taller; every stone remains scrollable. Inspection
   and expanded controls use their own scroll areas. The board's size and position
   do not depend on a selection, carry count, route, inspection, or expansion.
@@ -29,14 +31,27 @@ and the problems found in the previous controls.
   in the tray and a carrying-count marker, rather than appearing settled on the
   last destination. The next target is labeled “Drop 1” where cell size permits;
   its outline differs from the source selection.
+- Current-drop minus/plus controls remain active alongside taps. Plus stages
+  another bottom stone at the current destination; minus returns one to hand.
+  Removing its final stone removes that destination and returns to the previous
+  one, or to pickup selection if no drops remain. Completed drafts remain editable.
+  Each adjustment uses the shared rule preview and can be undone, including the
+  removal of the last destination. Changing pickup quantity clears old drop
+  history so Undo cannot restore a spread made with a different hand.
 - Drop remaining here stages the entire hand on the current destination. Undo
   reverses the last action, including a batch drop. Cancel restores the
   original board. Off-path and blocked taps preserve the draft and explain the
   straight-line, board-edge, wall, or capstone constraint.
 - Inspect another stack temporarily routes the next board tap to inspection.
   Back to carried stones restores the source tray without changing the draft.
-  Hold/right-click opens the same tray in shared play; legacy boards retain their
-  existing modal fallback. Hover remains an optional bounded view of top layers.
+  Hold fans up to five top layers in place until release or cancellation,
+  including the original source layers while stones are carried. Changes to
+  displayed or original inspection layers reset expansion. Empty cells retain
+  their existing tap recognition; hold expansion only registers for a stack.
+  Holding a stack never changes the draft.
+  Right-click and accessible Inspect stack open the persistent tray; legacy
+  boards retain their existing modal fallback. Hover remains an optional bounded
+  view of top layers.
 - A drag shows an offset carried-stack ghost and target feedback while moving.
   Release stages one bottom stone on the adjacent cell in that direction. The
   remaining hand stays available for taps or another drag from the current cell.
@@ -126,3 +141,73 @@ acceptance questions for real players.
   `verification.json`. These generated artifacts stay outside version control.
 
 Physical devices and uncoached new players remain the next usability evaluation.
+
+## Piece depth and simultaneous controls (2026-10-23)
+
+Shared painters now give every theme bounded side faces, beveled face lighting
+and contact shadows. Existing ornaments, owner colors and piece identities remain.
+The interaction updates above apply to shared Square/Hex matches and learning;
+legacy hold inspectors retain their existing behavior. No room/save migration or
+rule change is required. Source-tap cycling intentionally replaces the previous
+repeated-source no-op contract.
+
+Regression requirements: PLAY-02–05 and PREF-04–05; mixed board/button pickup and
+drop, zero-drop removal and undo, cap-crush restoration, hold/release/cancel,
+legacy inspection, unchanged board bounds, reduced motion and enlarged text.
+Initial implementation verification on Linux with Flutter 3.47.7 / Dart 3.13.5,
+before the pre-commit audit repairs below:
+
+- All 1,778 tests pass with `flutter test --no-pub`, including the new hold,
+  pickup/drop adjustment and history regressions, legacy inspectors, shared
+  studies, rule previews, enlarged-text layouts and connection/position guards.
+- `flutter analyze --no-pub --fatal-infos` reports no issues; the production
+  `flutter build web --no-pub` succeeds. The build still reports existing
+  secure-storage Wasm incompatibility and Cupertino font warnings; this check
+  qualifies the default JavaScript web build, not Wasm.
+- A focused capture run passed 61 planner/interaction checks and generated 26
+  phone/desktop, light/dark and enlarged-text images in `build/qa/stacks/`.
+  The theme visual suite also generated `build/theme-contact-sheet.png`; the
+  all-theme rendering and representative game captures were visually reviewed.
+  Artifacts are local QA output, not tracked source or deployed release evidence.
+- No new browser-runtime, online multi-client, physical-device, screen-reader,
+  performance or unfamiliar-player acceptance was performed for this revision.
+  Reduced-motion behavior retains the existing shared layer animation guard;
+  bounded painting and hover/inspection compatibility are covered by widget tests.
+
+### Pre-commit documentation and regression audit (2026-10-23)
+
+Reviewed the final diff, current feature list, AGENTS.md/CLAUDE.md, development
+and handoff instructions, current help, theme/viewport contracts and historical
+movement proposals. Current summaries now precede historical control records;
+the current handoff and release record distinguish this audited source revision
+from prior AI work and publication authorization.
+
+An added failing widget regression reproduced stale hold expansion when original
+inspection layers changed while a lifted source preview stayed empty. The reset
+now compares both layer lists. Additional checks exercise removing every drop,
+restarting in another direction and undoing back to the original route, plus
+holding/moving/releasing and right-click inspection during a staged draft.
+
+A second failing regression proved that hold-end/cancel callbacks on empty cells
+consumed their existing long-held taps. All hold callbacks now share the same
+nonempty-stack guard, preserving empty-cell placement recognition. The earlier
+in-progress full run was stopped after this finding; the final full run validates
+both fixes together.
+
+Final checks on the unchanged candidate pass: all **1,784** tests with
+`flutter test --no-pub --concurrency=2`; all **99** focused planner, gesture,
+viewport, legacy-inspector and visual checks; strict analysis with no issues;
+and the default JavaScript production web build. Dart formatting and diff
+whitespace checks are clean. The earlier 1,778-test result above qualifies the
+initial revision, not these follow-up repairs.
+
+The [source-bound audit record](qa/stack-controls-verification.json) stores the
+base commit, hashes of all eight changed Dart files, commands/results, expected
+before-fix failures, log digests and web artifact digest. Local logs are under
+`build/qa/stack-controls-audit/`; generated artifacts remain outside version control.
+The documentation audit checked current feature/instruction contracts and local
+link targets, while retaining historical reports as dated evidence. The same
+browser/device/performance acceptance limits listed above remain open. At
+qualification time, no commit, push, publication or new Android release had been
+performed. The owner subsequently authorized committing and pushing the audited
+source to main; hosted CI and deployment remain separate qualification stages.

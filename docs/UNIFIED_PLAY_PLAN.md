@@ -12,6 +12,11 @@ and [skill ratings](SKILL_RATINGS.md). The dated rollout and test counts below
 record the original unification; [release readiness](RELEASE_READINESS.md) tracks
 newer qualification and publication.
 
+For current shared stack gestures, piece depth and simultaneous pickup/drop
+controls, follow [stack interaction](STACK_INTERACTION.md). The 2026-10-23 UI
+revision preserves this engine's room/save formats and atomic rule validation;
+its source qualification is separate from the dated rollout evidence below.
+
 ## Original unification readiness
 
 Shared setup, rules, gestures, rendering, local/online controllers, AI, recovery,

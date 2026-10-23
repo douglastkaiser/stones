@@ -32,8 +32,13 @@ See the [rules audit](docs/TAK_RULES.md) for official sources, verified mechanic
 and remaining gaps, and the [development map](docs/DEVELOPMENT.md) for architecture
 and local testing notes.
 
+The [stack interaction contract](docs/STACK_INTERACTION.md) covers current
+hold-to-expand, simultaneous board/count controls, reversible bottom-first drops,
+explicit confirmation and the five themes' piece depth. Older movement audits
+retain dated legacy behavior and must not replace that current contract.
+
 ### Prerequisites
-- Flutter SDK (3.0+)
+- Flutter SDK 3.47.7 (matches the pinned CI version)
 
 ### Running Locally
 ```bash

@@ -105,8 +105,10 @@ connection, shared opposite-side goals, legacy room compatibility, and independe
 The [playability audit](PLAYABILITY_AUDIT.md) records player-journey questions,
 UX improvements, browser trials, automated evidence and remaining product work.
 The [current stack interaction](STACK_INTERACTION.md) documents persistent
-inspection, physical pickup selection, explicit spread drafts and live drag
-feedback in shared play. The [shared stack display](STACK_DISPLAY.md) records
+inspection, hold-to-expand on the board, source-tap/layer/minus-plus pickup,
+current-drop minus-plus alongside board taps, explicit spread drafts, live drag
+feedback and shared piece depth. Use its 2026-10-23 contract when older control
+reviews describe superseded pending-drop or hold-to-open-tray behavior. The [shared stack display](STACK_DISPLAY.md) records
 layer rendering, hover and
 touch inspection across square and Hex, including owner themes and previews.
 

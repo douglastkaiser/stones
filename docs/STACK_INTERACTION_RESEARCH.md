@@ -7,7 +7,13 @@ recognizer, move planner, and existing movement/stack audits. External examples
 below were checked through product documentation and a developer interview;
 they were not subjected to hands-on usability testing in this review.
 
-## Diagnosis in the current application
+The original proposal below is historical research, not the current control
+specification. The 2026-10-23 revision deliberately restores source-tap pickup
+cycling alongside direct selection, adds current-drop minus/plus, and restores
+on-board hold expansion. Use the linked implementation contract for current
+behavior and verification; preserve the original observations as dated evidence.
+
+## Diagnosis in the application at `911af8f`
 
 The player needs to connect four facts: the contents of the stack, which top
 stones they are taking, which bottom stone drops next, and the resulting control
