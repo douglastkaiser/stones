@@ -348,7 +348,9 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   ladders. Show provisional status, uncertainty and exact established human rank;
   AI and provisional players do not consume rank numbers, and tied human ratings
   share a rank consistently across home, standings and profiles;
-  distinguish unavailable data from an unrated account.
+  distinguish unavailable data from an unrated account. Regression coverage includes
+  multiple interleaved AI, tied humans and provisional humans across All/Humans/AI
+  filters. See the [hosted ranking diagnosis](SKILL_RATINGS.md#hosted-ranking-diagnosis-2026-10-23).
 - **ACCOUNT-04 · Human and AI standings:** use All/Humans/AI filters, inspect player details
   and history, and refresh standings. AI rows remain sorted by rating without a
   human rank number. The signed-in “Your standing” card opens that player’s

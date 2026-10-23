@@ -259,6 +259,107 @@ void main() {
             .id,
         'alice');
     expect(find.text('Rank #1'), findsOneWidget);
+    final personalProfile = tester.widget<PlayerDetailScreen>(
+      find.byType(PlayerDetailScreen),
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Alice (You)'));
+    await tester.tap(find.text('Alice (You)'));
+    await tester.pumpAndSettle();
+    final rowProfile = tester.widget<PlayerDetailScreen>(
+      find.byType(PlayerDetailScreen),
+    );
+    expect(rowProfile.player.id, personalProfile.player.id);
+    expect(rowProfile.player.pool, personalProfile.player.pool);
+    expect(find.text('Rank #1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('interleaved AI preserve human numbers across filters', (
+    tester,
+  ) async {
+    final repo = FakeRatings()
+      ..values = const [
+        EloRating(
+          id: 'ai_shared-search-v2_expert',
+          displayName: 'Expert AI',
+          rating: 2000,
+          gamesPlayed: 40,
+          isAi: true,
+        ),
+        EloRating(id: 'a', displayName: 'Alice', rating: 1800, gamesPlayed: 20),
+        EloRating(
+          id: 'ai_shared-search-v2_hard',
+          displayName: 'Hard AI',
+          rating: 1700,
+          gamesPlayed: 40,
+          isAi: true,
+        ),
+        EloRating(id: 'b', displayName: 'Bob', rating: 1600, gamesPlayed: 20),
+        EloRating(id: 'c', displayName: 'Carol', rating: 1600, gamesPlayed: 20),
+        EloRating(id: 'new', displayName: 'New', rating: 1500, gamesPlayed: 1),
+        EloRating(id: 'd', displayName: 'Dana', rating: 1400, gamesPlayed: 20),
+      ];
+    final controller = EloController(repo);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ratingRepositoryProvider.overrideWithValue(repo),
+          eloProvider.overrideWith((ref) => controller),
+        ],
+        child: const MaterialApp(home: LeaderboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Finder card(String name) =>
+        find.ancestor(of: find.text(name), matching: find.byType(Card));
+    void expectHumanRanks() {
+      for (final entry in {
+        'Alice': 1,
+        'Bob': 2,
+        'Carol': 2,
+        'Dana': 4,
+      }.entries) {
+        expect(
+          find.descendant(
+            of: card(entry.key),
+            matching: find.text('#${entry.value}'),
+          ),
+          findsOneWidget,
+        );
+      }
+      expect(
+        find.descendant(of: card('New'), matching: find.textContaining('#')),
+        findsNothing,
+      );
+    }
+
+    expectHumanRanks();
+    for (final ai in ['Expert AI', 'Hard AI']) {
+      expect(
+        find.descendant(of: card(ai), matching: find.textContaining('#')),
+        findsNothing,
+      );
+    }
+    expect(
+      tester.getTopLeft(card('Expert AI')).dy,
+      lessThan(tester.getTopLeft(card('Alice')).dy),
+    );
+    expect(
+      tester.getTopLeft(card('Alice')).dy,
+      lessThan(tester.getTopLeft(card('Hard AI')).dy),
+    );
+    await tester.ensureVisible(find.text('Humans'));
+    await tester.tap(find.text('Humans'));
+    await tester.pumpAndSettle();
+    expectHumanRanks();
+    expect(find.text('Expert AI'), findsNothing);
+    await tester.tap(find.text('AI'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(RegExp(r'^#')), findsNothing);
+    expect(find.text('Expert AI'), findsOneWidget);
+    expect(find.text('Hard AI'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

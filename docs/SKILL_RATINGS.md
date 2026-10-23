@@ -346,3 +346,29 @@ The subsequent five-part AI upgrade implementation, frozen reference engine,
 repetition context, material-weight limits and qualification commands are recorded
 in [AI upgrades](AI_UPGRADES.md). That audit distinguishes the latest verification
 from these earlier round-search probes.
+
+## Hosted ranking diagnosis (2026-10-23)
+
+A fresh read of the production `release-manifest.json` returned source
+`56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1`. This predates the human-only
+rank and personal-card navigation fix in `7e0cd72`; the reported off-by-one
+rank and unclickable card are consistent with that older client. Before the
+fix, both `competitionRank` and the server aggregate counted established AI.
+One established AI above a human therefore adds one to their displayed rank.
+The source fix preserves mixed rating order and excludes AI from both counts.
+The personal card and the own leaderboard row both open `PlayerDetailScreen`.
+
+ACCOUNT-03/04 regression coverage now additionally checks multiple interleaved
+AI, human ties, provisional exclusion and stable numbering through all three
+filters. Existing journeys check home → standings → own profile and an unrated
+account in the selected format. No additional runtime change is needed for
+these reported symptoms. Publication is still separate from source verification;
+the v3 Firestore prerequisite and manual Deploy Main process above still apply.
+
+Verification for this diagnosis: all 28 tests in
+`test/ratings/rating_system_test.dart` and
+`test/ratings/skill_leaderboard_test.dart` passed on Linux with Flutter 3.47.7 /
+Dart 3.13.5. Strict analysis (`flutter analyze --fatal-infos`) also passed.
+This includes the same-account/same-ladder navigation assertion
+for the personal card and own row. Hosted evidence is the read-only production
+manifest, not a new deployment or browser/device acceptance trial.
