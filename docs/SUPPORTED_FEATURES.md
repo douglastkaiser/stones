@@ -471,11 +471,11 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   declared PWA shortcut and browser install support need actual end-to-end checks;
   a manifest alone does not establish offline startup or shortcut routing.
 - **APP-07 · About and diagnostics:** expose the app version/source revision,
-  with release builds deriving the visible version from `pubspec.yaml` (1.1.0
-  for the October 24 Android update) and retaining the exact build source.
   game/rules information, privacy link and support entry points. Keep feedback
   diagnostics opt-in and exclude account IDs, room links, private moves and logs
   by default. Never claim an email was delivered just because a composer opened.
+  Release builds derive the visible version from `pubspec.yaml` (1.1.0 for the
+  October 24 Android update) and retain the exact build source.
 - **APP-08 · Responsive performance:** keep immediate interaction feedback and
   useful AI/loading/retry states while bounded search yields off the UI path.
   Cancel stale work on position/account/navigation changes. Dense boards, tall
@@ -483,10 +483,6 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   Measure on named devices; proposed latency/frame/startup targets in the finishing
   plan are acceptance goals, not established measurements.
 - **APP-09 · Delivery compatibility:** preserve signed Android package/update
-  identity when advancing the visible release version; the 1.1.0 Android update
-  rebuilds the prepared `72b9f1d` application with a version-only source change.
-  Verify the new report/bundle and Console code before Alpha publication; store
-  acceptance does not qualify physical-device update, login or saved-game use.
   identity, monotonically valid version codes, source-labelled artifacts, web
   base paths/cold invitation routes and previous-save readers. CI, room rules,
   web/Android builds and previews must remain usable. Qualify the exact artifact,
@@ -501,6 +497,11 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   afterward and daily, reporting publication separately from acceptance. Browser
   qualification pins Ubuntu 24.04 and the browser tooling; dependency setup uses
   bounded transport retries and cannot substitute for passing application checks.
+  Advancing Android's visible version retains the signing identity. The 1.1.0
+  update rebuilds prepared application `72b9f1d` with only version metadata and
+  documentation changes. Verify its report, bundle and Console code before Alpha
+  publication; store acceptance does not qualify physical-device updates, login
+  or saved-game use. See [release readiness](RELEASE_READINESS.md).
 
 ## Historical capabilities and compatibility obligations
 
