@@ -471,6 +471,8 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   declared PWA shortcut and browser install support need actual end-to-end checks;
   a manifest alone does not establish offline startup or shortcut routing.
 - **APP-07 · About and diagnostics:** expose the app version/source revision,
+  with release builds deriving the visible version from `pubspec.yaml` (1.1.0
+  for the October 24 Android update) and retaining the exact build source.
   game/rules information, privacy link and support entry points. Keep feedback
   diagnostics opt-in and exclude account IDs, room links, private moves and logs
   by default. Never claim an email was delivered just because a composer opened.
@@ -481,6 +483,10 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   Measure on named devices; proposed latency/frame/startup targets in the finishing
   plan are acceptance goals, not established measurements.
 - **APP-09 · Delivery compatibility:** preserve signed Android package/update
+  identity when advancing the visible release version; the 1.1.0 Android update
+  rebuilds the prepared `72b9f1d` application with a version-only source change.
+  Verify the new report/bundle and Console code before Alpha publication; store
+  acceptance does not qualify physical-device update, login or saved-game use.
   identity, monotonically valid version codes, source-labelled artifacts, web
   base paths/cold invitation routes and previous-save readers. CI, room rules,
   web/Android builds and previews must remain usable. Qualify the exact artifact,
