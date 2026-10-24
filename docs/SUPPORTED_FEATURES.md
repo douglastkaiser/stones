@@ -501,7 +501,8 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   update rebuilds prepared application `72b9f1d` with only version metadata and
   documentation changes. Verify its report, bundle and Console code before Alpha
   publication; store acceptance does not qualify physical-device updates, login
-  or saved-game use. See [release readiness](RELEASE_READINESS.md).
+  or saved-game use. See [Android 1.1.0 (503)](releases/ANDROID_503.md) for
+  exact source/artifact, Alpha review submission and retained device limits.
 
 ## Historical capabilities and compatibility obligations
 

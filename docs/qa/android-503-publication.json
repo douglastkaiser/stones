@@ -1,0 +1,306 @@
+{
+  "status": "submitted_in_review",
+  "baseline": {
+    "checked_at_utc": "2026-10-24",
+    "package": "com.douglastkaiser.stones",
+    "all_uploaded_codes_before": [
+      497,
+      481,
+      403,
+      385,
+      354,
+      1
+    ],
+    "alpha_before": "1.0.0 (497)",
+    "alpha_track_id": "4698915010481104074",
+    "internal_before": 385,
+    "production": "inactive",
+    "open_testing": "not started",
+    "testers": {
+      "selected_list": "Stones Testing",
+      "users": 3,
+      "opted_in": 3
+    },
+    "countries": [
+      "United States"
+    ],
+    "managed_publishing": false,
+    "upload_sha1": "FA:63:FB:8F:BB:9B:27:F6:90:54:1B:E7:BC:11:62:AC:90:3A:30:CB",
+    "upload_sha256": "FD:BA:27:BE:F8:1C:84:11:96:FA:B7:75:64:24:2F:68:4E:38:55:06:3D:17:91:65:CB:FD:16:BA:E5:94:D5:65",
+    "play_signing_sha256": "C1:B2:D1:79:4D:94:7B:D3:F1:73:94:01:72:11:56:30:85:75:EF:21:EE:33:C2:E9:45:AF:0E:67:F1:88:08:A2",
+    "previous_aab_sha256": "e0c00135dea7db92d8f15e4593603355b8eda874a9e12fea0c95c52e922a5981",
+    "replacement_source": "3995847bb5af77d59e4080d94f207eee6adf7975",
+    "version_name": "1.1.0",
+    "version_code": 503,
+    "android_run": 40049615757,
+    "ci_run": 40049598302,
+    "firestore_run": 40049598423
+  },
+  "prepared_502": {
+    "source": "72b9f1d609b3ae3e70f47748f98f7f64326cb6a3",
+    "version": "1.0.0",
+    "code": 502,
+    "artifacts": [
+      {
+        "id": 12543520144,
+        "name": "stones-android-apks-502-72b9f1d",
+        "digest": "sha256:4fb9b15369ddea0a986a44a25e1460c6e42bd7f504c00b2da806461c90398704",
+        "size_in_bytes": 89232640
+      },
+      {
+        "id": 12543107686,
+        "name": "stones-play-bundle-502-72b9f1d",
+        "digest": "sha256:4b71d4736b07319c1efddd5a5aadb8c253bd4e6f142ffb56c9d45d7d32a617dc",
+        "size_in_bytes": 72805223,
+        "verified_zip_digest": "sha256:4b71d4736b07319c1efddd5a5aadb8c253bd4e6f142ffb56c9d45d7d32a617dc"
+      },
+      {
+        "id": 12542948628,
+        "name": "stones-android-report-502-72b9f1d",
+        "digest": "sha256:b4e35b7b4d27fd743f58cafa75fb48e8c789c59460bbc459c98c04881c63b5fd",
+        "size_in_bytes": 642,
+        "verified_zip_digest": "sha256:b4e35b7b4d27fd743f58cafa75fb48e8c789c59460bbc459c98c04881c63b5fd"
+      }
+    ],
+    "release": {
+      "commit": "72b9f1d609b3ae3e70f47748f98f7f64326cb6a3",
+      "version_name": "1.0.0",
+      "version_code": 502,
+      "flutter": "3.47.7",
+      "package": "com.douglastkaiser.stones",
+      "play_games_enabled": false
+    },
+    "aab_sha256": "5f4a95492d9db6b3ba2074bd7eda354f6c07b81c5560169069bc3248f70fc787"
+  },
+  "selected_503": {
+    "source": "3995847bb5af77d59e4080d94f207eee6adf7975",
+    "version": "1.1.0",
+    "code": 503,
+    "artifacts": [
+      {
+        "id": 12543951561,
+        "name": "stones-play-bundle-503-3995847",
+        "digest": "sha256:eee2706b3e1ebb238bafdc6a6846af4fa5352caaebe9c3d0d8c41d49e9ad3f7c",
+        "size_in_bytes": 72804429,
+        "verified_zip_digest": "sha256:eee2706b3e1ebb238bafdc6a6846af4fa5352caaebe9c3d0d8c41d49e9ad3f7c"
+      },
+      {
+        "id": 12543807038,
+        "name": "stones-android-apks-503-3995847",
+        "digest": "sha256:a61c498cdd28495df9e07d1050603a78b1fefef0ade5c8d26cab86337024c56b",
+        "size_in_bytes": 89232684
+      },
+      {
+        "id": 12543298848,
+        "name": "stones-android-report-503-3995847",
+        "digest": "sha256:8c05bb69f7e5703dc854f615928bf05360f67141055b3e36b462086172df0493",
+        "size_in_bytes": 645,
+        "verified_zip_digest": "sha256:8c05bb69f7e5703dc854f615928bf05360f67141055b3e36b462086172df0493"
+      }
+    ],
+    "release": {
+      "commit": "3995847bb5af77d59e4080d94f207eee6adf7975",
+      "version_name": "1.1.0",
+      "version_code": 503,
+      "flutter": "3.47.7",
+      "package": "com.douglastkaiser.stones",
+      "play_games_enabled": false
+    },
+    "aab_sha256": "25c18f7d057cb2e8155e8aaf1f2d589cd4f0d30588640ef08e2b292528d67ca3"
+  },
+  "aab_integrity": {
+    "aab_sha256": "25c18f7d057cb2e8155e8aaf1f2d589cd4f0d30588640ef08e2b292528d67ca3",
+    "crc": "passed",
+    "manifest_digest": "passed",
+    "all_signed_entry_digests": "passed",
+    "signed_entries": 669,
+    "signature_file": "UPLOAD.RSA",
+    "sf_file": "UPLOAD.SF"
+  },
+  "aab_signer": {
+    "signer_sha256": "fdba27bef81c841196fab77564242f684e3855063d179165cbfd16bae594d565",
+    "matches_console_upload_identity": true,
+    "signature_verified": true
+  },
+  "qualification_runs": [
+    40051876001,
+    40051878724
+  ],
+  "main_ci": {
+    "run": 40049598302,
+    "attempt_1": "success",
+    "attempt_2": "failure: WebKit denied_storage_identity timeout",
+    "attempt_3": "failed-job retry repeated same WebKit timeout"
+  },
+  "firestore": {
+    "run": 40049598423,
+    "passed": 146,
+    "failed": 0,
+    "deployment_performed": false
+  },
+  "console": {
+    "accepted_version": "1.1.0",
+    "accepted_code": 503,
+    "preview": "Ready to release",
+    "supported_device_losses": 0,
+    "new_install_mb": 16.1,
+    "update_mb": 1.69,
+    "rollout_percent": 100,
+    "saved": true,
+    "submitted": true,
+    "draft": false,
+    "quick_checks": "completed successfully",
+    "review_status": "Your changes are now in review",
+    "available_to_testers": false,
+    "managed_publishing": false,
+    "automatic_publication_on_approval": true,
+    "submission_scope": "one change: Closed testing - Alpha, 1.1.0 (503), Start full rollout",
+    "settings_rechecked_after_save": true,
+    "internal_testing_code": 385,
+    "previous_serving_alpha_code": 497
+  },
+  "physical_device_checks": "not performed",
+  "feature_ids": [
+    "APP-07",
+    "APP-09"
+  ],
+  "observed_utc": "2026-10-24T02:13:22Z",
+  "qualifications": [
+    {
+      "run_id": 40051876001,
+      "url": "https://github.com/douglastkaiser/stones/actions/runs/40051876001",
+      "source": "3995847bb5af77d59e4080d94f207eee6adf7975",
+      "ref": "release/android-503-qualification-a",
+      "conclusion": "success",
+      "attempt": 1,
+      "jobs": [
+        {
+          "id": 120746116505,
+          "name": "Analyze & Test",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748344261,
+          "name": "Build Web",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748344273,
+          "name": "Build emulator application",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748344296,
+          "name": "Compile Android",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748708314,
+          "name": "Account checks (firefox)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748708322,
+          "name": "Account checks (webkit)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748708359,
+          "name": "Account checks (chromium)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748708396,
+          "name": "Browser player journeys",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748715107,
+          "name": "Production auth recovery (firefox)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748715143,
+          "name": "Production auth recovery (webkit)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748715216,
+          "name": "Production auth recovery (chromium)",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "run_id": 40051878724,
+      "url": "https://github.com/douglastkaiser/stones/actions/runs/40051878724",
+      "source": "3995847bb5af77d59e4080d94f207eee6adf7975",
+      "ref": "release/android-503-qualification-b",
+      "conclusion": "success",
+      "attempt": 1,
+      "jobs": [
+        {
+          "id": 120746125015,
+          "name": "Analyze & Test",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748506024,
+          "name": "Build emulator application",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748506055,
+          "name": "Build Web",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748506126,
+          "name": "Compile Android",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748784819,
+          "name": "Account checks (chromium)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748784836,
+          "name": "Browser player journeys",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748784872,
+          "name": "Account checks (firefox)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748784894,
+          "name": "Account checks (webkit)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748816555,
+          "name": "Production auth recovery (webkit)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748816560,
+          "name": "Production auth recovery (chromium)",
+          "conclusion": "success"
+        },
+        {
+          "id": 120748816564,
+          "name": "Production auth recovery (firefox)",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "ci_limit": "Main attempts 2 and 3 timed out at WebKit denied_storage_identity. No root-cause fix is claimed. Both subsequent fresh eleven-job source-identical runs passed; no gate waiver was used.",
+  "screenshot": {
+    "path": "docs/qa/android-503-submitted.jpg",
+    "sha256": "5acc4a288a062d4b4fa5465a8d619d9bf9b606853352b1bec2ae1175dc99d54f"
+  },
+  "apk_artifact_zip_downloaded": false
+}

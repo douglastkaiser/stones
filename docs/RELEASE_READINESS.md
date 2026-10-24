@@ -1,5 +1,27 @@
 # Current release qualification
 
+## Android 1.1.0 (503) publication, 2026-10-24
+
+**Submitted; in review.** At 02:13 UTC, Play Console confirmed **Your changes
+are now in review** for existing Alpha, **1.1.0 (503), Start full rollout**.
+Managed publishing remains off; approval publishes automatically. Version 503
+is not yet available to testers. Signing, Stones Testing (three users), United
+States targeting and other tracks were retained; internal testing remains 385.
+
+The owner requested a visible version increase
+from the prepared 1.0.0 (502); source `3995847bb5af77d59e4080d94f207eee6adf7975`
+changes only version metadata and inventory documentation relative to `72b9f1d`.
+The signed release passed preflight, strict analysis, 1,785 tests, all APK/AAB
+builds and signature checks. Two fresh complete eleven-job source-identical CI
+qualifications passed. Earlier main WebKit storage-denial timeouts remain in
+the audit; no root-cause repair is claimed. All 146 rules tests passed. No
+additional Firebase deployment was performed. Play accepted the AAB, reported
+Ready to release with zero device-support losses and completed quick checks.
+See [the exact release record](releases/ANDROID_503.md) for artifact digests,
+signatures and Console proof. Physical-device install/update, real Google
+credential exchange and saved-game/usability acceptance remain unverified.
+Inventory references updated: APP-07 and APP-09.
+
 ## Published web and Firebase release, 2026-10-24
 
 **Published and hosted-verified.** The [live website](https://www.douglastkaiser.com/stones/)

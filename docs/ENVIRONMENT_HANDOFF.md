@@ -1,5 +1,24 @@
 # Stones environment handoff
 
+## Android 1.1.0 (503) handoff, 2026-10-24
+
+**Submitted to existing Alpha; in review, not yet available.** Play Console at
+02:13 UTC confirmed **Your changes are now in review** for **1.1.0 (503), Start
+full rollout**. Quick checks completed. Managed publishing is off, so approval
+publishes automatically. Signing identities, Stones Testing (three users),
+United States targeting and other tracks were retained; internal testing is 385.
+
+The owner requested a version bump. The replacement main build source is
+`3995847bb5af77d59e4080d94f207eee6adf7975`, with only version metadata and
+inventory documentation changes from prepared `72b9f1d`. Signed Android Release
+and two fresh complete eleven-job source-identical CI runs passed; all 146 rules
+tests passed. Earlier intermittent WebKit storage-denial timeouts remain recorded
+without claiming a root-cause fix. Consult [Android 503](releases/ANDROID_503.md)
+for source/code, artifact/report digests, signature checks and Console proof.
+Firebase publication was already complete; no further deployment was performed.
+APP-07/APP-09 were updated. Physical Play install/update, real Google sign-in,
+saved-game continuity and device usability remain untested for this artifact.
+
 ## Published release handoff, 2026-10-24
 
 Web application `58a1f56545d165becaa23490f92658c041cfc755` and its required
