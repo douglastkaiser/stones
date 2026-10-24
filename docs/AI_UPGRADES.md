@@ -1,10 +1,13 @@
 # Shared AI v3 upgrades — 2026-10-23
 
 Applies to **LEARN-01**, **PLAN-10** and **COMPAT-06**. These are search/evaluation
-changes, not Tak rules or new draw conditions. The v3 engine is still unreleased.
+changes, not Tak rules or new draw conditions. V3 is now published in web
+application `58a1f56` (2026-10-24); see the
+[release record](RELEASE_READINESS.md#published-web-and-firebase-release-2026-10-24).
 Saved v1/v2 configurations keep their strategies; v3 continues the established
 v2 AI rating identities. The actual engine remains recorded on each game and new
-rating-history item. No rating reset, historical rewrite or deployment is included.
+rating-history item. Publication preserves ratings and historical records.
+The dated qualification notes below retain their strength/timing limits.
 
 ## Implemented behavior
 
@@ -123,7 +126,8 @@ wins/blocks, full-round interference and saved v1/v2 compatibility remain requir
 The full 50-seed matrix and the human Expert-strength target remain **unqualified**.
 Exploratory runs must not be described as demonstrated tier separation or improved
 human playing strength. Browser responsiveness and physical-device acceptance
-require their own evidence. Nothing has been published.
+require their own evidence. Those source measurements did not establish
+publication; the release record above now documents publication separately.
 
 ## Recorded evidence
 
@@ -157,4 +161,5 @@ and binary hashes and separates these checks from qualification:
 
 The full material pilot grid, 50-seed matrices, no-regression timing acceptance and
 human/device strength acceptance remain open. The implementation is reviewable;
-it is not a qualified strength or speed improvement and has not been deployed.
+it is not a qualified strength or speed improvement. Publication is documented
+separately in the release record above.

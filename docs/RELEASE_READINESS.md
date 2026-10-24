@@ -1,8 +1,11 @@
 # Current release qualification
 
-## Full release preparation, 2026-10-24
+## Published web and Firebase release, 2026-10-24
 
-Application source `58a1f56545d165becaa23490f92658c041cfc755` includes all
+**Published and hosted-verified.** The [live website](https://www.douglastkaiser.com/stones/)
+now serves application source `58a1f56545d165becaa23490f92658c041cfc755`: human-only
+ranks, matching personal/profile standings, clickable Your standing, v3 AI and
+the piece-depth/stack-controls revision. This source includes all
 October application commits across 120 remote references. Both complete
 [CI attempts](https://github.com/douglastkaiser/stones/actions/runs/40042345439)
 passed: 1,785 Flutter tests each, strict analysis, web/Android compilation,
@@ -19,9 +22,26 @@ workflows retain full source history for that comparison. Deployment tools are
 pinned to the workflow revision, separately from the qualified application source.
 All 45 release-tool tests passed, including changed rules/indexes and forged
 rollback hashes; the actual previous `56cb6fb` artifact was captured and verified
-against its own source. Website publication and hosted checks remain pending at
-this checkpoint. Earlier dated source-candidate sections below retain their
-historical qualification limits.
+against its own source. The release-tool fix is main commit `78b9181`; it changes
+no application, asset or Firebase contract files relative to the qualified source.
+
+The successful [Deploy Main retry](https://github.com/douglastkaiser/stones/actions/runs/40047952588)
+used CI attempt 2's exact production artifact. Publishing commit
+`95a3c5d8adc8556024156132765e2ca329a14b6c` passed
+[Pages deployment](https://github.com/douglastkaiser/stones/actions/runs/40047999865).
+All three hosted browser jobs passed source/integrity verification and all 12
+cold/warm/blocked-popup/close-retry checks. Independent readback verified the
+live HTML/bootstrap/main bytes against the artifact manifest and the backend
+hashes against the published rules/index configuration. Two previous startup
+pairs remain retained. The original 81-file `56cb6fb` release is archived for
+90 days in rollback artifact `12541513443`.
+
+The [publication audit](qa/publication-2026-10-24.json) binds the source, CI,
+backend, artifact digests, rollback and hosted evidence. Android verification
+covers compilation; a new Play Store distribution, physical-device trials,
+real Google credential exchange and full AI strength/timing qualification are
+separate from this web release. Earlier dated source-candidate sections below
+retain their historical qualification limits.
 
 ## Piece depth and stack controls source candidate, 2026-10-23
 

@@ -1,5 +1,34 @@
 # Stones environment handoff
 
+## Published release handoff, 2026-10-24
+
+Web application `58a1f56545d165becaa23490f92658c041cfc755` and its required
+Firebase rules are published and verified. All October application commits are
+present on main; the audit checked 120 remote references. The release includes
+human-only rank numbers and matching account/profile standings, clickable Your
+standing, v3 AI with continued rating identities, and the stack-depth/controls
+revision. Both complete application CI attempts passed 1,785 Flutter tests each,
+strict analysis, web/Android compilation and three-engine browser checks.
+All 146 rules authorization checks passed.
+
+The first publication stopped before website mutation because it compared the
+old rollback artifact with the new backend hashes. Main `78b9181` fixes deploy
+and restore verification to use the archived artifact's own source. All 45
+release-tool tests and the actual 81-file previous release passed verification.
+The fix changes no application/asset/backend files relative to `58a1f56`.
+The retry published the exact qualified build, retained two cached startup pairs
+and archived the previous release for 90 days. All three hosted verification jobs
+and all 12 pre-credential login cases passed. Independent live byte/hash checks
+matched the selected artifact and published backend contract.
+
+Use [release readiness](RELEASE_READINESS.md#published-web-and-firebase-release-2026-10-24),
+the [publication audit](qa/publication-2026-10-24.json) and
+[Firebase publication](releases/FIREBASE_20261024.md) for source/run/rollback
+references and remaining device, real credential exchange, Android distribution
+and AI-strength qualification limits. Local snapshots are under
+`build/qa/publication-20261023/`; CLI credentials remain in their normal external
+store. The dated source-promotion notes below describe earlier stages.
+
 ## Current stack-controls audit handoff, 2026-10-23
 
 The owner approved committing and pushing this audited piece-depth and

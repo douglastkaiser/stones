@@ -1,12 +1,13 @@
 # Feature inventory and regression contract
 
-Updated 2026-10-23 against main baseline `5053a0f` plus the ranking/large-board
+Updated 2026-10-24 against published application `58a1f56`, including the ranking/large-board
 follow-up in [skill ratings](SKILL_RATINGS.md#ranking-and-large-board-ai-follow-up-2026-10-23)
 and [v3 AI upgrades](AI_UPGRADES.md).
 The 2026-10-23 [stack-control revision](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
 adds bounded piece depth, restores on-board hold expansion and supports board
 taps alongside pickup/current-drop minus-plus controls. Its implementation and
-local qualification are distinct from publication and device acceptance.
+local qualification are recorded separately from the [completed web/Firebase publication](RELEASE_READINESS.md#published-web-and-firebase-release-2026-10-24)
+and pending physical-device acceptance.
 
 This is the durable reference for what Stones
 does, what it is intended to do, and what future changes must preserve. Its scope

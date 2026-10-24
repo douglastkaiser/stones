@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-24T01:08:20.177558+00:00",
+  "status": "published_and_hosted_verified",
+  "application_source": "58a1f56545d165becaa23490f92658c041cfc755",
+  "release_tool_source": "78b91815d04014fba019ff22468fb2befebd40f3",
+  "feature_ids": [
+    "ACCOUNT-03",
+    "ACCOUNT-04",
+    "APP-05",
+    "APP-09",
+    "PLAY-02",
+    "PLAY-03",
+    "PLAY-04",
+    "PLAY-05",
+    "PREF-04",
+    "PREF-05",
+    "COMPAT-08",
+    "LEARN-01",
+    "COMPAT-06"
+  ],
+  "main_audit": {
+    "remote_references_checked": 120,
+    "application_commit_cutoff": "2026-10-01",
+    "missing_application_commits": [],
+    "changes_after_qualified_application": [
+      ".github/workflows/deploy-main.yml",
+      ".github/workflows/rollback-main.yml",
+      "docs/RELEASE_READINESS.md",
+      "docs/SUPPORTED_FEATURES.md",
+      "docs/releases/FIREBASE_20261024.md",
+      "scripts/test_auth_qualification.py",
+      "scripts/web_artifact.py"
+    ],
+    "application_asset_and_backend_files_unchanged": true
+  },
+  "application_ci": {
+    "run_id": 40042345439,
+    "url": "https://github.com/douglastkaiser/stones/actions/runs/40042345439",
+    "successful_complete_attempts": [
+      1,
+      2
+    ],
+    "flutter_tests_per_attempt": 1785,
+    "strict_analysis": "passed",
+    "web_build": "passed",
+    "android_compilation": "passed",
+    "browser_player_journeys": "passed",
+    "account_and_production_recovery_browsers": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ]
+  },
+  "release_tools": {
+    "tests_passed": 45,
+    "ci_release_tool_step": "passed",
+    "old_artifact_files_verified": 81,
+    "regressions": [
+      "changed rules",
+      "changed indexes",
+      "forged rollback backend hashes"
+    ],
+    "first_deploy_run": 40047543803,
+    "first_deploy_outcome": "stopped before website mutation: prior artifact compared with current backend hashes",
+    "fix": "verify archived backend hashes against explicitly selected original Git source; pin release tools separately from application artifact"
+  },
+  "firebase": {
+    "project": "stones-9a6a0",
+    "published_at_utc": "2026-10-24T00:57:10.766771Z",
+    "ruleset": "projects/stones-9a6a0/rulesets/fcda75d9-216e-428f-89cd-1a58d41105d2",
+    "rules_sha256": "6839907f200d69fc0c96138f333827be5a80185c3055e24ebc11cc77788160a5",
+    "index_configuration_sha256": "a1e2148a12658d0475f03f054493f54c9dbf241d1e46004bfd4a83828098aed3",
+    "configured_ready_indexes": 6,
+    "index_resource_identities_and_configuration": "unchanged",
+    "ratingResults_moves_indexing_exemption": "preserved",
+    "authorization_tests_passed": 146,
+    "authorization_run_id": 40042345340,
+    "read_only_production_checks": [
+      {
+        "name": "overall public mixed ladder",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "overall human-only rank aggregate",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "overall public AI profile",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "square-5-2-standardTak-open public mixed ladder",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "square-5-2-standardTak-open human-only rank aggregate",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "square-5-2-standardTak-open public AI profile",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "hex-2-3-sharedRoads-open public mixed ladder",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "hex-2-3-sharedRoads-open human-only rank aggregate",
+        "httpStatus": 200,
+        "passed": true
+      },
+      {
+        "name": "hex-2-3-sharedRoads-open public AI profile",
+        "httpStatus": 404,
+        "passed": true
+      },
+      {
+        "name": "private access denied /ratingResults",
+        "httpStatus": 403,
+        "passed": true
+      },
+      {
+        "name": "private access denied /aiResultKeys",
+        "httpStatus": 403,
+        "passed": true
+      },
+      {
+        "name": "private access denied /skillSettlements",
+        "httpStatus": 403,
+        "passed": true
+      },
+      {
+        "name": "private access denied /skillSettlements/publication-probe-not-a-real-result/scopes/overall",
+        "httpStatus": 403,
+        "passed": true
+      }
+    ],
+    "game_account_player_or_rating_data_seeded_or_migrated": false,
+    "previous_ruleset": "projects/stones-9a6a0/rulesets/c7cad732-21df-4e85-a5b2-8f4f0376a546",
+    "previous_rules_sha256": "922b127302119aea7f400099ed26cd0a91ab96918e0705c2865ca5e68191a1b9",
+    "local_snapshot_directory": "build/qa/publication-20261023/"
+  },
+  "publication": {
+    "deploy_run_id": 40047952588,
+    "deploy_url": "https://github.com/douglastkaiser/stones/actions/runs/40047952588",
+    "workflow_source": "78b91815d04014fba019ff22468fb2befebd40f3",
+    "publishing_commit": "95a3c5d8adc8556024156132765e2ca329a14b6c",
+    "pages_run_id": 40047999865,
+    "pages_url": "https://github.com/douglastkaiser/stones/actions/runs/40047999865",
+    "jobs": [
+      {
+        "id": 120733858296,
+        "name": "qualify",
+        "conclusion": "success"
+      },
+      {
+        "id": 120733891972,
+        "name": "publish",
+        "conclusion": "success"
+      },
+      {
+        "id": 120734006166,
+        "name": "Verify hosted login (firefox)",
+        "conclusion": "success"
+      },
+      {
+        "id": 120734006202,
+        "name": "Verify hosted login (webkit)",
+        "conclusion": "success"
+      },
+      {
+        "id": 120734006246,
+        "name": "Verify hosted login (chromium)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "web": {
+    "url": "https://www.douglastkaiser.com/stones/",
+    "artifact": {
+      "id": 12540593815,
+      "name": "web-build-58a1f56545d165becaa23490f92658c041cfc755-2",
+      "digest": "sha256:70009fee6498f457965a07f7d2e2000de024e08b65a952ba3a2c2785b4846858",
+      "size_in_bytes": 16989196,
+      "expires_at": "2026-11-07T00:25:13Z"
+    },
+    "manifest_sha256": "58c752f2116b276889aba86a41c2b5291eb4e5823069d6ab2cebecf136b91f8b",
+    "startup_integrity": {
+      "checkedAt": "2026-10-24T01:04:31.264189+00:00",
+      "source": "58a1f56545d165becaa23490f92658c041cfc755",
+      "backendContract": "matches verified production rules and index configuration",
+      "live": {
+        "base": "https://www.douglastkaiser.com/stones/",
+        "previewSource": "58a1f56545d165becaa23490f92658c041cfc755",
+        "currentPair": [
+          "flutter_bootstrap.62345ba746f4d05ae132.js",
+          "main.37a56b6f0ac5e6006652.dart.js"
+        ],
+        "retainedPairCount": 2,
+        "integrity": "passed",
+        "observations": [
+          {
+            "path": "",
+            "url": "https://www.douglastkaiser.com/stones/?baseline=1792803867575459507",
+            "bytes": 9113,
+            "transferMs": 462
+          },
+          {
+            "path": "startup-assets.json",
+            "url": "https://www.douglastkaiser.com/stones/startup-assets.json?baseline=1792803868037817001",
+            "bytes": 252,
+            "transferMs": 494
+          },
+          {
+            "path": "flutter_bootstrap.62345ba746f4d05ae132.js",
+            "url": "https://www.douglastkaiser.com/stones/flutter_bootstrap.62345ba746f4d05ae132.js",
+            "bytes": 13584,
+            "transferMs": 605
+          },
+          {
+            "path": "main.37a56b6f0ac5e6006652.dart.js",
+            "url": "https://www.douglastkaiser.com/stones/main.37a56b6f0ac5e6006652.dart.js",
+            "bytes": 4270199,
+            "transferMs": 2122
+          }
+        ],
+        "timingScope": "HTTP transfer only; not browser startup, input or frame rate"
+      }
+    },
+    "hosted_login_cases_per_browser": [
+      "cold",
+      "warm",
+      "popup_blocked",
+      "close_retry"
+    ],
+    "hosted_login_cases_passed": 12,
+    "hosted_report_artifacts": [
+      {
+        "id": 12542520596,
+        "name": "hosted-firefox-58a1f56545d165becaa23490f92658c041cfc755-40047952588-1",
+        "digest": "sha256:8b98486afac56fa6cbece8c0e11cc94a75c7aa40c85bc404cdc412aa88ca07c6",
+        "size_in_bytes": 1602,
+        "expires_at": "2027-01-22T01:02:41Z"
+      },
+      {
+        "id": 12542221965,
+        "name": "hosted-webkit-58a1f56545d165becaa23490f92658c041cfc755-40047952588-1",
+        "digest": "sha256:8ca988db40124ee5fb26e6fe1c7259ddb3f265372770abbeb630ae2b8781187e",
+        "size_in_bytes": 1598,
+        "expires_at": "2027-01-22T01:02:41Z"
+      },
+      {
+        "id": 12541759481,
+        "name": "hosted-chromium-58a1f56545d165becaa23490f92658c041cfc755-40047952588-1",
+        "digest": "sha256:5a0e503a2692cf7843119ec40fe0b785421bbfa2289acd176d0bd25edbadaf1a",
+        "size_in_bytes": 1614,
+        "expires_at": "2027-01-22T01:02:41Z"
+      }
+    ]
+  },
+  "rollback": {
+    "previous_application_source": "56cb6fbd3b46c0a5ddb1ae383b1a77bb931f08c1",
+    "artifact": {
+      "id": 12541513443,
+      "name": "rollback-58a1f56545d165becaa23490f92658c041cfc755-40047952588-1",
+      "digest": "sha256:5d1e3573a2d1e92857c40c28adf9490d6388557a7e6e4a17a685cc1f3463399e",
+      "size_in_bytes": 16973862,
+      "expires_at": "2027-01-22T01:02:41Z"
+    },
+    "retention_days": 90,
+    "retained_startup_pairs": 2
+  },
+  "qualification_limits": [
+    "Physical-device and real Google credential-exchange acceptance remain separate.",
+    "Android compilation does not establish a new Play Store distribution.",
+    "Full AI strength/timing matrix and human Expert-strength target remain unqualified."
+  ]
+}

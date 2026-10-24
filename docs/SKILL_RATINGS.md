@@ -372,3 +372,15 @@ Dart 3.13.5. Strict analysis (`flutter analyze --fatal-infos`) also passed.
 This includes the same-account/same-ladder navigation assertion
 for the personal card and own row. Hosted evidence is the read-only production
 manifest, not a new deployment or browser/device acceptance trial.
+
+
+## Ranking publication follow-up (2026-10-24)
+
+ACCOUNT-03/04 are now live in application `58a1f56`, including human-only rank
+numbers and the personal-card/profile navigation checked in this investigation.
+The required v3 rules are [published and exactly verified](releases/FIREBASE_20261024.md).
+Both complete application CI attempts passed, including 1,785 Flutter tests each;
+all three hosted browser jobs passed their source/integrity/login checks. The
+[release record](RELEASE_READINESS.md#published-web-and-firebase-release-2026-10-24)
+and [publication audit](qa/publication-2026-10-24.json) identify the exact build,
+rollback archive and remaining physical-device/real-account acceptance limits.
