@@ -1,5 +1,30 @@
 # Screenshots for Play Store Listing
 
+## Current 1.1.0 assets (October 24, 2026)
+
+Use the six JPEGs in `store_assets/screenshots/phone/` (1080x1920) and the two
+JPEGs in each of `tablet_7/` and `tablet_10/` (1920x1080). Paths are relative to
+the repository root. The phone sequence uploaded to Console is Square, home,
+stack inspection, learning, seat setup, Hex. Tablet order is Square/Hex for
+7-inch and Hex/Square for 10-inch.
+
+`phone_poster.html` is the editable caption/frame composition. Serve the repository
+root so its relative raw-capture and Roboto/Lora font paths resolve, then render each
+`?shot=01_square` through `06_learn` at 1080x1920 with full-page capture.
+The source HTML documents its exact asset paths. Never stretch a truncated
+viewport screenshot to meet the required size.
+
+These are actual browser UI captures from the verified production artifact of
+`3995847`, matching Android 1.1.0 (503). They are not physical Android screenshots
+or device acceptance. The application UI is unaltered; captions/framing are
+assisted compositions declared as such in Console. Raw tablet captures retain
+their separate capture provenance. See [the manifest](../assets_1_1_0.json) for
+dimensions and SHA-256 hashes, and [the release record](../../docs/releases/STORE_LISTING_20261024.md)
+for verification and submission outcome.
+
+The earlier capture suggestions below are reference material, not the current
+uploaded asset inventory.
+
 ## Requirements
 
 Google Play Store screenshot specifications:

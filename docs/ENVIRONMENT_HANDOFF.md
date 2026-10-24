@@ -2,10 +2,10 @@
 
 ## Android 1.1.0 (503) handoff, 2026-10-24
 
-**Submitted to existing Alpha; in review, not yet available.** Play Console at
-02:13 UTC confirmed **Your changes are now in review** for **1.1.0 (503), Start
-full rollout**. Quick checks completed. Managed publishing is off, so approval
-publishes automatically. Signing identities, Stones Testing (three users),
+**Available to selected Alpha testers.** Play Console at 17:04 UTC confirmed
+**1.1.0 (503)** is available, released October 23 at 7:21 PM Console time.
+The initial 02:13 UTC submission was approved and published automatically.
+Managed publishing is off. Signing identities, Stones Testing (three users),
 United States targeting and other tracks were retained; internal testing is 385.
 
 The owner requested a version bump. The replacement main build source is
@@ -18,6 +18,20 @@ for source/code, artifact/report digests, signature checks and Console proof.
 Firebase publication was already complete; no further deployment was performed.
 APP-07/APP-09 were updated. Physical Play install/update, real Google sign-in,
 saved-game continuity and device usability remain untested for this artifact.
+
+## Play listing and tester handoff, 2026-10-24
+
+Updated English descriptions, feature graphic and six phone/four tablet images
+were uploaded, reviewed and submitted as six listing changes. See the
+[listing record](releases/STORE_LISTING_20261024.md) for final Console status,
+asset hashes, source provenance and AI artwork declarations. APP-10 was added.
+The captures use the verified production browser build of Android source
+`3995847`; they do not replace physical Android qualification.
+
+Share https://play.google.com/apps/testing/com.douglastkaiser.stones after adding
+each consenting tester's Google Play account email to **Stones Testing**. The
+link does not add users to that list. Existing testers, United States targeting,
+signing identities and managed publishing were preserved.
 
 ## Published release handoff, 2026-10-24
 

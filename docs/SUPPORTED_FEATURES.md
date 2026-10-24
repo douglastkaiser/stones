@@ -504,6 +504,17 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   or saved-game use. See [Android 1.1.0 (503)](releases/ANDROID_503.md) for
   exact source/artifact, Alpha review submission and retained device limits.
 
+- **APP-10 · Store presentation:** Play descriptions and artwork reflect the
+  distributed game's actual Square/Hex, two-to-four-player, AI and learning
+  capabilities. Preserve clear variant identity and device-local progression
+  limits; do not promise synchronized unlocks, automatic matchmaking or pricing
+  guarantees absent from the implementation. Capture real application UI with
+  source/viewport provenance, distinguish it from physical-device qualification,
+  and record store-listing submission separately from binary availability.
+  Sources: [listing copy](../store_listing/full_description.txt),
+  [listing capture and submission record](releases/STORE_LISTING_20261024.md),
+  [Android release](releases/ANDROID_503.md).
+
 ## Historical capabilities and compatibility obligations
 
 These capabilities appear in the full history and remain relevant even where the

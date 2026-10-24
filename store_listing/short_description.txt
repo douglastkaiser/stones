@@ -1,1 +1,1 @@
-A strategic board game of roads and stacks. Challenge AI or play online!
+Build roads and master stacks. Play Square or Hex with friends and AI.

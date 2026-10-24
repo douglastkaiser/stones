@@ -2,10 +2,10 @@
 
 ## Android 1.1.0 (503) publication, 2026-10-24
 
-**Submitted; in review.** At 02:13 UTC, Play Console confirmed **Your changes
-are now in review** for existing Alpha, **1.1.0 (503), Start full rollout**.
-Managed publishing remains off; approval publishes automatically. Version 503
-is not yet available to testers. Signing, Stones Testing (three users), United
+**Available to selected testers.** At 17:04 UTC, Play Console confirmed existing
+Alpha **1.1.0 (503)** is available, released October 23 at 7:21 PM Console time.
+The 02:13 UTC submission was approved and published automatically with managed
+publishing off. Signing, Stones Testing (three users), United
 States targeting and other tracks were retained; internal testing remains 385.
 
 The owner requested a visible version increase
@@ -21,6 +21,17 @@ See [the exact release record](releases/ANDROID_503.md) for artifact digests,
 signatures and Console proof. Physical-device install/update, real Google
 credential exchange and saved-game/usability acceptance remain unverified.
 Inventory references updated: APP-07 and APP-09.
+
+## Play store listing refresh, 2026-10-24
+
+The English short/full descriptions, six phone screenshots, two screenshots
+per tablet category and feature graphic were uploaded, reviewed, saved and
+submitted as six listing changes. Source, hashes, capture provenance, asset
+declarations and final Console status are in the [listing record](releases/STORE_LISTING_20261024.md).
+APP-10 documents accurate store presentation. These browser captures do not
+establish physical Android acceptance. Tester enrollment uses the existing
+[opt-in link](https://play.google.com/apps/testing/com.douglastkaiser.stones)
+after the tester's Google account email is added to Stones Testing.
 
 ## Published web and Firebase release, 2026-10-24
 

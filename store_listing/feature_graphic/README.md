@@ -1,5 +1,19 @@
 # Feature Graphic for Play Store
 
+## Current 1.1.0 artwork
+
+`feature_graphic_1_1.svg` is the editable source for the current
+`store_assets/feature_graphic.png` (repository-relative), a 1024x500 RGB PNG.
+It uses the current wood, ivory and charcoal palette, a Square position based
+on the verified gameplay capture, and the line "Every stack changes the road."
+This assisted vector composition is declared as created/edited using AI in
+Play Console. It is illustrative artwork; the listing's gameplay images are
+actual UI captures. See [the manifest](../assets_1_1_0.json) and
+[publication record](../../docs/releases/STORE_LISTING_20261024.md).
+
+The template and design notes below predate this revision and are retained
+as reference material.
+
 ## Specifications
 
 - **Dimensions**: 1024 × 500 px

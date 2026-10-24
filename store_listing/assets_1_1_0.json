@@ -1,0 +1,170 @@
+{
+  "version": "1.1.0",
+  "android_code": 503,
+  "application_source": "3995847bb5af77d59e4080d94f207eee6adf7975",
+  "capture_build": {
+    "run": 40051876001,
+    "artifact_id": 12543493063,
+    "artifact_sha256": "ad7208a8cec4f0df22a59832dfe413ee28fb2220766e02c3dae94656b116efa1",
+    "kind": "production",
+    "flutter": "3.47.7",
+    "verification": "All artifact files, auth source hashes and backend hashes verified against canonical selected Git source."
+  },
+  "capture": {
+    "method": "Browser UI, legal local games and actual setup/tutorial screens",
+    "phone_viewport": [
+      540,
+      960
+    ],
+    "stack_viewport": [
+      540,
+      1080
+    ],
+    "tablet_viewport": [
+      1920,
+      1080
+    ],
+    "presentation": "Unaltered UI capture embedded with captions in the checked-in HTML layout",
+    "physical_android_device": false,
+    "real_google_credentials_used": false,
+    "shared_online_room_created": false
+  },
+  "feature_graphic_source": "store_listing/feature_graphic/feature_graphic_1_1.svg",
+  "phone_layout_source": "store_listing/screenshots/phone_poster.html",
+  "images": [
+    {
+      "path": "store_assets/screenshots/phone/01_square.jpg",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 134155,
+      "sha256": "9a71f946d27a2052665f2b2b32f5833c8b666b12cf9acd932f72bebffbb4f3d4"
+    },
+    {
+      "path": "store_assets/screenshots/phone/02_hex.jpg",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 135022,
+      "sha256": "caa1dde4f95d5387098618790477738b6e65f83ac2fbab1a5d643d2982bc5bbb"
+    },
+    {
+      "path": "store_assets/screenshots/phone/03_setup.jpg",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 114471,
+      "sha256": "2670706d63645601fb7d0283b36528ee4c0500e0710aa28f0fe140904d43d3b4"
+    },
+    {
+      "path": "store_assets/screenshots/phone/04_stack.jpg",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 128807,
+      "sha256": "b47095d7fe7414dd25d6f9eb5074cf0ea3835f845b7bece4ee6a6efc508e6b9c"
+    },
+    {
+      "path": "store_assets/screenshots/phone/05_home.jpg",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 127642,
+      "sha256": "b4acad236f0498a3e55cf42229179ba95eac996c3f50385762aa20a05e453c48"
+    },
+    {
+      "path": "store_assets/screenshots/phone/06_learn.jpg",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 132958,
+      "sha256": "0b79ce8d79465bfbd31aebba2833f1529a17c3a4cbf5052a64de8913652ba174"
+    },
+    {
+      "path": "store_assets/screenshots/tablet_7/01_square.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 83637,
+      "sha256": "216e73034159d1a76b026b69043ae66b9d140d9fdd21654d8a87bba3dbb4bd20"
+    },
+    {
+      "path": "store_assets/screenshots/tablet_7/02_hex.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 87042,
+      "sha256": "3ec687ded60bf1fd0a7ea4087d1b4f88bae36dad09695be11a3f2a3a52620ddc"
+    },
+    {
+      "path": "store_assets/screenshots/tablet_10/01_square.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 83637,
+      "sha256": "216e73034159d1a76b026b69043ae66b9d140d9fdd21654d8a87bba3dbb4bd20"
+    },
+    {
+      "path": "store_assets/screenshots/tablet_10/02_hex.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 87042,
+      "sha256": "3ec687ded60bf1fd0a7ea4087d1b4f88bae36dad09695be11a3f2a3a52620ddc"
+    },
+    {
+      "path": "store_assets/feature_graphic.png",
+      "width": 1024,
+      "height": 500,
+      "bytes": 423902,
+      "sha256": "70ba55260c3d8f96ff2f30a478894c2685bebab66aac742a39f3d7a612b5a5ab"
+    }
+  ],
+  "copy": {
+    "short_description": {
+      "path": "store_listing/short_description.txt",
+      "characters": 70,
+      "sha256": "968d1abaa5d8a206dae02d2cc545298c97e26cf457de36a696a046beef8e0a2f"
+    },
+    "full_description": {
+      "path": "store_listing/full_description.txt",
+      "characters": 1903,
+      "sha256": "9461cd94b86140425315425c3e088f8701c7f1db0686cc9c39af4ba8ab06cde7"
+    }
+  },
+  "unchanged": [
+    "app name",
+    "app icon",
+    "testers",
+    "countries",
+    "signing",
+    "managed publishing"
+  ],
+  "console_status": "submitted; Your changes are now in review; quick checks completed",
+  "console_submission_date": "2026-10-24",
+  "console_change_count": 6,
+  "phone_console_order": [
+    "01_square",
+    "05_home",
+    "04_stack",
+    "06_learn",
+    "03_setup",
+    "02_hex"
+  ],
+  "tablet_console_order": {
+    "7-inch": [
+      "01_square",
+      "02_hex"
+    ],
+    "10-inch": [
+      "02_hex",
+      "01_square"
+    ]
+  },
+  "ai_declaration": {
+    "labeled": [
+      "feature graphic",
+      "six captioned phone compositions"
+    ],
+    "not_labeled": [
+      "unchanged icon",
+      "raw tablet gameplay captures"
+    ],
+    "guidance": "https://support.google.com/googleplay/android-developer/answer/17262077?hl=en"
+  },
+  "copy_character_count": "UTF-8 text with CRLF normalized to LF, trimmed, matching browser textarea counts",
+  "console_proof": {
+    "path": "docs/qa/store-listing-20261024-submitted.jpg",
+    "sha256": "4dc20d3f3deb6e275c9bb69f6b8ea84b9b59d4edf336e68891ae1e96f781f04b"
+  }
+}

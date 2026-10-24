@@ -1,9 +1,9 @@
 # Stones Android 1.1.0 (503)
 
-**Submitted to Google Play review on 2026-10-24 (UTC).** The existing Alpha
-track is configured for 100% rollout. Managed publishing remains off, so approval
-publishes automatically. Store availability and physical-device acceptance are
-separate from this submission.
+**Available to selected Alpha testers, verified 2026-10-24 17:04 UTC.** Initially
+submitted to Google Play review on 2026-10-24 (UTC), the existing Alpha release
+is now available at 100% rollout. Managed publishing remains off. Store
+availability and physical-device acceptance remain separate evidence.
 
 ## Source and version
 
@@ -162,6 +162,22 @@ was the serving release before submission; internal testing remains 385.
 No physical-device trial was performed.
 
 ![Play Console confirms Alpha 503 is in review](../qa/android-503-submitted.jpg)
+
+### Approval and availability follow-up
+
+At **2026-10-24 17:04 UTC**, the existing Alpha track explicitly showed
+**Latest release: 1.1.0 (503)** and **Available to selected testers**, with
+**Released on Oct 23 7:21 PM** in Console's displayed time. Release details show
+**100% rollout**, one of one country/region and 19,346 supported devices.
+Console also reports **Available to 0 users** and **0.00%** install-base adoption;
+availability to the selected cohort does not establish any tester installation.
+The approved release
+is available; the earlier in-review observation above is historical. Managed
+publishing remained off. The separate [store listing refresh](STORE_LISTING_20261024.md)
+does not replace or rebuild this accepted AAB. No physical Play installation
+or Google credential exchange was performed during this follow-up.
+
+![Play Console confirms Alpha 503 is available](../qa/android-503-available.jpg)
 
 ## Release notes
 

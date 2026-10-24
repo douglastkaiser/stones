@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Stones store screenshot</title>
+<style>
+@font-face{font-family:Lora;src:url(../../assets/fonts/Lora-Regular.ttf)}
+@font-face{font-family:Roboto;src:url(../../assets/fonts/Roboto-Regular.ttf)}
+*{box-sizing:border-box}html,body{margin:0;width:1080px;height:1920px;overflow:hidden}
+body{color:#f5ebdc;background:radial-gradient(ellipse at 85% 5%,#523b29 0,transparent 48%),linear-gradient(135deg,#1a1714,#29211b);font-family:Roboto,Arial,sans-serif}
+header{position:absolute;left:70px;right:55px;top:43px}
+.brand{font-size:22px;letter-spacing:9px;color:#efb47f;margin-bottom:22px}
+h1{font-family:Lora,Georgia,serif;font-size:60px;font-weight:400;line-height:1.15;letter-spacing:-1px;margin:0 0 18px}
+p{font-size:27px;line-height:1.35;color:#d4c7b8;margin:0;white-space:nowrap}
+.screen{position:absolute;left:89px;top:262px;width:902px;height:1602px;border:1px solid #8e7153;border-radius:20px;overflow:hidden;background:#29241f;box-shadow:0 18px 70px #0008}
+img{display:block;width:900px;height:1600px;object-fit:contain}
+</style>
+<header><div class="brand">STONES</div><h1 id="title"></h1><p id="caption"></p></header>
+<div class="screen"><img id="screen" alt="Actual Stones application screen"></div>
+<script>
+const shots={
+ '01_square':['Make every stone count','Build roads, raise walls and turn stacks into strategy.'],
+ '02_hex':['Think beyond the square','Three-player Hex. New routes. Shared goals.'],
+ '03_setup':['Bring everyone to the table','Mix local friends, online seats and AI. Play with 2–4.'],
+ '04_stack':['Every layer tells a story','Inspect a stack before you plan your next move.'],
+ '05_home':['Find your next game','Classic Square, Hex variants and a quick way to learn.'],
+ '06_learn':['Learn one move at a time','Guided lessons and puzzles use the same play controls.']
+};
+const key=new URLSearchParams(location.search).get('shot')||'01_square';
+if(!shots[key])throw new Error('Unknown screenshot');
+document.getElementById('title').textContent=shots[key][0];
+document.getElementById('caption').textContent=shots[key][1];
+document.getElementById('screen').src='../../store_assets/screenshots/raw/'+key+'.jpg';
+</script>
+</html>

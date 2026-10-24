@@ -1,5 +1,5 @@
 {
-  "status": "submitted_in_review",
+  "status": "available_to_selected_testers",
   "baseline": {
     "checked_at_utc": "2026-10-24",
     "package": "com.douglastkaiser.stones",
@@ -150,14 +150,20 @@
     "submitted": true,
     "draft": false,
     "quick_checks": "completed successfully",
-    "review_status": "Your changes are now in review",
-    "available_to_testers": false,
+    "review_status": "Available to selected testers",
+    "available_to_testers": true,
     "managed_publishing": false,
     "automatic_publication_on_approval": true,
     "submission_scope": "one change: Closed testing - Alpha, 1.1.0 (503), Start full rollout",
     "settings_rechecked_after_save": true,
     "internal_testing_code": 385,
-    "previous_serving_alpha_code": 497
+    "previous_serving_alpha_code": 497,
+    "initial_review_status": "Your changes are now in review",
+    "availability_observed_at": "2026-10-24T17:04:00Z",
+    "released_console_time": "Oct 23 7:21 PM",
+    "available_to_users_display": 0,
+    "install_base_percent": 0.0,
+    "supported_devices": 19346
   },
   "physical_device_checks": "not performed",
   "feature_ids": [
@@ -302,5 +308,9 @@
     "path": "docs/qa/android-503-submitted.jpg",
     "sha256": "5acc4a288a062d4b4fa5465a8d619d9bf9b606853352b1bec2ae1175dc99d54f"
   },
-  "apk_artifact_zip_downloaded": false
+  "apk_artifact_zip_downloaded": false,
+  "availability_screenshot": {
+    "path": "docs/qa/android-503-available.jpg",
+    "sha256": "bec3d9803b478a020107df1a3da0907415c1d15524733b88478840c046a7c196"
+  }
 }

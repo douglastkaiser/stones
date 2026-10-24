@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#171512"/><stop offset="1" stop-color="#35271e"/>
+    </linearGradient>
+    <linearGradient id="wood" x2="0" y2="1">
+      <stop stop-color="#e1d1a9"/><stop offset="1" stop-color="#c9b88e"/>
+    </linearGradient>
+    <linearGradient id="ivory" x2="0" y2="1">
+      <stop stop-color="#fff8e8"/><stop offset="1" stop-color="#d8cdb7"/>
+    </linearGradient>
+    <linearGradient id="slate" x2="0" y2="1">
+      <stop stop-color="#626464"/><stop offset="1" stop-color="#343737"/>
+    </linearGradient>
+    <pattern id="grain" width="62" height="62" patternUnits="userSpaceOnUse">
+      <rect x="2" y="2" width="58" height="58" fill="url(#wood)"/>
+      <path d="M4 13L58 12M5 27L57 25M4 42L58 43M7 53L56 52" stroke="#8e774e" stroke-opacity=".17" fill="none"/>
+    </pattern>
+    <pattern id="hexes" width="86" height="74" patternUnits="userSpaceOnUse">
+      <path d="M21.5 0L64.5 0L86 37L64.5 74L21.5 74L0 37Z" fill="none" stroke="#f0b47b" stroke-opacity=".055"/>
+    </pattern>
+    <filter id="shadow" x="-.4" y="-.4" width="1.8" height="1.8">
+      <feDropShadow dx="0" dy="14" stdDeviation="15" flood-opacity=".45"/>
+    </filter>
+    <g id="flat">
+      <path d="M12 28L50 28L55 47L7 47Z" fill="#171512" opacity=".23"/>
+      <path d="M13 23L49 23L54 42L8 42Z" fill="url(#ivory)" stroke="#8c7a5e" stroke-width="1.2"/>
+      <path d="M15 28H47M13 34H49" stroke="#fffcef" opacity=".8"/>
+    </g>
+    <g id="dark">
+      <path d="M9 39Q9 20 31 20Q53 20 53 39V46H9Z" fill="#111" opacity=".3"/>
+      <path d="M10 34Q10 16 31 16Q52 16 52 34V42H10Z" fill="url(#slate)" stroke="#93918a"/>
+      <path d="M13 35H49" stroke="#9a9b96" opacity=".6"/>
+    </g>
+    <g id="wall">
+      <rect x="15" y="11" width="35" height="43" rx="2" fill="#000" opacity=".25"/>
+      <rect x="12" y="7" width="35" height="43" rx="2" fill="url(#slate)" stroke="#aaa596"/>
+      <path d="M16 11H43V46H16ZM16 18H43M16 26H43M16 34H43" fill="none" stroke="#85877f" stroke-opacity=".5"/>
+    </g>
+    <g id="cap">
+      <path d="M12 49Q12 11 31 11Q50 11 50 49Z" fill="#171512" opacity=".25"/>
+      <path d="M11 44Q11 6 30 6Q49 6 49 44Z" fill="url(#ivory)" stroke="#8c7a5e" stroke-width="1.2"/>
+      <path d="M16 22H44M13 32H47M12 40H48" stroke="#b3a68c" stroke-opacity=".6"/>
+    </g>
+  </defs>
+  <rect width="1024" height="500" fill="url(#background)"/>
+  <rect x="485" width="539" height="500" fill="url(#hexes)"/>
+  <path d="M58 442H477" stroke="#795940" stroke-opacity=".6"/>
+  <g font-family="Georgia,serif" fill="#f5ebdc">
+    <text x="58" y="83" font-family="Arial,sans-serif" font-size="15" letter-spacing="3.2" fill="#f0b47b">ROADS · STACKS · STRATEGY</text>
+    <text x="53" y="197" font-size="100" letter-spacing="2">STONES</text>
+    <text x="59" y="246" font-size="25" fill="#d9cbbb">Every stack changes the road.</text>
+    <g font-family="Arial,sans-serif" font-size="20">
+      <rect x="58" y="302" width="175" height="48" rx="24" fill="#f0b47b"/>
+      <text x="145.5" y="333" text-anchor="middle" fill="#2b2019">Square + Hex</text>
+      <rect x="249" y="302" width="164" height="48" rx="24" fill="none" stroke="#947558"/>
+      <text x="331" y="333" text-anchor="middle">2–4 players</text>
+    </g>
+    <text x="59" y="400" font-size="22" fill="#c3b4a2">Learn together. Play your way.</text>
+  </g>
+  <g transform="translate(642 89) rotate(7 155 155)" filter="url(#shadow)">
+    <rect x="-17" y="-17" width="344" height="344" rx="20" fill="#604630" stroke="#b88d59" stroke-width="2"/>
+    <rect width="310" height="310" fill="url(#grain)"/>
+    <use href="#flat" x="0" y="62"/>
+    <use href="#cap" x="0" y="124"/>
+    <use href="#flat" x="62" y="124"/>
+    <use href="#flat" x="0" y="186"/>
+    <use href="#flat" x="62" y="186"/>
+    <use href="#flat" x="124" y="186"/>
+    <use href="#dark" x="124" y="69"/>
+    <use href="#flat" x="124" y="62"/>
+    <use href="#dark" x="124" y="55"/>
+    <use href="#dark" x="248" y="62"/>
+    <use href="#wall" x="124" y="124"/>
+    <use href="#dark" x="186" y="124"/>
+    <use href="#dark" x="186" y="186"/>
+    <g transform="translate(248 183)"><use href="#cap" style="filter:brightness(.52)"/></g>
+  </g>
+</svg>

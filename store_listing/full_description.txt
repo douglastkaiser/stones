@@ -1,48 +1,33 @@
-Master the art of building roads in this elegant abstract strategy game.
+Build a road. Break a blockade. Turn a stack into your next move.
 
-Stones is a deeply strategic board game where two players compete to connect opposite edges of the board with a continuous road of their pieces. Simple to learn but endlessly challenging to master, Stones offers the kind of strategic depth found in timeless classics like Chess and Go.
+Stones is an abstract strategy board game inspired by Tak. Start with classic two-player Square play, then explore Stones variants for two to four players on Square or Hex boards.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Place flat stones to connect opposite sides, raise walls to block a route, and use capstones to flatten walls. Pick up and spread stacks to change who controls the board. A quiet position can become a race for a road in a single turn.
 
-HOW TO PLAY
+PLAY YOUR WAY
 
-Place stones flat to build roads, or stand them upright to block your opponent. The capstone—your most powerful piece—can move stacks and flatten walls. Build a road connecting your two edges before your opponent does, or control the most territory when all pieces are played.
+• Challenge computer opponents from Easy to Expert.
+• Pass and play with friends on one device.
+• Invite friends online with room codes and links.
+• Mix local players, online friends and AI at the same table.
+• Customize board size, seats, turn order and optional clocks.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LEARN, PRACTICE AND EXPLORE
 
-FEATURES
+• Learn through guided Square and Hex tutorials.
+• Solve tactical puzzles and practice road building, blocking and stack movement.
+• Try Court practice for coaching and room to explore.
+• Inspect every layer of a stack before planning a move.
+• Save and resume local games, then review completed games move by move.
 
-◆ MULTIPLE WAYS TO PLAY
-• Local multiplayer — Pass and play with a friend
-• Online multiplayer — Create or join games with room codes
-• VS Computer — Challenge AI opponents from Easy to Expert
+MAKE THE TABLE YOURS
 
-◆ LEARN THE GAME
-• Interactive tutorials guide you through the rules
-• Practice puzzles sharpen your tactical skills
-• Unlock achievements as you improve
+Explore five coordinated board and piece styles: Classic Wood, Slate, Marble, Morocco and Kyoto. Earn achievements and unlock cosmetics through play. Adjust appearance, sound and music to suit your table.
 
-◆ CUSTOMIZATION
-• Board sizes from 3×3 (quick games) to 8×8 (epic battles)
-• Chess clock option for timed matches
-• Unlockable themes to personalize your experience
+FIND YOUR STANDING
 
-◆ PREMIUM EXPERIENCE
-• No advertisements — ever
-• No in-app purchases — one-time purchase, everything included
-• Offline play available
+Follow human leaderboard rankings and your profile standing. Google sign-in is optional for local play and helps you return to your online rooms with the same account.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Local and computer games can be played offline. Online play, account services and leaderboards require an internet connection. Achievements, cosmetic unlocks and preferences are stored on your device; signing in does not synchronize them across devices.
 
-PERFECT FOR
-
-✓ Fans of abstract strategy games
-✓ Players who enjoy Chess, Go, or Checkers
-✓ Anyone looking for a thoughtful two-player game
-✓ Strategic thinkers who love planning ahead
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Whether you have five minutes or an hour, Stones delivers a satisfying strategic experience. Start with smaller boards to learn the fundamentals, then graduate to larger grids where deep planning and tactical mastery determine the winner.
-
-Download now and discover why abstract strategy games have captivated players for centuries.
+Square games with more than two players and Hex games use Stones variant rules. Classic Tak is two-player Square.
