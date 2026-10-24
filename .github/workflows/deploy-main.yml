@@ -90,6 +90,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.qualify.outputs.source }}
+          fetch-depth: 0
+      - name: Check out the release tools belonging to this workflow
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: release-tools
       - uses: actions/download-artifact@v4
         with:
           name: ${{ needs.qualify.outputs.artifact }}
@@ -109,7 +115,7 @@ jobs:
           git -C published pull --ff-only origin gh-pages
           git -C published rev-parse HEAD > rollback-publishing-commit.txt
           python3 scripts/rollback_artifact.py published build/rollback > rollback-source.json
-          python3 scripts/web_artifact.py verify build/rollback --source "$(python3 -c 'import json; print(json.load(open("rollback-source.json"))["previous_source"])')"
+          python3 release-tools/scripts/web_artifact.py verify build/rollback --backend-from-git --source "$(python3 -c 'import json; print(json.load(open("rollback-source.json"))["previous_source"])')"
       - uses: actions/upload-artifact@v4
         with:
           name: rollback-${{ needs.qualify.outputs.source }}-${{ github.run_id }}-${{ github.run_attempt }}

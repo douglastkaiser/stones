@@ -29,6 +29,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: archive
         uses: actions/github-script@v7
         env:
@@ -72,7 +74,7 @@ jobs:
           if data['previous_source'] != os.environ['PREVIOUS_SOURCE']:
               raise SystemExit('Rollback archive is not the explicitly selected source')
           PY
-          python3 scripts/web_artifact.py verify restore/build/rollback --source "$PREVIOUS_SOURCE"
+          python3 scripts/web_artifact.py verify restore/build/rollback --source "$PREVIOUS_SOURCE" --backend-from-git
       - uses: actions/checkout@v4
         with:
           ref: gh-pages

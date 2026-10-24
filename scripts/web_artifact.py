@@ -49,9 +49,10 @@ def create(root, source, *, kind='production'):
         json.dumps(manifest, sort_keys=True, indent=2) + '\n')
 
 
-def verify(root, source, *, kind=None):
+def verify(root, source, *, kind=None, backend_from_git=False):
     manifest = json.loads((root / 'release-manifest.json').read_text())
-    if manifest.get('version') != 1 or manifest.get('source') != source:
+    if not re.fullmatch(r'[0-9a-f]{40}', source) or \
+            manifest.get('version') != 1 or manifest.get('source') != source:
         raise ValueError('Artifact does not match the selected source commit')
     if manifest.get('flutter') != '3.47.7' or manifest.get('files') != files(root):
         raise ValueError('Artifact content or toolchain does not match its manifest')
@@ -60,8 +61,14 @@ def verify(root, source, *, kind=None):
         raise ValueError('Artifact entry point or auth sources differ from checkout')
     if not {'index.html', 'startup-assets.json', 'privacy.html'} <= manifest['files'].keys():
         raise ValueError('Incomplete release artifact')
-    if manifest.get('rules') != digest(Path('firestore.rules')) or \
-            manifest.get('indexes') != digest(Path('firestore.indexes.json')):
+    def backend_digest(name):
+        if backend_from_git:
+            return hashlib.sha256(subprocess.check_output(
+                ['git', 'show', f'{source}:{name}'])).hexdigest()
+        return digest(Path(name))
+
+    if manifest.get('rules') != backend_digest('firestore.rules') or \
+            manifest.get('indexes') != backend_digest('firestore.indexes.json'):
         raise ValueError('Artifact backend contract differs from its source')
 
 
@@ -71,10 +78,12 @@ if __name__ == '__main__':
     parser.add_argument('root', type=Path)
     parser.add_argument('--source')
     parser.add_argument('--kind', choices=['production', 'emulator'])
+    parser.add_argument('--backend-from-git', action='store_true',
+                        help='Verify rollback backend hashes against its selected source commit')
     args = parser.parse_args()
     source = args.source or subprocess.check_output(
         ['git', 'rev-parse', 'HEAD'], text=True).strip()
     if args.action == 'create':
         create(args.root, source, kind=args.kind or 'production')
     else:
-        verify(args.root, source, kind=args.kind)
+        verify(args.root, source, kind=args.kind, backend_from_git=args.backend_from_git)

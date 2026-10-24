@@ -1,5 +1,28 @@
 # Current release qualification
 
+## Full release preparation, 2026-10-24
+
+Application source `58a1f56545d165becaa23490f92658c041cfc755` includes all
+October application commits across 120 remote references. Both complete
+[CI attempts](https://github.com/douglastkaiser/stones/actions/runs/40042345439)
+passed: 1,785 Flutter tests each, strict analysis, web/Android compilation,
+player journeys and independent Chromium/Firefox/WebKit account and production
+recovery checks. All 146 [Firestore authorization tests](https://github.com/douglastkaiser/stones/actions/runs/40042345340)
+passed. The [Firebase rules publication](releases/FIREBASE_20261024.md) is complete,
+with exact source readback, six unchanged READY indexes and 13 production checks.
+
+The first [website publication attempt](https://github.com/douglastkaiser/stones/actions/runs/40047543803)
+stopped before changing the website: rollback verification compared the previous
+artifact's backend hashes with the new working tree. APP-09 now verifies those
+hashes from the explicitly selected previous Git commit. Both deploy and restore
+workflows retain full source history for that comparison. Deployment tools are
+pinned to the workflow revision, separately from the qualified application source.
+All 45 release-tool tests passed, including changed rules/indexes and forged
+rollback hashes; the actual previous `56cb6fb` artifact was captured and verified
+against its own source. Website publication and hosted checks remain pending at
+this checkpoint. Earlier dated source-candidate sections below retain their
+historical qualification limits.
+
 ## Piece depth and stack controls source candidate, 2026-10-23
 
 Audited source revision based on `7e0cd72`; the owner approved committing and

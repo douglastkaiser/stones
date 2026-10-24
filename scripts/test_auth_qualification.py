@@ -1,6 +1,9 @@
 """Qualification must fail on incomplete evidence and run independent suites."""
+import hashlib
 import json
+from contextlib import chdir
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -121,6 +124,41 @@ class RollbackTests(unittest.TestCase):
             manifest.write_text(json.dumps(data))
             with self.assertRaises(ValueError):
                 verify(root, 'a' * 40, kind='production')
+
+    def test_rollback_uses_its_own_committed_backend_and_rejects_forged_hashes(self):
+        for changed_file, manifest_key in [('firestore.rules', 'rules'),
+                                            ('firestore.indexes.json', 'indexes')]:
+            with self.subTest(changed_file=changed_file), \
+                    tempfile.TemporaryDirectory() as directory, chdir(directory):
+                root = Path(directory)
+                def git(*args):
+                    return subprocess.check_output(['git', *args], text=True,
+                                                   stderr=subprocess.DEVNULL).strip()
+                git('init', '-q')
+                git('config', 'user.name', 'Release test')
+                git('config', 'user.email', 'release-test@example.invalid')
+                Path('firestore.rules').write_text('old rules')
+                Path('firestore.indexes.json').write_text('{"indexes": []}')
+                git('add', 'firestore.rules', 'firestore.indexes.json')
+                git('commit', '-qm', 'Previous backend')
+                previous = git('rev-parse', 'HEAD')
+                published, output = root / 'published', root / 'rollback'
+                test_web_publication.PublicationTests().fixture(published)
+                with patch('web_artifact.auth_sources', return_value={}):
+                    create(published, previous)
+                capture(published, output)
+                Path(changed_file).write_text('new backend')
+                git('add', changed_file)
+                git('commit', '-qm', 'New backend')
+                with self.assertRaisesRegex(ValueError, 'backend contract'):
+                    verify(output, previous)
+                verify(output, previous, backend_from_git=True)
+                manifest = output / 'release-manifest.json'
+                data = json.loads(manifest.read_text())
+                data[manifest_key] = hashlib.sha256(Path(changed_file).read_bytes()).hexdigest()
+                manifest.write_text(json.dumps(data))
+                with self.assertRaisesRegex(ValueError, 'backend contract'):
+                    verify(output, previous, backend_from_git=True)
 
 
 if __name__ == '__main__':
