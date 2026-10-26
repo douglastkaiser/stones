@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/game_wake_lock.dart';
 import '../models/piece.dart' show PieceType;
 import '../models/cosmetics.dart';
 import '../providers/cosmetics_provider.dart';
@@ -297,7 +298,7 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                         ? '${game.current.label} · AI turn${match.room == null ? '' : ' (host)'}'
                         : '${game.current.label} to play${game.opening ? ' · place ${game.current.next.label} flat' : ''}';
 
-    return Scaffold(
+    final screen = Scaffold(
       appBar: AppBar(title: const Text('Three-player Hex'), actions: [
         if (match.room == null && match.kinds.contains(HexSeatKind.ai))
           IconButton(
@@ -498,6 +499,8 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                 ])));
       })),
     );
+    return GameKeepAwake(
+        active: !game.finished && !match.paused, child: screen);
   }
 
   String _seatStatus(HexMatchState match, HexSeat seat) {

@@ -1,3 +1,4 @@
+import '../services/game_wake_lock.dart';
 import '../widgets/room_invitation_actions.dart';
 import '../widgets/audio_controls.dart';
 
@@ -481,7 +482,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           icon: const Icon(Icons.flag_outlined),
         ),
     ];
-    return Scaffold(
+    final screen = Scaffold(
       appBar: AppBar(
         title: Text(
           widget.title ??
@@ -720,6 +721,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         ),
       ),
     );
+    return GameKeepAwake(
+        active: !game.finished && !match.paused, child: screen);
   }
 
   Widget _controls(

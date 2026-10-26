@@ -1,5 +1,35 @@
 # Current release qualification
 
+## Keep active games awake, 2026-10-26 (local source)
+
+PLAY-12 adds automatic screen wake-lock requests on shared Square/Hex and legacy
+Square/Hex game pages. Human, mixed and AI-only play stay eligible while waiting
+for a move or reconnecting. Explicit pause, completion, leaving/covering the page
+and backgrounding release the request. Dialogs retain it. Foreground return
+reasserts the eligible request; denied/unsupported requests remain nonblocking
+and retry on the next game tap.
+
+Local validation uses Flutter 3.47.7 / Dart 3.13.5 on Linux. The 33 focused
+wake-lock/game-screen tests and strict analysis passed. Coverage includes both
+geometries with zero/one/two AI seats, five simulated idle minutes, actual local
+completion/rematch, remote-turn waiting, online background/reconciliation,
+dialogs versus full pages, reference ownership, denied requests and departure
+during delayed acquisition. A release web build passed. A localhost Chromium
+trial using the browser's real Screen Wake Lock API confirmed acquire → pause
+release → resume acquire → leave release in an ordinary computer game.
+A second real-API Chromium trial at 390×844 watched two AIs advance from 3 to
+20 occupied cells during 15 seconds without input, retaining the wake lock;
+pause/resume/leave produced the expected release/acquire/release sequence.
+The complete Flutter suite passed all 1,796 tests in 16 minutes 10 seconds.
+
+This is local source qualification, with no hosting or Play publication. Native
+Android compilation/install and physical Android/iPhone/desktop display-timeout
+trials remain unverified. Browser/device policy can deny or revoke wake locks;
+manually locking a device, background execution and laptop lid closure remain
+platform-controlled. Headless Chromium and simulated idle time do not establish
+physical-device sleep prevention. Safari/Firefox and installed mobile web app
+qualification remain pending.
+
 ## Android 1.1.0 (503) publication, 2026-10-24
 
 **Available to selected testers.** At 17:04 UTC, Play Console confirmed existing

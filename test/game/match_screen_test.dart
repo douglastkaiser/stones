@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:stones/services/game_wake_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +23,9 @@ void main() {
   testWidgets(
       'resuming an online screen reconciles missed turns from the server',
       (tester) async {
+    final wakeCalls = <bool>[];
+    final wakeLock =
+        GameWakeLock(toggle: (enabled) async => wakeCalls.add(enabled));
     final store = MemoryMatchRoomStore();
     var authentications = 0;
     final controller = MatchController(
@@ -38,15 +42,18 @@ void main() {
     ]));
     await store.join('UABCDEF', 'guest');
     await controller.play(MatchMove.place(const Cell(0, 0), PieceType.flat));
-    await tester.pumpWidget(ProviderScope(
-        overrides: [matchProvider.overrideWith((ref) => controller)],
-        child: const MaterialApp(home: MatchScreen())));
+    await tester.pumpWidget(ProviderScope(overrides: [
+      matchProvider.overrideWith((ref) => controller),
+      gameWakeLockProvider.overrideWithValue(wakeLock)
+    ], child: const MaterialApp(home: MatchScreen())));
     await tester.pumpAndSettle();
+    expect(wakeCalls, [true]); // Remote turn still keeps the screen awake.
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
     expect(controller.state.paused, isFalse);
+    expect(wakeCalls.last, isFalse);
     store.publishOnSubmit = false;
     await store.submit('UABCDEF', 'guest', 1,
         MatchMove.place(const Cell(1, 0), PieceType.flat));
@@ -63,6 +70,7 @@ void main() {
     expect(authentications, 2);
     expect(controller.state.game!.ply, 2);
     expect(controller.state.canPlay, isTrue);
+    expect(wakeCalls.last, isTrue);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();

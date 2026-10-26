@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'services/game_wake_lock.dart';
 import 'services/web_back_button_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -137,7 +138,7 @@ class _StonesAppState extends ConsumerState<StonesApp>
     return MaterialApp(
       scaffoldMessengerKey: _messenger,
       navigatorKey: _navigator,
-      navigatorObservers: [_history],
+      navigatorObservers: [_history, gameWakeLockRoutes],
       builder: (context, child) =>
           AudioControls(navigator: _navigator, child: child!),
       title: 'Stones',
@@ -1039,7 +1040,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     }
 
-    return PopScope(
+    final screen = PopScope(
       child: Scaffold(
         appBar: AppBar(
           bottom: session.isCourtMode
@@ -1556,6 +1557,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         ),
       ),
     );
+    return GameKeepAwake(active: !gameState.isGameOver, child: screen);
   }
 
   /// Handle tap on the board frame (outside cells) - cancels stack movement

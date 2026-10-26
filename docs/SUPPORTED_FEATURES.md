@@ -1,6 +1,6 @@
 # Feature inventory and regression contract
 
-Updated 2026-10-24 against published application `58a1f56`, including the ranking/large-board
+Updated 2026-10-26 against published application `58a1f56`, including the ranking/large-board
 follow-up in [skill ratings](SKILL_RATINGS.md#ranking-and-large-board-ai-follow-up-2026-10-23)
 and [v3 AI upgrades](AI_UPGRADES.md).
 The 2026-10-23 [stack-control revision](STACK_INTERACTION.md#piece-depth-and-simultaneous-controls-2026-10-23)
@@ -187,6 +187,19 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
   and changing matches resets the view. Web semantic hit regions match cell
   polygons so neighboring labels cannot intercept touches. See [adaptive gameplay
   UX](ADAPTIVE_GAMEPLAY_UX.md), introduced by `fc31e80`.
+
+- **PLAY-12 · Keep active games awake:** unfinished, unpaused games request a screen
+  wake lock while their game page is visible and the app is foregrounded. Shared
+  Square/Hex and legacy game screens cover human, AI, mixed, online and AI-only
+  play, including long remote-turn waits and temporary disconnections. In-game
+  dialogs retain the request; explicit pause, completion, leaving/covering the
+  page and backgrounding release it. Returning to eligible play reacquires it.
+  Supported Android and HTTPS browsers remain subject to device/browser policy;
+  denied or unsupported requests do not interrupt play and retry on foreground
+  return or the next game interaction. Manual locking and background execution
+  remain platform-controlled. Source: `lib/services/game_wake_lock.dart`;
+  regressions: `test/game_wake_lock_test.dart`, `test/game/match_screen_test.dart`.
+  Physical-device timeout qualification is tracked in [release readiness](RELEASE_READINESS.md).
 
 ## AI, practice and learning
 
