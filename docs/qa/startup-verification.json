@@ -1,0 +1,264 @@
+{
+  "recordedUtc": "2026-10-26T19:00:52.470351+00:00",
+  "status": "reviewed-for-main-source-promotion-unpublished",
+  "baseCommit": "8be2bc99837ddc0c83f9c233bcde1f1c702170a4",
+  "platform": "Windows 11 26H2 x64",
+  "flutter": "3.47.7",
+  "dart": "3.13.5",
+  "playwright": "1.62.0",
+  "inventoryUpdated": [
+    "APP-06",
+    "PREF-01",
+    "PREF-05"
+  ],
+  "regressionRequirements": [
+    "APP-01",
+    "APP-02",
+    "APP-03",
+    "APP-04",
+    "APP-05",
+    "APP-07",
+    "APP-09",
+    "PREF-06",
+    "Square/Hex home/play/learning"
+  ],
+  "sourceFilesSha256": {
+    ".github/workflows/android-release.yml": "e6bd58031814ebb69d6f592a76bd2c96f4e308acbcdd3cfdfa9ba7106e6e4ea7",
+    ".github/workflows/ci.yml": "ac869282ef2737dc7f0226e98d10eed25ff2e7e89e0874a611be8f9f8a4da723",
+    ".github/workflows/ios-build.yml": "63758f7e4e56fe9773d785d49b24a6cfd6e391988a29c60f205a406ecf8d564e",
+    ".github/workflows/pr-preview.yml": "7926bf4d12f2666acc90bf76b2c8ba000ed692dae77f254c5d42c4f481011275",
+    "android/app/src/main/res/drawable-hdpi/android12splash.png": "c93e4dc804f5dc4f44a4dd71e509ee4be3e2df4e19db7d7db84a47d3fd78cf4e",
+    "android/app/src/main/res/drawable-hdpi/ic_launcher_foreground.png": "91f6562c6e702f3f98bf5cb6aa49a262e966ba9be57a1d39ce3c664b00501666",
+    "android/app/src/main/res/drawable-hdpi/splash.png": "649e687fbd9bbea91362a2a54ad3468141a78b64cb6e5d286d616ad8f94151ad",
+    "android/app/src/main/res/drawable-mdpi/android12splash.png": "3aff899c05f9028af108f39bbf9f2c9adbb33d1c16f0db720700b8e7b0918e85",
+    "android/app/src/main/res/drawable-mdpi/ic_launcher_foreground.png": "71739a11ab75efa34575a8dbeddfd0759fb88200f775149c1dc6ec2d985d65fd",
+    "android/app/src/main/res/drawable-mdpi/splash.png": "f37b54cc165d244a636065216c5d04302504e9f4f9bd9ff09bbe5b890ed0ffda",
+    "android/app/src/main/res/drawable-night-hdpi/android12splash.png": "58fcf741cc79dbd6d63f77059bd06ed1c68350c5dafb644c4ffb60211f0ba2cc",
+    "android/app/src/main/res/drawable-night-hdpi/splash.png": "bc27c1cdbdfac1e78c5872be773c34d66c3d079a75897bf1a7880e69a4cab1dd",
+    "android/app/src/main/res/drawable-night-mdpi/android12splash.png": "cd26236f8bcbe93a20a8d32b756e8cd625a0e68c9abfe948bf4f0557a35b41da",
+    "android/app/src/main/res/drawable-night-mdpi/splash.png": "8ac1d9f2bade00c2ddf4a41200f285d25e3788e885ebfd4043a1bee65ae0c881",
+    "android/app/src/main/res/drawable-night-v21/background.png": "15e80fd34f4ec328493c8e862ab816886e35ee82d4672638a41cba3653279b25",
+    "android/app/src/main/res/drawable-night-v21/launch_background.xml": "42b8d099f0a6d79e90a67949d7a655c09458c734aa1bd8c4d7c73a79b28397ea",
+    "android/app/src/main/res/drawable-night-xhdpi/android12splash.png": "7982464643ba8bfc2f2fb2ce3cca626c999d3ca7a4ea734a5f917e360a434138",
+    "android/app/src/main/res/drawable-night-xhdpi/splash.png": "2cfeb1be7bac01877a3011ff78005362cd4976e1476c6d004337a32bea6cb490",
+    "android/app/src/main/res/drawable-night-xxhdpi/android12splash.png": "08ca36161a6675344cc215f05871f1aa730292cab1cb2961e00e51f18775ab1f",
+    "android/app/src/main/res/drawable-night-xxhdpi/splash.png": "a3ee8be35d0367a4301734a1201e4521eed4ba85e1593c80c67115ff556c01b8",
+    "android/app/src/main/res/drawable-night-xxxhdpi/android12splash.png": "c6f0916ac894c0fa344b6cece6f026c9d67db3d5d894133b0ed1862a2e11bd9b",
+    "android/app/src/main/res/drawable-night-xxxhdpi/splash.png": "8a690fd9644c68d6e607a71d229d8884458a125a217896f553d53e84eef81314",
+    "android/app/src/main/res/drawable-night/background.png": "15e80fd34f4ec328493c8e862ab816886e35ee82d4672638a41cba3653279b25",
+    "android/app/src/main/res/drawable-night/launch_background.xml": "42b8d099f0a6d79e90a67949d7a655c09458c734aa1bd8c4d7c73a79b28397ea",
+    "android/app/src/main/res/drawable-v21/background.png": "c52ae8af83e2412ab176aec178ee9246081fc8c34d3fa46366e2b9b264e6d846",
+    "android/app/src/main/res/drawable-v21/launch_background.xml": "42b8d099f0a6d79e90a67949d7a655c09458c734aa1bd8c4d7c73a79b28397ea",
+    "android/app/src/main/res/drawable-xhdpi/android12splash.png": "d6fdadb930470bb32327d690eb5a77db087862fba3f0ab7264d5ccc89aacf303",
+    "android/app/src/main/res/drawable-xhdpi/ic_launcher_foreground.png": "9df9dd7313d5ea873dc51db6135e972b97fd2c919548e6774c35bd02dc0e2268",
+    "android/app/src/main/res/drawable-xhdpi/splash.png": "14bcfc9b72911e9cafe81ed432f56b86ad976d0be703e1e7dad6e9d922c362a2",
+    "android/app/src/main/res/drawable-xxhdpi/android12splash.png": "7e55834a0eb346fdd1f4ccadb3be408221a911c83ea55a46eae55787a25bca2f",
+    "android/app/src/main/res/drawable-xxhdpi/ic_launcher_foreground.png": "a9eb4d7beeb6e819e299749616292a95e7fcd1256ce46aacd8fd407b264886b5",
+    "android/app/src/main/res/drawable-xxhdpi/splash.png": "02252d051bbe22ebf3dbc45e10435e9075170bcf66b7aca477b3474cf65e60ce",
+    "android/app/src/main/res/drawable-xxxhdpi/android12splash.png": "804efbb065b02d413a06c613971a1a3e75f3da29182b348f534fb550204dfb8d",
+    "android/app/src/main/res/drawable-xxxhdpi/ic_launcher_foreground.png": "f042e2426d8dbea00360fa3ae39a1191ade651f2d53342680e607f77695ea54f",
+    "android/app/src/main/res/drawable-xxxhdpi/splash.png": "628e47c53a78b36db724378f5f06b18e54edf948568bd91ca12ab378e9bba956",
+    "android/app/src/main/res/drawable/background.png": "c52ae8af83e2412ab176aec178ee9246081fc8c34d3fa46366e2b9b264e6d846",
+    "android/app/src/main/res/drawable/launch_background.xml": "42b8d099f0a6d79e90a67949d7a655c09458c734aa1bd8c4d7c73a79b28397ea",
+    "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml": "3a1f03d9cb7cba12cf3df5078879f8bf24aed8265277cc487128f48594f9ef4e",
+    "android/app/src/main/res/mipmap-hdpi/ic_launcher.png": "dd0f022e1e1abbdfc39677d3241b3481c3ec3ab5e1ea7548fda473dd87f0d1cd",
+    "android/app/src/main/res/mipmap-mdpi/ic_launcher.png": "c10041e77c62c0bb15f9d9af4c64ccbc766a119812e91b4072258116e98ddccb",
+    "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": "148f33e3f6db693215b5fb449fe4d350b9c4e01f615a9ca492992860dca121c6",
+    "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": "07f2e822ef67eba55077b72b7956faddf12ca084a2bafa3b527c8a4d32554f60",
+    "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": "7fdcb99ad51a04502aa4b5890c75229f8ad80cba3960e6efd8872dce0764f2f8",
+    "android/app/src/main/res/values-night-v31/styles.xml": "c87732a79e1f4c434ecfb3241e13985d73bb925a06b070cdd29e798a3c39735c",
+    "android/app/src/main/res/values-night/startup_colors.xml": "2dd7a3246e169fcc7dcf12961ece719eca744fe9ab2f6e910b08c105585b3797",
+    "android/app/src/main/res/values-night/styles.xml": "d92da3b888518acf6d9ca3822a510184393ca639ef3965c83d1c3891213b6a93",
+    "android/app/src/main/res/values-v31/styles.xml": "b5070d6539f0696e12fb37144d0bdfcdd2c2794e66f5cdc823c9cec400adf3d2",
+    "android/app/src/main/res/values/colors.xml": "4e816b55a99b88925dbb3d47b2b588aada4911bd09256a054e74d3bd73c07a2e",
+    "android/app/src/main/res/values/startup_colors.xml": "24946b066a392ca7a57460f697b96686aae74907b03a614a9e617b1b86aa01e1",
+    "android/app/src/main/res/values/styles.xml": "21d1aa09d9859c16f86bacf2fb60f4ad892e0e962b933b7c381b7de4e0fb6e0e",
+    "assets/icon/adaptive_foreground.png": "06dea22a89cd2fa4779a2ab8a7c7119ef4cbb25020e3aa639568f2cf93a7d6b6",
+    "assets/icon/app_icon.png": "712e3b9457149a574b26116a65bf24643562d44eed6499cad719a30eacc86f90",
+    "assets/icon/stones.svg": "cc3f52722dd3f2989deae3572053286373d9426f6c029e3c087fe414164481c3",
+    "assets/splash/android12.png": "f004caa9639f51d6592e9c7a1aa105d04e0acf61b75069c58b208771736d532f",
+    "assets/splash/android12_dark.png": "63571782f9fb15787d5eee91e20016a888fce4657bde54754c5255632dd0a29e",
+    "assets/splash/mark.png": "879f183949dc1f337b3a390d6971d40ed0408fd114fd51f43dba5a796e6d8191",
+    "assets/splash/mark_dark.png": "ee9812df0ec5985c51cd21a538a378fde7d202db980869e80b21a59ac089ec10",
+    "lib/main.dart": "2ddf01ccfb3903885b171c9fba209f114f7e125e0cd5a277084b038e2ab6c459",
+    "lib/providers/settings_provider.dart": "e8c7928a37a55944b3ff1479adc4ecbc6c41fecd35847dbd080024986a19929f",
+    "lib/screens/about_screen.dart": "7613c33170c50632708c221094a9cf26882f4be6775bf815ab095d4bff6dcb3c",
+    "lib/screens/main_menu_screen.dart": "282efebb6605cc3a01f7037da5069668b69b3f2296babd6e7db83e716f41c409",
+    "lib/widgets/stones_identity.dart": "736601262cdf8be8c5883c618074e975289cc99a0435250f27ddc8df0f72fba8",
+    "lib/widgets/stones_mark_geometry.dart": "c4f0717b9efb1deb871d61993a73d95427df704b9747f50e786dfc6cef8170f2",
+    "pubspec.lock": "e92ae756ca265f2aca99671a443147e9d6990d84d6e88f848f336dc5e4866528",
+    "pubspec.yaml": "3cbe4082515aa866a46f8b6e6d9a5286e398bf1a9c47b19c7706288994e5f036",
+    "scripts/check_startup_branding.py": "7457e834a1a208b25a0d092314a95c713663a39f5a3c59048ec70dec3a0c7969",
+    "scripts/generate_branding.py": "cfb1c440281de57e3a1f430affa19e5d66f3ebda2ffa3c041c8361485d880cc8",
+    "scripts/generate_splash_branding.sh": "417524cc0cfec93fa833294c4015aab5d4cd26d38abc7e8b1ffa7e3f7a6050f3",
+    "scripts/test_prepare_web_release.py": "f0886b8f40d9e224928e39338a85314a60408a94723b14ef29226a1129a8c894",
+    "scripts/test_startup_branding.py": "de51f9bbe9049f6f1ae9477fea849dd858b43205f9c1c096065265f8bb93c59e",
+    "test/startup_settings_test.dart": "62736776ef519d92281b0aa16cf9e72af4813f33f871f04161c58a9780614d54",
+    "tools/integration_app.dart": "4b712a8938ee5cdf2ee2ebd90207d751d599664fb4fcb4e59f44415f3af4d654",
+    "tools/startup_browser_checks.py": "828a6249ec19c7ed8c6db27fe276e7c347d835ad15ab0bde58e8af2a3c977e73",
+    "web/favicon.png": "2ad7320ec56ed56869cf4cb4955adccb63c3267cd5ebac6efd624c16ebc7a8e6",
+    "web/flutter_bootstrap.js": "0bcee8c6811469b7991901409aaf54a33a7d4ee498e7883f97ff1921ad12499b",
+    "web/icons/Icon-192.png": "555acdab93b3e9c6839be4c9d4970d62e6e1420380dfb623bbe0519a61f04c21",
+    "web/icons/Icon-512.png": "712e3b9457149a574b26116a65bf24643562d44eed6499cad719a30eacc86f90",
+    "web/icons/Icon-maskable-192.png": "f26e1538799fe995fb3dc51b15a3494572c0acd855b4d1696f02284efd835555",
+    "web/icons/Icon-maskable-512.png": "3f42128942f76c901635cb5e4742b7e19761a7ca1bde58021a9cd6cd1c6e9ecb",
+    "web/index.html": "81ef4f772ce4dde4720b03d1772ed6d557752c90cf8798d482a4f5ab6a1cba70",
+    "web/manifest.json": "e19e9ec9388387c6589e0e1d01bac2b35af4e9696d34ddf99b43f37214da42fc"
+  },
+  "checks": {
+    "strictAnalysis": "passed: no issues",
+    "flutterSuite": "passed: 1808 tests, 8m58s, isolated run",
+    "earlierOverlappingSuite": "failed: 1807 passed, 1 missing generated ink_sparkle.frag; retained earlier log",
+    "focusedSettings": "passed: 12 tests",
+    "pythonReleaseTools": "passed: 50 tests after regression review (initial qualification: 49)",
+    "format": "passed: 8 Dart files, 0 changes",
+    "webRelease": "passed: dart2js, /stones/, local engine, fingerprinted",
+    "nativeGenerators": "passed: repeat generation preserves native backgrounds and custom web HTML",
+    "androidDebugBuild": "attempted; blocked: Android SDK not found",
+    "firefox": "attempted; blocked: installed executable spawn UNKNOWN"
+  },
+  "browserChecks": {
+    "chromium": {
+      "scenariosPassed": 21,
+      "report": "build/qa/startup/chromium/real-report.json",
+      "reportSha256": "04cef10cc7db1f512ee7c9af10bcf3e5686532d2a6174937bf866f7538d337a4",
+      "handoffs": [
+        {
+          "case": "light-phone",
+          "firstFlutterFrameMs": 9346.7,
+          "video": "build/qa/startup/chromium/video/page@bc5b86c3b73b972fa81f6c28a8f0e621.webm",
+          "videoSha256": "17f5ba1278ee919d7405e6b10d93fbc0da525aca2c4e66a3d67762477fdbe24d"
+        },
+        {
+          "case": "dark-desktop",
+          "firstFlutterFrameMs": 3503.7,
+          "video": "build/qa/startup/chromium/video/page@96e42275893209199217d3bc279ecffd.webm",
+          "videoSha256": "d993580b6eb172c5d623db94836f5bc77737b10656e78598a0da7bd8223a4425"
+        },
+        {
+          "case": "system-phone",
+          "firstFlutterFrameMs": 3583.9,
+          "video": "build/qa/startup/chromium/video/page@ba8354d92177a8790c2c1e107d343387.webm",
+          "videoSha256": "0d8b4e3e86c841769563c8defdc1c91a32d090cff27c795a630b33bb6f2dd584"
+        },
+        {
+          "case": "invalid-desktop",
+          "firstFlutterFrameMs": 3882.7,
+          "video": "build/qa/startup/chromium/video/page@6fdff0b67e0c97c7bdfd66aec51dfbdb.webm",
+          "videoSha256": "4e4a3bfd8c66b8bf561f76a88aca7f65509f2892ee07c4765e65d5ab821135c2"
+        },
+        {
+          "case": "no-storage-phone",
+          "firstFlutterFrameMs": 3502.3,
+          "video": "build/qa/startup/chromium/video/page@41fac56f74a4a754ce240024d3d098a5.webm",
+          "videoSha256": "8975bf525705a0dd804d1c7762b73b10f97b346ee6c7ba0a839b9b8de7a02b1c"
+        }
+      ]
+    },
+    "webkit": {
+      "scenariosPassed": 21,
+      "report": "build/qa/startup/webkit/real-report.json",
+      "reportSha256": "50886d5fdcb019cf3daac1376232f5c6814ba9fceaffadafcdf7e686d0371a06",
+      "handoffs": [
+        {
+          "case": "light-phone",
+          "firstFlutterFrameMs": 3723,
+          "video": "build/qa/startup/webkit/video/page@5b5d13445bc86edcb85ab76e45cd13e2.webm",
+          "videoSha256": "0a790574344edc72bc606d71cead210d342d3aa2866a7c5f6f19c411c91901f1"
+        },
+        {
+          "case": "dark-desktop",
+          "firstFlutterFrameMs": 4336,
+          "video": "build/qa/startup/webkit/video/page@57738a4fa8b9dbc50d29b0c6593ecc75.webm",
+          "videoSha256": "603fd7385374d18f0b5d4e5f258b04b0d3503f55c86cab1abcf6b81def1c3256"
+        },
+        {
+          "case": "system-phone",
+          "firstFlutterFrameMs": 3564,
+          "video": "build/qa/startup/webkit/video/page@ace19d368a4b47e4a5228e092e1efcc3.webm",
+          "videoSha256": "02df8fad4ec10f3e6abbc47140a9738f73bd87b5f9b66c9f05e2d4fd2471e8e6"
+        },
+        {
+          "case": "invalid-desktop",
+          "firstFlutterFrameMs": 4433,
+          "video": "build/qa/startup/webkit/video/page@f1a8da2c268a1cd518b0adb029e58361.webm",
+          "videoSha256": "00400da3a970df098c07cbc0835981ba46f588818959b03bf18aba6e4fa00a67"
+        },
+        {
+          "case": "no-storage-phone",
+          "firstFlutterFrameMs": 2592,
+          "video": "build/qa/startup/webkit/video/page@23055e34b030928517f31acfd2ad2dce.webm",
+          "videoSha256": "39916ed47a3853ff93971b294a774baef543ac242781809bdcdf837f718b1a1d"
+        }
+      ]
+    }
+  },
+  "artifactsSha256": {
+    "build/web/index.html": "eef452068a41356ec99061f71434ee820968baa41c61cea6c86c91dc48d64856",
+    "build/web/startup-assets.json": "6c5b9ed007aae9e429f7ec03c7edc9dd5d6800bbced6c31caa139cd88106a64d",
+    "build/web/flutter_bootstrap.js": "77deb9b3aa569df7f7036fcfcbfa41280a118a22ea236b8bf450044957c38a0c",
+    "build/web/main.dart.js": "eed1e649473be3edbaab5f5bc475c15279a13cf8d41cf319a8efb2ed51181702",
+    "build/web/flutter_bootstrap.d49f410f51163fb0a466.js": "0968ba32c436fe10eeb9bb067c2caa8cce6ddf1e2c16815ce4ff3b9b46bde064",
+    "build/web/main.eed1e649473be3edbaab.dart.js": "eed1e649473be3edbaab5f5bc475c15279a13cf8d41cf319a8efb2ed51181702"
+  },
+  "logsSha256": {
+    "build/startup-analysis.log": "b47f5f48838fdaed3ca0d6f74e1374a2a079373b69a6f99b091bb6e051b62e7f",
+    "build/startup-flutter-test.log": "8c4b686d21d1612844842e6bd81465b879041e321218ed432c3fc4cb0ff2a648",
+    "build/startup-flutter-test-final.log": "0d486fedf9463c7f4b4009190460281305805a1def5c366642be99f3871ca855",
+    "build/startup-settings-tests.log": "ec43b626774e6b80131545645dc3884ac77574cc0ba9a6656e291340e97b6321",
+    "build/startup-release-tools-final.log": "5d0639071a28445eb3155d807150f9d48a7b934718f109ff66c3d1486d686ae5",
+    "build/startup-web-build-final.log": "2df3f622f7d2d313a09521b09dfd8d3406843d93c4e11f1d300edc509aa029d9",
+    "build/startup-android-build.log": "85c37000ed74152a3de7692f1930d96acdb351c7cc4af9306705a4e33815587b",
+    "build/startup-chromium-real.log": "0780b0a69265035700db324ce2851ff2f9bc06b20b8320ca4bdbe02891506beb",
+    "build/startup-webkit-real.log": "2868c201c92c5f59f86fcbb969133db634f91afbc0c8c6a4db17f329cc5b0c52",
+    "build/startup-firefox.log": "45a249cb9a6da551529cb1b50adfa9579abdba4413398701c9907b37c02fe1e4",
+    "build/startup-native-generation.log": "8c7ca394ec0de783c82ca1afb10322207401db040c43c82e3bbefc6d3d1a3c6d",
+    "build/startup-review-flutter.log": "13bb7f462cf2bb79366c112c575d1f4b0bb0cae9f624635c1f8c5c789099c425",
+    "build/startup-review-python-final.log": "22d07d6df2858154b2f2ad71e71afb234ecc6f6220a57ebc4d1ac2f67e0d609b",
+    "build/startup-review-icon-generation.log": "5d74702f86747f9c9f475381f2ccabb782bf820c8342c95cb1703373519a005b",
+    "build/startup-review-analysis.log": "57423d40148e4d8108bfff6a17d150bdcf1cb84daacd0a9405de25960e4dee08"
+  },
+  "screenshotsSha256": {
+    "docs/qa/startup/bootstrap-failure.png": "79855881a149670dc9dc4ce8e9d8886a0a1a278fa88c0ebff8b05c36c8c92258",
+    "docs/qa/startup/icons.png": "132254ed47abf62230886f2288848b20d97c8755d4719d045ab8d9f89cb0783c",
+    "docs/qa/startup/loader-dark-280-large.png": "f56f2f203ff0c99ff0756bc1a56c9ecdb5d41a0c044e60a7a82c7ee5c05024fc",
+    "docs/qa/startup/menu-dark-desktop.png": "587b6bc85928470719c3c42603cfa9103a184fa00406a319f9116a81146ea78f",
+    "docs/qa/startup/menu-light-phone.png": "f56ed5553cf2d7a899ce72843593cf7132c118f999867eff187cc74f97f98462",
+    "docs/qa/startup/transition-light-phone.png": "ffcd90446b3721c3f072575ce9afacda76e73f9505128170775cd17eec5a8b45"
+  },
+  "remainingQualification": [
+    "Android SDK compilation and emulator/device launch pre-12 and 12+ in both system appearances",
+    "physical Android install/update and launcher masks",
+    "physical iPhone Safari and screen-reader/focus acceptance",
+    "device safe areas, OS font enlargement and installed PWA journeys",
+    "Firefox runtime startup (Windows process could not launch)",
+    "two source-identical complete remote CI runs before any publication"
+  ],
+  "published": false,
+  "deletedPaths": [
+    "android/app/src/main/res/drawable/ic_launcher_foreground.xml",
+    "assets/splash/branding.png"
+  ],
+  "regressionReview": {
+    "dateUtc": "2026-10-26T21:47:06.152246+00:00",
+    "authorized": "Commit and push to main after regression review; no app publication",
+    "findingsFixed": [
+      "Windows CRLF checkout falsely failed generated Dart source byte comparison",
+      "Default launcher 16% inset duplicated padding already present in adaptive foreground"
+    ],
+    "adjacentFlutterTests": 37,
+    "pythonTests": 50,
+    "applicationDartAndWebRuntimeChangedDuringReview": false,
+    "unrelatedRegressionsFound": false,
+    "remoteMainAtReview": "8be2bc99837ddc0c83f9c233bcde1f1c702170a4",
+    "remainingQualification": [
+      "Android SDK compilation and emulator/device launch pre-12 and 12+ in both system appearances",
+      "physical Android install/update and launcher masks",
+      "physical iPhone Safari and screen-reader/focus acceptance",
+      "device safe areas, OS font enlargement and installed PWA journeys",
+      "Firefox runtime startup (Windows process could not launch)",
+      "two source-identical complete remote CI runs before any publication"
+    ],
+    "strictAnalysis": "passed: no issues, 55.7 seconds"
+  }
+}

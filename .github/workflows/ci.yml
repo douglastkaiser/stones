@@ -50,10 +50,12 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Generate splash branding
-        run: ./scripts/generate_splash_branding.sh
+        run: python3 scripts/generate_branding.py --check
 
       - name: Generate splash screen
-        run: dart run flutter_native_splash:create
+        run: |
+          dart run flutter_native_splash:create
+          python3 scripts/check_startup_branding.py
 
       - name: Run analyzer
         run: flutter analyze --fatal-infos
@@ -98,10 +100,12 @@ jobs:
         run: dart run flutter_launcher_icons
 
       - name: Generate splash branding
-        run: ./scripts/generate_splash_branding.sh
+        run: python3 scripts/generate_branding.py --check
 
       - name: Generate splash screen
-        run: dart run flutter_native_splash:create
+        run: |
+          dart run flutter_native_splash:create
+          python3 scripts/check_startup_branding.py
 
       - name: Clean and build web
         run: |
@@ -112,6 +116,20 @@ jobs:
           python3 -m unittest scripts.test_prepare_web_release
           python3 scripts/prepare_web_release.py
           python3 scripts/web_artifact.py create build/web
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install startup browser harness
+        run: bash scripts/install_browser_harness.sh chromium
+      - name: Verify startup faults, appearance and painted handoff
+        run: python3 tools/startup_browser_checks.py --root build/web --real
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: startup-evidence-${{ github.sha }}-${{ github.run_attempt }}
+          path: build/qa/startup
+          if-no-files-found: warn
 
       - id: artifact-name
         run: echo "name=web-build-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
@@ -141,6 +159,12 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: python3 -m unittest discover -s scripts -p 'test_android_release_preflight.py'
+      - name: Generate and verify Android launch surfaces
+        run: |
+          python3 scripts/generate_branding.py --check
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+          python3 scripts/check_startup_branding.py
       - run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:

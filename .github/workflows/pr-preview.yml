@@ -39,10 +39,12 @@ jobs:
         run: dart run flutter_launcher_icons
 
       - name: Generate splash branding
-        run: ./scripts/generate_splash_branding.sh
+        run: python3 scripts/generate_branding.py --check
 
       - name: Generate splash screen
-        run: dart run flutter_native_splash:create
+        run: |
+          dart run flutter_native_splash:create
+          python3 scripts/check_startup_branding.py
 
       - name: Build web for PR preview
         run: flutter build web --release --base-href "/stones/pr/${{ github.event.pull_request.number }}/"

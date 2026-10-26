@@ -32,6 +32,7 @@ dependencies:
   wakelock_plus: ^1.5.2
 
 dev_dependencies:
+  shared_preferences_platform_interface: ^2.4.2
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
@@ -61,30 +62,30 @@ flutter_launcher_icons:
   ios: false  # Enable when iOS project is scaffolded with: flutter create . --platforms=ios
   remove_alpha_ios: true
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#46505A"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#EDE5D7"
+  adaptive_icon_foreground: "assets/icon/adaptive_foreground.png"
+  # The source already includes the Android circular safe-area padding.
+  adaptive_icon_foreground_inset: 0
   min_sdk_android: 21
   web:
-    generate: true
+    generate: false
     image_path: "assets/icon/app_icon.png"
-    background_color: "#46505A"
-    theme_color: "#795548"
+    background_color: "#EDE5D7"
+    theme_color: "#EDE5D7"
   windows:
     generate: false
   macos:
     generate: false
 
 flutter_native_splash:
-  color: "#795548"
-  image: "assets/icon/app_icon.png"
-  branding: "assets/splash/branding.png"
-  branding_mode: bottom
-
-  # Enable web splash (uses same settings as above)
-  web: true
-
-  # Android 12+ specific settings
+  color: "#EDE5D7"
+  color_dark: "#1B1816"
+  image: "assets/splash/mark.png"
+  image_dark: "assets/splash/mark_dark.png"
+  # The custom accessible loader is maintained in web/index.html.
+  web: false
   android_12:
-    color: "#795548"
-    image: "assets/icon/app_icon.png"
-    branding: "assets/splash/branding.png"
+    color: "#EDE5D7"
+    color_dark: "#1B1816"
+    image: "assets/splash/android12.png"
+    image_dark: "assets/splash/android12_dark.png"

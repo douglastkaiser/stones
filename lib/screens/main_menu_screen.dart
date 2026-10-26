@@ -14,6 +14,7 @@ import '../game/match_config.dart';
 import '../game/match_setup_screen.dart';
 import '../game/learning_hub.dart';
 import '../widgets/game_menu.dart';
+import '../widgets/stones_identity.dart';
 import '../widgets/account_card.dart';
 import '../providers/player_profile_provider.dart';
 import '../game/join_room_screen.dart';
@@ -57,9 +58,6 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
 
   Future<void> _initialize() async {
     ref.read(eloProvider);
-    // Load settings
-    await ref.read(appSettingsProvider.notifier).load();
-
     // Load achievements
     await ref.read(achievementProvider.notifier).load();
 
@@ -101,14 +99,14 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Row(children: [
-                                    Expanded(
-                                        child: Text('STONES',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineSmall
-                                                ?.copyWith(letterSpacing: 3))),
+                                    const StonesMark(size: 28),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                        child: Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: StonesWordmark()))),
                                     IconButton(
                                         tooltip: 'Leaderboard',
                                         icon: const Icon(

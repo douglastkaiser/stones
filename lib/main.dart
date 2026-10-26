@@ -43,12 +43,21 @@ void _debugLog(String message) {
   print('[GAME] $message');
 }
 
-void main() {
+Future<void> main() async {
   configureBrowserNavigation();
   WidgetsFlutterBinding.ensureInitialized();
   // Firebase initialization is deferred to OnlineGameController.initialize()
   // to reduce initial load time when user only plays offline
-  runApp(const ProviderScope(child: StonesApp()));
+  await launchStones();
+}
+
+/// Shared by production and emulator entry points. Optional services start only
+/// after the initialized interface is available; none gates local play.
+Future<void> launchStones({ProviderContainer? container}) async {
+  final providers = container ?? ProviderContainer();
+  await providers.read(appSettingsProvider.notifier).load();
+  runApp(UncontrolledProviderScope(
+      container: providers, child: const StonesApp()));
 }
 
 class StonesApp extends ConsumerStatefulWidget {
@@ -107,8 +116,6 @@ class _StonesAppState extends ConsumerState<StonesApp>
     super.initState();
     _history.initialize();
     WidgetsBinding.instance.addObserver(this);
-    // Load settings on app start
-    ref.read(appSettingsProvider.notifier).load();
   }
 
   @override

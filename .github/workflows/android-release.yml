@@ -70,8 +70,9 @@ jobs:
       - name: Generate branding
         run: |
           dart run flutter_launcher_icons
-          ./scripts/generate_splash_branding.sh
+          python3 scripts/generate_branding.py --check
           dart run flutter_native_splash:create
+          python3 scripts/check_startup_branding.py
       - run: flutter analyze --fatal-infos
       - run: flutter test
       - name: Prepare optional Play Games resource IDs

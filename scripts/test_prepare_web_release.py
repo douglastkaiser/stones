@@ -37,6 +37,24 @@ class WebReleaseTests(unittest.TestCase):
             prepare(root)
             self.assertNotEqual(old, (root / 'index.html').read_text())
 
+    def test_custom_loader_survives_release_fingerprinting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root)
+            source = Path(__file__).resolve().parents[1] / 'web'
+            index = (source / 'index.html').read_text(encoding='utf-8')
+            (root / 'index.html').write_text(index, encoding='utf-8')
+            custom = (source / 'flutter_bootstrap.js').read_text(encoding='utf-8')
+            generated = (root / 'flutter_bootstrap.js').read_text()
+            (root / 'flutter_bootstrap.js').write_text(generated + '\n' + custom, encoding='utf-8')
+            prepare(root)
+            prepared = (root / 'index.html').read_text(encoding='utf-8')
+            self.assertEqual(re.sub(r'flutter_bootstrap\.[0-9a-f]{20}\.js',
+                                    'flutter_bootstrap.js', prepared), index)
+            for marker in ('flutter-first-frame', 'id="stones-loader"',
+                           'flutter.theme_mode', '$FLUTTER_BASE_HREF'):
+                self.assertIn(marker, prepared)
+
     def test_unknown_layout_fails_without_modifying_page(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

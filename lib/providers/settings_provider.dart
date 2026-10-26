@@ -88,25 +88,41 @@ class AppSettings {
 class AppSettingsNotifier extends StateNotifier<AppSettings> {
   AppSettingsNotifier() : super(const AppSettings());
 
-  /// Load settings from SharedPreferences
-  Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeModeIndex = prefs.getInt(SettingsKeys.themeMode);
-    final defaults = _parseChessClockDefaults(
-      prefs.getString(SettingsKeys.chessClockDefaults),
-    );
-    state = AppSettings(
-      hexModeEnabled: prefs.getBool(SettingsKeys.hexModeEnabled) ?? false,
-      boardSize: prefs.getInt(SettingsKeys.boardSize) ?? 5,
-      isSoundMuted: prefs.getBool(SettingsKeys.soundMuted) ?? false,
-      musicVolume:
-          (prefs.getDouble(SettingsKeys.musicVolume) ?? 0).clamp(0.0, 1.0),
-      themeMode: themeModeIndex != null
-          ? ThemeMode.values[themeModeIndex]
-          : ThemeMode.system,
-      chessClockEnabled: prefs.getBool(SettingsKeys.chessClockEnabled) ?? false,
-      chessClockDefaults: defaults,
-    );
+  Future<void>? _initialization;
+
+  /// All startup callers share one storage read, including concurrent callers.
+  Future<void> load() => _initialization ??= _load();
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      T? read<T>(String key) {
+        final value = prefs.get(key);
+        return value is T ? value : null;
+      }
+
+      final rawTheme = read<int>(SettingsKeys.themeMode);
+      final themeModeIndex =
+          rawTheme is int && rawTheme >= 0 && rawTheme < ThemeMode.values.length
+              ? rawTheme
+              : 0;
+      final defaults = _parseChessClockDefaults(
+        read<String>(SettingsKeys.chessClockDefaults),
+      );
+      state = AppSettings(
+        hexModeEnabled: read<bool>(SettingsKeys.hexModeEnabled) ?? false,
+        boardSize: read<int>(SettingsKeys.boardSize) ?? 5,
+        isSoundMuted: read<bool>(SettingsKeys.soundMuted) ?? false,
+        musicVolume:
+            (read<double>(SettingsKeys.musicVolume) ?? 0).clamp(0.0, 1.0),
+        themeMode: ThemeMode.values[themeModeIndex],
+        chessClockEnabled: read<bool>(SettingsKeys.chessClockEnabled) ?? false,
+        chessClockDefaults: defaults,
+      );
+    } catch (_) {
+      // Storage can be disabled by browser policy. Local play still starts in
+      // System appearance with defaults; never expose an unhandled startup error.
+    }
   }
 
   /// Expose the experimental hex mode without changing the active square game.
