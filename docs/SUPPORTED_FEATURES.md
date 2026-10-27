@@ -218,7 +218,8 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   survive positional-search timeout. Indexed path evaluation shares cached
   geometry across search positions. Saved v1/v2 configurations retain their strategy and recorded engine version.
   New v3 AI continue the existing v2 rating profiles. Lookahead targets count
-  full table rounds: Easy/Medium one, Hard two, Expert three. Every difficulty
+  full table rounds: Easy one, Medium two in duels (one in multiplayer), Hard two,
+  Expert three. Every difficulty
   completes a bounded, selective first round that models every rival's turn;
   wider/deeper refinements use the remaining thinking budget. Easy varies among
   near-equal choices evaluated over that round. Saved v1/v2 search is unchanged.
@@ -230,7 +231,25 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   regression in pilot checks. Confirmed position history discourages repeated
   near-equal root moves without adding a repetition draw rule. History rebuilds
   after load/reconnect/takeback and reaches native/browser search consistently.
-  See [AI upgrades and qualification](AI_UPGRADES.md) for weights and remaining gates.
+  See [AI upgrades and qualification](AI_UPGRADES.md) for weights and remaining gates,
+  and the [Hex balance investigation](AI_BALANCE_INVESTIGATION.md) for opening/seat
+  controls and exact bounded defensive counterexamples. Hex tier separation is
+  still unproven; the strict per-board CI gates are retained.
+  The 2026-10-26 source follow-up establishes Hard-width lower-depth duel results
+  before Expert's widest refinement. Multiplayer retains its prior search widths
+  and root order. An isolated capstone reserve-credit pilot lost
+  both seat rotations and was rejected; there is no capstone opening restriction.
+  Medium now chooses its best completed result instead of a periodic second
+  near-equal choice, and its duel target deepens within the unchanged 500 ms
+  budget; saved v1/v2 strategies retain their existing behavior.
+  Completed duel horizon checks recognize rival threats with no legal defense
+  as forced losses, while retaining terminal draws as defenses. Interrupted
+  checks do not establish a forced result; multiplayer still needs joint proof.
+  Optional
+  seeded final-choice policies are experimental and disabled in normal play;
+  full-window alternative scores and tactical/repetition safeguards apply.
+  Six required native adjacent-tier CI groups cover Square-5 and two-seat Hex-2;
+  a manual full-size/player-count workflow checks held-out ordering separately.
   Immediate wins and blocks are covered at Square 8 and Hex radius 4 for all four
   difficulties at two/four seats; broad strength and device timing remain unqualified.
   Difficulty-strength acceptance is still open (see limits below).
@@ -562,7 +581,7 @@ must stay explicit until implementation and acceptance evidence justify changing
 | PLAN-07 · Visual and performance finish | Core menu/table styling exists. Complete coherent learning/account/history/collection surfaces, dense mixed-theme readability, reduced-motion/audio behavior and measured performance on reference phones. Keep five coordinated sets. | [Finishing plan](FINISHING_PLAN.md), packet 10 |
 | PLAN-08 · Account lifecycle and disclosures | Feedback exists. Account/data deletion needs discoverable app/web entry points, reauthentication, retryable cleanup and treatment of shared histories/rooms. Align actual Analytics/retention, privacy text and store disclosures before public release. | [Feedback](FEEDBACK.md), finishing packet 11 |
 | PLAN-09 · Release baseline and parity | Continue exact-source/artifact/backend qualification and rollback. Qualify one source across web and Play Android, actual update/install, old saves, independent accounts and a long-running friend game. Store-track publication and production-access requirements remain separate gates. | [Release readiness](RELEASE_READINESS.md), finishing packets 1 and 12 |
-| PLAN-10 · AI strength | Four tiers and resumable paired-reference qualification tooling are implemented. Default/max-board 50-seed qualification, the full material-weight pilot grid and the human Expert-strength target remain open. Partial matrices and exploratory probes cannot qualify; native timings do not establish browser/device performance. | [AI upgrades](AI_UPGRADES.md), [Playtesting feedback](PLAYTESTING_FEEDBACK.md) |
+| PLAN-10 · AI strength | Four tiers, required representative adjacent-tier regression gates, a manually requested all-size/player-count ordering matrix, and resumable paired-reference tooling are implemented. Expert's lower-depth foundation has a source correction; a capstone reserve-credit pilot was rejected after losses, and organic variation remains opt-in experimental. Full 50-seed qualification, held-out same-tier no-regression evidence, the material-weight pilot grid and the human Expert-strength target remain open. Partial matrices and exploratory probes cannot qualify; native timings do not establish browser/device performance. | [AI upgrades](AI_UPGRADES.md), [Playtesting feedback](PLAYTESTING_FEEDBACK.md) |
 | PLAN-11 · Device and usability acceptance | Physical iPhone web sign-in retry, Android back gestures, Play-signed invitations/audio/sharing, native safe areas, keyboard/screen readers, large text and unfamiliar-player trials remain acceptance work. Browser viewport tests do not establish these. | [Release readiness](RELEASE_READINESS.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md) |
 
 Current constraints also remain visible:

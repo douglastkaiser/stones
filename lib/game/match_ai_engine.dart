@@ -11,18 +11,25 @@ import 'match_config.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
 
+/// Experimental final-choice policies. Production retains deterministic play.
+enum AiMoveVariation { deterministic, ties, weighted }
+
 /// A shared search: zero-sum minimax for two seats, MaxN for independent rivals.
 /// Branching and depth are bounded; every adopted iteration finishes all roots.
 class MatchSearchStats {
   // Depth is measured in individual moves; completedRounds records full cycles.
   int completedDepth = 0,
       completedRounds = 0,
+      completedRootWidth = 0,
       evaluatedRoots = 0,
       elapsedMs = 0;
   final consideredSeats = <SeatId>{};
   int cacheHits = 0, cacheEntries = 0, cacheEvictions = 0, forksProven = 0;
   bool timedOut = false;
   String stage = 'roots';
+  String? timeoutStage;
+  int? decisionSeed;
+  List<Map<String, Object?>> alternatives = const [];
 }
 
 class MatchAI {
@@ -31,7 +38,10 @@ class MatchAI {
       this.onSearchComplete,
       this.useCaches = true,
       this.cacheCapacity = 10000,
+      this.variation = AiMoveVariation.deterministic,
       this.materialWeights = const AiMaterialWeights()});
+  final AiMoveVariation variation;
+  math.Random? _random;
   final bool useCaches;
   final int cacheCapacity;
   final AiMaterialWeights materialWeights;
@@ -45,7 +55,8 @@ class MatchAI {
   String _moveKey(MatchState game, MatchMove move) =>
       _moveKeys[move] ??= jsonEncode(move.toMap(game.current));
 
-  MatchMove _rootChoice(MatchState game, List<(MatchMove, double)> scores) {
+  MatchMove _rootChoice(MatchState game, List<(MatchMove, double)> scores,
+      {bool allowVariation = true}) {
     scores.sort((a, b) => b.$2.compareTo(a.$2));
     if (!_v3(game) || scores.first.$2.abs() >= 100000) {
       return scores.first.$1;
@@ -56,15 +67,22 @@ class MatchAI {
         _recent[aiPositionKey(MatchRules.play(game, move)!)] ?? 0;
     final least = plausible.map((s) => repeats(s.$1)).reduce(math.min);
     final pool = plausible.where((s) => repeats(s.$1) == least).toList();
+    if (allowVariation && variation != AiMoveVariation.deterministic) {
+      final best = pool.first.$2;
+      final margin = variation == AiMoveVariation.ties ? 0.0 : 4.0;
+      final close = pool.where((s) => s.$2 >= best - margin).toList();
+      final weights = close.map((s) => 1 / (1 + best - s.$2)).toList();
+      var draw = _random!.nextDouble() * weights.reduce((a, b) => a + b);
+      for (var i = 0; i < close.length; i++) {
+        draw -= weights[i];
+        if (draw <= 0) return close[i].$1;
+      }
+      return close.last.$1;
+    }
     if (level == BotLevel.easy && !game.opening) {
       final seed = game.ply * 31 +
           game.board.keys.fold<int>(0, (sum, c) => sum + c.x * 7 + c.y * 13);
       return pool[seed.abs() % pool.length].$1;
-    }
-    if (level == BotLevel.medium &&
-        pool.length > 1 &&
-        (game.ply ~/ game.config.seats.length) % 3 == 1) {
-      return pool[1].$1;
     }
     return pool.first.$1;
   }
@@ -90,17 +108,31 @@ class MatchAI {
   final BotLevel level;
   final bool yieldDuringSearch;
   // Targets are full rounds for v3; saved v2 games retain individual-move depth.
-  int get depth => [1, 1, 2, 3][level.index];
+  int get depth => [1, 2, 2, 3][level.index];
   int get branching => [4, 8, 12, 16][level.index];
   int _branching(MatchState game) =>
       game.config.seats.length > 2 ? [4, 8, 8, 10][level.index] : branching;
+  // Establish the same completed lower-depth result before adding width or
+  // depth. Otherwise additional root moves can make a stronger tier
+  // fall back to the weaker, selective baseline more often.
+  int _rootWidth(MatchState game, int stage) => _v3(game) &&
+          game.config.seats.length == 2 &&
+          level == BotLevel.expert &&
+          stage <= 2
+      ? 12
+      : _branching(game);
   Duration get thinkingLimit =>
       Duration(milliseconds: [200, 500, 1200, 2200][level.index]);
 
   Future<MatchMove?> choose(MatchState game,
       {bool Function()? cancelled,
+      int? decisionSeed,
       List<String> recentPositionKeys = const []}) async {
     if (game.finished) return null;
+    final effectiveSeed = variation == AiMoveVariation.deterministic
+        ? null
+        : decisionSeed ?? math.Random().nextInt(0x7fffffff);
+    _random = effectiveSeed == null ? null : math.Random(effectiveSeed);
     _cache =
         _v3(game) && useCaches ? AiSearchCache(capacity: cacheCapacity) : null;
     _keys = Expando<String>();
@@ -115,7 +147,7 @@ class MatchAI {
     var best = first;
     final roundSearch = game.config.aiEngine == 'shared-search-v3';
     var roundCandidates = <(MatchMove, MatchState, double)>[];
-    final stats = MatchSearchStats();
+    final stats = MatchSearchStats()..decisionSeed = effectiveSeed;
     final watch = Stopwatch()..start();
     var bestRootScore = double.negativeInfinity;
     final budget = SearchBudget(
@@ -167,13 +199,17 @@ class MatchAI {
       }
       var completedScores = <(MatchMove, double)>[];
       if (roundSearch) {
-        best = await _oneRound(game, candidates, stats, cancelled);
+        best = await _oneRound(game, candidates, stats, cancelled,
+            allowVariation: level == BotLevel.easy);
         // Fork proof is opportunistic: only a complete enumeration of joint
         // defenses can promote a move to a forced win. Deadline exhaustion is unknown.
         stats.stage = 'fork proof';
         for (final candidate in candidates.take(2)) {
           if (await aiVerifyFork(candidate.$2, game.current, budget,
-                  onTimeout: () => stats.timedOut = true) ==
+                  onTimeout: () {
+                stats.timedOut = true;
+                stats.timeoutStage = 'fork proof';
+              }) ==
               AiForkStatus.proven) {
             stats.forksProven++;
             return candidate.$1;
@@ -181,20 +217,36 @@ class MatchAI {
         }
         if (level == BotLevel.easy) return best;
       }
-      final exactAlternatives = roundSearch &&
-          (level == BotLevel.medium &&
-                  (game.ply ~/ game.config.seats.length) % 3 == 1 ||
-              candidates.take(_branching(game)).any(
-                  (entry) => _recent.containsKey(aiPositionKey(entry.$2))));
       stats.stage = 'search';
-      for (var iteration = 1; iteration <= depth; iteration++) {
-        final plies =
-            roundSearch ? iteration * game.config.seats.length : iteration;
+      final targetDepth = !roundSearch ||
+              game.config.seats.length > 2 && level == BotLevel.medium
+          ? [1, 1, 2, 3][level.index]
+          : depth;
+      final widenDuel = roundSearch &&
+          game.config.seats.length == 2 &&
+          level == BotLevel.expert &&
+          targetDepth >= 2 &&
+          candidates.length > 12;
+      for (var iteration = 1;
+          iteration <= targetDepth + (widenDuel ? 1 : 0);
+          iteration++) {
+        final rounds = widenDuel && iteration > 2 ? iteration - 1 : iteration;
+        final plies = roundSearch ? rounds * game.config.seats.length : rounds;
         final beam = roundSearch ? (level == BotLevel.medium ? 2 : 3) : null;
         final iterationScores = <(MatchMove, double)>[];
         MatchMove? iterationMove;
         var score = double.negativeInfinity;
-        for (final (move, next, _) in candidates.take(_branching(game))) {
+        final selected = candidates.take(_rootWidth(game, iteration)).toList();
+        final principal =
+            selected.indexWhere((entry) => identical(entry.$1, best));
+        if (roundSearch && game.config.seats.length == 2 && principal > 0) {
+          selected.insert(0, selected.removeAt(principal));
+        }
+        final exactAlternatives = roundSearch &&
+            (variation != AiMoveVariation.deterministic ||
+                selected.any(
+                    (entry) => _recent.containsKey(aiPositionKey(entry.$2))));
+        for (final (move, next, _) in selected) {
           final double value;
           if (game.config.seats.length == 2) {
             value = await _duelSearch(
@@ -216,11 +268,20 @@ class MatchAI {
           }
         }
         if (iterationMove != null) {
+          stats.alternatives = [
+            for (final (move, value) in iterationScores)
+              {
+                'move': move.toMap(game.current),
+                'score': value,
+                'exact': exactAlternatives
+              }
+          ];
           best = exactAlternatives
               ? _rootChoice(game, iterationScores)
               : iterationMove;
           stats.completedDepth = plies;
-          if (roundSearch) stats.completedRounds = iteration;
+          stats.completedRootWidth = selected.length;
+          if (roundSearch) stats.completedRounds = rounds;
           completedScores = iterationScores;
         }
       }
@@ -238,6 +299,7 @@ class MatchAI {
       }
     } on SearchTimedOut {
       stats.timedOut = true;
+      stats.timeoutStage ??= stats.stage;
       // Always model every rival at least once, even when initial ranking or
       // the exhaustive defense pass used up the refinement deadline.
       if (roundSearch && stats.completedRounds == 0) {
@@ -259,6 +321,7 @@ class MatchAI {
       _keys = Expando<String>();
       _moveKeys = Expando<String>();
       _recent.clear();
+      _random = null;
       onSearchComplete?.call(stats);
     }
     return best;
@@ -268,7 +331,8 @@ class MatchAI {
       MatchState game,
       List<(MatchMove, MatchState, double)> candidates,
       MatchSearchStats stats,
-      bool Function()? cancelled) async {
+      bool Function()? cancelled,
+      {bool allowVariation = false}) async {
     stats.stage = 'round baseline';
     final budget =
         SearchBudget(enabled: yieldDuringSearch, cancelled: cancelled);
@@ -279,7 +343,7 @@ class MatchAI {
     final ordered = candidates.toList()..sort((a, b) => b.$3.compareTo(a.$3));
     final scores = <(MatchMove, double)>[];
     stats.consideredSeats.add(game.current);
-    for (final (move, position, _) in ordered.take(_branching(game))) {
+    for (final (move, position, _) in ordered.take(_rootWidth(game, 0))) {
       var next = position;
       // Root move plus N-1 opponent moves is one round, ending just before
       // this seat's next turn. A terminal result legitimately ends it sooner.
@@ -298,7 +362,17 @@ class MatchAI {
     scores.sort((a, b) => b.$2.compareTo(a.$2));
     stats.completedRounds = 1;
     stats.completedDepth = game.config.seats.length;
-    return _rootChoice(game, scores);
+    stats.completedRootWidth = scores.length;
+    stats.alternatives = [
+      for (final (move, value) in scores)
+        {
+          'move': move.toMap(game.current),
+          'score': value,
+          'exact': false,
+          'model': 'selective-baseline'
+        }
+    ];
+    return _rootChoice(game, scores, allowVariation: allowVariation);
   }
 
   Future<bool> _rivalWin(
@@ -323,7 +397,9 @@ class MatchAI {
     final key = 'win:${_key(game)}';
     final cached = _cache?.get<bool>(key);
     if (cached != null) return cached;
-    for (final move in MatchRules.legalMoves(game)) {
+    final moves =
+        _v3(game) ? aiWinCandidates(game) : MatchRules.legalMoves(game);
+    for (final move in moves) {
       final pause = budget.pauseIfNeeded();
       if (pause != null) await pause;
       if (MatchRules.play(game, move)!.result?.winner == game.current) {
@@ -560,10 +636,18 @@ class MatchAI {
       }
       if (_v3(game) && extend) {
         final forcing = await _forcing(game, budget);
-        if (forcing.isNotEmpty) {
+        if (forcing.threatened && forcing.replies.isEmpty) {
+          // Every legal defense was checked. A rival that can win after each
+          // reply has a forced win, even though this position is not terminal
+          // yet. An interrupted enumeration throws rather than proving a loss.
+          return game.current == root
+              ? -200000 + game.ply.toDouble() + 2
+              : 200000 - game.ply.toDouble() - 2;
+        }
+        if (forcing.replies.isNotEmpty) {
           var value =
               game.current == root ? double.negativeInfinity : double.infinity;
-          for (final (_, next, _) in forcing.take(beam ?? branching)) {
+          for (final (_, next, _) in forcing.replies.take(beam ?? branching)) {
             final score = await _duelSearch(
                 next, game.config.seats.length - 1, root, budget, alpha, beta,
                 beam: beam, extend: false);
@@ -615,18 +699,21 @@ class MatchAI {
 
   // Extend only forced defensive sequences; quiet captures get ordering credit
   // below, avoiding an unbounded capture search in a multiplayer free-for-all.
-  Future<List<(MatchMove, MatchState, double)>> _forcing(
-      MatchState game, SearchBudget budget) async {
-    if (!await _rivalWin(game, game.current, budget)) return [];
+  Future<({bool threatened, List<(MatchMove, MatchState, double)> replies})>
+      _forcing(MatchState game, SearchBudget budget) async {
+    if (!await _rivalWin(game, game.current, budget)) {
+      return (threatened: false, replies: <(MatchMove, MatchState, double)>[]);
+    }
     final replies = <(MatchMove, MatchState, double)>[];
     for (final candidate in await _ranked(game, budget)) {
       if (candidate.$2.result?.winner == game.current ||
+          candidate.$2.result?.draw == true ||
           !candidate.$2.finished &&
               !await _rivalWin(candidate.$2, game.current, budget)) {
         replies.add(candidate);
       }
     }
-    return replies;
+    return (threatened: true, replies: replies);
   }
 
   Future<Map<SeatId, double>> _searchBody(
@@ -648,10 +735,11 @@ class MatchAI {
       }
       if (_v3(game) && extend) {
         final forcing = await _forcing(game, budget);
-        if (forcing.isNotEmpty) {
+        if (forcing.replies.isNotEmpty) {
           Map<SeatId, double>? result;
           var score = double.negativeInfinity;
-          for (final (_, next, _) in forcing.take(beam ?? _branching(game))) {
+          for (final (_, next, _)
+              in forcing.replies.take(beam ?? _branching(game))) {
             final values = await _search(
                 next, game.config.seats.length - 1, budget,
                 beam: beam, extend: false);
@@ -742,6 +830,31 @@ class MatchAI {
                     sum +
                     math.min(4, stack.length - 1) * 2 +
                     (stack.last.type == PieceType.capstone ? 5 : 0))
+    };
+  }
+
+  static bool _isV3(MatchState game) =>
+      game.config.aiEngine == 'shared-search-v3';
+
+  /// Diagnostic terms use the same units as the positional evaluator. Material
+  /// probes are separate because callers can supply experimental weights.
+  static Map<String, double> evaluationTerms(MatchState game, SeatId seat,
+      {bool endgame = true}) {
+    if (game.finished) return {'terminal': evaluate(game)[seat]!};
+    final occupied = game.board.length / game.geometry.cells.length;
+    final controlled = game.board.values.where((s) => s.last.seat == seat);
+    return {
+      'road': _roadScore(game, seat),
+      'flats': MatchRules.flatCounts(game)[seat]! *
+          (4 + (endgame ? 40 * occupied * occupied : 0)),
+      'development': _isV3(game) ? _development(game, seat) : 0,
+      'deployment':
+          (Reserve.initial(game.config).total - game.reserves[seat]!.total) *
+              8.0,
+      'stackControl':
+          controlled.fold(0.0, (sum, s) => sum + math.min(4, s.length - 1) * 2),
+      'capMaterial': 5.0 *
+          controlled.where((s) => s.last.type == PieceType.capstone).length,
     };
   }
 

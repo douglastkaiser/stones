@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stones/game/ai_position.dart';
 import 'package:stones/game/match_ai.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_rules.dart';
@@ -20,15 +21,19 @@ void main() {
                     level: BotLevel.values[(offset + index * 3) % 4])
             ]);
         var game = MatchState.initial(config);
+        final history = <String>[aiPositionKey(game)];
         final supply = game.reserves[config.starter]!.total;
         for (var ply = 0; ply < 150 && !game.finished; ply++) {
-          final move =
-              await selectMatchMove(game, config.seat(game.current).level);
+          final move = await selectMatchMove(
+              game, config.seat(game.current).level,
+              recentPositionKeys: history);
           expect(move, isNotNull, reason: 'AI stalled at ply $ply');
           final next = MatchRules.play(game, move!);
           expect(next, isNotNull,
               reason: 'AI produced an illegal move at $ply');
           game = next!;
+          history.add(aiPositionKey(game));
+          if (history.length > 64) history.removeAt(0);
           expect(game.ply, ply + 1);
           for (final id in config.ids) {
             final stones = game.board.values

@@ -122,7 +122,7 @@ control descriptions only for their legacy adapters.
 
 ### AI System (`lib/game/`)
 - `match_ai.dart` - Shared AI entry point, native/web dispatch and optional confirmed-position history
-- `match_ai_engine.dart` - Versioned search; v3 targets 1/1/2/3 full table rounds for Easy/Medium/Hard/Expert, with selective mandatory first-round coverage
+- `match_ai_engine.dart` - Versioned search; v3 duel targets are 1/2/2/3 full rounds for Easy/Medium/Hard/Expert (Medium retains one round in multiplayer), with selective mandatory first-round coverage
 - `ai_search_cache.dart`, `ai_tactics.dart`, `ai_material.dart` - Decision-local reuse, bounded forcing analysis and legal material probes
 - `ai_position.dart` - Canonical repetition identity; no new draw rule
 - `match_rules.dart` - Shared legal placement/spread generation and results

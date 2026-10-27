@@ -1,0 +1,72 @@
+name: AI strength shards
+
+on:
+  workflow_call:
+    inputs:
+      shape:
+        required: true
+        type: string
+      size:
+        required: true
+        type: number
+      players:
+        required: true
+        type: number
+      tier:
+        required: true
+        type: number
+      policy:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  shard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: |
+          dart compile exe tools/ai_worker.dart -o /tmp/stones-ai-candidate
+          python3 scripts/ai_strength_ci.py provenance --binary=/tmp/stones-ai-candidate
+          dart compile exe tools/ai_strength.dart -o /tmp/stones-ai-strength
+      - name: Record five seeded rotations
+        shell: bash
+        env:
+          SHAPE: ${{ inputs.shape }}
+          SIZE: ${{ inputs.size }}
+          PLAYERS: ${{ inputs.players }}
+          TIER: ${{ inputs.tier }}
+          POLICY: ${{ inputs.policy }}
+          BATCH: ${{ matrix.batch }}
+        run: |
+          mkdir -p build/ai-full
+          git rev-parse HEAD > build/ai-full/source.txt
+          flutter --version > build/ai-full/runtime.txt
+          /tmp/stones-ai-strength --shape="$SHAPE" --size="$SIZE" --players="$PLAYERS" --tier="$TIER" --policy="$POLICY" --seeds=5 --seed-start="$((100000 + BATCH * 5))" --explore --output=build/ai-full/games.jsonl | tee build/ai-full/run.log
+      - name: Explain duel opening effects
+        if: always() && inputs.players == 2
+        shell: bash
+        run: |
+          if [[ -f build/ai-full/games.jsonl ]]; then
+            python3 scripts/ai_balance_report.py build/ai-full/games.jsonl --output=build/ai-full/balance.json
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-full-${{ inputs.shape }}-${{ inputs.size }}-${{ inputs.players }}-${{ inputs.tier }}-${{ matrix.batch }}
+          overwrite: true
+          path: build/ai-full
+          retention-days: 30

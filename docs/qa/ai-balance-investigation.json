@@ -1,0 +1,1540 @@
+{
+  "date": "2026-10-26",
+  "scope": "Exploratory native AOT studies. Small reused development/regression seeds; neither held-out qualification nor a solution of the game. Two rotations of same-policy self-play are repeatability checks, not independent openings. Timing is not qualified.",
+  "runs": [
+    {
+      "replay": "build/qa/ai-strength/pruned-hex-hard.jsonl",
+      "replaySha256": "21677c0d4b337b6d5be2cbb429b647af033e6e095990470d35c2db98f7fb2c0d",
+      "manifest": {
+        "engine": "shared-search-v3",
+        "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "os": "linux",
+        "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "opponentSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "runnerSha256": "2e743d72aa3c5b1a8e92bc2e5981cddfd93c8d6c886a9f26753c5eb40898e775",
+        "shape": "hex",
+        "size": 2,
+        "players": 2,
+        "starter": "ivory",
+        "tier": 1,
+        "seeds": 5,
+        "seedStart": 0,
+        "policy": "deterministic",
+        "seededOpening": true,
+        "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+        "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+        "candidateSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "opponentSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "comparison": "adjacent"
+      },
+      "summary": {
+        "expectedGames": 10,
+        "games": 10,
+        "complete": true,
+        "finished": 10,
+        "wins": 5,
+        "losses": 5,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "balance": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 10,
+        "openingSeeds": 5,
+        "decisive": 10,
+        "starterWins": 8,
+        "secondSeatWins": 2,
+        "starterShare": 0.8,
+        "pairedOutcomes": {
+          "starter-sweep": 4,
+          "second-seat-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 0,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 1,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 2,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "charcoal"
+            ],
+            "outcome": "second-seat-sweep"
+          },
+          {
+            "seed": 3,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 4,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "seed": 0,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 9
+        },
+        {
+          "seed": 0,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 39
+        },
+        {
+          "seed": 1,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 33
+        },
+        {
+          "seed": 1,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 35
+        },
+        {
+          "seed": 2,
+          "rotation": 0,
+          "winner": "charcoal",
+          "targetWon": false,
+          "finished": true,
+          "plies": 22
+        },
+        {
+          "seed": 2,
+          "rotation": 1,
+          "winner": "charcoal",
+          "targetWon": true,
+          "finished": true,
+          "plies": 28
+        },
+        {
+          "seed": 3,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 21
+        },
+        {
+          "seed": 3,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 37
+        },
+        {
+          "seed": 4,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 33
+        },
+        {
+          "seed": 4,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 13
+        }
+      ]
+    },
+    {
+      "replay": "build/qa/ai-strength/pruned-hex-expert.jsonl",
+      "replaySha256": "e784b20f9c220c8abc4bb4d676574362a1b57561439a021c76f166d26c78e5de",
+      "manifest": {
+        "engine": "shared-search-v3",
+        "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "os": "linux",
+        "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "opponentSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "runnerSha256": "2e743d72aa3c5b1a8e92bc2e5981cddfd93c8d6c886a9f26753c5eb40898e775",
+        "shape": "hex",
+        "size": 2,
+        "players": 2,
+        "starter": "ivory",
+        "tier": 2,
+        "seeds": 5,
+        "seedStart": 0,
+        "policy": "deterministic",
+        "seededOpening": true,
+        "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+        "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+        "candidateSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "opponentSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "comparison": "adjacent"
+      },
+      "summary": {
+        "expectedGames": 10,
+        "games": 10,
+        "complete": true,
+        "finished": 10,
+        "wins": 5,
+        "losses": 5,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "balance": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 10,
+        "openingSeeds": 5,
+        "decisive": 10,
+        "starterWins": 10,
+        "secondSeatWins": 0,
+        "starterShare": 1.0,
+        "pairedOutcomes": {
+          "starter-sweep": 5
+        },
+        "bySeed": [
+          {
+            "seed": 0,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 1,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 2,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 3,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 4,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "seed": 0,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 49
+        },
+        {
+          "seed": 0,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 17
+        },
+        {
+          "seed": 1,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 15
+        },
+        {
+          "seed": 1,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 23
+        },
+        {
+          "seed": 2,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 35
+        },
+        {
+          "seed": 2,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 39
+        },
+        {
+          "seed": 3,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 17
+        },
+        {
+          "seed": 3,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 33
+        },
+        {
+          "seed": 4,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 17
+        },
+        {
+          "seed": 4,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 19
+        }
+      ]
+    },
+    {
+      "replay": "build/qa/ai-strength/balance/hex-expert-self.jsonl",
+      "replaySha256": "93af88576d724c996dc63c4d3da35260ba2d55fff13d2aaa2a8d401373d06499",
+      "manifest": {
+        "engine": "shared-search-v3",
+        "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "os": "linux",
+        "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "opponentSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "runnerSha256": "2e743d72aa3c5b1a8e92bc2e5981cddfd93c8d6c886a9f26753c5eb40898e775",
+        "shape": "hex",
+        "size": 2,
+        "players": 2,
+        "starter": "ivory",
+        "tier": 2,
+        "seeds": 3,
+        "seedStart": 0,
+        "policy": "deterministic",
+        "seededOpening": true,
+        "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+        "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+        "candidateSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "opponentSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "comparison": "same-tier-reference"
+      },
+      "summary": {
+        "expectedGames": 6,
+        "games": 6,
+        "complete": true,
+        "finished": 6,
+        "wins": 3,
+        "losses": 3,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "balance": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 6,
+        "openingSeeds": 3,
+        "decisive": 6,
+        "starterWins": 4,
+        "secondSeatWins": 2,
+        "starterShare": 0.6666666666666666,
+        "pairedOutcomes": {
+          "starter-sweep": 2,
+          "second-seat-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 0,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 1,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "charcoal"
+            ],
+            "outcome": "second-seat-sweep"
+          },
+          {
+            "seed": 2,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "seed": 0,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 33
+        },
+        {
+          "seed": 0,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 59
+        },
+        {
+          "seed": 1,
+          "rotation": 0,
+          "winner": "charcoal",
+          "targetWon": false,
+          "finished": true,
+          "plies": 54
+        },
+        {
+          "seed": 1,
+          "rotation": 1,
+          "winner": "charcoal",
+          "targetWon": true,
+          "finished": true,
+          "plies": 54
+        },
+        {
+          "seed": 2,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 23
+        },
+        {
+          "seed": 2,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 33
+        }
+      ]
+    },
+    {
+      "replay": "build/qa/ai-strength/balance/hex-expert-reversed.jsonl",
+      "replaySha256": "61ca99d71694ca7a73ec68d24699afb36e5d4b250dd2854c41dec34ed024717d",
+      "manifest": {
+        "engine": "shared-search-v3",
+        "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "os": "linux",
+        "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "opponentSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "runnerSha256": "2e743d72aa3c5b1a8e92bc2e5981cddfd93c8d6c886a9f26753c5eb40898e775",
+        "shape": "hex",
+        "size": 2,
+        "players": 2,
+        "starter": "charcoal",
+        "tier": 2,
+        "seeds": 1,
+        "seedStart": 0,
+        "policy": "deterministic",
+        "seededOpening": true,
+        "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+        "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+        "candidateSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "opponentSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "comparison": "same-tier-reference"
+      },
+      "summary": {
+        "expectedGames": 2,
+        "games": 2,
+        "complete": true,
+        "finished": 2,
+        "wins": 1,
+        "losses": 1,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "balance": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 2,
+        "openingSeeds": 1,
+        "decisive": 2,
+        "starterWins": 2,
+        "secondSeatWins": 0,
+        "starterShare": 1.0,
+        "pairedOutcomes": {
+          "starter-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 0,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "charcoal"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "seed": 0,
+          "rotation": 0,
+          "winner": "charcoal",
+          "targetWon": false,
+          "finished": true,
+          "plies": 33
+        },
+        {
+          "seed": 0,
+          "rotation": 1,
+          "winner": "charcoal",
+          "targetWon": true,
+          "finished": true,
+          "plies": 33
+        }
+      ]
+    },
+    {
+      "replay": "build/qa/ai-strength/balance/hex-expert-natural.jsonl",
+      "replaySha256": "f0d47343444b5f88d8bffa2f7d3a1143aad790bb86b7d3a34f6340e8cf4eb3f8",
+      "manifest": {
+        "engine": "shared-search-v3",
+        "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "os": "linux",
+        "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "opponentSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "runnerSha256": "2e743d72aa3c5b1a8e92bc2e5981cddfd93c8d6c886a9f26753c5eb40898e775",
+        "shape": "hex",
+        "size": 2,
+        "players": 2,
+        "starter": "ivory",
+        "tier": 2,
+        "seeds": 1,
+        "seedStart": 0,
+        "policy": "deterministic",
+        "seededOpening": false,
+        "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+        "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+        "candidateSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "opponentSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "comparison": "same-tier-reference"
+      },
+      "summary": {
+        "expectedGames": 2,
+        "games": 2,
+        "complete": true,
+        "finished": 2,
+        "wins": 1,
+        "losses": 1,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "balance": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 2,
+        "openingSeeds": 1,
+        "decisive": 2,
+        "starterWins": 2,
+        "secondSeatWins": 0,
+        "starterShare": 1.0,
+        "pairedOutcomes": {
+          "starter-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 0,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "seed": 0,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 41
+        },
+        {
+          "seed": 0,
+          "rotation": 1,
+          "winner": "ivory",
+          "targetWon": false,
+          "finished": true,
+          "plies": 41
+        }
+      ]
+    },
+    {
+      "replay": "build/qa/ai-strength/pruned-expert-reference.jsonl",
+      "replaySha256": "13bee272cb1a41a2b8526e850f73f86f98d8e0803af2d5a0f6e44efd613060e9",
+      "manifest": {
+        "engine": "shared-search-v3",
+        "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "os": "linux",
+        "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+        "opponentSha256": "4d490a6ef2632c7050203dbcb9781271e50a4a82f9f1b8dc2b7c7a64775baa77",
+        "runnerSha256": "2e743d72aa3c5b1a8e92bc2e5981cddfd93c8d6c886a9f26753c5eb40898e775",
+        "shape": "hex",
+        "size": 2,
+        "players": 2,
+        "starter": "ivory",
+        "tier": 2,
+        "seeds": 2,
+        "seedStart": 10000,
+        "policy": "deterministic",
+        "seededOpening": true,
+        "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+        "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+        "candidateSource": {
+          "sourceSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+          "workerSha256": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "67e144c958ddf318f62c0ff4c8b5c98c8f017e11ab56e4dd7bce678a3baa0ed5",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "opponentSource": {
+          "sourceSha256": "651d024a51647cce764738f6e8df563e4e72b88dd69e2e9b8052e121087f128c",
+          "workerSha256": "b133d12ffb95ff20fdd3f522f7dd5dc18a1d263754cb954156550f917bf0ba2f",
+          "sourceFiles": {
+            "lib/game/match_ai_engine.dart": "651d024a51647cce764738f6e8df563e4e72b88dd69e2e9b8052e121087f128c",
+            "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+            "lib/game/ai_tactics.dart": "5e57fb7cd9f718f52e6268640150fdf4f868f37a30256094b0d6b580000b0d6e",
+            "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+            "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+            "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+            "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+            "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+            "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+            "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+            "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+            "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+            "tools/ai_worker.dart": "b133d12ffb95ff20fdd3f522f7dd5dc18a1d263754cb954156550f917bf0ba2f",
+            "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea"
+          }
+        },
+        "comparison": "same-tier-reference"
+      },
+      "summary": {
+        "expectedGames": 4,
+        "games": 4,
+        "complete": true,
+        "finished": 4,
+        "wins": 4,
+        "losses": 0,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 1.0,
+        "passed": true,
+        "scope": "regression-only"
+      },
+      "balance": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 4,
+        "openingSeeds": 2,
+        "decisive": 4,
+        "starterWins": 2,
+        "secondSeatWins": 2,
+        "starterShare": 0.5,
+        "pairedOutcomes": {
+          "target-sweep": 2
+        },
+        "bySeed": [
+          {
+            "seed": 10000,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          },
+          {
+            "seed": 10001,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "seed": 10000,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 17
+        },
+        {
+          "seed": 10000,
+          "rotation": 1,
+          "winner": "charcoal",
+          "targetWon": true,
+          "finished": true,
+          "plies": 52
+        },
+        {
+          "seed": 10001,
+          "rotation": 0,
+          "winner": "ivory",
+          "targetWon": true,
+          "finished": true,
+          "plies": 21
+        },
+        {
+          "seed": 10001,
+          "rotation": 1,
+          "winner": "charcoal",
+          "targetWon": true,
+          "finished": true,
+          "plies": 44
+        }
+      ]
+    }
+  ],
+  "proofs": [
+    {
+      "scope": "Exact finite-horizon objective, not an unbounded game solution",
+      "attacker": "ivory",
+      "replayPly": 3,
+      "counter": {
+        "seat": "charcoal",
+        "x": 1,
+        "y": 0,
+        "type": "capstone",
+        "direction": null,
+        "drops": []
+      },
+      "fromPly": 4,
+      "remainingPlies": 5,
+      "config": {
+        "version": 1,
+        "aiEngine": "shared-search-v3",
+        "ratingVersion": 3,
+        "shape": "hex",
+        "size": 2,
+        "seats": [
+          {
+            "id": "ivory",
+            "control": "ai",
+            "level": "medium"
+          },
+          {
+            "id": "charcoal",
+            "control": "ai",
+            "level": "hard"
+          }
+        ],
+        "starter": "ivory",
+        "profile": "sharedRoads"
+      },
+      "replayGame": 0,
+      "replaySha256": "12e8f74567f987c31a94352973ebf2b3c56fe6126a103c497e219474057e55f8",
+      "maxNodes": 200000,
+      "timeLimitMs": 30000,
+      "verdict": "refuted",
+      "expandedNodes": 1088,
+      "cacheHits": 364,
+      "elapsedMs": 658,
+      "position": "4/14,0;14,0;3:D;6:A;10:C;14:F;",
+      "rulesSha256": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+      "solverSha256": "2302f21fcf3797f29add0b2af2cf2135d290c350aabe1a85efe61fe44994c1dd"
+    },
+    {
+      "scope": "Exact finite-horizon objective, not an unbounded game solution",
+      "attacker": "ivory",
+      "replayPly": 5,
+      "counter": {
+        "seat": "charcoal",
+        "x": 0,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      "fromPly": 6,
+      "remainingPlies": 3,
+      "config": {
+        "version": 1,
+        "aiEngine": "shared-search-v3",
+        "ratingVersion": 3,
+        "shape": "hex",
+        "size": 2,
+        "seats": [
+          {
+            "id": "ivory",
+            "control": "ai",
+            "level": "medium"
+          },
+          {
+            "id": "charcoal",
+            "control": "ai",
+            "level": "hard"
+          }
+        ],
+        "starter": "ivory",
+        "profile": "sharedRoads"
+      },
+      "replayGame": 0,
+      "replaySha256": "12e8f74567f987c31a94352973ebf2b3c56fe6126a103c497e219474057e55f8",
+      "maxNodes": 200000,
+      "timeLimitMs": 30000,
+      "verdict": "proven",
+      "expandedNodes": 199,
+      "cacheHits": 0,
+      "elapsedMs": 280,
+      "position": "6/13,0;12,1;2:A;3:D;4:D;6:A;9:D;10:C;",
+      "rulesSha256": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+      "solverSha256": "2302f21fcf3797f29add0b2af2cf2135d290c350aabe1a85efe61fe44994c1dd"
+    },
+    {
+      "scope": "Exact finite-horizon objective, not an unbounded game solution",
+      "attacker": "ivory",
+      "replayPly": 5,
+      "counter": {
+        "seat": "charcoal",
+        "x": 1,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      "fromPly": 6,
+      "remainingPlies": 3,
+      "config": {
+        "version": 1,
+        "aiEngine": "shared-search-v3",
+        "ratingVersion": 3,
+        "shape": "hex",
+        "size": 2,
+        "seats": [
+          {
+            "id": "ivory",
+            "control": "ai",
+            "level": "medium"
+          },
+          {
+            "id": "charcoal",
+            "control": "ai",
+            "level": "hard"
+          }
+        ],
+        "starter": "ivory",
+        "profile": "sharedRoads"
+      },
+      "replayGame": 0,
+      "replaySha256": "12e8f74567f987c31a94352973ebf2b3c56fe6126a103c497e219474057e55f8",
+      "maxNodes": 200000,
+      "timeLimitMs": 30000,
+      "verdict": "refuted",
+      "expandedNodes": 127,
+      "cacheHits": 0,
+      "elapsedMs": 163,
+      "position": "6/13,0;12,1;2:A;3:D;4:D;6:A;10:C;14:D;",
+      "rulesSha256": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+      "solverSha256": "2302f21fcf3797f29add0b2af2cf2135d290c350aabe1a85efe61fe44994c1dd"
+    }
+  ],
+  "proofReplay": {
+    "config": {
+      "version": 1,
+      "aiEngine": "shared-search-v3",
+      "ratingVersion": 3,
+      "shape": "hex",
+      "size": 2,
+      "seats": [
+        {
+          "id": "ivory",
+          "control": "ai",
+          "level": "medium"
+        },
+        {
+          "id": "charcoal",
+          "control": "ai",
+          "level": "hard"
+        }
+      ],
+      "starter": "ivory",
+      "profile": "sharedRoads"
+    },
+    "moves": [
+      {
+        "seat": "ivory",
+        "x": -1,
+        "y": -1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -1,
+        "y": 2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 0,
+        "y": 1,
+        "type": "capstone",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -1,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": -2,
+        "y": 2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 0,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 2,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 1,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 1,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      }
+    ]
+  },
+  "rejectedExperiments": {
+    "commonDuelReplyBeam2": "Expert lost 0-4 to frozen richer reply-beam model; rejected",
+    "capReserveCredit5": "Expert lost 0-2 to original Expert; rejected"
+  },
+  "defensiveStaticComparison": {
+    "scope": "Static position evaluation; search can prefer a different move",
+    "ply": 5,
+    "seat": "charcoal",
+    "before": {
+      "terms": {
+        "ivory": {
+          "road": -160.0,
+          "flats": 13.54016620498615,
+          "development": 18.0,
+          "deployment": 24.0,
+          "stackControl": 0.0,
+          "capMaterial": 5.0,
+          "legalMaterial": 0.0
+        },
+        "charcoal": {
+          "road": -240.0,
+          "flats": 13.54016620498615,
+          "development": 10.0,
+          "deployment": 16.0,
+          "stackControl": 0.0,
+          "capMaterial": 0.0,
+          "legalMaterial": 0.0
+        }
+      },
+      "utility": -101.0
+    },
+    "alternatives": [
+      {
+        "move": {
+          "seat": "charcoal",
+          "x": 0,
+          "y": 0,
+          "type": "flat",
+          "direction": null,
+          "drops": []
+        },
+        "terms": {
+          "ivory": {
+            "road": -160.0,
+            "flats": 15.977839335180054,
+            "development": 18.0,
+            "deployment": 24.0,
+            "stackControl": 0.0,
+            "capMaterial": 5.0,
+            "legalMaterial": 0.0
+          },
+          "charcoal": {
+            "road": -160.0,
+            "flats": 23.966759002770083,
+            "development": 22.0,
+            "deployment": 24.0,
+            "stackControl": 0.0,
+            "capMaterial": 0.0,
+            "legalMaterial": 0.0
+          }
+        },
+        "utility": 6.988919667590039
+      },
+      {
+        "move": {
+          "seat": "charcoal",
+          "x": 1,
+          "y": 0,
+          "type": "flat",
+          "direction": null,
+          "drops": []
+        },
+        "terms": {
+          "ivory": {
+            "road": -160.0,
+            "flats": 15.977839335180054,
+            "development": 18.0,
+            "deployment": 24.0,
+            "stackControl": 0.0,
+            "capMaterial": 5.0,
+            "legalMaterial": 0.0
+          },
+          "charcoal": {
+            "road": -160.0,
+            "flats": 23.966759002770083,
+            "development": 12.0,
+            "deployment": 24.0,
+            "stackControl": 0.0,
+            "capMaterial": 0.0,
+            "legalMaterial": 0.0
+          }
+        },
+        "utility": -3.0110803324099606
+      }
+    ]
+  },
+  "defensiveBudgetReplay": {
+    "scope": "One isolated decision; not a latency or strength qualification",
+    "candidateSha256": "a6baa4bffa00cb62d9037be8367d1393c506e40e1975da39a4a290adf48fe7b8",
+    "replay": "docs/qa/ai-balance-hex-counterexample.jsonl",
+    "ply": 5,
+    "level": "hard",
+    "response": {
+      "id": "defense-ply5",
+      "position": "[{\"version\":1,\"aiEngine\":\"shared-search-v3\",\"ratingVersion\":3,\"shape\":\"hex\",\"size\":2,\"seats\":[{\"id\":\"ivory\",\"control\":\"ai\",\"level\":\"medium\"},{\"id\":\"charcoal\",\"control\":\"ai\",\"level\":\"hard\"}],\"starter\":\"ivory\",\"profile\":\"sharedRoads\"},1,false,[0,13,0],[1,13,1],[-2,2,[0,0]],[-1,-1,[1,0]],[-1,0,[1,0]],[-1,2,[0,0]],[0,1,[0,2]]]",
+      "move": {
+        "seat": "charcoal",
+        "x": 0,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      "elapsedMs": 1200,
+      "depth": 2,
+      "rounds": 1,
+      "rootWidth": 12,
+      "timedOut": true,
+      "stage": "search",
+      "timeoutStage": "search",
+      "randomSeed": null,
+      "alternatives": [
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "score": -197.66666666666663,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "score": -118.11111111111111,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "score": -122.54047399199754,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "score": -118.11111111111111,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "score": -118.11111111111111,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "score": -174.9293628808864,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "score": -122.54047399199754,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "score": -122.54047399199754,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "score": -199991.0,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "score": -199991.0,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "score": -199991.0,
+          "exact": false
+        },
+        {
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "score": -199991.0,
+          "exact": false
+        }
+      ],
+      "evaluationBefore": {
+        "road": -240.0,
+        "flats": 13.54016620498615,
+        "development": 10.0,
+        "deployment": 16.0,
+        "stackControl": 0.0,
+        "capMaterial": 0.0
+      },
+      "evaluationAfter": {
+        "road": -160.0,
+        "flats": 23.966759002770083,
+        "development": 22.0,
+        "deployment": 24.0,
+        "stackControl": 0.0,
+        "capMaterial": 0.0
+      },
+      "cacheHits": 965,
+      "cacheEntries": 9965,
+      "cacheEvictions": 5133,
+      "forksProven": 0
+    }
+  },
+  "verification": {
+    "flutterFullSuite": {
+      "passed": 1831,
+      "failed": 0
+    },
+    "finalFocusedProofAndChoice": {
+      "passed": 31,
+      "failed": 0
+    },
+    "pythonSuite": {
+      "passed": 51,
+      "failed": 0
+    },
+    "strictAnalysis": "passed",
+    "webReleaseBuild": "passed",
+    "workflowActionlint": "passed",
+    "requiredHexHardMedium": "failed: 5-5",
+    "requiredHexExpertHard": "failed: 5-5",
+    "fullStrengthQualification": "not run"
+  }
+}

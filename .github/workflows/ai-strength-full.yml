@@ -1,0 +1,95 @@
+name: Full AI Strength
+
+on:
+  workflow_dispatch:
+    inputs:
+      shape:
+        description: 'Board shape'
+        type: choice
+        options: [all, square, hex]
+        default: all
+      size:
+        description: 'Size; 0 selects every supported size'
+        default: '0'
+      players:
+        description: 'Players; 0 selects 2, 3 and 4'
+        type: choice
+        options: ['0', '2', '3', '4']
+        default: '0'
+      tier:
+        description: 'Lower tier: 0 Easy, 1 Medium, 2 Hard; -1 selects all'
+        type: choice
+        options: ['-1', '0', '1', '2']
+        default: '-1'
+      policy:
+        description: 'Final-choice experiment; production remains deterministic'
+        type: choice
+        options: [deterministic, ties, weighted]
+        default: deterministic
+
+permissions:
+  contents: read
+
+jobs:
+  select:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: matrix
+        env:
+          SHAPE: ${{ inputs.shape }}
+          SIZE: ${{ inputs.size }}
+          PLAYERS: ${{ inputs.players }}
+          TIER: ${{ inputs.tier }}
+        run: |
+          python3 scripts/ai_strength_ci.py matrix --shape="$SHAPE" --size="$SIZE" --players="$PLAYERS" --tier="$TIER" --output=matrix.json
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-full-selection
+          overwrite: true
+          path: matrix.json
+
+  profile:
+    needs: select
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    uses: ./.github/workflows/ai-strength-shards.yml
+    with:
+      shape: ${{ matrix.shape }}
+      size: ${{ matrix.size }}
+      players: ${{ matrix.players }}
+      tier: ${{ matrix.tier }}
+      policy: ${{ inputs.policy }}
+
+  aggregate:
+    if: always() && needs.select.result == 'success'
+    needs: [select, profile]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ai-full-selection
+          path: build/selection
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-full-*-*-*-*-*
+          path: build/ai-full
+      - name: Require every selected profile to pass
+        env:
+          SHAPE: ${{ inputs.shape }}
+          SIZE: ${{ inputs.size }}
+          PLAYERS: ${{ inputs.players }}
+          TIER: ${{ inputs.tier }}
+        run: |
+          python3 scripts/ai_strength_ci.py aggregate --shape="$SHAPE" --size="$SIZE" --players="$PLAYERS" --tier="$TIER" --output=build/ai-full-summary.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-full-summary
+          overwrite: true
+          path: build/ai-full-summary.json

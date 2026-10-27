@@ -1,5 +1,169 @@
 # Shared AI v3 upgrades — 2026-10-23
 
+## 2026-10-26 strength investigation and CI
+
+This follow-up is a source change, not a publication or a completed full strength
+qualification. It affects **LEARN-01** and **PLAN-10**; saved v1/v2 strategies and
+rating identities remain unchanged.
+
+The production v3 engine does not draw random numbers. Easy retains its stable
+position-based variation. The old v3 Medium policy deliberately selected a second
+near-equal move every third round; after the new Square regression sample exposed
+a 4–6 loss to Easy, that scripted handicap was removed. Medium now chooses its
+best completed result, subject to repetition avoidance. Saved v1/v2 choices remain
+unchanged. Search is nevertheless sensitive
+to wall-clock cutoffs, runtime and device load. Its 200/500/1200/2200 ms limits
+bound refinement, not total latency: a mandatory selective round can finish after
+the deadline. Search returns a completed iteration, or its completed selective
+baseline, rather than adopting an unfinished iteration.
+
+Medium's duel target is now two rounds rather than one, within its existing
+500 ms refinement budget. Its multiplayer target stays one round. Hard retains
+broader search and its 1200 ms budget; Expert retains its three-round target and
+2200 ms budget. The focused Square sample then separated Medium/Easy 10–0 and
+Hard/Medium 6–4. These ten-game samples are regression evidence, not qualification.
+
+The original native Square-5 pilot won both seeded seat rotations for Expert,
+but the normal AI-controlled opening let the first seat win both rotations,
+including Hard beating second-seat Expert. This reproduces the reported outcome
+without establishing that Hard is stronger across openings. Most decisions in
+that normal-opening pair completed only one round. Expert previously paid for
+16 roots even in its shallow fallback and early refinements, versus Hard's 12.
+In duels it now establishes the same root-width foundation as Hard before
+widening its final refinement. Completed principal choices are searched first
+in subsequent v3 duel iterations. Multiplayer search retains its prior widths
+and root order; the full optional matrix checks those formats separately.
+Neither change prescribes board moves or raises thinking budgets. Native mixed
+playthrough tests supply the same confirmed-position history as the controller,
+retaining their 150-move completion requirement.
+
+Expert also retains a completed wider two-round result before attempting its
+third round. A common narrower reply model for Hard/Expert was tested and rejected
+after Expert lost 0–4 to the frozen richer model; their richer reply beams remain.
+Exact material pruning now skips spreads that cannot possibly form a road while
+retaining every potential winning placement. Possible flat endings bypass that
+pruning, including a spread filling several empty cells. Differential legal-move
+checks and a board-filling spread regression protect that bound.
+
+The Hex probes also exposed a horizon error: the defensive extension returned
+the same empty list for a quiet position and for an immediate rival threat with
+no legal defense. The latter was then assigned a normal positional score. The
+extension now distinguishes those states. In a duel, a completed enumeration
+with no safe reply proves a rival win on its next move and receives a forced-loss
+score. Terminal draws count as safe defenses. An interrupted enumeration still
+aborts refinement rather than proving a loss; multiplayer does not infer a winner
+from this duel-only argument. A legal 3×3 fork regression previously scored the
+losing line at −124.345679 instead of a forced loss, and now detects it correctly.
+
+The evaluator gives a deployed capstone five points and values its road-blocking
+effect, while caps do not score as flats. A pilot credited the same five points
+in reserve to remove the deployment incentive. That isolated change lost both
+seat rotations against the original Expert on development seed 10000, so it was
+rejected. This small sample does not establish an optimal material model, but
+does not support discouraging early caps. The production evaluator retains its
+board-value terms. There is no opening delay, capstone ban or deployment-turn
+penalty. Worker diagnostics expose positional score terms, completed-root
+alternatives, timeout stages and capstone deployment plies for further study.
+On that same two-game development pilot, search-only and combined changes each
+split 1–1 against the original Expert. Those exploratory games do not qualify
+strength or latency; the smaller search-only change is retained for CI checks.
+
+For one recorded first non-opening move, a cap and a flat on the same cell had
+static utilities 95.0 and 94.576: identical road/development terms, with the cap's
+five-point board bonus barely exceeding the flat's scoring value. The reserve
+credit variant still chose an early cap in that opening. Early cap deployment
+therefore cannot be attributed only to the small deployment bonus, or assumed
+weak from its timing. Compare completed search values and outcomes as well.
+Inspect both seats' score terms from a native JSONL replay with:
+
+```sh
+dart run tools/ai_explain.dart --replay=PATH --game=0 --ply=2
+```
+
+This explains the recorded move and its same-cell flat alternative when legal.
+Its static utilities are not a substitute for the worker's completed-search
+diagnostics; the tool explicitly identifies that limit in its output.
+
+### Reproducible adjacent-tier checks
+
+Every push/PR runs six independent native jobs: three adjacent matchups on Square
+5 and two-seat Hex radius 2. Each uses five fixed opening seeds (0–4)
+and both AI seat assignments: 60 games total. Every ten-game group must finish
+all trials, complete at least eight games, have at least five decisive games and
+give the stronger tier more wins than losses. Capped games remain unfinished.
+Failure fails CI; Deploy Main explicitly requires all six successful jobs.
+These small samples detect regressions; they do not establish universal ordering.
+
+Current Hex Hard/Medium and Expert/Hard samples still fail at 5–5. Every opening
+was swept by the same seat after swapping difficulties; the starter won 8/10 and
+10/10 respectively. Equal-Expert controls and exhaustive bounded counterfactuals
+show both opening/initiative effects and avoidable defensive errors. The strict
+gates remain unchanged. See the [balance investigation](AI_BALANCE_INVESTIGATION.md)
+and its provenance-backed evidence for the controls and limits. Each duel CI
+artifact includes a report separating tier sweeps from opening/seat sweeps.
+
+**Full AI Strength** is manual only. With no filters it covers 81 groups: every
+supported Square/Hex size, 2/3/4 seats and every adjacent matchup. Fifty opening
+seeds (100000–100049, separate from the required regression seeds), with one
+stronger AI rotated through every seat, total 12,150 games.
+Five-seed shards retain complete replays and source/runtime/binary provenance.
+Aggregation rejects missing or duplicate trials, mixed source/policy provenance
+and incorrect seat outcomes. Each group must meet the existing 80% completion,
+50% decisive-game and >60% normalized stronger-tier share gates. Filters produce
+explicitly partial coverage. This workflow does not replace paired-reference
+latency qualification or physical-device acceptance.
+
+```sh
+dart compile exe tools/ai_worker.dart -o /tmp/stones-ai-candidate
+python3 scripts/ai_strength_ci.py provenance --binary=/tmp/stones-ai-candidate
+dart compile exe tools/ai_strength.dart -o /tmp/stones-ai-strength
+/tmp/stones-ai-strength --shape=square --size=5 --players=2 --tier=2 \
+  --seeds=5 --output=/tmp/hard-expert.jsonl
+```
+
+Each output must be new; interrupted/partial shards fail aggregation and can be
+rerun with a new output. The older qualification runner retains its resumable
+matrix. `--natural-opening --seeds=1 --explore` investigates normal AI-controlled
+openings. `--opponent=PATH --explore` compares the candidate against a frozen
+same-tier executable (tier 1 selects Hard, tier 2 Expert). Each binary needs a
+provenance sidecar captured when built; `provenance --source-ref=SHA` can describe
+an executable frozen from that exact revision. Do not relabel an existing binary
+with a different source.
+
+### Organic final-choice experiments
+
+Production remains deterministic. Optional `AiMoveVariation.ties` and `weighted`
+policies are available through shared dispatch, native workers and the manual
+workflow. The default policy does not consume randomness. The ties policy samples
+equal scores; weighted samples within four points of the best remaining eligible
+move after repetition filtering, favoring better scores with weight
+`1 / (1 + score deficit)`. Both preserve forced-result priority
+and the existing least-repeated-position filter. They replace Easy/Medium's
+deterministic alternatives only when explicitly selected.
+
+Refinement alternatives are compared using full root windows: alpha-beta bounds
+are not treated as exact alternative scores. Random choice uses only a completed
+iteration. Easy may vary over its completed selective round after tactical
+filtering; a deadline fallback remains deterministic. If verification cannot
+complete, search retains the previous completed choice. This extra exact scoring
+can cost depth and must be measured, not assumed harmless.
+
+Use independent fixed decision seeds for comparisons; workers record each seed,
+selected move and alternatives. Shared dispatch accepts the same optional seed
+on web/native. An unseeded explicit experiment uses a fresh RNG; replayed games
+already retain their actual moves. To compare a policy against deterministic
+same-tier play with the same binary:
+
+```sh
+/tmp/stones-ai-strength --tier=2 --policy=ties --reference --seeds=5 \
+  --explore --output=/tmp/expert-ties-pilot.jsonl
+```
+
+No randomized policy is enabled by this change. Enabling one requires held-out
+same-tier no-regression evidence, passing adjacent-tier gates, useful diversity
+and acceptable timing/depth. Seeded selection is reproducible when the same
+iteration completes; wall-clock search remains runtime dependent.
+
 Applies to **LEARN-01**, **PLAN-10** and **COMPAT-06**. These are search/evaluation
 changes, not Tak rules or new draw conditions. V3 is now published in web
 application `58a1f56` (2026-10-24); see the
@@ -22,7 +186,9 @@ The dated qualification notes below retain their strength/timing limits.
    canonical identity. Root duel values use full windows whenever repetition or
    Medium variation can select a near-equal alternative. Best-move-only choices
    retain alpha-beta pruning. This prevents treating upper bounds as exact scores
-   without paying for exact alternative scores on every turn.
+   without paying for exact alternative scores on every turn. The current
+   follow-up replaces Medium's periodic alternative with its best completed
+   choice; explicit variation and repetition still require exact alternatives.
 2. **Exact tactics and bounded extensions.** V3 horizon win checks enumerate legal
    placements and spreads without the old path-distance gate. This covers winning
    multi-drop spreads whose initial road distance exceeds one. A sound total-stone

@@ -1,4 +1,5 @@
 import '../services/ai/search_budget.dart';
+import '../models/piece.dart';
 import 'match_config.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
@@ -14,20 +15,43 @@ MatchState aiTurnFor(MatchState game, SeatId seat) {
 /// A sound material lower bound, unlike path distance: count buried stones too.
 /// A move can add at most one stone; a road must span the board. Flat endings
 /// bypass this shortcut. Standing stones deliberately overestimate possibilities.
+int _roadSpan(MatchState game) => game.config.shape == BoardShape.square
+    ? game.config.size
+    : 2 * game.config.size + 1;
+
+int _stoneCount(MatchState game, SeatId seat) => game.board.values.fold<int>(
+    0,
+    (count, stack) =>
+        count + stack.where((stone) => stone.seat == seat).length);
+
+bool _flatEndingPossible(MatchState game) =>
+    game.board.length + game.geometry.carryLimit >=
+        game.geometry.cells.length ||
+    game.reserves.values.any((reserve) => reserve.total <= 1);
+
 bool aiMayWinInOne(MatchState game, SeatId seat) {
   if (game.finished) return false;
-  if (game.board.length + 1 >= game.geometry.cells.length ||
-      game.reserves.values.any((reserve) => reserve.total <= 1)) {
-    return true;
+  if (_flatEndingPossible(game)) return true;
+  return _stoneCount(game, seat) + 1 >= _roadSpan(game);
+}
+
+/// Exact pruning, not a move preference: spreads add no material, so they
+/// cannot complete a road with fewer stones than the board's span. A spread
+/// can fill several empty cells; possible flat endings retain every legal move.
+Iterable<MatchMove> aiWinCandidates(MatchState game) sync* {
+  if (game.opening ||
+      _flatEndingPossible(game) ||
+      _stoneCount(game, game.current) >= _roadSpan(game)) {
+    yield* MatchRules.legalMoves(game);
+    return;
   }
-  final span = game.config.shape == BoardShape.square
-      ? game.config.size
-      : 2 * game.config.size + 1;
-  final stones = game.board.values.fold<int>(
-      0,
-      (count, stack) =>
-          count + stack.where((stone) => stone.seat == seat).length);
-  return stones + 1 >= span;
+  final reserve = game.reserves[game.current]!;
+  for (final cell in game.geometry.cells) {
+    if (game.topAt(cell) != null) continue;
+    for (final type in [PieceType.flat, PieceType.capstone]) {
+      if (reserve.has(type)) yield MatchMove.place(cell, type);
+    }
+  }
 }
 
 Future<List<MatchMove>> aiWinningMoves(
@@ -38,7 +62,7 @@ Future<List<MatchMove>> aiWinningMoves(
   if (!aiMayWinInOne(game, seat)) return const [];
   final turn = aiTurnFor(game, seat);
   final wins = <MatchMove>[];
-  for (final move in MatchRules.legalMoves(turn)) {
+  for (final move in aiWinCandidates(turn)) {
     final pause = budget.pauseIfNeeded();
     if (pause != null) await pause;
     if (MatchRules.play(turn, move)!.result?.winner == seat) {
