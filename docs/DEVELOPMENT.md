@@ -1,5 +1,9 @@
 # Development map
 
+The [startup and identity audit](STARTUP_IDENTITY.md) records shared branding,
+initialized appearance, loader recovery, generator guards and remaining native
+launch/device qualification.
+
 The [feature inventory and regression contract](SUPPORTED_FEATURES.md) covers the
 full project history, current and intended capabilities, historical parity gaps
 and regression journeys. Read affected feature IDs before implementation and

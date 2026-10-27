@@ -1,5 +1,17 @@
 # Current release qualification
 
+## Startup and identity refresh, 2026-10-26 (unpublished local candidate)
+
+APP-06, PREF-01 and PREF-05 now describe the shared geometric mark, saved-theme
+startup gate, accessible web loader, failure/reload and delayed-start behavior,
+and Android light/dark resources. See [the startup audit](STARTUP_IDENTITY.md)
+and [verification ledger](qa/startup-verification.json) for exact local checks,
+screenshots, source/artifact hashes and qualification gaps. Strict analysis, all
+1,808 Flutter tests, 50 Python checks, the release web build and 21 startup
+scenarios each in Chromium/WebKit passed locally. Android compilation
+was attempted but the SDK is absent; native launches and physical-device checks
+remain unqualified. No web, backend or Play publication occurred.
+
 ## Keep active games awake, 2026-10-26 (local source)
 
 PLAY-12 adds automatic screen wake-lock requests on shared Square/Hex and legacy

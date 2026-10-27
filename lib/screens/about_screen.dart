@@ -10,6 +10,7 @@ import '../services/play_games_service.dart';
 import '../services/sound_manager.dart';
 import '../theme/theme.dart';
 import '../version.dart';
+import '../widgets/stones_identity.dart';
 
 /// About screen with game information and licenses
 class AboutScreen extends ConsumerStatefulWidget {
@@ -97,14 +98,12 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
       context: context,
       applicationName: 'Stones',
       applicationVersion: AppVersion.displayVersion,
-      applicationIcon: Padding(
-        padding: const EdgeInsets.all(16),
+      applicationIcon: const Padding(
+        padding: EdgeInsets.all(16),
         child: SizedBox(
           height: 64,
           width: 64,
-          child: CustomPaint(
-            painter: _StonesIconPainter(),
-          ),
+          child: StonesMark(),
         ),
       ),
       applicationLegalese: '\u00a9 2024 Stones Contributors',
@@ -145,24 +144,11 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                       width: 80,
                       child: GestureDetector(
                         onTap: _onIconTap,
-                        child: CustomPaint(
-                          painter: _StonesIconPainter(),
-                        ),
+                        child: const StonesMark(size: 80),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'STONES',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color:
-                                isDark ? Colors.white : GameColors.titleColor,
-                            letterSpacing: 4,
-                          ),
-                    ),
+                    const StonesWordmark(fontSize: 30),
                     const SizedBox(height: 4),
                     GestureDetector(
                       onTap: _onVersionTap,
@@ -375,74 +361,4 @@ class _LinkTile extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Custom painter for stones icon
-class _StonesIconPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final centerX = size.width / 2;
-    final baseY = size.height * 0.75;
-
-    // Draw stacked flat stones
-    _drawFlatStone(canvas, centerX, baseY, size.width * 0.6,
-        GameColors.darkPiece, GameColors.darkPieceBorder);
-    _drawFlatStone(canvas, centerX, baseY - size.height * 0.12,
-        size.width * 0.6, GameColors.lightPiece, GameColors.lightPieceBorder);
-    _drawFlatStone(canvas, centerX, baseY - size.height * 0.24,
-        size.width * 0.6, GameColors.darkPiece, GameColors.darkPieceBorder);
-
-    // Draw capstone on top
-    _drawCapstone(canvas, centerX, baseY - size.height * 0.48,
-        size.width * 0.18, GameColors.lightPiece, GameColors.lightPieceBorder);
-  }
-
-  void _drawFlatStone(Canvas canvas, double x, double y, double width,
-      Color fill, Color border) {
-    final height = width * 0.2;
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(x, y), width: width, height: height),
-      Radius.circular(height * 0.2),
-    );
-
-    // Shadow
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.2)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawRRect(rect.shift(const Offset(2, 2)), shadowPaint);
-
-    // Fill
-    final fillPaint = Paint()..color = fill;
-    canvas.drawRRect(rect, fillPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawRRect(rect, borderPaint);
-  }
-
-  void _drawCapstone(Canvas canvas, double x, double y, double radius,
-      Color fill, Color border) {
-    // Shadow
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.25)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawCircle(Offset(x + 2, y + 2), radius, shadowPaint);
-
-    // Fill
-    final fillPaint = Paint()..color = fill;
-    canvas.drawCircle(Offset(x, y), radius, fillPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(Offset(x, y), radius, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

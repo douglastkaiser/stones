@@ -449,7 +449,12 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
 
 - **PREF-01 · Appearance modes:** persist System/Light/Dark independently of the
   board/piece set. Menus, settings, learning, dialogs and status/action text remain
-  readable in each mode; follow system changes when System is selected.
+  readable in each mode; follow system changes when System is selected. Resolve
+  validated saved appearance before building the initial menu, with one shared
+  settings initialization. Missing/invalid preferences or unavailable storage use
+  System. The web loader resolves the same preference before paint; Android's
+  native launch follows system appearance until Flutter paints the saved mode.
+  Source and regressions: [startup identity audit](STARTUP_IDENTITY.md).
 - **PREF-02 · Clock defaults:** preserve editable per-board defaults, enablement
   and per-game overrides. Defaults affect new configurations, never reset a
   running game's time bank, and survive temporarily entering untimed Court.
@@ -468,7 +473,10 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
   visible selection/focus. Touch and click alternatives must expose everything
   otherwise available by hover/drag. On-board hold expansion is optional: the
   persistent tray and accessible Inspect stack action retain full-layer access.
-  Enlarged text and scrollable content must
+  Web startup announces loading/failure status, exposes keyboard-operable Reload,
+  respects reduced motion, safe areas and enlarged text on narrow viewports.
+  See [startup identity audit](STARTUP_IDENTITY.md) for browser evidence and physical
+  screen-reader limits. Enlarged text and scrollable content must
   retain essential actions. Shared boards provide directional focus traversal and
   reveal focused cells when zoomed. Escape-cancel parity and physical screen-reader
   qualification remain tracked below rather than assumed complete.
@@ -498,10 +506,21 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
 - **APP-05 · Web updates:** a previously cached page can still load retained startup
   assets after a rollout. Release artifacts identify the source being reviewed.
 
-- **APP-06 · Install and startup:** retain app icons, Android/web launch surfaces,
-  visible loading and installable-web manifest/standalone configuration. The
-  declared PWA shortcut and browser install support need actual end-to-end checks;
-  a manifest alone does not establish offline startup or shortcut routing.
+- **APP-06 · Install and startup:** use the shared geometric stacked-stones mark
+  on loading, home, About/licenses, Android/web icons and favicon. Launch backdrops
+  match cream `#EDE5D7` / charcoal `#1B1816`; Android includes pre-12 and 12+
+  light/dark resources, transparent splash marks and padded adaptive foregrounds.
+  Web loading remains until the initialized Flutter interface paints, then fades
+  briefly without a minimum startup delay. Bootstrap/engine/app-start failures
+  expose readable status and working Reload; help appears after 15 seconds while
+  startup continues. Optional account/audio/network services do not gate local
+  play. Asset generation preserves the custom loader, relative web base paths,
+  invitation routing, fingerprinted startup and previous-release compatibility.
+  See [startup identity audit](STARTUP_IDENTITY.md) for verified artifacts,
+  accessibility journeys and remaining Android/device qualification. Retain
+  installable-web manifest/standalone configuration. The declared PWA shortcut and
+  browser install support need actual end-to-end checks; a manifest alone does
+  not establish offline startup or shortcut routing.
 - **APP-07 · About and diagnostics:** expose the app version/source revision,
   game/rules information, privacy link and support entry points. Keep feedback
   diagnostics opt-in and exclude account IDs, room links, private moves and logs

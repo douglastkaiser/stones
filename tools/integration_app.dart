@@ -22,8 +22,9 @@ Future<void> main() async {
           authDomain: 'localhost'));
   await FirebaseAuth.instance.useAuthEmulator('127.0.0.1', 9099);
   FirebaseFirestore.instance.useFirestoreEmulator('127.0.0.1', 8088);
-  runApp(ProviderScope(overrides: [
+  await launchStones(
+      container: ProviderContainer(overrides: [
     accountServiceProvider
         .overrideWithValue(FirebaseAccountService(() async {})),
-  ], child: const StonesApp()));
+  ]));
 }
