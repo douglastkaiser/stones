@@ -13,8 +13,10 @@ import 'match_room_store.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
 import 'match_storage.dart';
+import 'match_threats.dart';
 
 const _unchangedElapsed = Object();
+const _unchangedCourtReply = Object();
 
 class MatchSession {
   const MatchSession(
@@ -26,6 +28,7 @@ class MatchSession {
       this.connected = true,
       this.reconnecting = false,
       this.paused = false,
+      this.courtWinningReply,
       this.explanation,
       this.inputLocked = false,
       this.clock,
@@ -40,6 +43,7 @@ class MatchSession {
   final bool connected;
   final bool reconnecting;
   final bool paused;
+  final MatchMove? courtWinningReply;
   final String? error;
   final String? shortcutWarning;
   final String? explanation;
@@ -64,6 +68,7 @@ class MatchSession {
           bool? connected,
           bool? reconnecting,
           bool? paused,
+          Object? courtWinningReply = _unchangedCourtReply,
           String? explanation,
           bool? inputLocked,
           MatchClock? clock,
@@ -79,6 +84,9 @@ class MatchSession {
           connected: connected ?? this.connected,
           reconnecting: reconnecting ?? this.reconnecting,
           paused: paused ?? this.paused,
+          courtWinningReply: identical(courtWinningReply, _unchangedCourtReply)
+              ? this.courtWinningReply
+              : courtWinningReply as MatchMove?,
           explanation: explanation ?? this.explanation,
           inputLocked: inputLocked ?? this.inputLocked,
           clock: clock ?? this.clock,
@@ -261,6 +269,23 @@ class MatchController extends StateNotifier<MatchSession> {
     final clock = snapshot['clock'] == null
         ? null
         : MatchClock.fromMap(Map<String, dynamic>.from(snapshot['clock']));
+    final courtReply = snapshot['courtWinningReply'] == null
+        ? null
+        : MatchMove.fromMap(
+            Map<String, dynamic>.from(snapshot['courtWinningReply']));
+    if (courtReply != null &&
+        (!config.court ||
+            game.finished ||
+            config.seat(game.current).control != SeatControl.ai ||
+            !records.any((move) =>
+                config
+                    .seat(SeatId.values.byName(move['seat'] as String))
+                    .control ==
+                SeatControl.localHuman) ||
+            MatchRules.play(game, courtReply)?.result?.winner !=
+                game.current)) {
+      throw const FormatException('Invalid saved Court winning reply');
+    }
     if ((clock == null) != (config.clockSeconds == 0) ||
         (clock != null &&
             (clock.bank.length != config.ids.length ||
@@ -274,6 +299,7 @@ class MatchController extends StateNotifier<MatchSession> {
         id: snapshot['id'] as String,
         uid: snapshot['ratingUid'] as String?,
         paused: true,
+        courtWinningReply: courtReply,
         elapsed: snapshot['elapsed'] == null
             ? null
             : MatchElapsed.fromMap(
@@ -560,6 +586,7 @@ class MatchController extends StateNotifier<MatchSession> {
         if (!mounted || epoch != _epoch) return true;
         state = state.copyWith(
             game: game.copyWith(result: result),
+            courtWinningReply: null,
             elapsed: elapsed,
             clock: clock,
             busy: false);
@@ -675,6 +702,7 @@ class MatchController extends StateNotifier<MatchSession> {
     }
     final ai = game.config.seat(game.current).control == SeatControl.ai;
     if (bot != ai ||
+        (bot && state.room == null && state.paused) ||
         (!bot && !state.canPlay) ||
         (bot &&
             state.room != null &&
@@ -754,6 +782,9 @@ class MatchController extends StateNotifier<MatchSession> {
           'elapsed': state.elapsed!.frozen(DateTime.now()).toMap(),
         'config': state.game!.config.toMap(),
         'moves': _localMoves,
+        if (state.courtWinningReply != null)
+          'courtWinningReply':
+              state.courtWinningReply!.toMap(state.game!.current),
         if (state.clock != null)
           'clock': state.clock!.frozen(DateTime.now()).toMap(),
         if (state.game!.result != null &&
@@ -916,6 +947,7 @@ class MatchController extends StateNotifier<MatchSession> {
       _localMoves = records;
       state = state.copyWith(
           game: restored,
+          courtWinningReply: null,
           elapsed: state.elapsed?.resumed(DateTime.now()),
           busy: false,
           paused: false,
@@ -937,6 +969,7 @@ class MatchController extends StateNotifier<MatchSession> {
     if (!mounted ||
         state.game == null ||
         state.game!.finished ||
+        (!paused && state.courtWinningReply != null) ||
         state.inputLocked) {
       return;
     }
@@ -967,6 +1000,35 @@ class MatchController extends StateNotifier<MatchSession> {
       }));
     }
     _schedule();
+  }
+
+  /// Explicit consent to see the already verified winning reply in Court Mode.
+  Future<bool> continueCourt() async {
+    final game = state.game;
+    final reply = state.courtWinningReply;
+    if (game == null ||
+        reply == null ||
+        !game.config.court ||
+        state.room != null ||
+        state.busy ||
+        !state.paused ||
+        MatchRules.play(game, reply)?.result?.winner != game.current) {
+      return false;
+    }
+    final epoch = _epoch;
+    state = state.copyWith(
+        paused: false,
+        courtWinningReply: null,
+        elapsed: state.elapsed?.resumed(DateTime.now()));
+    final played = await play(reply, bot: true);
+    if (!played && mounted && epoch == _epoch && state.game == game) {
+      state = state.copyWith(
+          paused: true,
+          courtWinningReply: reply,
+          elapsed: state.elapsed?.frozen(DateTime.now()),
+          error: state.error);
+    }
+    return played;
   }
 
   /// Stop work immediately on navigation; defer notification past widget teardown.
@@ -1066,6 +1128,38 @@ class MatchController extends StateNotifier<MatchSession> {
       try {
         _searchingPly = game.ply;
         _searchingToken = token;
+        if (state.room == null &&
+            game.config.court &&
+            !game.opening &&
+            _localMoves.any((move) =>
+                game.config
+                    .seat(SeatId.values.byName(move['seat'] as String))
+                    .control ==
+                SeatControl.localHuman)) {
+          final reply = await courtWinningReply(game,
+              cancelled: () =>
+                  !mounted || epoch != _epoch || token != _searchToken);
+          if (!mounted ||
+              epoch != _epoch ||
+              token != _searchToken ||
+              state.game != game ||
+              state.paused) {
+            return;
+          }
+          if (reply != null) {
+            _searchingPly = null;
+            _searchingToken = null;
+            state = state.copyWith(
+                paused: true,
+                courtWinningReply: reply,
+                elapsed: state.elapsed?.frozen(DateTime.now()));
+            await _save();
+            if (mounted && epoch == _epoch && token == _searchToken) {
+              state = state.copyWith(busy: false);
+            }
+            return;
+          }
+        }
         final move = await search(game, game.config.seat(game.current).level);
         if (!mounted ||
             epoch != _epoch ||

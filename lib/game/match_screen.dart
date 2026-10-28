@@ -394,7 +394,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     : !match.connected
                         ? 'Disconnected · your board is retained'
                         : match.paused && match.room == null
-                            ? 'Match paused'
+                            ? match.courtWinningReply != null
+                                ? 'Court Mode paused'
+                                : 'Match paused'
                             : match.paused &&
                                     game.config.seat(game.current).control ==
                                         SeatControl.ai
@@ -426,7 +428,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       if (match.room == null)
         IconButton(
           tooltip: match.paused ? 'Resume match' : 'Pause match',
-          onPressed: () => _controller.pause(!match.paused),
+          onPressed: match.courtWinningReply != null
+              ? null
+              : () => _controller.pause(!match.paused),
           icon: Icon(match.paused ? Icons.play_arrow : Icons.pause),
         ),
       if (game.config.court) ...[
@@ -773,6 +777,33 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   }
 
   Widget? _primaryActions(MatchSession match, MatchState game) {
+    if (match.courtWinningReply != null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            liveRegion: true,
+            child: Text('Tak! ${game.current.label} can win next move.',
+                textAlign: TextAlign.center),
+          ),
+          Wrap(
+            spacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              FilledButton(
+                onPressed: match.busy ? null : () => _controller.takeBack(),
+                child: const Text('Take back'),
+              ),
+              TextButton(
+                onPressed:
+                    match.busy ? null : () => _controller.continueCourt(),
+                child: const Text('Let AI play'),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
     final source = _selection.source;
     final inspected = _selection.inspected;
     if (source != null || _selection.planned != null) {

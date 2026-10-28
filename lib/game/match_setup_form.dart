@@ -45,6 +45,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
     final online =
         _config.seats.where((s) => s.control == SeatControl.onlineHuman).length;
     final bots = _config.seats.length - local - online;
+    final canUseCourt = online == 0 && bots > 0 && local > 0;
     return AbsorbPointer(
         absorbing: _busy,
         child: Column(
@@ -208,15 +209,20 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                   if (online > 0)
                     const Text(
                         'The match starts once every online seat is filled.'),
-                  if (online == 0 && bots > 0 && local > 0)
-                    SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Court Mode'),
-                        subtitle: const Text(
-                            'Hints, AI explanations and takebacks. Untimed practice; no awards.'),
-                        value: _config.court,
-                        onChanged: (value) =>
-                            _update(_config.copyWith(court: value))),
+                  SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Court Mode'),
+                      subtitle: Text(canUseCourt
+                          ? 'Hints, Tak! warnings, AI explanations and takebacks. Untimed, unrated practice; no awards.'
+                          : online > 0
+                              ? 'Available offline with a local human and an AI. Change online seats to local human or AI.'
+                              : bots == 0
+                                  ? 'Choose AI for at least one player above to enable coached practice.'
+                                  : 'Choose Local human for at least one player above to enable coached practice.'),
+                      value: _config.court,
+                      onChanged: canUseCourt
+                          ? (value) => _update(_config.copyWith(court: value))
+                          : null),
                   if (!_config.court) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(

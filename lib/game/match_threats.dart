@@ -1,9 +1,33 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/ai/search_budget.dart';
+import 'ai_tactics.dart';
 import 'match_config.dart';
 import 'match_rules.dart';
 import 'match_state.dart';
+
+/// Exact one-move check for the current AI, before it can end Court practice.
+Future<MatchMove?> findCourtWinningReply(MatchState game,
+    {bool Function()? cancelled, bool yieldDuringSearch = true}) async {
+  if (!game.config.court ||
+      game.finished ||
+      game.opening ||
+      game.config.seat(game.current).control != SeatControl.ai) {
+    return null;
+  }
+  final budget = SearchBudget(enabled: yieldDuringSearch, cancelled: cancelled);
+  return (await aiWinningMoves(game, game.current, budget, stopAfter: 1))
+      .firstOrNull;
+}
+
+Future<MatchMove?> _nativeWinningReply(MatchState game) =>
+    findCourtWinningReply(game, yieldDuringSearch: false);
+
+Future<MatchMove?> courtWinningReply(MatchState game,
+        {bool Function()? cancelled}) =>
+    kIsWeb
+        ? findCourtWinningReply(game, cancelled: cancelled)
+        : compute(_nativeWinningReply, game);
 
 /// A legal win on an unchanged position; this does not claim a forced win.
 Future<Set<SeatId>> findMatchThreats(MatchState game,

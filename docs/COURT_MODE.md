@@ -1,6 +1,66 @@
 # Court Mode
 
-Updated 2026-10-09.
+## Current shared Court practice (2026-10-28)
+
+Square and Hex setup offer **Learn with the computer**, whose description names
+Court Mode, hints, Tak! warnings and takebacks. **Customize → Game settings**
+always shows the Court Mode switch. Previously Customize defaulted to all local
+humans and omitted the switch entirely, making it appear that the feature was
+missing. Ineligible configurations now show a disabled switch with guidance:
+choose at least one AI, retain at least one local human, and replace any online
+seats. Eligible configurations can enable Court immediately. Eligibility, untimed
+practice, rating/award exclusions and the threat sound are unchanged.
+
+Before an offline Court AI turn after human play, the controller checks for an
+exact legal one-move win with the existing tactical enumeration and MatchRules
+adjudication. If one exists, it freezes play and active elapsed time before AI
+search or submission. The board remains inspectable and the fixed action area
+shows **Tak! [seat] can win next move**, **Take back**, and **Let AI play**.
+Take back restores the last human decision and removes subsequent AI replies;
+Let AI play explicitly commits the verified winning reply, after which normal
+finished-Court takeback remains available. Generic Resume cannot bypass the
+decision. Draws and nonwinning replies do not trigger the pause.
+
+The check includes placements, complete spreads, capstone flattening, road and
+flat wins on Square/Hex with two through four seats. Web work yields and native
+work uses an isolate; navigation/position tokens reject stale results. It checks
+the current AI's actual turn, rather than predicting intervening opponents'
+moves. Further AI seats are checked when their turns arrive. Ordinary games and
+isolated studies do not receive this interception; core legality is unchanged.
+
+The local save records the winning reply alongside the confirmed history. Reload
+validates it by replay and restores the paused decision. Failed takeback or
+continuation writes leave the position and choice retryable. No AI win is exposed
+or processed before its move is saved.
+
+Regression journeys cover touch swipes and mouse-wheel navigation through both
+expanded setup sections at 150% text on Square and Hex, disabled-to-enabled Court
+after selecting an AI, and online/AI-only exclusions. See
+`test/game/court_setup_navigation_test.dart`. Adjacent checks cover mixed seats,
+saved size/clock preferences, replacement cancellation, learning and quick starts.
+`test/game/court_winning_reply_test.dart` covers automatic interception before AI
+search, durable reload/takeback, explicit continuation and terminal takeback,
+ordinary-game isolation, movement-only flattening wins, flat wins versus draws,
+three/four-seat rewind, and failed save retries. Portrait and landscape widget
+journeys check both visible choices at 150% text on both shapes.
+
+Verification on Flutter 3.47.7 / Linux: all 27 focused Court setup/interception
+tests pass; the full suite passes all 1,921 tests. Strict analysis reports no
+issues, and the release web build passes (with the existing secure-storage Wasm
+dry-run and Cupertino font warnings).
+A localhost Chromium mobile viewport (390×700) checks the disabled switch and
+explanation, then replays a Square human mistake through the actual web app:
+the AI's sixth move is held, Take back durably restores four moves, and a repeated
+mistake followed by Let AI play saves the winning sixth move. Browser API traffic
+was blocked; no production game/account was used. Screenshots are generated at
+`build/qa/court/disabled-court-mobile.png` and `court-paused-mobile.png`.
+Hosted builds and physical devices have not been qualified for this change.
+Feature IDs: SETUP-01, LEARN-02, LEARN-08 and SAVE-08.
+
+## Historical legacy implementation (2026-10-09)
+
+The sections below describe the older Square screen; current shared setup,
+durable recovery and coaching use `lib/game/` (see [development map](DEVELOPMENT.md)).
 
 ## Source and scope
 

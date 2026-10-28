@@ -3,7 +3,7 @@ import 'match_config.dart';
 /// Friendly starting points; custom games still use the same configuration.
 enum MatchPreset {
   learn('Learn with the computer',
-      'Easy computer · hints and takebacks · unrated practice'),
+      'Court Mode · easy computer · hints, Tak! warnings and takebacks · unrated practice'),
   computer('Play the computer',
       'Easy computer · no hints · eligible signed-in games are rated'),
   sameDevice('Same-device game', 'Take turns with friends on this device'),

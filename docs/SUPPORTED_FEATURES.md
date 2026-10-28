@@ -66,7 +66,8 @@ History: `cf126b9`, `87f40d9`, `47191d3`, `7f6d298`, `45d2946`, `2df1b28`.
 
 - **SETUP-01 · Quick starts:** start coached Square practice, ordinary computer play,
   friends on one device, or an online invitation from the game menu without
-  having to understand every advanced setting.
+  having to understand every advanced setting. Learn with the computer explicitly
+  identifies its Court Mode coaching, Tak! warnings and takebacks.
 - **SETUP-02 · Square and Hex:** choose either shape; Square defaults to an untimed 5×5
   duel and Hex to an untimed radius-2 three-player variant. Standard Tak and
   additional variants remain distinguishable.
@@ -270,7 +271,16 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   Difficulty-strength acceptance is still open (see limits below).
 - **LEARN-02 · Court practice:** play untimed, unrated coached games with free takebacks,
   including recovery of a finished practice position. Inspect legal next-move
-  winning threats for each seat on Square and Hex.
+  winning threats for each seat on Square and Hex. Customize → Game settings
+  always shows Court Mode; incompatible seats leave the switch disabled with
+  guidance to choose a local human and an AI with no online seats. Changing seats
+  enables the switch immediately when eligible. Before an AI can take a legal
+  immediate win after human play, automatically pause with Tak!, Take back and
+  Let AI play. Take back restores the latest human decision, including intervening
+  AI replies; allowing the win still permits a finished-game takeback. Applies to
+  road and flat wins, including stack movement, on both shapes and all supported
+  seat counts. See [Court audit](COURT_MODE.md),
+  `test/game/court_setup_navigation_test.dart` and `court_winning_reply_test.dart`.
 - **LEARN-03 · Square fundamentals:** follow nine lessons, receive completion feedback,
   and continue with Next or coached practice after progress saves successfully.
 - **LEARN-04 · Broader learning:** open Square/Hex tutorials, verified puzzle studies and
@@ -292,7 +302,10 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   effects and load a legal preview for explicit confirmation. AI commentary and
   next-move threat warnings are bounded estimates, not proof of a forced win.
   Ignore stale results after navigation or position changes; coaching never
-  changes the live board just by calculating a suggestion.
+  changes the live board just by calculating a suggestion. The Court loss pause
+  requires a verified legal winning reply rather than a heuristic evaluation;
+  Take back or Let AI play explicitly resolves it, and generic Resume cannot
+  bypass the choice. Ordinary games and isolated lessons retain their flow.
 
 ## Save, return and finish
 
@@ -326,7 +339,9 @@ History: `a6e2adf`, `567376f`, `db47e49`, `d37748b`, `2b914c7`, `2df1b28`, `a72c
   durably. An online clock continues independently of a player's screen; pausing
   a local AI runner does not pause the shared room clock. Pending AI work can
   resume from confirmed state when a participant reopens the room; it does not
-  run on a cloud game server while all participants are away.
+  run on a cloud game server while all participants are away. A Court loss pause
+  saves its verified winning reply and restores the same decision on local reload;
+  failed takeback/continuation saves retain the position and allow retry.
 
 ## Play with other people
 

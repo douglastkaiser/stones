@@ -30,7 +30,10 @@ saves retain their exposed-flat placements and Elo contract. See
 The shared Court shell now detects any legal win on the player's next move
 (road or flat scoring) if the position is unchanged. It is coaching feedback,
 not a rule requiring a call or guaranteeing a forced win. Core validation stays
-in MatchRules. Court takebacks remain offline, unrated practice. See
+in MatchRules. Offline Court now pauses before an AI's verified immediate
+winning reply after human play, offering a takeback or explicit continuation;
+this teaching pause does not change any legal move or outcome. See
+[Court practice](COURT_MODE.md). Court takebacks remain offline, unrated practice. See
 [playtesting feedback](PLAYTESTING_FEEDBACK.md) for timing, cosmetics, chat and
 verification; these features do not amend official two-player Tak.
 
