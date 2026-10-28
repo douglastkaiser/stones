@@ -211,6 +211,21 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
 
 - **LEARN-01 · Four AI choices:** Easy, Medium, Hard and Expert make legal moves on both
   shapes and mixed two-to-four-seat tables without blocking normal interaction.
+  The source candidate adds a Hard/Expert v3 duel safety check after the original
+  strategic search. It replaces a move only after proving a forced loss and
+  verifying a defense at the same finite horizon (three, then five plies).
+  A completed near-term repair survives deeper timeout. Total duel targets are
+  200/500/2000/5000 ms; the original strategic allocation and all multiplayer/
+  saved-v1/v2 budgets remain unchanged. Connectivity orders exact proof work;
+  selected native Square-5/Hex-2 Hard/Expert reference evidence supports the
+  repair. Required representative tier gates pass; full size/player strength and
+  browser/device responsiveness remain separate qualification requirements.
+  See [the tactical repair](AI_TACTICAL_REPAIR.md) for verification and limits.
+  Internal opt-in v3 duel experiments provide completed full-width minimax and a
+  separate bounded road-resilience term. Defaults remain selective/zero until
+  independent strength and latency gates pass. Their emergency timeout fallback
+  may report zero completed plies; multiplayer keeps its mandatory round. See
+  [duel experiments](AI_DUEL_EXPERIMENTS.md) for source behavior and evidence limits.
   New games use the v3 search with connected-road development and central access
   as secondary preferences. Multiplayer values each rival's progress and near-road
   threats instead of only the strongest rival, to encourage timely interference.
@@ -600,7 +615,7 @@ must stay explicit until implementation and acceptance evidence justify changing
 | PLAN-07 · Visual and performance finish | Core menu/table styling exists. Complete coherent learning/account/history/collection surfaces, dense mixed-theme readability, reduced-motion/audio behavior and measured performance on reference phones. Keep five coordinated sets. | [Finishing plan](FINISHING_PLAN.md), packet 10 |
 | PLAN-08 · Account lifecycle and disclosures | Feedback exists. Account/data deletion needs discoverable app/web entry points, reauthentication, retryable cleanup and treatment of shared histories/rooms. Align actual Analytics/retention, privacy text and store disclosures before public release. | [Feedback](FEEDBACK.md), finishing packet 11 |
 | PLAN-09 · Release baseline and parity | Continue exact-source/artifact/backend qualification and rollback. Qualify one source across web and Play Android, actual update/install, old saves, independent accounts and a long-running friend game. Store-track publication and production-access requirements remain separate gates. | [Release readiness](RELEASE_READINESS.md), finishing packets 1 and 12 |
-| PLAN-10 · AI strength | Four tiers, required representative adjacent-tier regression gates, a manually requested all-size/player-count ordering matrix, and resumable paired-reference tooling are implemented. Expert's lower-depth foundation has a source correction; a capstone reserve-credit pilot was rejected after losses, and organic variation remains opt-in experimental. Full 50-seed qualification, held-out same-tier no-regression evidence, the material-weight pilot grid and the human Expert-strength target remain open. Partial matrices and exploratory probes cannot qualify; native timings do not establish browser/device performance. | [AI upgrades](AI_UPGRADES.md), [Playtesting feedback](PLAYTESTING_FEEDBACK.md) |
+| PLAN-10 · AI strength | The source uses an exact forced-loss veto in Hard/Expert v3 duels, retaining the original strategy unless a bounded loss is proved and a defense verified. Connectivity orders proof attempts. Selected native confirmation covers 50 distinct openings per board, swapped seats, Square 5/Hex radius 2 and Hard/Expert: 226–161 with 13 draws against the frozen original; aggregate opening-stream-clustered p = 0.0002154. All 400 games and 203 replacements passed independent replay/proof checks. Four tiers, six unchanged required representative adjacent-tier gates, a manually requested all-size/player-count matrix and resumable reference tooling are implemented. Full-width/weighted-evaluation variants remain opt-in after failed development/latency studies; the capstone reserve-credit pilot was rejected, and organic variation remains opt-in experimental. Full size/player strength qualification, the material-weight pilot grid, human Expert strength and browser/device responsiveness remain open. The selected native result does not qualify the full matrix or publish a release. | [Tactical repair](AI_TACTICAL_REPAIR.md), [confirmation](qa/ai-fix/reference-study.json), [AI upgrades](AI_UPGRADES.md) |
 | PLAN-11 · Device and usability acceptance | Physical iPhone web sign-in retry, Android back gestures, Play-signed invitations/audio/sharing, native safe areas, keyboard/screen readers, large text and unfamiliar-player trials remain acceptance work. Browser viewport tests do not establish these. | [Release readiness](RELEASE_READINESS.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md) |
 
 Current constraints also remain visible:

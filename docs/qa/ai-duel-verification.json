@@ -1,0 +1,4264 @@
+{
+  "recordedUtc": "2026-10-27T05:39:46.519126+00:00",
+  "scope": "Implemented opt-in v3 duel experiments. Diagnostic pilots only; rollout rejected, no strength or device qualification.",
+  "defaults": {
+    "fullWidthDuels": false,
+    "roadResilienceWeight": 0,
+    "savedV1V2": "unchanged",
+    "multiplayer": "unchanged",
+    "ciGates": "unchanged"
+  },
+  "adoptionDecision": {
+    "search": "not accepted: timing regressions and negative same-tier pilot",
+    "evaluation": "not qualified: positive four-game pilot does not meet full strength/timing/weight-grid gates",
+    "combined": "not accepted: timing regressions, negative same-tier and incremental pilots"
+  },
+  "provenance": {
+    "referenceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+    "referenceVerifiedImportOnlyCopy": true,
+    "referenceAndHistoricalDependenciesVerified": true,
+    "measuredCandidateSourcesStillMatchWorkingTree": true,
+    "arms": {
+      "R": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "S": {
+        "arm": "S",
+        "buildSettings": {
+          "fullWidthDuels": true,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=true",
+          "-DSTONES_RESILIENCE_WEIGHT=0"
+        ],
+        "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "32b158174988cb96ffbfba3df03741bf308ee174d6e8040f193c7c932b5ce226",
+        "workerSha256": "0bc8d4172e8c141b2aa8f64a103a20a0fec6b6268c3e3589c26f427c354db0b9",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "da08a0d7d115b336a4e69159636a9858c5a8ccbed50ab85e754f513bae6f4081",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_resilience.dart": "bffb880d4d7c76b3f7e3e5e0a62afc586601815abe17c38cb5d01862016fc7e6",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "32b158174988cb96ffbfba3df03741bf308ee174d6e8040f193c7c932b5ce226",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "0bc8d4172e8c141b2aa8f64a103a20a0fec6b6268c3e3589c26f427c354db0b9",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "44f4084ae7023dcb9b53e1114dfca2aecbfcd07e2605a387ce8e64cb8b241b25"
+        }
+      },
+      "E": {
+        "arm": "E",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 16
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=false",
+          "-DSTONES_RESILIENCE_WEIGHT=16"
+        ],
+        "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "32b158174988cb96ffbfba3df03741bf308ee174d6e8040f193c7c932b5ce226",
+        "workerSha256": "0bc8d4172e8c141b2aa8f64a103a20a0fec6b6268c3e3589c26f427c354db0b9",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "da08a0d7d115b336a4e69159636a9858c5a8ccbed50ab85e754f513bae6f4081",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_resilience.dart": "bffb880d4d7c76b3f7e3e5e0a62afc586601815abe17c38cb5d01862016fc7e6",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "32b158174988cb96ffbfba3df03741bf308ee174d6e8040f193c7c932b5ce226",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "0bc8d4172e8c141b2aa8f64a103a20a0fec6b6268c3e3589c26f427c354db0b9",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "44f4084ae7023dcb9b53e1114dfca2aecbfcd07e2605a387ce8e64cb8b241b25"
+        }
+      },
+      "SE": {
+        "arm": "SE",
+        "buildSettings": {
+          "fullWidthDuels": true,
+          "roadResilienceWeight": 16
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=true",
+          "-DSTONES_RESILIENCE_WEIGHT=16"
+        ],
+        "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "32b158174988cb96ffbfba3df03741bf308ee174d6e8040f193c7c932b5ce226",
+        "workerSha256": "0bc8d4172e8c141b2aa8f64a103a20a0fec6b6268c3e3589c26f427c354db0b9",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "da08a0d7d115b336a4e69159636a9858c5a8ccbed50ab85e754f513bae6f4081",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_resilience.dart": "bffb880d4d7c76b3f7e3e5e0a62afc586601815abe17c38cb5d01862016fc7e6",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "32b158174988cb96ffbfba3df03741bf308ee174d6e8040f193c7c932b5ce226",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "0bc8d4172e8c141b2aa8f64a103a20a0fec6b6268c3e3589c26f427c354db0b9",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "44f4084ae7023dcb9b53e1114dfca2aecbfcd07e2605a387ce8e64cb8b241b25"
+        }
+      }
+    },
+    "runnerSources": {
+      "tools/ai_duel_benchmark.dart": "1caf5ffc9ca9b3d7ae2e7f73932634a64652819a025411c50c5b895932cef0ad",
+      "tools/ai_duel_defense_check.dart": "acb7b0c3a2eaf197abc0b4c8c64fd81bcea2f41087a4d9810dcb0e5cd361aef0",
+      "tools/ai_strength.dart": "a50775cd897603cb05d18a9687174402fccb56075fa2a5dcc9b0266db92a9379",
+      "tools/ai_qualification.dart": "79e350cbc1461814df05127bb5204356f15e76b53a46315c6bc45f8f5a843f68",
+      "scripts/ai_balance_report.py": "d4ca25e43ed1cd1f4c32157b453cb6e6939456df935a6840f29a180debd34ad2"
+    },
+    "runnerBinaries": {
+      "/tmp/stones-ai-duel-benchmark": "ba6e4a8a4b46c661781c9beaa915a4300f173561f4ceca63c10b112a7ce135b2",
+      "/tmp/stones-ai-duel-defense-check": "ecf7b3acfdc94f088bc06148008f2803219cfe82fe4a6da3420fffbfa1bdd447",
+      "/tmp/stones-ai-duel-strength": "268232d9310b5c95d7072a46ed2fbbeeeef9bfd3d8f18bd1a4d37c2e4b884d5b"
+    }
+  },
+  "verification": {
+    "fullFlutter": {
+      "passed": 1864,
+      "failed": 0,
+      "scope": "Full run during implementation; final focused checks cover subsequent root-window/cancellation changes and added fixtures",
+      "log": {
+        "path": "/tmp/stones-ai-full-test.log",
+        "sha256": "ace067dbc05a515eac50be13869898584ae2059a928e6a183fc4becff8aadbb5"
+      }
+    },
+    "finalFocusedFlutter": {
+      "passed": 28,
+      "failed": 0,
+      "log": {
+        "path": "/tmp/stones-ai-final-focused.log",
+        "sha256": "4a3f4afd445de47ebd648008966dd681cc33e17090763a11181f745918d84d10"
+      }
+    },
+    "python": {
+      "passed": 60,
+      "failed": 0,
+      "log": {
+        "path": "/tmp/stones-ai-python.log",
+        "sha256": "5cadaab21fe5e6d4cc65a75e05a07345c582d5399ff7d7cc0a8aa7646464dc34"
+      }
+    },
+    "strictAnalysis": {
+      "status": "passed",
+      "log": {
+        "path": "/tmp/stones-ai-final-analyze.log",
+        "sha256": "ecf661a9d596031f656bca473c0cb923366e91913e7932544e26d5742e96e794"
+      }
+    },
+    "releaseWebBuild": {
+      "status": "passed",
+      "scope": "Compilation only, not experimental browser/device responsiveness",
+      "log": {
+        "path": "/tmp/stones-ai-final-web.log",
+        "sha256": "f72e8822e733c182002570f36fd24d3650fd7a8cefe8e2d0f2948bc077499ede"
+      }
+    },
+    "localConfiguration": "Pre-existing analysis_options.yaml platform/build exclusions were preserved byte-for-byte; no CI workflow or strength threshold changed."
+  },
+  "counterexample": {
+    "sourceReplay": {
+      "path": "docs/qa/ai-balance-hex-counterexample.jsonl",
+      "sha256": "12e8f74567f987c31a94352973ebf2b3c56fe6126a103c497e219474057e55f8"
+    },
+    "measurement": {
+      "path": "build/qa/ai-duel/defense.jsonl",
+      "sha256": "9c1158edf2ab2c89cd408183417cb474d1ae9ddbb43f074103b084856281e2ee"
+    },
+    "manifest": {
+      "path": "build/qa/ai-duel/defense.jsonl.manifest.json",
+      "sha256": "85a373795a7d48f918a256dbd75107ae795f1ee2d55a6c6c0f25b172240c0c46"
+    },
+    "independentPositions": 1,
+    "transformsPerTier": 12,
+    "scope": "Six rotations and two color assignments of one known position; not independent strength openings",
+    "summary": {
+      "sample": "development",
+      "cases": 24,
+      "duelTimingCoverageComplete": false,
+      "qualificationComplete": false,
+      "strengthQualified": false,
+      "selectedPairedP95Passed": true,
+      "comparisons": [
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "S-R",
+          "positions": 12,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "E-R",
+          "positions": 12,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "SE-R",
+          "positions": 12,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "SE-S",
+          "positions": 12,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "S-R",
+          "positions": 12,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2201.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "E-R",
+          "positions": 12,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2201.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "SE-R",
+          "positions": 12,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2201.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "SE-S",
+          "positions": 12,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        }
+      ]
+    },
+    "proof": {
+      "scope": "Refutes only the recorded ninth-move win, not an eventual game result",
+      "inputSha256": "9c1158edf2ab2c89cd408183417cb474d1ae9ddbb43f074103b084856281e2ee",
+      "manifestSha256": "85a373795a7d48f918a256dbd75107ae795f1ee2d55a6c6c0f25b172240c0c46",
+      "rulesSha256": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+      "solverSha256": "2302f21fcf3797f29add0b2af2cf2135d290c350aabe1a85efe61fe44994c1dd",
+      "runnerSha256": "acb7b0c3a2eaf197abc0b4c8c64fd81bcea2f41087a4d9810dcb0e5cd361aef0",
+      "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+      "requiredTransformedDefenseGatePassed": true,
+      "groups": {
+        "E:hard": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        },
+        "SE:hard": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        },
+        "R:hard": {
+          "proven": 4,
+          "refuted": 8,
+          "unknown": 0
+        },
+        "S:hard": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        },
+        "SE:expert": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        },
+        "R:expert": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        },
+        "S:expert": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        },
+        "E:expert": {
+          "proven": 0,
+          "refuted": 12,
+          "unknown": 0
+        }
+      },
+      "records": [
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 77,
+          "cacheHits": 0,
+          "elapsedMs": 22,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 77,
+          "cacheHits": 0,
+          "elapsedMs": 18,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "proven",
+          "expandedNodes": 199,
+          "cacheHits": 0,
+          "elapsedMs": 60,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 133,
+          "cacheHits": 0,
+          "elapsedMs": 38,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 77,
+          "cacheHits": 0,
+          "elapsedMs": 17,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 127,
+          "cacheHits": 0,
+          "elapsedMs": 39,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 127,
+          "cacheHits": 0,
+          "elapsedMs": 41,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 109,
+          "cacheHits": 0,
+          "elapsedMs": 41,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -2,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 77,
+          "cacheHits": 0,
+          "elapsedMs": 25,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "proven",
+          "expandedNodes": 199,
+          "cacheHits": 0,
+          "elapsedMs": 67,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 133,
+          "cacheHits": 0,
+          "elapsedMs": 46,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -2,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 77,
+          "cacheHits": 0,
+          "elapsedMs": 18,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 127,
+          "cacheHits": 0,
+          "elapsedMs": 38,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 133,
+          "cacheHits": 0,
+          "elapsedMs": 51,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 109,
+          "cacheHits": 0,
+          "elapsedMs": 27,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 0,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -2,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 77,
+          "cacheHits": 0,
+          "elapsedMs": 18,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 102,
+          "cacheHits": 0,
+          "elapsedMs": 22,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 102,
+          "cacheHits": 0,
+          "elapsedMs": 22,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 73,
+          "cacheHits": 0,
+          "elapsedMs": 13,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 73,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 86,
+          "cacheHits": 0,
+          "elapsedMs": 17,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 78,
+          "cacheHits": 0,
+          "elapsedMs": 16,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 73,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 81,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 102,
+          "cacheHits": 0,
+          "elapsedMs": 22,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 73,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 73,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 102,
+          "cacheHits": 0,
+          "elapsedMs": 22,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": 1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 78,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 73,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 81,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 1,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 102,
+          "cacheHits": 0,
+          "elapsedMs": 22,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 115,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 115,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 66,
+          "cacheHits": 0,
+          "elapsedMs": 11,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 115,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 57,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 115,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -2,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 66,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 115,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 57,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 2,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 115,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 57,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 54,
+          "cacheHits": 0,
+          "elapsedMs": 8,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 148,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 148,
+          "cacheHits": 0,
+          "elapsedMs": 16,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 57,
+          "cacheHits": 0,
+          "elapsedMs": 9,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 148,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 101,
+          "cacheHits": 0,
+          "elapsedMs": 12,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -2,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 54,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 2,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 148,
+          "cacheHits": 0,
+          "elapsedMs": 16,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 2,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 148,
+          "cacheHits": 0,
+          "elapsedMs": 17,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 57,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 0,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 57,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 2,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 148,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 101,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 3,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 59,
+          "cacheHits": 0,
+          "elapsedMs": 10,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 183,
+          "cacheHits": 0,
+          "elapsedMs": 29,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 183,
+          "cacheHits": 0,
+          "elapsedMs": 28,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 98,
+          "cacheHits": 0,
+          "elapsedMs": 17,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 82,
+          "cacheHits": 0,
+          "elapsedMs": 13,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 183,
+          "cacheHits": 0,
+          "elapsedMs": 31,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 98,
+          "cacheHits": 0,
+          "elapsedMs": 18,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 98,
+          "cacheHits": 0,
+          "elapsedMs": 17,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 86,
+          "cacheHits": 0,
+          "elapsedMs": 15,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 183,
+          "cacheHits": 0,
+          "elapsedMs": 31,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 98,
+          "cacheHits": 0,
+          "elapsedMs": 19,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 82,
+          "cacheHits": 0,
+          "elapsedMs": 14,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 183,
+          "cacheHits": 0,
+          "elapsedMs": 33,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 98,
+          "cacheHits": 0,
+          "elapsedMs": 19,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 98,
+          "cacheHits": 0,
+          "elapsedMs": 20,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 86,
+          "cacheHits": 0,
+          "elapsedMs": 18,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 4,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": 1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 183,
+          "cacheHits": 0,
+          "elapsedMs": 32,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 0,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "proven",
+          "expandedNodes": 155,
+          "cacheHits": 0,
+          "elapsedMs": 36,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 127,
+          "cacheHits": 0,
+          "elapsedMs": 29,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 141,
+          "cacheHits": 0,
+          "elapsedMs": 32,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 141,
+          "cacheHits": 0,
+          "elapsedMs": 31,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 2,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 127,
+          "cacheHits": 0,
+          "elapsedMs": 28,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 114,
+          "cacheHits": 0,
+          "elapsedMs": 28,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": -1,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 141,
+          "cacheHits": 0,
+          "elapsedMs": 35,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": false,
+          "attacker": "ivory",
+          "move": {
+            "seat": "charcoal",
+            "x": 1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 134,
+          "cacheHits": 0,
+          "elapsedMs": 39,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 2,
+            "y": -2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 127,
+          "cacheHits": 0,
+          "elapsedMs": 31,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        },
+        {
+          "arm": "E",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 141,
+          "cacheHits": 0,
+          "elapsedMs": 32,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 141,
+          "cacheHits": 0,
+          "elapsedMs": 33,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "hard",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 0,
+            "y": 0,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "proven",
+          "expandedNodes": 155,
+          "cacheHits": 0,
+          "elapsedMs": 35,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "E",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -1,
+            "type": "capstone",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 114,
+          "cacheHits": 0,
+          "elapsedMs": 28,
+          "binarySha256": "ed0ae550c0d4b9e68ddd955c6ef8e149a4d8c5202c023d9772bf281bdd2f10e7"
+        },
+        {
+          "arm": "SE",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": -1,
+            "y": 2,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 141,
+          "cacheHits": 0,
+          "elapsedMs": 34,
+          "binarySha256": "e11671f4f685f69a48da253a37689253c7ee0e6507c9b5491f3f9250a2840ee3"
+        },
+        {
+          "arm": "R",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 134,
+          "cacheHits": 0,
+          "elapsedMs": 37,
+          "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10"
+        },
+        {
+          "arm": "S",
+          "level": "expert",
+          "rotation": 5,
+          "colorSwap": true,
+          "attacker": "charcoal",
+          "move": {
+            "seat": "ivory",
+            "x": 1,
+            "y": -1,
+            "type": "flat",
+            "direction": null,
+            "drops": []
+          },
+          "remainingPlies": 3,
+          "verdict": "refuted",
+          "expandedNodes": 134,
+          "cacheHits": 0,
+          "elapsedMs": 36,
+          "binarySha256": "05f8ddab3f3597a44475561e668a2ccc14b41a11b041de5be07f6ec44ff1a701"
+        }
+      ]
+    }
+  },
+  "heldOutTimingPilot": {
+    "measurement": {
+      "path": "build/qa/ai-duel/heldout-timing.jsonl",
+      "sha256": "e939aa70a9de9897081637fa351f5a37f38e6e2d7c3a9cf5fe6027148a6e692c"
+    },
+    "manifest": {
+      "path": "build/qa/ai-duel/heldout-timing.jsonl.manifest.json",
+      "sha256": "21f80009dc1450b6e3b214c14d23c25cd832a80e812d640022528b1216d83f8e"
+    },
+    "seed": 200000,
+    "independentOpeningsPerProfile": 1,
+    "positionsPerProfile": 3,
+    "decisionCases": 48,
+    "armDecisions": 192,
+    "scope": "Three correlated positions per profile/tier; descriptive p95 only. Parameters fixed before holdout; no tuning on these results.",
+    "summary": {
+      "sample": "held-out",
+      "cases": 48,
+      "duelTimingCoverageComplete": false,
+      "qualificationComplete": false,
+      "strengthQualified": false,
+      "selectedPairedP95Passed": false,
+      "comparisons": [
+        {
+          "group": "square-5-2:easy",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 22.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:easy",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 31.0,
+          "referenceP95Ms": 22.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:easy",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 22.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:easy",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:medium",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 190.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:medium",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 333.0,
+          "referenceP95Ms": 190.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:medium",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 190.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:medium",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:hard",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 399.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:hard",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 612.0,
+          "referenceP95Ms": 399.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:hard",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 399.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:hard",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:expert",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:expert",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:expert",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-5-2:expert",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:easy",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 33.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:easy",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 56.0,
+          "referenceP95Ms": 33.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:easy",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 33.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:easy",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:medium",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:medium",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:medium",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:medium",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:hard",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-2-2:expert",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:easy",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 29.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "square-8-2:easy",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 88.0,
+          "referenceP95Ms": 29.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:easy",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 212.0,
+          "referenceP95Ms": 29.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "square-8-2:easy",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 212.0,
+          "referenceP95Ms": 200.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "square-8-2:medium",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "square-8-2:medium",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:medium",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "square-8-2:medium",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "square-8-2:hard",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:hard",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:hard",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:hard",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:expert",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:expert",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:expert",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "square-8-2:expert",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:easy",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 49.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "hex-4-2:easy",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 202.0,
+          "referenceP95Ms": 49.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:easy",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 49.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "hex-4-2:easy",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 200.0,
+          "referenceP95Ms": 200.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "hex-4-2:medium",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "hex-4-2:medium",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:medium",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "hex-4-2:medium",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 500.0,
+          "referenceP95Ms": 500.0,
+          "candidateEmergencyFallbacks": 1
+        },
+        {
+          "group": "hex-4-2:hard",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:hard",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 1201.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:hard",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:hard",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 1200.0,
+          "referenceP95Ms": 1200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:expert",
+          "comparison": "S-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:expert",
+          "comparison": "E-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:expert",
+          "comparison": "SE-R",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        },
+        {
+          "group": "hex-4-2:expert",
+          "comparison": "SE-S",
+          "positions": 3,
+          "candidateP95Ms": 2200.0,
+          "referenceP95Ms": 2200.0,
+          "candidateEmergencyFallbacks": 0
+        }
+      ]
+    }
+  },
+  "heldOutGamePilots": {
+    "games": 40,
+    "finished": 40,
+    "decisive": 38,
+    "independentOpenings": 2,
+    "seeds": [
+      100000,
+      100001
+    ],
+    "profile": "hex-2-2",
+    "level": "hard",
+    "scope": "Same two openings reused across all arms, colors and worker assignments; never count the 40 games as 40 independent openings. Equal-policy target/opponent sweeps are timed repeatability observations, not engine superiority.",
+    "runs": [
+      {
+        "name": "hex-2-2-hard-E-R",
+        "scope": "same-tier held-out pilot",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-E-R.jsonl",
+          "sha256": "c7d98f70ccf1ee36523ffa734c10157ed77fb0934708983cdb08af21719fbcad"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-E-R.jsonl.manifest.json",
+          "sha256": "4c26412c16a19a64336e4bebad7c897602291bd81a4149e977ce7df89b674415"
+        },
+        "candidateArm": "E",
+        "opponentArm": "R",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 3,
+          "losses": 1,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.75,
+          "passed": true,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 3,
+          "secondSeatWins": 1,
+          "starterShare": 0.75,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.5,
+            1.0
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "starter-sweep": 1,
+            "target-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "ivory"
+              ],
+              "outcome": "starter-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "charcoal"
+              ],
+              "outcome": "target-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 33,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 17,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 17,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 26,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-R-R-charcoal",
+        "scope": "equal-policy repeatability/starting-role control",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-R-R-charcoal.jsonl",
+          "sha256": "cac4aef15b3a9ec07160141e5054a1246d9f44db93a95ea1ac171978ac17452c"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-R-R-charcoal.jsonl.manifest.json",
+          "sha256": "4bf529cd2ff464a7597018cb78cff66ad97e43d6247b2c30baa3b5c6e1397c25"
+        },
+        "candidateArm": "R",
+        "opponentArm": "R",
+        "starter": "charcoal",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 2,
+          "losses": 2,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.5,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 4,
+          "secondSeatWins": 0,
+          "starterShare": 1.0,
+          "starterShare95CI": [
+            1.0,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.5,
+            0.5
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "starter-sweep": 2
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "charcoal"
+              ],
+              "outcome": "starter-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "charcoal"
+              ],
+              "outcome": "starter-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 29,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 29,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 21,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 21,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-R-R",
+        "scope": "equal-policy repeatability/starting-role control",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-R-R.jsonl",
+          "sha256": "664623165f4f150a845675271ce6d2bac9ce7e7383a1f0892779f79d07d9882b"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-R-R.jsonl.manifest.json",
+          "sha256": "8ff3a06fce299f2c462568f2243df163931d218bb39e8b126cbb244f31433eda"
+        },
+        "candidateArm": "R",
+        "opponentArm": "R",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 2,
+          "losses": 2,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.5,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 4,
+          "secondSeatWins": 0,
+          "starterShare": 1.0,
+          "starterShare95CI": [
+            1.0,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.5,
+            0.5
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "starter-sweep": 2
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "ivory"
+              ],
+              "outcome": "starter-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "ivory"
+              ],
+              "outcome": "starter-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 49,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 49,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 21,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 21,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-S-R",
+        "scope": "same-tier held-out pilot",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-S-R.jsonl",
+          "sha256": "6b5f626f49023537418ebb4dcdf91db9ea73e9640d991710184cf5bac5c41d92"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-S-R.jsonl.manifest.json",
+          "sha256": "1799009aef12c20f7acd7b2dc09107f8c2657309cce279511e8ca0a80483edce"
+        },
+        "candidateArm": "S",
+        "opponentArm": "R",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 1,
+          "losses": 3,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.25,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 3,
+          "secondSeatWins": 1,
+          "starterShare": 0.75,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.0,
+            0.5
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "starter-sweep": 1,
+            "opponent-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "ivory"
+              ],
+              "outcome": "starter-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "ivory"
+              ],
+              "outcome": "opponent-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 17,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 49,
+            "reason": "flats"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 44,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 15,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-S-S-charcoal",
+        "scope": "equal-policy repeatability/starting-role control",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-S-S-charcoal.jsonl",
+          "sha256": "c9c99c84f9a453309fbcd0c5eb6fa6a3485c159ab7aec18f0153400f787fd4a1"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-S-S-charcoal.jsonl.manifest.json",
+          "sha256": "403af662503076e7f30658983886a67c316a766e651195bcf259fa9319201d44"
+        },
+        "candidateArm": "S",
+        "opponentArm": "S",
+        "starter": "charcoal",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 1,
+          "losses": 3,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.25,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 3,
+          "secondSeatWins": 1,
+          "starterShare": 0.75,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.0,
+            0.5
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "opponent-sweep": 1,
+            "starter-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "ivory"
+              ],
+              "outcome": "opponent-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "charcoal"
+              ],
+              "outcome": "starter-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 35,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 38,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 52,
+            "reason": "flats"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 63,
+            "reason": "flats"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-S-S",
+        "scope": "equal-policy repeatability/starting-role control",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-S-S.jsonl",
+          "sha256": "6ef463ed7e3a7a4d20a738b3967cdc3d770fec00dccf30e131aae9e9f920a7e3"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-S-S.jsonl.manifest.json",
+          "sha256": "6c561c4f88e8baad660c59ec5765d2330e3f7c0d80fe1856422d100a2f92e985"
+        },
+        "candidateArm": "S",
+        "opponentArm": "S",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 2,
+          "losses": 2,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.5,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 2,
+          "secondSeatWins": 2,
+          "starterShare": 0.5,
+          "starterShare95CI": [
+            0.5,
+            0.5
+          ],
+          "targetShare95CI": [
+            0.0,
+            1.0
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "opponent-sweep": 1,
+            "target-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "ivory"
+              ],
+              "outcome": "opponent-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "charcoal"
+              ],
+              "outcome": "target-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 51,
+            "reason": "flats"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 35,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 69,
+            "reason": "flats"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 38,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-SE-R",
+        "scope": "same-tier held-out pilot",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-R.jsonl",
+          "sha256": "e1720fb4b8c627bf1b0fb17664c841493b871804a3c81fc547f3311e69517114"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-R.jsonl.manifest.json",
+          "sha256": "003a0a9e9df32794d31df7bd4e51303e3e0f02e08a352e1d8a1b9ce8d6022ad1"
+        },
+        "candidateArm": "SE",
+        "opponentArm": "R",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 0,
+          "losses": 3,
+          "draws": 1,
+          "unfinished": 0,
+          "normalizedShare": 0.0,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 3,
+          "starterWins": 2,
+          "secondSeatWins": 1,
+          "starterShare": 0.6666666666666666,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.0,
+            0.0
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "inconclusive": 1,
+            "opponent-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                null,
+                "ivory"
+              ],
+              "outcome": "inconclusive"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "ivory"
+              ],
+              "outcome": "opponent-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": null,
+            "finished": true,
+            "targetWon": false,
+            "plies": 50,
+            "reason": "flats"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 51,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 26,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 49,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-SE-S",
+        "scope": "same-tier held-out pilot",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-S.jsonl",
+          "sha256": "379ae15b1883cdad4782dd23309e3b6d58da687ffc5185cb0ed5d4db0e15e7fb"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-S.jsonl.manifest.json",
+          "sha256": "f5ead133cd18ca585035261a16342a9def9e26db971367684156a1eb81cb60cc"
+        },
+        "candidateArm": "SE",
+        "opponentArm": "S",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 1,
+          "losses": 2,
+          "draws": 1,
+          "unfinished": 0,
+          "normalizedShare": 0.3333333333333333,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 3,
+          "starterWins": 2,
+          "secondSeatWins": 1,
+          "starterShare": 0.6666666666666666,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.0,
+            1.0
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "opponent-sweep": 1,
+            "inconclusive": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "ivory"
+              ],
+              "outcome": "opponent-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                null
+              ],
+              "outcome": "inconclusive"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 51,
+            "reason": "flats"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 17,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 69,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": null,
+            "finished": true,
+            "targetWon": false,
+            "plies": 60,
+            "reason": "flats"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-SE-SE-charcoal",
+        "scope": "equal-policy repeatability/starting-role control",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-SE-charcoal.jsonl",
+          "sha256": "07364fe16ff90a69fbe1339c59f8b172c02c756ba17dcacc62e4ae5985f91cc9"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-SE-charcoal.jsonl.manifest.json",
+          "sha256": "59b8ecb62ce112ceef9faadd395592a5b860baa514deb2d8302a1ed88ed86745"
+        },
+        "candidateArm": "SE",
+        "opponentArm": "SE",
+        "starter": "charcoal",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 3,
+          "losses": 1,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.75,
+          "passed": true,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 3,
+          "secondSeatWins": 1,
+          "starterShare": 0.75,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.5,
+            1.0
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "target-sweep": 1,
+            "starter-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "charcoal"
+              ],
+              "outcome": "target-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "charcoal"
+              ],
+              "outcome": "starter-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 54,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 53,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 29,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": true,
+            "plies": 29,
+            "reason": "road"
+          }
+        ]
+      },
+      {
+        "name": "hex-2-2-hard-SE-SE",
+        "scope": "equal-policy repeatability/starting-role control",
+        "replay": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-SE.jsonl",
+          "sha256": "b2e6db2bf9e25246980eee8e18593af14443b2ed42206843a3a20a950e9349ac"
+        },
+        "manifest": {
+          "path": "build/qa/ai-duel/hex-2-2-hard-SE-SE.jsonl.manifest.json",
+          "sha256": "59e08abf710368542456aafccd38ccb4fb30db42391a11cbf46f80f29b0dfed1"
+        },
+        "candidateArm": "SE",
+        "opponentArm": "SE",
+        "starter": "ivory",
+        "independentOpenings": 2,
+        "runnerSummary": {
+          "expectedGames": 4,
+          "games": 4,
+          "complete": true,
+          "finished": 4,
+          "wins": 1,
+          "losses": 3,
+          "draws": 0,
+          "unfinished": 0,
+          "normalizedShare": 0.25,
+          "passed": false,
+          "scope": "regression-only"
+        },
+        "qualificationPassed": false,
+        "balance": {
+          "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+          "games": 4,
+          "openingSeeds": 2,
+          "decisive": 4,
+          "starterWins": 3,
+          "secondSeatWins": 1,
+          "starterShare": 0.75,
+          "starterShare95CI": [
+            0.5,
+            1.0
+          ],
+          "targetShare95CI": [
+            0.0,
+            0.5
+          ],
+          "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+          "pairedOutcomes": {
+            "opponent-sweep": 1,
+            "starter-sweep": 1
+          },
+          "bySeed": [
+            {
+              "seed": 100000,
+              "sameOpening": true,
+              "winners": [
+                "charcoal",
+                "ivory"
+              ],
+              "outcome": "opponent-sweep"
+            },
+            {
+              "seed": 100001,
+              "sameOpening": true,
+              "winners": [
+                "ivory",
+                "ivory"
+              ],
+              "outcome": "starter-sweep"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "seed": 100000,
+            "rotation": 0,
+            "winner": "charcoal",
+            "finished": true,
+            "targetWon": false,
+            "plies": 54,
+            "reason": "road"
+          },
+          {
+            "seed": 100000,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 55,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 0,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": true,
+            "plies": 27,
+            "reason": "road"
+          },
+          {
+            "seed": 100001,
+            "rotation": 1,
+            "winner": "ivory",
+            "finished": true,
+            "targetWon": false,
+            "plies": 27,
+            "reason": "road"
+          }
+        ]
+      }
+    ],
+    "equalStrengthControls": {
+      "R": {
+        "games": 8,
+        "starterWins": 8,
+        "secondSeatWins": 0,
+        "independentOpenings": 2,
+        "startingColors": [
+          "ivory",
+          "charcoal"
+        ]
+      },
+      "S": {
+        "games": 8,
+        "starterWins": 5,
+        "secondSeatWins": 3,
+        "independentOpenings": 2,
+        "startingColors": [
+          "ivory",
+          "charcoal"
+        ]
+      },
+      "SE": {
+        "games": 8,
+        "starterWins": 6,
+        "secondSeatWins": 2,
+        "independentOpenings": 2,
+        "startingColors": [
+          "ivory",
+          "charcoal"
+        ]
+      }
+    },
+    "distinctNormalizedOpenings": {
+      "100000": [
+        {
+          "x": 0,
+          "y": 0,
+          "type": "flat",
+          "direction": null,
+          "drops": []
+        },
+        {
+          "x": 2,
+          "y": -2,
+          "type": "flat",
+          "direction": null,
+          "drops": []
+        }
+      ],
+      "100001": [
+        {
+          "x": -1,
+          "y": 0,
+          "type": "flat",
+          "direction": null,
+          "drops": []
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "type": "flat",
+          "direction": null,
+          "drops": []
+        }
+      ]
+    }
+  },
+  "remainingGates": {
+    "fullWeightGrid": "not run",
+    "fiftySeedSameTierAndAdjacentMatrices": "not run: prerequisite timing and same-tier pilots failed",
+    "requiredSixCiStrengthGroups": "not rerun or weakened; no passing claim",
+    "full81GroupMatrix": "not run",
+    "expertHeldOutGameQualification": "not run; Expert has counterexample and timing diagnostics only",
+    "physicalDeviceAndHumanStrength": "not tested",
+    "publication": "not performed"
+  },
+  "interpretation": "The independent finite-horizon proof establishes avoidable quick losses. Self-play starting shares depend on policy and timed cutoffs; they establish neither intrinsic balance nor stronger defense by themselves. Rules, opening restrictions and randomness defaults are unchanged."
+}

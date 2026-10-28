@@ -7,7 +7,7 @@ import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'ai_qualification.dart'
-    show Worker, profiles, profileKey, sha, percentile;
+    show Worker, profiles, profileKey, sha, percentile, binaryProvenance;
 
 Future<void> main(List<String> args) async {
   if (args.contains('--help')) {
@@ -33,6 +33,8 @@ Future<void> main(List<String> args) async {
   final candidatePath = option('candidate', '/tmp/stones-ai-candidate');
   final baselinePath = option('baseline', '/tmp/stones-ai-baseline');
   final output = File(option('output', '/tmp/stones-ai-latency.json'));
+  final candidateSource = await binaryProvenance(candidatePath);
+  final baselineSource = await binaryProvenance(baselinePath);
   if (samples < 1 ||
       positions < 1 ||
       !profiles.any((p) => selected == 'all' || profileKey(p) == selected)) {
@@ -138,6 +140,8 @@ Future<void> main(List<String> args) async {
         'runtime': Platform.version,
         'candidateSha256': await sha(candidatePath),
         'baselineSha256': await sha(baselinePath),
+        'candidateSource': candidateSource,
+        'baselineSource': baselineSource,
         'p95GatePassed': passed,
         'summary': summary,
         'decisions': rows

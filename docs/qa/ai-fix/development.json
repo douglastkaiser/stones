@@ -1,0 +1,1575 @@
+{
+  "scope": "Development and rejection evidence only. None of these small reused samples qualifies the final repair or establishes intrinsic starting advantage.",
+  "finalCandidate": false,
+  "qualification": false,
+  "runs": [
+    {
+      "data": "build/qa/ai-fix/development5-SE-R.jsonl",
+      "dataSha256": "bb00971271a6909e017c79546358cd04ace03c50134b4d14c21d8d6d2af9376b",
+      "manifestSha256": "5e8e610eb5fc9e898d7b325d358bd747e005886822cb9595d03a07d109857ac4",
+      "candidateBinarySha256": "e5037c6cd92e4dd0eb5107d943e15c6f7b4911ab3736f4dcb5ddbf3e63f5a588",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "SE",
+        "buildSettings": {
+          "fullWidthDuels": true,
+          "roadResilienceWeight": 16,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ]
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=true",
+          "-DSTONES_RESILIENCE_WEIGHT=16",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "binarySha256": "e5037c6cd92e4dd0eb5107d943e15c6f7b4911ab3736f4dcb5ddbf3e63f5a588",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "a3c64fa068da395b4cb225f808d621086c4bc6f0f0d8128f0ad9054c020669b3",
+        "workerSha256": "157d03267996c841b885317a046ae380029fbd0bc5b716c5323cf53ffe4a11a8",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "9aabc7110b532af9ffbd67a26bb92a3b144e05847990fa00e33080387749f63d",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "a3c64fa068da395b4cb225f808d621086c4bc6f0f0d8128f0ad9054c020669b3",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "157d03267996c841b885317a046ae380029fbd0bc5b716c5323cf53ffe4a11a8",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "410794c26950403556e8424432af5fcedb24b65d867a0ab9cf9c010482ea4adb"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 4,
+        "games": 4,
+        "complete": true,
+        "finished": 4,
+        "wins": 2,
+        "losses": 2,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development5-SE-R.jsonl",
+        "dataSha256": "bb00971271a6909e017c79546358cd04ace03c50134b4d14c21d8d6d2af9376b",
+        "games": 4,
+        "candidateWins": 2,
+        "candidateLosses": 2,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 2,
+          "positive": 1,
+          "negative": 1,
+          "tied": 0,
+          "oneSidedImprovementP": 0.75,
+          "oneSidedRegressionP": 0.75,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 4,
+        "openingSeeds": 2,
+        "decisive": 4,
+        "starterWins": 2,
+        "secondSeatWins": 2,
+        "starterShare": 0.5,
+        "starterShare95CI": [
+          0.5,
+          0.5
+        ],
+        "targetShare95CI": [
+          0.0,
+          1.0
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "opponent-sweep": 1,
+          "target-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 10001,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "ivory"
+            ],
+            "outcome": "opponent-sweep"
+          },
+          {
+            "seed": 10002,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 0
+    },
+    {
+      "data": "build/qa/ai-fix/development6-SE-R.jsonl",
+      "dataSha256": "866d217e2a79ea6b3d0da5ee9e4e8643c18351043265d4eb6aad00fe8fabba00",
+      "manifestSha256": "e9e81556ee397ae2e2d89016b1389e2357228342e2c2276ad5cbbec0666d4cdf",
+      "candidateBinarySha256": "f36d47242561a46a94a971943943d3ed2cf2535301c2b4f79000b822eed2316f",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "SE",
+        "buildSettings": {
+          "fullWidthDuels": true,
+          "roadResilienceWeight": 16,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ]
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=true",
+          "-DSTONES_RESILIENCE_WEIGHT=16",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "binarySha256": "f36d47242561a46a94a971943943d3ed2cf2535301c2b4f79000b822eed2316f",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "44ed2ee41c39e51a024a50877862f7d3468479a1d1943ed520cfb2903244f06f",
+        "workerSha256": "157d03267996c841b885317a046ae380029fbd0bc5b716c5323cf53ffe4a11a8",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "9aabc7110b532af9ffbd67a26bb92a3b144e05847990fa00e33080387749f63d",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "44ed2ee41c39e51a024a50877862f7d3468479a1d1943ed520cfb2903244f06f",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "157d03267996c841b885317a046ae380029fbd0bc5b716c5323cf53ffe4a11a8",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "adc064afce4f3c3f8c9c0cf95bc56cefb619aac073fedb7d10ba7a52f91ebe39"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 6,
+        "games": 6,
+        "complete": true,
+        "finished": 6,
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.6666666666666666,
+        "passed": true,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development6-SE-R.jsonl",
+        "dataSha256": "866d217e2a79ea6b3d0da5ee9e4e8643c18351043265d4eb6aad00fe8fabba00",
+        "games": 6,
+        "candidateWins": 4,
+        "candidateLosses": 2,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 3,
+          "positive": 1,
+          "negative": 0,
+          "tied": 2,
+          "oneSidedImprovementP": 0.5,
+          "oneSidedRegressionP": 1.0,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 6,
+        "openingSeeds": 3,
+        "decisive": 6,
+        "starterWins": 5,
+        "secondSeatWins": 1,
+        "starterShare": 0.8333333333333334,
+        "starterShare95CI": [
+          0.5,
+          1.0
+        ],
+        "targetShare95CI": [
+          0.5,
+          1.0
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "starter-sweep": 2,
+          "target-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 10001,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10002,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          },
+          {
+            "seed": 10003,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 0
+    },
+    {
+      "data": "build/qa/ai-fix/development7-S-R.jsonl",
+      "dataSha256": "164e20b83db1d2cd24506af45cd34bd14db92862d8583fa2e83988a0c2f2a9c3",
+      "manifestSha256": "14018379286c4a2ffef1bf802f29b5be4623ab0a36e1077666da4363baa67dec",
+      "candidateBinarySha256": "d6c180e4729b57ea686dab6dfb9bd008b2e1e7fca54b04dd306a12e417787bd7",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "S",
+        "buildSettings": {
+          "fullWidthDuels": true,
+          "roadResilienceWeight": 0,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ]
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=true",
+          "-DSTONES_RESILIENCE_WEIGHT=0",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "binarySha256": "d6c180e4729b57ea686dab6dfb9bd008b2e1e7fca54b04dd306a12e417787bd7",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "e5286c951b791ffa705f7803470c0cc6becf1ec1136eb8e504cd1d73830da1d1",
+        "workerSha256": "78a05b37c6f9f1f9f9f3890869a291c952318e43771d445ffe355a3617708a8c",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "f97176c3e8f3c37f3ddfd80d58f41595a0025440ecb761212fc75f7b7684ca11",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "e5286c951b791ffa705f7803470c0cc6becf1ec1136eb8e504cd1d73830da1d1",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "78a05b37c6f9f1f9f9f3890869a291c952318e43771d445ffe355a3617708a8c",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "adc064afce4f3c3f8c9c0cf95bc56cefb619aac073fedb7d10ba7a52f91ebe39"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 6,
+        "games": 6,
+        "complete": true,
+        "finished": 6,
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.3333333333333333,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development7-S-R.jsonl",
+        "dataSha256": "164e20b83db1d2cd24506af45cd34bd14db92862d8583fa2e83988a0c2f2a9c3",
+        "games": 6,
+        "candidateWins": 2,
+        "candidateLosses": 4,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 3,
+          "positive": 0,
+          "negative": 1,
+          "tied": 2,
+          "oneSidedImprovementP": 1.0,
+          "oneSidedRegressionP": 0.5,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 6,
+        "openingSeeds": 3,
+        "decisive": 6,
+        "starterWins": 5,
+        "secondSeatWins": 1,
+        "starterShare": 0.8333333333333334,
+        "starterShare95CI": [
+          0.5,
+          1.0
+        ],
+        "targetShare95CI": [
+          0.0,
+          0.5
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "starter-sweep": 2,
+          "opponent-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 10001,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10002,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "ivory"
+            ],
+            "outcome": "opponent-sweep"
+          },
+          {
+            "seed": 10003,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 0
+    },
+    {
+      "data": "build/qa/ai-fix/development7-E-R.jsonl",
+      "dataSha256": "e0560284720ad5be765ab66f2a50b30bdcd7b88fac7b801e2f684d0c7167e0d8",
+      "manifestSha256": "1d17422e15c8c0ff0155ff37c266b57bd41e3b86dc7f8d04769e124b0e71b254",
+      "candidateBinarySha256": "7a44c965833a13a720aa2a2fc3890d9cfa04dba79d47fad244a6e18662dcc80f",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "E",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 16,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ]
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=false",
+          "-DSTONES_RESILIENCE_WEIGHT=16",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "binarySha256": "7a44c965833a13a720aa2a2fc3890d9cfa04dba79d47fad244a6e18662dcc80f",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "e5286c951b791ffa705f7803470c0cc6becf1ec1136eb8e504cd1d73830da1d1",
+        "workerSha256": "78a05b37c6f9f1f9f9f3890869a291c952318e43771d445ffe355a3617708a8c",
+        "sourceFiles": {
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "f97176c3e8f3c37f3ddfd80d58f41595a0025440ecb761212fc75f7b7684ca11",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "e5286c951b791ffa705f7803470c0cc6becf1ec1136eb8e504cd1d73830da1d1",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "78a05b37c6f9f1f9f9f3890869a291c952318e43771d445ffe355a3617708a8c",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "adc064afce4f3c3f8c9c0cf95bc56cefb619aac073fedb7d10ba7a52f91ebe39"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 6,
+        "games": 6,
+        "complete": true,
+        "finished": 6,
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.3333333333333333,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development7-E-R.jsonl",
+        "dataSha256": "e0560284720ad5be765ab66f2a50b30bdcd7b88fac7b801e2f684d0c7167e0d8",
+        "games": 6,
+        "candidateWins": 2,
+        "candidateLosses": 4,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 3,
+          "positive": 0,
+          "negative": 1,
+          "tied": 2,
+          "oneSidedImprovementP": 1.0,
+          "oneSidedRegressionP": 0.5,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 6,
+        "openingSeeds": 3,
+        "decisive": 6,
+        "starterWins": 3,
+        "secondSeatWins": 3,
+        "starterShare": 0.5,
+        "starterShare95CI": [
+          0.0,
+          1.0
+        ],
+        "targetShare95CI": [
+          0.0,
+          0.5
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "opponent-sweep": 1,
+          "starter-sweep": 1,
+          "second-seat-sweep": 1
+        },
+        "bySeed": [
+          {
+            "seed": 10001,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "ivory"
+            ],
+            "outcome": "opponent-sweep"
+          },
+          {
+            "seed": 10002,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10003,
+            "sameOpening": true,
+            "winners": [
+              "charcoal",
+              "charcoal"
+            ],
+            "outcome": "second-seat-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 0
+    },
+    {
+      "data": "build/qa/ai-fix/development10-G-R.jsonl",
+      "dataSha256": "20812cce482c2f39d16701a42f572a33c76eb83ccc98b490d17790075cfc175a",
+      "manifestSha256": "695d716e9cc6c02e1e482fd2c3f1e9586c1ad11618e69960bb7d11f5d7761c7f",
+      "candidateBinarySha256": "819c5783e44a0a18c7ef18c746233cddc3b943aaf490553a13ac27fe40259acc",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "G",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ],
+          "tacticalSafety": true
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=false",
+          "-DSTONES_RESILIENCE_WEIGHT=0",
+          "-DSTONES_TACTICAL_SAFETY=true",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "sourceSnapshot": "/workspace/stones/build/qa/ai-fix/bin10/source",
+        "binarySha256": "819c5783e44a0a18c7ef18c746233cddc3b943aaf490553a13ac27fe40259acc",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "77d7b81cce4984a9b24b7b8cf425a9476127f303cb540b2d1a3a938d1e268b86",
+        "workerSha256": "2580a6e060f09da74347ff3d67ffb0fb19d81e15b18bb640e64826b7a9303c50",
+        "sourceFiles": {
+          "lib/game/ai_duel_position.dart": "463b21538d5d45247700fbd00ebdc80db729b28183357b75d4928ee274dc96c2",
+          "lib/game/ai_duel_safety.dart": "5159d5f680b91dbd14dbe1700103a4d63a081fa330acae9deea0f55d9a07a72e",
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "f97176c3e8f3c37f3ddfd80d58f41595a0025440ecb761212fc75f7b7684ca11",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "77d7b81cce4984a9b24b7b8cf425a9476127f303cb540b2d1a3a938d1e268b86",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "2580a6e060f09da74347ff3d67ffb0fb19d81e15b18bb640e64826b7a9303c50",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "0b3b5f58c653cdc496a132c23001758f4123d13ed79a2e7a9e1f503b39de153a"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "sourceSnapshot": "/workspace/stones/build/qa/ai-fix/bin10/source",
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 10,
+        "games": 10,
+        "complete": true,
+        "finished": 10,
+        "wins": 5,
+        "losses": 5,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.5,
+        "passed": false,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development10-G-R.jsonl",
+        "dataSha256": "20812cce482c2f39d16701a42f572a33c76eb83ccc98b490d17790075cfc175a",
+        "games": 10,
+        "candidateWins": 5,
+        "candidateLosses": 5,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 5,
+          "positive": 0,
+          "negative": 0,
+          "tied": 5,
+          "oneSidedImprovementP": null,
+          "oneSidedRegressionP": null,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 10,
+        "openingSeeds": 5,
+        "decisive": 10,
+        "starterWins": 10,
+        "secondSeatWins": 0,
+        "starterShare": 1.0,
+        "starterShare95CI": [
+          1.0,
+          1.0
+        ],
+        "targetShare95CI": [
+          0.5,
+          0.5
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "starter-sweep": 5
+        },
+        "bySeed": [
+          {
+            "seed": 10001,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10002,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10003,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10004,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10005,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 2
+    },
+    {
+      "data": "build/qa/ai-fix/development11-G-R-hex.jsonl",
+      "dataSha256": "d620a34fafc3f5e800795689e8db26df5ab8e39c858f85a601eee3f2a4af794e",
+      "manifestSha256": "bc71f194f2c4f2ccaa06f0938f9b4493eff5a6613ca5e9ced6dbbfe2d8caec78",
+      "candidateBinarySha256": "8f4da7d9dc8146e3f24db2d66d8eebcb763533bde5327840ff5e10edaae6623b",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "G",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ],
+          "tacticalSafety": true
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=false",
+          "-DSTONES_RESILIENCE_WEIGHT=0",
+          "-DSTONES_TACTICAL_SAFETY=true",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "sourceSnapshot": "/workspace/stones/build/qa/ai-fix/bin11/source",
+        "binarySha256": "8f4da7d9dc8146e3f24db2d66d8eebcb763533bde5327840ff5e10edaae6623b",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "6d524cdd0ca80062080b148703b9443ade5a6c2fd0f0f924a4e02deaf280e363",
+        "workerSha256": "d40c809943e6da73ab1cd7ebf740f6184cde45802a5898b639dd0bc60026eb5f",
+        "sourceFiles": {
+          "lib/game/ai_duel_position.dart": "463b21538d5d45247700fbd00ebdc80db729b28183357b75d4928ee274dc96c2",
+          "lib/game/ai_duel_safety.dart": "5159d5f680b91dbd14dbe1700103a4d63a081fa330acae9deea0f55d9a07a72e",
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "f97176c3e8f3c37f3ddfd80d58f41595a0025440ecb761212fc75f7b7684ca11",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "6d524cdd0ca80062080b148703b9443ade5a6c2fd0f0f924a4e02deaf280e363",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "d40c809943e6da73ab1cd7ebf740f6184cde45802a5898b639dd0bc60026eb5f",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "0b3b5f58c653cdc496a132c23001758f4123d13ed79a2e7a9e1f503b39de153a"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "sourceSnapshot": "/workspace/stones/build/qa/ai-fix/bin11/source",
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 6,
+        "games": 6,
+        "complete": true,
+        "finished": 6,
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.6666666666666666,
+        "passed": true,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development11-G-R-hex.jsonl",
+        "dataSha256": "d620a34fafc3f5e800795689e8db26df5ab8e39c858f85a601eee3f2a4af794e",
+        "games": 6,
+        "candidateWins": 4,
+        "candidateLosses": 2,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 3,
+          "positive": 1,
+          "negative": 0,
+          "tied": 2,
+          "oneSidedImprovementP": 0.5,
+          "oneSidedRegressionP": 1.0,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 6,
+        "openingSeeds": 3,
+        "decisive": 6,
+        "starterWins": 5,
+        "secondSeatWins": 1,
+        "starterShare": 0.8333333333333334,
+        "starterShare95CI": [
+          0.5,
+          1.0
+        ],
+        "targetShare95CI": [
+          0.5,
+          1.0
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "target-sweep": 1,
+          "starter-sweep": 2
+        },
+        "bySeed": [
+          {
+            "seed": 10010,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          },
+          {
+            "seed": 10011,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10012,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 2
+    },
+    {
+      "data": "build/qa/ai-fix/development11-G-R-square.jsonl",
+      "dataSha256": "8a52a712a425b96a164c4df569a95e3a043540ad973d0a9266f3d90aa58f339c",
+      "manifestSha256": "c15915c6bebc3f7219161c1ae14d8ef52271477dfec99cb6e2511b5ff2a078d9",
+      "candidateBinarySha256": "8f4da7d9dc8146e3f24db2d66d8eebcb763533bde5327840ff5e10edaae6623b",
+      "opponentBinarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+      "candidateSources": {
+        "arm": "G",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0,
+          "duelBudgetsMs": [
+            200,
+            500,
+            2000,
+            5000
+          ],
+          "tacticalSafety": true
+        },
+        "compilerFlags": [
+          "-DSTONES_FULL_WIDTH=false",
+          "-DSTONES_RESILIENCE_WEIGHT=0",
+          "-DSTONES_TACTICAL_SAFETY=true",
+          "-DSTONES_DUEL_BUDGETS=200:500:2000:5000"
+        ],
+        "sourceSnapshot": "/workspace/stones/build/qa/ai-fix/bin11/source",
+        "binarySha256": "8f4da7d9dc8146e3f24db2d66d8eebcb763533bde5327840ff5e10edaae6623b",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": null,
+        "sourceSha256": "6d524cdd0ca80062080b148703b9443ade5a6c2fd0f0f924a4e02deaf280e363",
+        "workerSha256": "d40c809943e6da73ab1cd7ebf740f6184cde45802a5898b639dd0bc60026eb5f",
+        "sourceFiles": {
+          "lib/game/ai_duel_position.dart": "463b21538d5d45247700fbd00ebdc80db729b28183357b75d4928ee274dc96c2",
+          "lib/game/ai_duel_safety.dart": "5159d5f680b91dbd14dbe1700103a4d63a081fa330acae9deea0f55d9a07a72e",
+          "lib/game/ai_duel_search.dart": "8653f6f3c5ef2e09e57c6ce30c7f306e3de5d0852308f216fe31386c5dd0af03",
+          "lib/game/ai_duel_tactics.dart": "f97176c3e8f3c37f3ddfd80d58f41595a0025440ecb761212fc75f7b7684ca11",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_road_connections.dart": "078bff4fce4427c533675e3bb20620d43820c7f9b49f9cd2844355e04954eeb6",
+          "lib/game/ai_road_resilience.dart": "3b899b2def1d0f0aa71059ee2f8addc69a094476d37523f30965fbef8f3d2152",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/board_view.dart": "f6547d8e33283b5d07dface3036a78325f9d43937da8fbffaf93dc03a3d3c248",
+          "lib/game/board_viewport.dart": "b5c7fbc86111d6f05bbd0f6dde6db5be5a06b37745e68ac87d0f6781fb02a582",
+          "lib/game/clock_label.dart": "2c1a8b475a9f298f1af1b519f8c3b78e28dea22caa0d1a0a800f466ec7586c88",
+          "lib/game/completed_match.dart": "f5bdff97c436c6583000e55ef3c3bc605389e0bf8fc6c629d523a8cc9e0dd22f",
+          "lib/game/example_position.dart": "cbc6036cc749e32a5c0e86ce6c2ffb9664d767889f0aa9a77940ed9c046046d4",
+          "lib/game/fundamentals.dart": "39e177168a4a46af2ec20c67dd1839a924329ce89f621e94d4b21b14f95b16ee",
+          "lib/game/invitation_navigation.dart": "21f04203c295e17e652f03e095fc7049b2087f1c5bf77b40d7cc8835449622e9",
+          "lib/game/join_room_screen.dart": "4c502624a0cb78eff4692fd2091b1cc30eb06ad264379dafeed446918315a8de",
+          "lib/game/learning_hub.dart": "a22059efaef2d8536576411a5db15c9b19d21598ceeefdd00a74e8ebd4bf2dbf",
+          "lib/game/legacy_achievement_result.dart": "e59bd98e176ba1b6e2a234f19392e61f9010413e7059983be81d3433261c6180",
+          "lib/game/legacy_hex_adapter.dart": "ab8ae3064b36612d34808b2f4aaa68cc09ce3923c80905f635320d51192fdf5a",
+          "lib/game/legacy_match_ai_engine.dart": "8f2f4d795943c519d4b8aea6d84a688b3638d07a3dc7b88f347e0c126830270e",
+          "lib/game/legacy_square_adapter.dart": "98374f5fc52a580043c65a9d15c3fcfb37792f6302b3aa70f59aaf2cb9df792d",
+          "lib/game/match_ai.dart": "07703fb5e78af0baa3fc8b9f09727d741edc9e9ed44d562af0c32acbe0e9e264",
+          "lib/game/match_ai_engine.dart": "6d524cdd0ca80062080b148703b9443ade5a6c2fd0f0f924a4e02deaf280e363",
+          "lib/game/match_clock.dart": "c89f9a2ba69180ffb1ca1ba05f6250fd31de56f57b47ac1d30a700aed45cc560",
+          "lib/game/match_coaching.dart": "161f3bb7db2b4d2f865750ba4410f73e9fb9aae669f71898711ce41ae69d42c6",
+          "lib/game/match_completed.dart": "218b6117431b5f66961edb93cc4869b9a23a71308954b489e5d0597fb292d11e",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_controller.dart": "c2e04a859c165a9f0838d6110a65ea83b687839647f5db11fb01897000350748",
+          "lib/game/match_elapsed.dart": "e82a74e3367bf165db8d4a265b8e3939cb70e66346588270716e41c773778f77",
+          "lib/game/match_forcing_position.dart": "9f4f524cdb217c7939bfd8605d4d0b020ed13b8e8f41a266ef75c6d327a0f0f1",
+          "lib/game/match_history_provider.dart": "63c7effac0bd7de7c810417289a2247acb0350e96aff41c47ffd2fe5cbe001d6",
+          "lib/game/match_preset.dart": "5779bb7e26c8f1c516632e3a7a1cac3652de6d2cdb0ae9a0c53ac40e6a67eda6",
+          "lib/game/match_provider.dart": "aa863c2705740832aaf03bd461aa8cb742dd507102d6f8a6700e9c9a8b8ceddd",
+          "lib/game/match_review_screen.dart": "054fb5c0218cee3e35f018c0b084dc72cfab7f604e5dba4b41a595b0cb49025e",
+          "lib/game/match_room.dart": "ee8242697c7ab9057968894579642c7aac4419f8e3ed7bbd8a33f00abc4c36a1",
+          "lib/game/match_room_store.dart": "ed38cac1f051335eb36feb97a17a54eb5b3406eb7a321c8182eb09dff5fba67e",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_screen.dart": "3c4e381ca5747e00462ab4cbc337cf3afc26768c925c3aafc002a3fcc88d5949",
+          "lib/game/match_setup_form.dart": "8b9b6d5bbd18eb438cd4aca131cf998f1f9f77503ab9029b23054b31b0de139a",
+          "lib/game/match_setup_screen.dart": "0f744181c91ea6947331bda7624f348593b924bade4da83c5b31fe20aed8f428",
+          "lib/game/match_standings.dart": "a7a2958491a41c982435ee2e875b83daeaba26b3ed933adf78894caf6226a8a5",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/game/match_storage.dart": "52a41fa5fe658dea8094ea8b3ae587c3b60008e9a85655d1633ab6c052d9a22f",
+          "lib/game/match_study.dart": "fc03cce9b38e516c05d9c99c3e954ea13694161e0ccb5b02ba9f3f494d5a9128",
+          "lib/game/match_table_layout.dart": "062d69fdbc69b1afe95d96d6d9928231114a2752bca9600bf8af929422974cab",
+          "lib/game/match_threats.dart": "55e420d6e47727feda1cb17db40cef69f9efea4bfc6de7a599fc6e7b9eef7be0",
+          "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+          "lib/game/multiplayer_studies.dart": "9a9aeb123b7ed2becf71b2f8ead8f6671275b28ed61da919a9fdfbcceb713de9",
+          "lib/game/open_tables.dart": "7f1678b45925b5fa67deb46b941c1099d7084d94bcf91b1f3b724e511a1de66c",
+          "lib/game/placement_elo.dart": "f886ddf150592eab61550327bcd6a26871e7ac801ad1bc7391ce0a55ed320abb",
+          "lib/game/rating_evidence.dart": "435df8a8ca021f037d596868afb5d177cdce9e426df732ec8783cd8e74c13533",
+          "lib/game/rating_pool.dart": "50c7b4b9351bc79e8bf5dd22609beca2eebb68cc06bb5382cbdb3000f554957d",
+          "lib/game/rating_recovery.dart": "92144516e8da1abf88c30cfb4d571c50335c22135c6ae440a091db88e31c9964",
+          "lib/game/rating_submission.dart": "a41d9a14fe320d677105290b934493b6ac1c44632a114164e12f5ae30f3f9d76",
+          "lib/game/result_explanation.dart": "d9d759e6d3c92552748e792b49407eca510d0250273b1f6ecf6afde6f957d087",
+          "lib/game/result_share_data.dart": "523b64034b62c713323cd67f27cb2cb7ed49abb971f0d3b8babfe80437c59203",
+          "lib/game/result_share_dialog.dart": "ca579934b3b85ea63509634bbef257b2a170852d4a0d52fabc8dd5f191eaed16",
+          "lib/game/room_invitation.dart": "a330992a040deb57b497d2d03f79661886f6eef67247484abea685c76a5923eb",
+          "lib/game/room_navigation.dart": "8b138337d529701457c683fdbce740a70b1a09b18fce166d8deb41642cdcc126",
+          "lib/game/seat_appearance.dart": "07e68e3d69aafae8f2b149a2703385cd2c68eac8524b5d073a1be2b26214f95e",
+          "lib/game/skill_rating.dart": "e468ee5e6995302f7b01c55d56e7d368783702a834f02311fd6a932ddd843292",
+          "lib/game/stack_move_tray.dart": "b7e2485a73362a06bcf56ed0091e0056ae1d8fcfb94e5a10e99aab5050085150",
+          "lib/game/study_catalog.dart": "39d7fca302d7499015960d58f5e536bed809299d7622d1adf451b78c6ea313ab",
+          "lib/game/study_controller.dart": "a2c4787d45f3b5a809641eff518e04a43132825fdfec73e7bddc4a99d88c3169",
+          "lib/game/study_screen.dart": "53a798187dd48fa477c803130efda22c78bbe575ececd716cda50460556106b0",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb",
+          "tools/ai_worker.dart": "d40c809943e6da73ab1cd7ebf740f6184cde45802a5898b639dd0bc60026eb5f",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "scripts/build_ai_duel_experiments.py": "0b3b5f58c653cdc496a132c23001758f4123d13ed79a2e7a9e1f503b39de153a"
+        }
+      },
+      "opponentSources": {
+        "arm": "R",
+        "buildSettings": {
+          "fullWidthDuels": false,
+          "roadResilienceWeight": 0
+        },
+        "compilerFlags": [],
+        "sourceSnapshot": "/workspace/stones/build/qa/ai-fix/bin11/source",
+        "binarySha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+        "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"linux_x64\"",
+        "checkoutRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+        "sourceSha256": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+        "workerSha256": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+        "sourceFiles": {
+          "tools/ai_duel_reference/engine.dart": "4f8d16ecc0079a3c4c26406a489085b415ce84dfb6f42bfd272547c4ccf96489",
+          "tools/ai_duel_reference/worker.dart": "2b3f66699c1d3828de070a006b1511bf9950e0fd73cfafc3c83cee59236cdd1a",
+          "tools/ai_worker_protocol.dart": "f32236fc327b6765864fd2c1c772759343f90588849ccda2d403472267f925ea",
+          "lib/game/ai_position.dart": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a",
+          "lib/game/ai_search_cache.dart": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3",
+          "lib/game/ai_material.dart": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955",
+          "lib/game/ai_tactics.dart": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6",
+          "lib/game/board_geometry.dart": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b",
+          "lib/game/match_config.dart": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a",
+          "lib/game/match_rules.dart": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74",
+          "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+          "lib/models/piece.dart": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d",
+          "lib/models/player.dart": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a",
+          "lib/services/ai/search_budget.dart": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+        }
+      },
+      "summary": {
+        "expectedGames": 6,
+        "games": 6,
+        "complete": true,
+        "finished": 6,
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "unfinished": 0,
+        "normalizedShare": 0.8333333333333334,
+        "passed": true,
+        "scope": "regression-only"
+      },
+      "paired": {
+        "data": "build/qa/ai-fix/development11-G-R-square.jsonl",
+        "dataSha256": "8a52a712a425b96a164c4df569a95e3a043540ad973d0a9266f3d90aa58f339c",
+        "games": 6,
+        "candidateWins": 5,
+        "candidateLosses": 1,
+        "draws": 0,
+        "openingPairEvidence": {
+          "openingClusters": 3,
+          "positive": 2,
+          "negative": 0,
+          "tied": 1,
+          "oneSidedImprovementP": 0.25,
+          "oneSidedRegressionP": 1.0,
+          "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+        },
+        "strengthProven": false,
+        "scope": "Pilot sign evidence only; all required profiles, tiers and gates remain necessary"
+      },
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 6,
+        "openingSeeds": 3,
+        "decisive": 6,
+        "starterWins": 4,
+        "secondSeatWins": 2,
+        "starterShare": 0.6666666666666666,
+        "starterShare95CI": [
+          0.5,
+          1.0
+        ],
+        "targetShare95CI": [
+          0.5,
+          1.0
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "starter-sweep": 1,
+          "target-sweep": 2
+        },
+        "bySeed": [
+          {
+            "seed": 10010,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "ivory"
+            ],
+            "outcome": "starter-sweep"
+          },
+          {
+            "seed": 10011,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          },
+          {
+            "seed": 10012,
+            "sameOpening": true,
+            "winners": [
+              "ivory",
+              "charcoal"
+            ],
+            "outcome": "target-sweep"
+          }
+        ]
+      },
+      "recordedVetoes": 7
+    }
+  ],
+  "note": "Both standalone revised S and E pilots lost 2-4 and were excluded from the normal evaluator/search. G preserves the strategic proposal unless an exact bounded loss and defense are established. Timed baseline variation can change games even when no veto occurs; pilot victories alone are not causal proof.",
+  "earlierG3Audit": {
+    "path": "build/qa/ai-fix/development10-safety-audit.json",
+    "sha256": "6d3009e8d81e71a87c35631170da8e044ac42af49e38d497810c6826060f61e8",
+    "games": 10,
+    "changes": 2,
+    "passed": true
+  }
+}

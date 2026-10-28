@@ -1,0 +1,66 @@
+{
+  "scope": "Fresh confirmation protocol, registered before any confirmation games; development pilots cannot qualify.",
+  "developmentSeeds": [
+    10000,
+    19999
+  ],
+  "confirmationSeeds": [
+    400000,
+    400059
+  ],
+  "timingSeeds": [
+    500000,
+    500059
+  ],
+  "profiles": [
+    {
+      "shape": "square",
+      "size": 5,
+      "level": "hard"
+    },
+    {
+      "shape": "square",
+      "size": 5,
+      "level": "expert"
+    },
+    {
+      "shape": "hex",
+      "size": 2,
+      "level": "hard"
+    },
+    {
+      "shape": "hex",
+      "size": 2,
+      "level": "expert"
+    }
+  ],
+  "requiredDistinctOpenings": 50,
+  "seatAssignments": "Both seats for every identical seeded opening; deduplicate opening clusters for inference.",
+  "strengthGate": {
+    "perProfileDecisiveCandidateShareAtLeast": 0.5,
+    "aggregateImprovementPAtMost": 0.05,
+    "method": "Exact opening-pair sign test; ties omitted; unfinished games separately fail completion checks."
+  },
+  "latency": {
+    "experimentalBudgetsMs": [
+      200,
+      500,
+      2000,
+      5000
+    ],
+    "referenceBudgetsMs": [
+      200,
+      500,
+      1200,
+      2200
+    ],
+    "control": "Frozen reference plus compute-matched RT; user explicitly permits increased latency for stronger play.",
+    "preserveExistingStrengthCiGates": true
+  },
+  "compatibility": "Saved engines v1/v2 and multiplayer retain their original path and budgets; no rules or rating format changes.",
+  "policyProof": "Recorded replies against every legal attack through the stated finite horizon; bounded evidence only.",
+  "rollout": "Only components passing independent correctness and comparative qualification may be adopted; no tuning on confirmation openings.",
+  "openingSelection": "Before any confirmation games, select the first 50 distinct two-move openings per board from the registered seed stream. Skip duplicate opening identities without inspecting outcomes. If necessary, extend the seed stream contiguously beyond 400059 solely to obtain 50 distinct openings.",
+  "referenceTrialResources": "After all six required CI groups pass: up to two independent paired-reference trials, each pinned to one distinct CPU and inherited by both workers. No builds, tests or latency profiling concurrently. Latency diagnostics remain sequential.",
+  "globalInference": "Cluster the paired game outcomes of both boards and both levels by their shared seed stream for the global sign test; never count swapped seats or tier repeats as independent openings."
+}

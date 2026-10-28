@@ -1,5 +1,43 @@
 # Shared AI v3 upgrades — 2026-10-23
 
+## 2026-10-28 targeted duel repair — selected native validation
+
+[The tactical repair](AI_TACTICAL_REPAIR.md) preserves the original strategic
+search, then verifies proposed Hard/Expert v3 duel moves against exact three-/
+five-ply forced-loss objectives. Only a proved loss plus a verified defense can
+replace a move. A completed near-term repair survives deeper timeout. Connectivity
+orders proof attempts instead of changing every positional score. Total targets
+are now 200/500/2000/5000 ms for this source candidate; saved v1/v2 and multiplayer
+retain their original strategies and allowances. This is not a publication or a
+claim of full playing-strength qualification. Required strength gates remain
+unchanged. The broader full-width and unconditional evaluation changes below
+remain off after their failed development and latency studies.
+
+Fresh native confirmation passed over 50 distinct openings per board with swapped
+seats at Hard and Expert: 226 wins, 161 losses and 13 draws against the frozen
+original, all 400 games finished. The preregistered opening-stream-clustered sign
+test gives p = 0.0002154. Independent replay verified all 203 actual replacements.
+All six required representative adjacent-tier regression groups passed without
+changing their gates. See [the confirmation evidence](qa/ai-fix/reference-study.json)
+for profile intervals, starting-role controls, source hashes and qualification
+limits. This establishes aggregate benefit for the tested native cohort; the
+full size/player matrix, human Expert strength and browser/device responsiveness
+remain open. No release was published.
+
+## 2026-10-27 completed-duel and resilience experiments
+
+[Completed duel search and road resilience](AI_DUEL_EXPERIMENTS.md) adds
+independent opt-in search/evaluation experiments and frozen current-v3 R/S/E/SE
+comparison tooling. Defaults remain unchanged pending strength and timing gates.
+The [benefit audit](qa/ai-benefit-audit.json) confirmed a required Square-5 Easy
+latency failure over 56 distinct opening clusters for search, evaluation and
+combined variants. Those full-width and weighted-evaluation variants remain unqualified for
+rollout. The targeted repair above has separate native confirmation evidence.
+Full-width duels retain completed ply iterations within existing targets and
+report emergency depth-zero fallbacks; multiplayer and saved engines keep their
+current behavior. A bounded general blocker-sensitivity term distinguishes
+redundant roads from bottlenecks without opening or capstone timing rules.
+
 ## 2026-10-26 strength investigation and CI
 
 This follow-up is a source change, not a publication or a completed full strength

@@ -57,6 +57,19 @@ Future<String> sha(String path) async {
   return result.stdout.toString().split(' ').first;
 }
 
+/// Historical binaries may lack a sidecar. New immutable experiment builds bind
+/// source/settings metadata to the executable hash rather than the live checkout.
+Future<Map<String, dynamic>?> binaryProvenance(String path) async {
+  final file = File('$path.manifest.json');
+  if (!file.existsSync()) return null;
+  final report = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+  if (report.containsKey('binarySha256') &&
+      report['binarySha256'] != await sha(path)) {
+    throw StateError('Binary provenance mismatch: $path');
+  }
+  return report;
+}
+
 // Keep full replay evidence on disk, retaining only gate inputs in memory.
 Map<String, dynamic> compactTrial(Map<String, dynamic> row) => {
       for (final key in [
@@ -270,6 +283,8 @@ Future<void> main(List<String> args) async {
       'lib/game/ai_search_cache.dart',
       'lib/game/ai_position.dart',
       'lib/game/ai_tactics.dart',
+      'lib/game/ai_duel_search.dart',
+      'lib/game/ai_road_resilience.dart',
       'tools/ai_worker.dart',
       'tools/ai_worker_protocol.dart'
     ]) {
@@ -288,6 +303,8 @@ Future<void> main(List<String> args) async {
       'weights': weights,
       'candidateSha256': await sha(candidatePath),
       'baselineSha256': await sha(baselinePath),
+      'candidateSource': await binaryProvenance(candidatePath),
+      'baselineSource': await binaryProvenance(baselinePath),
       'runtime': Platform.version,
       'os': Platform.operatingSystem,
       'budgetsMs': [200, 500, 1200, 2200],

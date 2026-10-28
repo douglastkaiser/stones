@@ -1,0 +1,254 @@
+{
+  "scope": "Targeted v3 duel repair qualified on the selected native Square-5/Hex-2 Hard/Expert cohort. All-size/player strength, human Expert strength and browser/device responsiveness remain unqualified.",
+  "published": false,
+  "stage": "Complete: 400 held-out games, preregistered aggregate strength gate, independent replay of all 400 games and proof of all 203 replacements passed. Six unchanged required CI groups, 1894 Flutter tests, 71 Python tests, strict analysis and release web build passed.",
+  "candidate": {
+    "binary": {
+      "path": "build/qa/ai-fix/bin12/G",
+      "sha256": "f7d5ed499ee252d46cc7047a52fd4802bd49462638fd3c53f4defbdd95781147"
+    },
+    "manifest": {
+      "path": "build/qa/ai-fix/bin12/G.manifest.json",
+      "sha256": "df6ee9fa1c5d06e022c53c193e4a70a816cae368ba913763d5157c353b3ae681"
+    },
+    "buildSettings": {
+      "fullWidthDuels": false,
+      "roadResilienceWeight": 0,
+      "tacticalSafety": true,
+      "duelBudgetsMs": [
+        200,
+        500,
+        2000,
+        5000
+      ]
+    },
+    "engineSourceSha256": "b19046d0cf15bf6fe2be5a7c8f2b16a735c97d5a376487721cffb67b2ce2698b"
+  },
+  "verificationObservedEarlierInSession": {
+    "flutterFullSuite": {
+      "passed": 1890,
+      "failed": 0
+    },
+    "addedAuditRegressions": {
+      "passed": 2,
+      "failed": 0
+    },
+    "pythonTests": {
+      "passed": 66,
+      "failed": 0
+    },
+    "strictAnalysis": "passed",
+    "releaseWebBuild": "passed",
+    "note": "Earlier terminal logs were in /tmp and did not survive the environment pause; persistent native evidence below remains available."
+  },
+  "transformedRootProof": {
+    "path": "build/qa/ai-fix/counter12-proof.json",
+    "sha256": "c9a1fbfc288db3bb35f50f73344f6a6478999dbc05edbb560f85062b96902943"
+  },
+  "recordedPolicy": {
+    "G-hard": {
+      "path": "build/qa/ai-fix/policy12-G-hard.json",
+      "sha256": "a570dc60c19b45e5e3d60ffb087d0fd8518609a8dfd4d41fce5f58c00a92a53b",
+      "verifiedRecordedPolicySafe": true
+    },
+    "G-expert": {
+      "path": "build/qa/ai-fix/policy12-G-expert.json",
+      "sha256": "55f3dce4e3b2c0c0c75e1fd9c4483845aaa9f46d299b24d2ab8f2e75ac1944c4",
+      "verifiedRecordedPolicySafe": true
+    },
+    "R-hard": {
+      "path": "build/qa/ai-fix/policy12-R-hard.json",
+      "sha256": "ef25e7b35e4af6a3e4cdd17188596f44fb5ac6919793944b02f559430463da34",
+      "verifiedRecordedPolicySafe": false
+    },
+    "RT-hard": {
+      "path": "build/qa/ai-fix/policy12-RT-hard.json",
+      "sha256": "fd2dbcb5cc7f502d66f7c65b9abe3ea36b832f7ce7c2c9c0b4640682a910874d",
+      "verifiedRecordedPolicySafe": true
+    }
+  },
+  "laterRegressionComparison": {
+    "data": {
+      "path": "build/qa/ai-fix/development-veto-comparison12.jsonl",
+      "sha256": "2c5de2157cd35e9b9b4cead9781fa04a4288de73b370010006bd577f55bea067"
+    },
+    "proof": {
+      "path": "build/qa/ai-fix/development-veto-comparison12-proof-final.json",
+      "sha256": "0d82325b0aa213a2eb15438cd985bfa335993caadb01ecaf4dd300215ff40881"
+    },
+    "groups": {
+      "G:hard": {
+        "proven": 0,
+        "refuted": 9,
+        "unknown": 0
+      },
+      "R:hard": {
+        "proven": 8,
+        "refuted": 1,
+        "unknown": 0
+      },
+      "RT:hard": {
+        "proven": 8,
+        "refuted": 1,
+        "unknown": 0
+      },
+      "R:expert": {
+        "proven": 6,
+        "refuted": 3,
+        "unknown": 0
+      },
+      "RT:expert": {
+        "proven": 1,
+        "refuted": 8,
+        "unknown": 0
+      },
+      "G:expert": {
+        "proven": 0,
+        "refuted": 9,
+        "unknown": 0
+      }
+    },
+    "scope": "Nine selected development positions, each queried at Hard and Expert. Not independent opening trials or a population strength estimate."
+  },
+  "replacementAudits": [
+    {
+      "path": "build/qa/ai-fix/audit12-proofs.json",
+      "sha256": "a8d9a70b108c88696bbcd85f79bc6e97824e65e996628ea04b863c03f8d59a83"
+    },
+    {
+      "path": "build/qa/ai-fix/development-veto-comparison12-audit.json",
+      "sha256": "46bd37981403be806bcd7707f5f2b741466e6e7c075b7ae6d653becca6247664"
+    }
+  ],
+  "auditCorrection": "The first generic later-position report incorrectly used the starter as attacker. It is superseded. The final report uses the opponent of the current mover; two permanent regressions cover both defending roles.",
+  "counterSummaryNote": "All 24 raw counterexample measurements completed; the old runner then failed summary aggregation for the newly selected arms. The arm-filtered summary code was corrected. Raw measurements and independent proofs remain valid.",
+  "interruptedCi": "Environment interruption left three completed Square Hard/Medium games in build/qa/ai-fix/ci12-interrupted. Preserved as interrupted diagnostic data; an entire fresh five-opening group was started before inspecting replacement outcomes. No engine changes or gate changes.",
+  "adjacentTierRegression": {
+    "path": "build/qa/ai-fix/ci12/report.json",
+    "sha256": "c736c16e72a60ae09d6004a1c07625fbbe8381efb9d8c028e54cf21648a85a30",
+    "groups": 6,
+    "games": 60,
+    "finished": 60,
+    "passed": true,
+    "scope": "Required representative regression groups only; not full matrix or held-out strength."
+  },
+  "currentVerification": {
+    "flutterFullSuite": {
+      "passed": 1894,
+      "failed": 0,
+      "path": "build/qa/ai-fix/logs/flutter-resume.log",
+      "sha256": "251be9b7894e3a651a37a4d445f5f8db7588eb102d506e24660ce631d3079b5e"
+    },
+    "pythonTests": {
+      "passed": 71,
+      "failed": 0,
+      "path": "build/qa/ai-fix/logs/python-final.log",
+      "sha256": "fc9c3bff03e29c6d9d1c11686b7306ad80ed49b7584e34846a7ec0a1a2504530"
+    },
+    "strictAnalysis": {
+      "passed": true,
+      "path": "build/qa/ai-fix/logs/analyze-resume.log",
+      "sha256": "a37859b7139140c77fd4c5c68dd325a0fdc37441530ebf6eb50ec0116f5c4f21"
+    },
+    "releaseWebBuild": {
+      "passed": true,
+      "path": "build/qa/ai-fix/logs/web-final.log",
+      "sha256": "f735d6901fd3e60e86ad8ebe62747a96e039d2dde09d4894cce5cec29b7981ad"
+    }
+  },
+  "ciReplacementAudit": {
+    "path": "build/qa/ai-fix/ci12/replacement-audit.json",
+    "sha256": "173219c1dc3d5c17b3162c35c9b86adb6d49b05d4e981a885b2ca3c93439fc4e",
+    "gamesReplayed": 60,
+    "changedDecisions": 26,
+    "passed": true,
+    "scope": "Every recorded replacement independently removes the stated bounded forced loss; not eventual strength."
+  },
+  "confirmationOpenings": {
+    "path": "build/qa/ai-fix/confirmation-openings.json",
+    "sha256": "70fede8e7a6f37d4930b97ad03167e94eb331c8d92ba1cc39a0ddd618cb61164"
+  },
+  "nativeResumeSmoke": {
+    "path": "build/qa/ai-fix/resume-smoke-proof.json",
+    "sha256": "1033b1e98607ed2635cb4c0be4b39b92840464ae464b5e8524602a1fe34df82f",
+    "passed": true
+  },
+  "observedSearchLatency": {
+    "path": "build/qa/ai-fix/ci12/observed-search-latency.json",
+    "sha256": "4551533ff2ebf8cd152dd36e808f23de57bc89b8cd3d74f862f2ed517f09b696",
+    "scope": "Sequential native CI search times; not matched-position or browser/device responsiveness."
+  },
+  "confirmationStudy": {
+    "path": "build/qa/ai-fix/reference12/study.json",
+    "sha256": "e474272db3289f7ecff2dc5b34e0a3cec611a684203f5cd6df7b7be52c74dde9",
+    "expectedGames": 400,
+    "status": "complete-selected-native-qualified",
+    "report": "build/qa/ai-fix/reference12/report.json",
+    "progress": "build/qa/ai-fix/reference12/progress.json",
+    "result": {
+      "path": "build/qa/ai-fix/reference12/report.json",
+      "sha256": "badedb24546319fdf077caa9d8276b617856838a3d324dc9f5dc357b14b07582"
+    },
+    "replacementAudit": {
+      "path": "build/qa/ai-fix/reference12/replacement-audit-complete.json",
+      "sha256": "a155bfbd42375601e26a5dec627b83500c5ae83cf69f4159b1c9463b252c8b64"
+    },
+    "summary": {
+      "path": "docs/qa/ai-fix/reference-study.json",
+      "sha256": "fa91959ebb385b462bc8b59d2dcf7befbacdf48dc1c94f378d0dc2aa595cc1bb"
+    }
+  },
+  "featureIdsUpdated": [
+    "LEARN-01",
+    "PLAN-10"
+  ],
+  "adjacentCompatibilityContract": "COMPAT-06: no saved engine or rating generation changes.",
+  "platformLimit": "Native Linux engine correctness, native regression games and release web compilation verified. No physical-device or browser responsiveness qualification, live multiplayer acceptance, human Expert-strength claim, or publication.",
+  "confirmationStrengthTotals": {
+    "games": 400,
+    "finished": 400,
+    "wins": 226,
+    "losses": 161,
+    "draws": 13,
+    "unfinished": 0
+  },
+  "confirmationSignEvidence": {
+    "openingClusters": 54,
+    "positive": 32,
+    "negative": 9,
+    "tied": 13,
+    "oneSidedImprovementP": 0.0002154285211872775,
+    "oneSidedRegressionP": 0.9999438892868966,
+    "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+  },
+  "sourceIntegrityRechecked": {
+    "coreFiles": 73,
+    "changedFiles": [],
+    "G_R_RT_BinaryChecksumsMatch": true,
+    "frozenReferenceDependencyClosureVerified": true
+  },
+  "selectedNativeReferenceStrengthQualified": true,
+  "fullMatrixQualified": false,
+  "humanExpertStrengthQualified": false,
+  "finalReplacementAudit": {
+    "path": "build/qa/ai-fix/reference12/replacement-audit-complete.json",
+    "sha256": "a155bfbd42375601e26a5dec627b83500c5ae83cf69f4159b1c9463b252c8b64",
+    "passed": true,
+    "gamesReplayed": 400,
+    "changedDecisions": 203,
+    "remainingUnknowns": 0,
+    "firstJustifiedHorizons": {
+      "3": 185,
+      "5": 18
+    },
+    "baseAudit": {
+      "path": "build/qa/ai-fix/reference12/replacement-audit.json",
+      "sha256": "07b636d81f27d2527ce06938472c9e45fa46d851b49d630ad727f5e51b13eb4c"
+    },
+    "extendedOfflineProof": {
+      "path": "build/qa/ai-fix/reference12/unresolved-old-proof.json",
+      "sha256": "053d2dfa166093c5a9ee4e9d15037b85b495f60c50c39e2f1cb4975b7139b4d6"
+    },
+    "note": "One original-move proof exceeded the original 30-second offline verifier allowance. The unchanged independent solver proved the identical five-ply objective with a 300-second allowance. The measured engine, game data, and acceptance predicates are unchanged."
+  }
+}

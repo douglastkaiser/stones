@@ -1,0 +1,253 @@
+{
+  "scope": "Selected Square-5/Hex-2 Hard/Expert paired-reference strength, not all-size/player qualification or human strength",
+  "strengthGatesPassed": true,
+  "selectedNativeRepairQualified": true,
+  "fullMatrixQualified": false,
+  "humanExpertStrengthQualified": false,
+  "published": false,
+  "totals": {
+    "games": 400,
+    "finished": 400,
+    "wins": 226,
+    "losses": 161,
+    "draws": 13,
+    "unfinished": 0
+  },
+  "openingDesign": "50 distinct two-move openings per board, both seats, Hard and Expert. Openings selected before outcomes. Shared seed streams clustered across both boards and both levels.",
+  "aggregateOpeningStreamSignEvidence": {
+    "openingClusters": 54,
+    "positive": 32,
+    "negative": 9,
+    "tied": 13,
+    "oneSidedImprovementP": 0.0002154285211872775,
+    "oneSidedRegressionP": 0.9999438892868966,
+    "method": "Exact opening-pair sign test, ties omitted; tests tendency, not perfect-play strength"
+  },
+  "groups": [
+    {
+      "profile": "hex-2-expert",
+      "games": 100,
+      "distinctOpenings": 50,
+      "finished": 100,
+      "wins": 55,
+      "losses": 42,
+      "draws": 3,
+      "unfinished": 0,
+      "normalizedShare": 0.5670103092783505,
+      "share95OpeningClusterInterval": [
+        0.4897959183673469,
+        0.6464646464646465
+      ],
+      "passedNecessaryReferenceGates": true,
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 100,
+        "openingSeeds": 50,
+        "decisive": 97,
+        "starterWins": 67,
+        "secondSeatWins": 30,
+        "starterShare": 0.6907216494845361,
+        "starterShare95CI": [
+          0.5858585858585859,
+          0.7857142857142857
+        ],
+        "targetShare95CI": [
+          0.4897959183673469,
+          0.6464646464646465
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "second-seat-sweep": 6,
+          "opponent-sweep": 5,
+          "target-sweep": 10,
+          "starter-sweep": 26,
+          "inconclusive": 3
+        }
+      }
+    },
+    {
+      "profile": "hex-2-hard",
+      "games": 100,
+      "distinctOpenings": 50,
+      "finished": 100,
+      "wins": 57,
+      "losses": 43,
+      "draws": 0,
+      "unfinished": 0,
+      "normalizedShare": 0.57,
+      "share95OpeningClusterInterval": [
+        0.49,
+        0.65
+      ],
+      "passedNecessaryReferenceGates": true,
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 100,
+        "openingSeeds": 50,
+        "decisive": 100,
+        "starterWins": 63,
+        "secondSeatWins": 37,
+        "starterShare": 0.63,
+        "starterShare95CI": [
+          0.52,
+          0.73
+        ],
+        "targetShare95CI": [
+          0.49,
+          0.65
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "target-sweep": 11,
+          "starter-sweep": 24,
+          "opponent-sweep": 4,
+          "second-seat-sweep": 11
+        }
+      }
+    },
+    {
+      "profile": "square-5-expert",
+      "games": 100,
+      "distinctOpenings": 50,
+      "finished": 100,
+      "wins": 55,
+      "losses": 39,
+      "draws": 6,
+      "unfinished": 0,
+      "normalizedShare": 0.5851063829787234,
+      "share95OpeningClusterInterval": [
+        0.5,
+        0.6630434782608695
+      ],
+      "passedNecessaryReferenceGates": true,
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 100,
+        "openingSeeds": 50,
+        "decisive": 94,
+        "starterWins": 58,
+        "secondSeatWins": 36,
+        "starterShare": 0.6170212765957447,
+        "starterShare95CI": [
+          0.5053763440860215,
+          0.7319587628865979
+        ],
+        "targetShare95CI": [
+          0.5,
+          0.6630434782608695
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "second-seat-sweep": 9,
+          "starter-sweep": 20,
+          "inconclusive": 6,
+          "target-sweep": 10,
+          "opponent-sweep": 5
+        }
+      }
+    },
+    {
+      "profile": "square-5-hard",
+      "games": 100,
+      "distinctOpenings": 50,
+      "finished": 100,
+      "wins": 59,
+      "losses": 37,
+      "draws": 4,
+      "unfinished": 0,
+      "normalizedShare": 0.6145833333333334,
+      "share95OpeningClusterInterval": [
+        0.5268817204301075,
+        0.6947368421052632
+      ],
+      "passedNecessaryReferenceGates": true,
+      "initiative": {
+        "scope": "Exploratory agent/opening evidence, not perfect-play game balance",
+        "games": 100,
+        "openingSeeds": 50,
+        "decisive": 96,
+        "starterWins": 55,
+        "secondSeatWins": 41,
+        "starterShare": 0.5729166666666666,
+        "starterShare95CI": [
+          0.46808510638297873,
+          0.6770833333333334
+        ],
+        "targetShare95CI": [
+          0.5268817204301075,
+          0.6947368421052632
+        ],
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
+        "pairedOutcomes": {
+          "second-seat-sweep": 10,
+          "target-sweep": 14,
+          "starter-sweep": 18,
+          "opponent-sweep": 4,
+          "inconclusive": 4
+        }
+      }
+    }
+  ],
+  "study": {
+    "candidateSha256": "f7d5ed499ee252d46cc7047a52fd4802bd49462638fd3c53f4defbdd95781147",
+    "baselineSha256": "f48d8dd555d40113f182e32a764b99baa3216f102fc2abaeb201a127a11b8f10",
+    "runnerBinarySha256": "baac390d31c84d771c167b7808d348e444989d486290efe2f813962af7d1c82d",
+    "runnerSha256": "53cae3ec4e6ba2c4d72d70019034b5b119f8634be0c4d98afd4d84ccd49184a7",
+    "checkpointSha256": "e18a3bee8472d1f0443d2ace04b30b4071ea543b4c2e93f1fe80b589a7e6ec88",
+    "openingSelectionSha256": "70fede8e7a6f37d4930b97ad03167e94eb331c8d92ba1cc39a0ddd618cb61164",
+    "ciReportSha256": "c736c16e72a60ae09d6004a1c07625fbbe8381efb9d8c028e54cf21648a85a30",
+    "coordinatorSha256": "b48047f3900fd9d230c81642a24efa1684a7b9c24a5870e6076eca950b76436b",
+    "runnerDependencySha256": "79e350cbc1461814df05127bb5204356f15e76b53a46315c6bc45f8f5a843f68",
+    "cpuAffinities": [
+      0,
+      1
+    ],
+    "cpuQuota": "200000 100000",
+    "distinctPerBoard": 50,
+    "expectedTrials": 200,
+    "resourcePolicy": "At most two native trials; each trial and both engines pinned to one distinct CPU; no builds/tests/latency benchmarks concurrently",
+    "gates": {
+      "minDistinctOpenings": 50,
+      "minFinished": 0.8,
+      "minDecisive": 0.5,
+      "perProfileShareAtLeast": 0.5,
+      "aggregateOneSidedOpeningStreamSignPAtMost": 0.05
+    }
+  },
+  "rawReport": {
+    "path": "build/qa/ai-fix/reference12/report.json",
+    "sha256": "badedb24546319fdf077caa9d8276b617856838a3d324dc9f5dc357b14b07582"
+  },
+  "registeredProtocol": {
+    "path": "docs/qa/ai-fix/validation-protocol.json",
+    "sha256": "a7553de75e738cba073dd3069a83cca4b9c0a19d640f436faa7b0268bebb707f"
+  },
+  "replacementAudit": {
+    "path": "build/qa/ai-fix/reference12/replacement-audit-complete.json",
+    "sha256": "a155bfbd42375601e26a5dec627b83500c5ae83cf69f4159b1c9463b252c8b64",
+    "passed": true,
+    "gamesReplayed": 400,
+    "changedDecisions": 203,
+    "remainingUnknowns": 0,
+    "firstJustifiedHorizons": {
+      "3": 185,
+      "5": 18
+    },
+    "baseAudit": {
+      "path": "build/qa/ai-fix/reference12/replacement-audit.json",
+      "sha256": "07b636d81f27d2527ce06938472c9e45fa46d851b49d630ad727f5e51b13eb4c"
+    },
+    "extendedOfflineProof": {
+      "path": "build/qa/ai-fix/reference12/unresolved-old-proof.json",
+      "sha256": "053d2dfa166093c5a9ee4e9d15037b85b495f60c50c39e2f1cb4975b7139b4d6"
+    },
+    "note": "One original-move proof exceeded the original 30-second offline verifier allowance. The unchanged independent solver proved the identical five-ply objective with a 300-second allowance. The measured engine, game data, and acceptance predicates are unchanged."
+  },
+  "observedSearchLatency": {
+    "path": "build/qa/ai-fix/ci12/observed-search-latency.json",
+    "sha256": "4551533ff2ebf8cd152dd36e808f23de57bc89b8cd3d74f862f2ed517f09b696"
+  },
+  "interpretation": "Aggregate strength evidence applies to this native cohort with the allowed higher budgets. Per-profile intervals remain wide. Starting-role results describe these policies/openings, not perfect-play game balance. Compute-matched RT comparisons establish bounded tactical benefit on selected development positions, not a separate population win-rate advantage over RT.",
+  "compatibility": "Saved v1/v2 engines and three/four-seat search retain their original paths and budgets. No rules or rating-format changes.",
+  "limits": "All-size/player-count strength matrix, human Expert strength, browser/device responsiveness and publication remain outside this qualification."
+}

@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import '../../tools/ai_qualification.dart' show summarize, load, compactTrial;
+import '../../tools/ai_qualification.dart'
+    show summarize, load, compactTrial, binaryProvenance, sha;
 
 List<Map<String, dynamic>> trials(
         {int wins = 70, int draws = 10, int unfinished = 10}) =>
@@ -22,6 +23,25 @@ List<Map<String, dynamic>> trials(
         }
     ];
 void main() {
+  test('experiment provenance rejects a replaced executable', () async {
+    final directory = Directory.systemTemp.createTempSync('stones-provenance-');
+    try {
+      final binary = File('${directory.path}/engine')
+        ..writeAsStringSync('original');
+      final sidecar = File('${binary.path}.manifest.json');
+      expect(await binaryProvenance(binary.path), isNull);
+      sidecar.writeAsStringSync(jsonEncode({
+        'binarySha256': await sha(binary.path),
+        'buildSettings': {'fullWidthDuels': true, 'roadResilienceWeight': 16}
+      }));
+      expect((await binaryProvenance(binary.path))!['buildSettings'],
+          {'fullWidthDuels': true, 'roadResilienceWeight': 16});
+      binary.writeAsStringSync('replaced');
+      await expectLater(binaryProvenance(binary.path), throwsStateError);
+    } finally {
+      directory.deleteSync(recursive: true);
+    }
+  });
   test(
       'resume removes partial tail and keeps full replay off the in-memory aggregate',
       () async {

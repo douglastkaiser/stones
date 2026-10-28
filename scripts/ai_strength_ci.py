@@ -55,6 +55,7 @@ def aggregate(root, selected, seeds=50, full=True):
                              ("engine", "runtime", "os", "sourceSha256",
                               "workerSha256", "runnerSha256", "policy")) +
                        (json.dumps(manifest["candidateSource"]["sourceFiles"], sort_keys=True),
+                        json.dumps(manifest["candidateSource"].get("buildSettings", {}), sort_keys=True),
                         manifest.get("starter", "ivory")))
         rows = [json.loads(line) for line in path.read_text().splitlines()]
         shard_ids = {(seed, rotation)
@@ -112,9 +113,7 @@ def main():
             content = (subprocess.check_output(["git", "show", f"{args.source_ref}:{path}"])
                        if args.source_ref else Path(path).read_bytes())
             return hashlib.sha256(content).hexdigest()
-        report = {"sourceSha256": digest("lib/game/match_ai_engine.dart"),
-                  "workerSha256": digest("tools/ai_worker.dart"),
-                  "sourceFiles": {p: digest(p) for p in [
+        paths = [
                       "lib/game/match_ai_engine.dart", "lib/game/ai_material.dart",
                       "lib/game/ai_tactics.dart", "lib/game/ai_search_cache.dart",
                       "lib/game/ai_position.dart", "lib/game/match_config.dart",
@@ -122,7 +121,17 @@ def main():
                       "lib/game/board_geometry.dart", "lib/models/piece.dart",
                       "lib/models/player.dart",
                       "lib/services/ai/search_budget.dart", "tools/ai_worker.dart",
-                      "tools/ai_worker_protocol.dart"]}}
+                      "tools/ai_worker_protocol.dart"]
+        for path in ("lib/game/ai_duel_search.dart", "lib/game/ai_duel_tactics.dart",
+                     "lib/game/ai_road_connections.dart", "lib/game/ai_duel_position.dart", "lib/game/ai_duel_safety.dart", "lib/game/ai_road_resilience.dart"):
+            exists = (subprocess.run(["git", "cat-file", "-e", f"{args.source_ref}:{path}"],
+                                     stderr=subprocess.DEVNULL).returncode == 0
+                      if args.source_ref else Path(path).exists())
+            if exists:
+                paths.append(path)
+        report = {"sourceSha256": digest("lib/game/match_ai_engine.dart"),
+                  "workerSha256": digest("tools/ai_worker.dart"),
+                  "sourceFiles": {p: digest(p) for p in paths}}
         Path(args.binary + ".manifest.json").write_text(json.dumps(report) + "\n")
         return
     selected = matrix(args.shape, args.size, args.players, args.tier)

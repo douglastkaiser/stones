@@ -1,8 +1,28 @@
 """Separate tier sweeps from fixed opening/seat sweeps in native duel replays."""
 import argparse
 import json
+import random
 from collections import defaultdict
 from pathlib import Path
+
+
+def cluster_interval(clusters, numerator, denominator, resamples=2000):
+    """Bootstrap openings, retaining paired seats/repeats within each cluster."""
+    values = [(sum(numerator(row) for row in rows),
+               sum(denominator(row) for row in rows)) for rows in clusters]
+    if len(values) < 2:
+        return None
+    randomizer = random.Random(7331)
+    estimates = []
+    for _ in range(resamples):
+        sample = randomizer.choices(values, k=len(values))
+        total = sum(value[1] for value in sample)
+        if total:
+            estimates.append(sum(value[0] for value in sample) / total)
+    if not estimates:
+        return None
+    estimates.sort()
+    return [estimates[int((len(estimates) - 1) * p)] for p in (.025, .975)]
 
 
 def balance_report(rows):
@@ -13,6 +33,8 @@ def balance_report(rows):
     seeds = defaultdict(list)
     for row in rows:
         seeds[row["seed"]].append(row)
+    def is_decisive(row):
+        return bool(row["finished"] and row["winner"] is not None)
     counts = defaultdict(int)
     pairs = []
     for seed, games in sorted(seeds.items()):
@@ -40,6 +62,12 @@ def balance_report(rows):
         "decisive": len(decisive), "starterWins": starter_wins,
         "secondSeatWins": len(decisive) - starter_wins,
         "starterShare": starter_wins / len(decisive) if decisive else None,
+        "starterShare95CI": cluster_interval(seeds.values(),
+            lambda row: is_decisive(row) and row["winner"] == row["config"]["starter"],
+            is_decisive),
+        "targetShare95CI": cluster_interval(seeds.values(),
+            lambda row: is_decisive(row) and row["targetWon"], is_decisive),
+        "confidenceMethod": "Opening-cluster percentile bootstrap; 2000 resamples; descriptive, not perfect-play evidence",
         "pairedOutcomes": dict(counts), "bySeed": pairs,
     }
 

@@ -1,0 +1,6 @@
+{
+  "sourceRevision": "ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc",
+  "originalEngineSha256": "96317aec4462a5d20227549644c569986a2de3099129a7b9f1e28b3fe11ee810",
+  "scope": "Frozen current-v3 reference for full-width/search and resilience ablations. Engine changes only imports and a provenance comment. Dependencies must match before rebuilding.",
+  "dependencyManifest": "tools/ai_duel_reference/dependencies.sha256"
+}

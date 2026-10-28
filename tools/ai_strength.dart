@@ -7,7 +7,8 @@ import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/piece.dart';
-import 'ai_qualification.dart' show Worker, sha;
+import 'ai_qualification.dart' show Worker, sha, binaryProvenance;
+import 'ai_strength_checkpoint.dart';
 
 Map<String, Object?> strengthSummary(List<Map<String, dynamic>> rows,
     {required int seeds,
@@ -49,6 +50,23 @@ Map<String, Object?> strengthSummary(List<Map<String, dynamic>> rows,
 }
 
 Future<void> main(List<String> args) async {
+  final output = args
+          .where((s) => s.startsWith('--output='))
+          .map((s) => s.substring(9))
+          .firstOrNull ??
+      '/tmp/stones-ai-strength.jsonl';
+  final lockFile = File('$output.lock');
+  lockFile.parent.createSync(recursive: true);
+  final lock = lockFile.openSync(mode: FileMode.append);
+  try {
+    lock.lockSync();
+    await runStrength(args);
+  } finally {
+    lock.closeSync();
+  }
+}
+
+Future<void> runStrength(List<String> args) async {
   String option(String key, String fallback) =>
       args
           .where((s) => s.startsWith('--$key='))
@@ -84,16 +102,16 @@ Future<void> main(List<String> args) async {
       seats: SeatId.values.take(players).map(SeatConfig.new).toList());
   final reference =
       opponentPath != candidatePath || args.contains('--reference');
-  Map<String, dynamic> provenance(String path) {
-    final file = File('$path.manifest.json');
-    if (!file.existsSync()) {
-      throw StateError('Missing binary provenance: ${file.path}');
+  Future<Map<String, dynamic>> provenance(String path) async {
+    final report = await binaryProvenance(path);
+    if (report == null) {
+      throw StateError('Missing binary provenance: $path.manifest.json');
     }
-    return jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    return report;
   }
 
-  final candidateSource = provenance(candidatePath);
-  final opponentSource = provenance(opponentPath);
+  final candidateSource = await provenance(candidatePath);
+  final opponentSource = await provenance(opponentPath);
   final manifest = {
     'engine': MatchConfig.currentAiEngine,
     'runtime': Platform.version,
@@ -101,6 +119,8 @@ Future<void> main(List<String> args) async {
     'candidateSha256': await sha(candidatePath),
     'opponentSha256': await sha(opponentPath),
     'runnerSha256': await sha('tools/ai_strength.dart'),
+    'checkpointSha256': await sha('tools/ai_strength_checkpoint.dart'),
+    'full': args.contains('--full'),
     'shape': shape.name,
     'size': size,
     'players': players,
@@ -116,19 +136,16 @@ Future<void> main(List<String> args) async {
     'opponentSource': opponentSource,
     'comparison': reference ? 'same-tier-reference' : 'adjacent',
   };
-  // Each shard owns a fresh output. Never silently mix different source/settings.
-  if (output.existsSync()) {
-    throw StateError('Output already exists: ${output.path}');
-  }
-  output.parent.createSync(recursive: true);
-  File('${output.path}.manifest.json').writeAsStringSync(jsonEncode(manifest));
+  final rows = restoreStrengthCheckpoint(output, manifest,
+      resume: args.contains('--resume'));
+  final done = {for (final row in rows) '${row['seed']}:${row['rotation']}'};
   final candidate = Worker(await Process.start(candidatePath, []));
   final opponent = Worker(await Process.start(opponentPath, []));
-  final log = output.openWrite();
-  final rows = <Map<String, dynamic>>[];
+  final log = output.openWrite(mode: FileMode.append);
   try {
     for (var seed = seedStart; seed < seedStart + seeds; seed++) {
       for (var rotation = 0; rotation < players; rotation++) {
+        if (done.contains('$seed:$rotation')) continue;
         final target = SeatId.values[rotation];
         final cfg = template.copyWith(seats: [
           for (final seat in template.ids)

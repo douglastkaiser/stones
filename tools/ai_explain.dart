@@ -37,11 +37,16 @@ void main(List<String> args) {
   }
   final seat = game.current;
   final endgame = game.config.seat(seat).level.index >= BotLevel.hard.index;
+  final resilienceWeight = double.parse(option('road-resilience-weight', '0'));
+  if (!resilienceWeight.isFinite || resilienceWeight < 0) {
+    throw ArgumentError('Invalid resilience weight');
+  }
   Map<String, Object?> explain(MatchState position) {
     final terms = {
       for (final id in position.config.ids)
         id: {
-          ...MatchAI.evaluationTerms(position, id, endgame: endgame),
+          ...MatchAI.evaluationTerms(position, id,
+              endgame: endgame, roadResilienceWeight: resilienceWeight),
           if (!position.finished)
             'legalMaterial':
                 aiMaterialScore(position, id, const AiMaterialWeights()),

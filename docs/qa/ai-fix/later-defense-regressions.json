@@ -1,0 +1,558 @@
+[
+  {
+    "case": "veto-10012-0-28",
+    "config": {
+      "version": 1,
+      "aiEngine": "shared-search-v3",
+      "ratingVersion": 3,
+      "shape": "hex",
+      "size": 2,
+      "seats": [
+        {
+          "id": "ivory",
+          "control": "ai",
+          "level": "hard"
+        },
+        {
+          "id": "charcoal",
+          "control": "ai",
+          "level": "hard"
+        }
+      ],
+      "starter": "ivory",
+      "profile": "sharedRoads"
+    },
+    "moves": [
+      {
+        "seat": "ivory",
+        "x": 1,
+        "y": -2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -1,
+        "y": -1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": -1,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 0,
+        "y": 0,
+        "type": "capstone",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": -2,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -1,
+        "y": 2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": -2,
+        "y": 2,
+        "type": "capstone",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 0,
+        "y": -2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": -2,
+        "y": 2,
+        "type": null,
+        "direction": "east",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "charcoal",
+        "x": 0,
+        "y": 0,
+        "type": null,
+        "direction": "west",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": -2,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -1,
+        "y": 0,
+        "type": null,
+        "direction": "west",
+        "drops": [
+          2
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": -1,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": -2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 0,
+        "y": -1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -2,
+        "y": 0,
+        "type": null,
+        "direction": "northEast",
+        "drops": [
+          3
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": -2,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": -1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 0,
+        "y": -1,
+        "type": null,
+        "direction": "northEast",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "charcoal",
+        "x": 0,
+        "y": -1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": -1,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -1,
+        "y": -1,
+        "type": null,
+        "direction": "southWest",
+        "drops": [
+          4
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": -1,
+        "y": -1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -2,
+        "y": 0,
+        "type": null,
+        "direction": "northEast",
+        "drops": [
+          5
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": 0,
+        "y": 2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": -2,
+        "y": 0,
+        "type": "standing",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 2,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": -1,
+        "type": null,
+        "direction": "southEast",
+        "drops": [
+          1
+        ]
+      }
+    ],
+    "defender": "ivory",
+    "attacker": "charcoal",
+    "losingMove": {
+      "seat": "ivory",
+      "x": 0,
+      "y": 0,
+      "type": "flat",
+      "direction": null,
+      "drops": []
+    },
+    "defense": {
+      "seat": "ivory",
+      "x": -1,
+      "y": 0,
+      "type": null,
+      "direction": "northEast",
+      "drops": [
+        1
+      ]
+    },
+    "horizon": 3,
+    "referenceBudgetMs": 2000,
+    "referenceCompletedDepth": 2,
+    "defenseWasInReferenceRoots": true,
+    "sourceData": "build/qa/ai-fix/development-veto-comparison12.jsonl",
+    "sourceSha256": "2c5de2157cd35e9b9b4cead9781fa04a4288de73b370010006bd577f55bea067"
+  },
+  {
+    "case": "veto-10010-1-25",
+    "config": {
+      "version": 1,
+      "aiEngine": "shared-search-v3",
+      "ratingVersion": 3,
+      "shape": "square",
+      "size": 5,
+      "seats": [
+        {
+          "id": "ivory",
+          "control": "ai",
+          "level": "hard"
+        },
+        {
+          "id": "charcoal",
+          "control": "ai",
+          "level": "hard"
+        }
+      ],
+      "starter": "ivory",
+      "profile": "standardTak"
+    },
+    "moves": [
+      {
+        "seat": "ivory",
+        "x": 1,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 4,
+        "y": 4,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 4,
+        "y": 3,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 4,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 3,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 1,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 3,
+        "y": 1,
+        "type": "capstone",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 1,
+        "y": 3,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 0,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 0,
+        "y": 3,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": 3,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 4,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": 0,
+        "type": null,
+        "direction": "east",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": 2,
+        "y": 0,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 1,
+        "y": 0,
+        "type": null,
+        "direction": "east",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": 3,
+        "y": 1,
+        "type": null,
+        "direction": "northWest",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": 2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 4,
+        "y": 2,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 4,
+        "y": 0,
+        "type": null,
+        "direction": "southEast",
+        "drops": [
+          1
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": 3,
+        "y": 0,
+        "type": null,
+        "direction": "west",
+        "drops": [
+          2
+        ]
+      },
+      {
+        "seat": "charcoal",
+        "x": 2,
+        "y": 1,
+        "type": "capstone",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "ivory",
+        "x": 3,
+        "y": 1,
+        "type": "flat",
+        "direction": null,
+        "drops": []
+      },
+      {
+        "seat": "charcoal",
+        "x": 4,
+        "y": 1,
+        "type": null,
+        "direction": "southEast",
+        "drops": [
+          2
+        ]
+      },
+      {
+        "seat": "ivory",
+        "x": 4,
+        "y": 3,
+        "type": null,
+        "direction": "northWest",
+        "drops": [
+          1
+        ]
+      }
+    ],
+    "defender": "charcoal",
+    "attacker": "ivory",
+    "losingMove": {
+      "seat": "charcoal",
+      "x": 4,
+      "y": 3,
+      "type": "flat",
+      "direction": null,
+      "drops": []
+    },
+    "defense": {
+      "seat": "charcoal",
+      "x": 3,
+      "y": 3,
+      "type": "flat",
+      "direction": null,
+      "drops": []
+    },
+    "horizon": 3,
+    "referenceBudgetMs": 2000,
+    "referenceCompletedDepth": 2,
+    "defenseWasInReferenceRoots": true,
+    "sourceData": "build/qa/ai-fix/development-veto-comparison12.jsonl",
+    "sourceSha256": "2c5de2157cd35e9b9b4cead9781fa04a4288de73b370010006bd577f55bea067"
+  }
+]
