@@ -34,6 +34,7 @@ class MatchSearchStats {
   String stage = 'roots';
   String? timeoutStage;
   int? decisionSeed;
+  int? strategicLimitMs, totalLimitMs;
   List<Map<String, Object?>> alternatives = const [];
   final completedIterations = <Map<String, int>>[];
   String searchModel = 'selective';
@@ -219,12 +220,21 @@ class MatchAI {
     final stats = MatchSearchStats()..decisionSeed = effectiveSeed;
     final watch = Stopwatch()..start();
     var bestRootScore = double.negativeInfinity;
+    // Expert needs room to finish its extra round before the safety reserve.
+    // Keep explicit zero refinement limits and all other profiles unchanged.
+    final strategicLimit = _safetyFor(game) &&
+            level == BotLevel.expert &&
+            thinkingLimit > Duration.zero
+        ? thinkingLimit + const Duration(seconds: 1)
+        : thinkingLimit;
     final budget = SearchBudget(
         enabled: yieldDuringSearch,
         cancelled: cancelled,
-        thinkingLimit: _safetyFor(game) && thinkingLimit < _limitFor(game)
-            ? thinkingLimit
+        thinkingLimit: _safetyFor(game) && strategicLimit < _limitFor(game)
+            ? strategicLimit
             : _limitFor(game));
+    stats.strategicLimitMs = budget.thinkingLimit?.inMilliseconds;
+    stats.totalLimitMs = _limitFor(game).inMilliseconds;
     try {
       try {
         final roots = await _ranked(game, budget, onRoot: (move, next, score) {

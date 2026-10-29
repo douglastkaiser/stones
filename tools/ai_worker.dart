@@ -52,6 +52,8 @@ Future<void> main() => serve((game, level, history, request) async {
         'depth': stats?.completedDepth,
         'rounds': stats?.completedRounds,
         'rootWidth': stats?.completedRootWidth,
+        'strategicLimitMs': stats?.strategicLimitMs,
+        'totalLimitMs': stats?.totalLimitMs,
         'completedIterations': stats?.completedIterations,
         'timedOut': stats?.timedOut,
         'stage': stats?.stage,

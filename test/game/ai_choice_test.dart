@@ -63,6 +63,33 @@ void main() {
   final symmetric = MatchState.initial(cfg).copyWith(ply: 2);
   String key(MatchMove move) => jsonEncode(move.toMap(SeatId.ivory));
 
+  test('Expert uses more of its duel allowance without changing other profiles',
+      () async {
+    for (final (level, seats, engine, strategic, total) in [
+      (BotLevel.expert, 2, 'shared-search-v3', 3200, 5000),
+      (BotLevel.hard, 2, 'shared-search-v3', 1200, 2000),
+      (BotLevel.medium, 2, 'shared-search-v3', 500, 500),
+      (BotLevel.easy, 2, 'shared-search-v3', 200, 200),
+      (BotLevel.expert, 3, 'shared-search-v3', 2200, 2200),
+      (BotLevel.expert, 4, 'shared-search-v3', 2200, 2200),
+      (BotLevel.expert, 2, 'shared-search-v2', 2200, 2200),
+      (BotLevel.expert, 2, 'shared-search-v1', 2200, 2200),
+    ]) {
+      final config = MatchConfig(
+          shape: BoardShape.square,
+          size: 3,
+          aiEngine: engine,
+          seats: SeatId.values.take(seats).map(SeatConfig.new).toList());
+      late MatchSearchStats stats;
+      expect(
+          await MatchAI(level, onSearchComplete: (s) => stats = s)
+              .choose(MatchState.initial(config), cancelled: () => true),
+          isNull);
+      expect(stats.strategicLimitMs, strategic);
+      expect(stats.totalLimitMs, total);
+    }
+  });
+
   test(
       'winning-move bounds retain a board-filling spread with too few road stones',
       () async {

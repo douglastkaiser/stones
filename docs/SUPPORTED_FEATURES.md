@@ -216,8 +216,9 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   strategic search. It replaces a move only after proving a forced loss and
   verifying a defense at the same finite horizon (three, then five plies).
   A completed near-term repair survives deeper timeout. Total duel targets are
-  200/500/2000/5000 ms; the original strategic allocation and all multiplayer/
-  saved-v1/v2 budgets remain unchanged. Hard/Expert v3 duel strategic search
+  200/500/2000/5000 ms. Hard retains 1200 ms for strategic refinement; Expert v3
+  duels use 3200 ms of their existing 5000 ms total, with the remainder available
+  for safety verification. Multiplayer/saved-v1/v2 budgets remain unchanged. Hard/Expert v3 duel strategic search
   reuses immutable-stack sharing and exact component-based win detection from
   the safety search to reduce overhead within those same targets. Before accepting
   that all replies lose, ordinary duel search and horizon extensions check replies

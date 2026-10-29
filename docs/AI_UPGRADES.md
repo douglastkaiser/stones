@@ -8,7 +8,10 @@ reply loses. Hard/Expert v3 duels now widen purported forced-loss nodes until
 all replies have been checked or one refutes the claim. Ordinary search and
 forced horizon extensions share this rule. An interrupted iteration is discarded.
 The existing immutable-stack and exact win-checking kernels also reduce overhead.
-Evaluation, thinking limits, root targets and every release gate remain unchanged.
+Evaluation, total thinking limits, root targets and every release gate remain
+unchanged. Expert v3 duels use 3200 ms of their existing 5000 ms total for
+strategic refinement, instead of stopping after 2200 ms while safety verification
+can return early. Hard, saved engines and multiplayer retain their allocations.
 
 The overhead-only and depth-ordering candidates failed required groups; the
 original Expert widening schedule is restored. The new regression verifies the
