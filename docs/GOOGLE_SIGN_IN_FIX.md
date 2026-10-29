@@ -199,3 +199,27 @@ observed ten-minute dependency download delayed four jobs. Package operations
 have bounded network retries/timeouts and the setup step has a five-minute limit.
 These retries cover dependency transport only; browser assertions and complete
 qualification outcomes remain unchanged. Setup failure prevents promotion.
+
+### Denied-storage fixture correction — 2026-10-29
+
+Source `c61ac43` passed all 17 main CI jobs once and all six AI strength groups
+twice. Its second full run failed only WebKit's denied-storage credential case.
+Reproduction used that run's immutable emulator build on Ubuntu 24.04,
+Playwright 1.62.0 and WebKit 26.5. The instance-level `indexedDB.open` override
+was absent when the SDK accessed storage: the supposed denial case still used
+IndexedDB. The fixture therefore could not assume consistent storage availability
+across reloads.
+
+The override now applies to `IDBFactory.prototype.open`, covering later factory
+wrappers. Explicit checks require IndexedDB and local storage to reject access
+while session storage remains usable, both before sign-in and after reload.
+The focused comparison changed the SDK's selected persistence from IndexedDB
+to session storage and preserved the same signed-in identity across reload.
+Reports retain only storage-availability booleans. All 21 local credential checks
+passed across Chromium 151, Firefox 153 and WebKit 26.5, with both storage-policy
+snapshots verified. The legacy instance override failed the new validity guard
+as an expected negative control. All 74 release-tool tests also passed.
+Production authentication, all original account assertions, timeouts and release
+gates are unchanged.
+ACCOUNT-01/10/13 remain the adjacent regression contract. The corrected source
+still requires two complete successful main CI attempts before publication.

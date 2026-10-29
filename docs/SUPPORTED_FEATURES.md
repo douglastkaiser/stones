@@ -480,6 +480,8 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   failure; achievements, themes and settings retain their device-local limits.
   Browser-process restart and denied-persistent-storage checks cover restoration,
   last-account replacement, explicit sign-out and usable session fallback.
+  The denied-storage fixture verifies blocked IndexedDB/local storage and usable
+  session storage before sign-in and after reload; ineffective fault injection fails qualification.
 
 ## Preferences, presentation and accessible input
 

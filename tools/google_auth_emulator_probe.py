@@ -61,6 +61,33 @@ def signed_in(page):
     expect(page.get_by_role('button', name='Sign out', exact=True)).to_be_visible(timeout=15000)
 
 
+def verify_denied_persistence(page):
+    """Verify the fault and its usable fallback, without recording stored data."""
+    flags = page.evaluate(f"""() => {{
+      ({AUTH})();
+      let indexedDBDenied = false, localStorageDenied = false;
+      let sessionStorageAvailable = false;
+      try {{
+        const request = indexedDB.open('stones-auth-denial-probe');
+        request.onsuccess = () => request.result.close();
+      }} catch (error) {{ indexedDBDenied = error.name === 'SecurityError'; }}
+      const key = 'stones-auth-denial-probe';
+      try {{
+        localStorage.setItem(key, '1');
+        localStorage.removeItem(key);
+      }} catch (error) {{ localStorageDenied = error.name === 'SecurityError'; }}
+      try {{
+        sessionStorage.setItem(key, '1');
+        sessionStorageAvailable = sessionStorage.getItem(key) === '1';
+        sessionStorage.removeItem(key);
+      }} catch (_) {{ sessionStorageAvailable = false; }}
+      return {{indexedDBDenied, localStorageDenied, sessionStorageAvailable}};
+    }}""")
+    if not all(flags.values()):
+        raise AssertionError('Denied-persistence fixture did not apply')
+    return flags
+
+
 def open_settings(page):
     tap(page, page.get_by_role('button', name='Settings & account', exact=True))
     page.get_by_text('Settings', exact=True).wait_for()
@@ -254,7 +281,9 @@ def main():
                         fallback.route('**/*', browser_request)
                         fallback.add_init_script(EMULATOR_BINDING)
                         fallback.add_init_script("""(() => {
-                          indexedDB.open = () => { throw new DOMException('Denied', 'SecurityError'); };
+                          // WebKit can expose another factory wrapper later;
+                          // an override on one indexedDB instance is not stable.
+                          IDBFactory.prototype.open = () => { throw new DOMException('Denied', 'SecurityError'); };
                           const set = Storage.prototype.setItem;
                           Storage.prototype.setItem = function(key, value) {
                             if (this === localStorage)
@@ -267,15 +296,22 @@ def main():
                         ready(test_page)
                         open_settings(test_page)
                         test_page.evaluate(f'async () => {{ await ({AUTH})().authStateReady(); }}')
+                        stage('denied_storage_fixture')
+                        result['storage_fixture'] = {
+                            'before_sign_in': verify_denied_persistence(test_page)
+                        }
                         stage('denied_storage_sign_in')
                         assert credential_fixture(test_page, 'sign_in', fixture_claims()) is None
                         stage('denied_storage_identity')
                         assert identity(test_page) is not None and not identity(test_page)['anonymous']
                         signed_in(test_page)
                         fallback_identity = identity(test_page)
+                        stage('denied_storage_reload')
                         test_page.reload()
                         ready(test_page)
+                        result['storage_fixture']['after_reload'] = verify_denied_persistence(test_page)
                         open_settings(test_page)
+                        stage('denied_storage_restore_identity')
                         signed_in(test_page)
                         stage('denied_storage_restoration')
                         assert identity(test_page) == fallback_identity
@@ -288,7 +324,8 @@ def main():
                 result['error_type'] = type(error).__name__
                 for marker in ('strict mode violation', 'Execution context was destroyed',
                                'Expected the local demo auth emulator',
-                               'Cannot read properties of undefined', 'is not defined'):
+                               'Cannot read properties of undefined', 'is not defined',
+                               'Denied-persistence fixture did not apply'):
                     if marker in str(error):
                         result['error_category'] = marker
             save()
