@@ -87,7 +87,7 @@ attempts. Native diagnostics do not replace those checks or qualify the full
 size/player strength matrix. Hosted source, integrity and login are checked after
 publication.
 
-## Expert reply coverage candidate
+## Duel reply breadth calibration candidate
 
 The optimized source passed all five other representative groups, but Square
 Expert/Hard tied 5–5 in both the first optimized run and `d781e35`; all other
@@ -96,15 +96,20 @@ was not retried. Repeating the depth-before-width experiment after optimization
 was also rejected locally: one win, four losses and one draw in six games left
 no possible required majority, even if all remaining games won.
 
-Expert previously increased root width and depth while retaining the same
-three-reply interior beam as Hard. The current candidate instead gives Expert
-four replies at each strategic search node. It retains the original root/depth
-schedule, exact forced-result widening, safety proof and 5000 ms total target.
-Hard, other tiers and saved/multiplayer profiles keep their prior reply widths.
-The additional reply improves search coverage; it is not evidence of stronger
-play until its complete exact-source qualification passes. Ninety-six focused
-choice/round/safety tests and strict analysis passed locally; the representative
-native tournament and CI are still pending.
+An Expert four-reply candidate (`9589308`) was rejected after Hex Expert/Hard
+again tied 5–5 in CI. Its local Square trial stopped at two wins and four losses
+in six games after that required CI failure; the incomplete local run is not a
+qualification result. That candidate was never promoted to main.
+
+The current candidate fits Hard's interior beam to its shorter strategic
+allowance: two replies instead of three. Expert retains its original three.
+Hard still targets twelve roots and four plies, Expert sixteen roots and six
+plies, with the original Expert widening schedule and 2000/5000 ms total targets.
+Exact forced-result widening and the three-/five-ply safety checks remain. This
+changes ordinary selective coverage only in Hard v3 duels; saved engines,
+multiplayer and other tiers retain their prior reply widths. Full adjacent-tier
+gates must establish both Hard/Medium and Expert/Hard ordering before this
+calibration is adopted. Strength qualification is pending.
 
 ## Preserve frozen benchmark controls while production evolves
 
