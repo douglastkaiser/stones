@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "preservedAt": "a87e1b7354747ba7712d171df9f85748b6e8a8ee",
+  "sources": [
+    {
+      "source": "lib/game/ai_position.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/ai_position.dart.txt",
+      "sha256": "0c29add9925f90394dde43f09f94064bd91b1ff00a63a631ec1b2709aad04a9a"
+    },
+    {
+      "source": "lib/game/ai_search_cache.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/ai_search_cache.dart.txt",
+      "sha256": "770194483eb7c0228ac20609b4800306f52eac57d43a2b33a31df2afaaef82e3"
+    },
+    {
+      "source": "lib/game/ai_material.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/ai_material.dart.txt",
+      "sha256": "d0071f70f662c4ea8c269a5123a0614d0cf34809c05fb48b78e42c370e410955"
+    },
+    {
+      "source": "lib/game/ai_tactics.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/ai_tactics.dart.txt",
+      "sha256": "da85940be73716c1ffbb1c3fb02316e29b0b37dd2f2ba64b8e7e913994123df6"
+    },
+    {
+      "source": "lib/game/board_geometry.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/board_geometry.dart.txt",
+      "sha256": "9793927a6230de0c7f96363dc08c6e02859f5c6d13e388808216bd8e692cd40b"
+    },
+    {
+      "source": "lib/game/match_config.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/match_config.dart.txt",
+      "sha256": "7fc4c2c8a1f408b1d1bb09b3f26b3136167fe1fa0feb8bb086aea044b2fef67a"
+    },
+    {
+      "source": "lib/game/match_rules.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/match_rules.dart.txt",
+      "sha256": "1479598855f42b80babf6ae2960253b464f7a52ed8dd13828063a4eacf0b8e74"
+    },
+    {
+      "source": "lib/game/match_state.dart",
+      "snapshot": "tools/ai_reference_sources/lib/game/match_state.dart.txt",
+      "sha256": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c"
+    },
+    {
+      "source": "lib/models/piece.dart",
+      "snapshot": "tools/ai_reference_sources/lib/models/piece.dart.txt",
+      "sha256": "2a1f17120e0deee95789bd732209d2bce99d3db16ca9ef3e168d08f4d9cee76d"
+    },
+    {
+      "source": "lib/models/player.dart",
+      "snapshot": "tools/ai_reference_sources/lib/models/player.dart.txt",
+      "sha256": "67b8ff62b5b43d13999654a20d7108d7a14d9ba699fad28d46aec683a0f6b88a"
+    },
+    {
+      "source": "lib/services/ai/search_budget.dart",
+      "snapshot": "tools/ai_reference_sources/lib/services/ai/search_budget.dart.txt",
+      "sha256": "d537dbb0ed5de5ffdadd91bc31d5ef65d30fca891a1bd564a2f700000cf358eb"
+    }
+  ]
+}

@@ -6,6 +6,11 @@ import shutil
 from pathlib import Path
 import subprocess
 
+if __package__:
+    from .frozen_ai_reference import materialize_reference, verify_materialized_reference, verify_shared_contract
+else:
+    from frozen_ai_reference import materialize_reference, verify_materialized_reference, verify_shared_contract
+
 
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -27,6 +32,7 @@ def verify_reference():
         expected, name = line.split("  ", 1)
         if digest(name) != expected:
             raise ValueError(f"Frozen duel reference dependency changed: {name}")
+    verify_shared_contract()
 
 
 def main():
@@ -43,10 +49,14 @@ def main():
     directory = Path(args.output_dir).resolve()
     # Never replace a frozen executable/evidence set, including a partial build.
     directory.mkdir(parents=True, exist_ok=False)
+    reference_directory = directory / "reference_package"
+    reference_packages = materialize_reference(reference_directory)
+    reference_packages_sha = digest(reference_packages)
     source_files = [str(p) for p in sorted(Path("lib/game").glob("*.dart"))]
     source_files += ["lib/models/piece.dart", "lib/models/player.dart",
                      "lib/services/ai/search_budget.dart", "tools/ai_worker.dart",
                      "tools/ai_worker_protocol.dart", __file__]
+    source_files += ["scripts/frozen_ai_reference.py"]
     source_files = [str(Path(p).relative_to(Path.cwd())) if Path(p).is_absolute()
                     else p for p in source_files]
     source_files += [str(p) for p in sorted(Path("tools").glob("ai_*.dart"))]
@@ -76,6 +86,8 @@ def main():
             f"-DSTONES_FULL_WIDTH={str(selected['fullWidthDuels']).lower()}",
             f"-DSTONES_RESILIENCE_WEIGHT={selected['roadResilienceWeight']}",
             f"-DSTONES_TACTICAL_SAFETY={str(arm == 'G').lower()}"]
+        if arm in ("R", "RT"):
+            flags.append(f"--packages={reference_packages}")
         if arm != "R" and budgets is not None:
             flags.append("-DSTONES_DUEL_BUDGETS=" + ":".join(map(str, budgets)))
         subprocess.run([args.dart, "compile", "exe", *flags, source, "-o", str(binary)], check=True)
@@ -99,12 +111,17 @@ def main():
             "sourceSha256": sources["tools/ai_duel_reference/engine.dart"] if arm in ("R", "RT")
             else sources["lib/game/match_ai_engine.dart"],
             "workerSha256": sources[source], "sourceFiles": sources,
+            "referencePackageRoot": str(reference_directory) if arm in ("R", "RT") else None,
+            "referencePackageConfigSha256": reference_packages_sha if arm in ("R", "RT") else None,
         }
         Path(str(binary) + ".manifest.json").write_text(json.dumps(report, indent=2) + "\n")
         reports[arm] = report
     for name in snapshot_files:
         if digest(name) != digest(directory / "source" / name):
             raise ValueError(f"Source changed during build: {name}")
+    verify_materialized_reference(reference_directory)
+    if digest(reference_packages) != reference_packages_sha:
+        raise ValueError("Reference package configuration changed during build")
     (directory / "manifest.json").write_text(json.dumps(reports, indent=2) + "\n")
     print(directory)
 

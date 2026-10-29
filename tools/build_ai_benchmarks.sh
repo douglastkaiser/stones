@@ -12,6 +12,7 @@ if actual != manifest['frozenSourceSha256']:
     raise SystemExit('Frozen baseline engine changed')
 PY_CHECK
 sha256sum --check tools/ai_baseline/dependencies.sha256
-"$DART_BIN" compile exe tools/ai_baseline/worker.dart -o /tmp/stones-ai-baseline
+REFERENCE_PACKAGES="$(python3 scripts/frozen_ai_reference.py --output-dir /tmp/stones-ai-baseline-reference)"
+"$DART_BIN" compile exe --packages="$REFERENCE_PACKAGES" tools/ai_baseline/worker.dart -o /tmp/stones-ai-baseline
 "$DART_BIN" compile exe tools/ai_worker.dart -o /tmp/stones-ai-candidate
 sha256sum /tmp/stones-ai-baseline /tmp/stones-ai-candidate

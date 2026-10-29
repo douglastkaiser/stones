@@ -86,3 +86,17 @@ account checks, rules qualification and two consecutive successful main CI
 attempts. Native diagnostics do not replace those checks or qualify the full
 size/player strength matrix. Hosted source, integrity and login are checked after
 publication.
+
+## Preserve frozen benchmark controls while production evolves
+
+The first optimized source correctly triggered the reference dependency guard:
+its frozen engine still imported live production material/rule modules. The
+reference engines, workers and protocol remain untouched. Their original library
+bytes are now archived and materialized into a reference-only package. Historical
+hash values remain unchanged; no expected hash is refreshed to the optimization.
+Original canonical rule APIs and shared game-contract modules retain byte checks.
+New release-tool tests compare every archive with its original Git object, verify
+the compiler package alias and reject tampered materialized files or rule APIs.
+All 74 release-tool tests, strict analysis, and complete R/RT/F/S/E/SE/G builder
+integration passed locally. These checks repair the build safeguard without
+waiving any strength or publication gate.

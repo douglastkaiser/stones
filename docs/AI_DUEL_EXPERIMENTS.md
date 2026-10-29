@@ -173,6 +173,16 @@ weight remains zero until qualification.
 The frozen R reference is from `ec5d3dcef52d5e7c5d6f995819b7cd179b49b8fc`.
 Its engine copy changes only imports and a provenance comment. Frozen dependency
 hashes must match before rebuilding. The older `tools/ai_baseline` remains intact.
+Historical library dependencies are preserved byte-for-byte under
+`tools/ai_reference_sources/`. The reference builder materializes them as an
+isolated package and passes its package configuration only to R/RT compilation;
+production builds keep their normal package. Expected historical dependency hashes
+and original engine/worker/protocol bytes are unchanged. Original rule APIs,
+geometry, state/configuration, pieces and position identity remain checked against
+the same game contract. The additive allocation-free query is separately checked
+against the canonical transformer. Release-tool tests verify original Git bytes,
+package selection, and rejection of altered sources. Historical executable
+sidecars are not rewritten. Use the builder below for reference compilation.
 
 Build R (reference), S (search), E (evaluation) and SE (combined) in a **new**
 directory. Sidecars record actual binary/source hashes, flags, settings and runtime:
