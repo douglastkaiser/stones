@@ -316,14 +316,15 @@ class MatchAI {
           final rounds = widenDuel && iteration > 2 ? iteration - 1 : iteration;
           final plies =
               roundSearch ? rounds * game.config.seats.length : rounds;
-          // Fit Hard's reply breadth to its shorter refinement budget.
-          // Expert retains three replies and its extra round; exact forced-loss
-          // verification still widens beyond either selective beam.
+          // Fit Hard's reply breadth to its budget and board topology:
+          // Square has two road axes, Hex three. Expert retains three replies
+          // and its extra round; exact forced-loss verification still widens.
           final beam = roundSearch
-              ? (level == BotLevel.medium ||
-                      _safetyFor(game) && level == BotLevel.hard
+              ? (level == BotLevel.medium
                   ? 2
-                  : 3)
+                  : _safetyFor(game) && level == BotLevel.hard
+                      ? game.geometry.axisCount
+                      : 3)
               : null;
           final iterationScores = <(MatchMove, double)>[];
           MatchMove? iterationMove;

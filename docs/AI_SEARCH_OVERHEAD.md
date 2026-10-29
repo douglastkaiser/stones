@@ -101,15 +101,23 @@ again tied 5–5 in CI. Its local Square trial stopped at two wins and four loss
 in six games after that required CI failure; the incomplete local run is not a
 qualification result. That candidate was never promoted to main.
 
-The current candidate fits Hard's interior beam to its shorter strategic
-allowance: two replies instead of three. Expert retains its original three.
-Hard still targets twelve roots and four plies, Expert sixteen roots and six
-plies, with the original Expert widening schedule and 2000/5000 ms total targets.
-Exact forced-result widening and the three-/five-ply safety checks remain. This
-changes ordinary selective coverage only in Hard v3 duels; saved engines,
-multiplayer and other tiers retain their prior reply widths. Full adjacent-tier
-gates must establish both Hard/Medium and Expert/Hard ordering before this
-calibration is adopted. Strength qualification is pending.
+A global two-reply Hard candidate (`9046bca`) passed Square Hard/Medium
+locally 9–1 and in CI, but failed Hex Hard/Medium. Its independent replay covered
+all ten legal completed games; no safety replacements occurred, so the proof
+auditor's nonempty-replacement requirement was not met. The global candidate
+was not promoted. Its Square Expert result remains pending.
+
+The current candidate therefore retains Hex Hard's existing three-reply beam
+and fits Square Hard's shorter strategic allowance with two replies. The breadth
+uses the topology's road-axis count (two for Square, three for Hex); this sets a
+beam size, not a guarantee that each axis is represented. Expert retains three
+replies on both boards. Hard still targets twelve roots and four plies, Expert
+sixteen roots and six plies, with the original Expert widening schedule and
+2000/5000 ms total targets. Exact forced-result widening and the three-/five-ply
+safety checks remain. Saved engines, multiplayer and other tiers retain their
+prior reply widths. All six unchanged adjacent-tier gates must qualify this
+source before adoption; the full size/player strength matrix remains open.
+Qualification is pending.
 
 ## Preserve frozen benchmark controls while production evolves
 
