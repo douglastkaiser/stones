@@ -1,46 +1,52 @@
-# Hard/Expert strategic-search overhead repair — 2026-10-29
+# Hard/Expert duel search repair — 2026-10-29
 
 Applies to LEARN-01 and PLAN-10; COMPAT-06 remains the adjacent saved-engine
-contract. The October 28 main CI completed its Hex Expert/Hard games at 5–5,
-with the starting seat winning all ten games. This is a failed ordering check,
-not proof that the two difficulties or the starting positions are equivalent.
+contract. The release gates remain unchanged.
 
-The strategic search was rebuilding and validating every immutable stack for
-every child position, and checking immediate wins by applying and adjudicating
-every candidate move. The exact safety search already used stack sharing and
-component-based winning-move detection. Hard/Expert v3 duels now reuse those
-same implementations during strategic search as well. This gives refinement
-more of its existing time allowance without changing its evaluator, beam/depth
-targets, forced-loss veto, game rules or thinking limits.
+## The underlying false forced-result claim
 
-This change is restricted to the existing Hard/Expert v3 duel path. Easy,
-Medium, multiplayer, saved v1/v2 engines and opt-in full-width experiments retain
-their existing paths. No opening seeds, difficulty handicaps, CI thresholds or
-deployment qualification requirements change. Timed search may complete a
-different iteration and therefore choose a different move; the optimization is
-not a promise of universal strength or hardware-independent move selection.
+Selective minimax searched only a small reply beam. If all sampled replies lost,
+it could assign a forced-result score without examining an unsampled defense.
+More depth or faster board transitions did not make that inference sound.
 
-## Complete depth before extra width
+A reproducible legal 3×3 position exposed this directly: Hard assigned 199990
+(a forced win) to a flat at `(2,1)`. An independent exhaustive solver refuted the
+win objective over the following eight plies, expanding 6,209 nodes. The repaired
+search completes the same four-ply iteration, chooses a spread and assigns a
+normal positional value (8.4444 in the native diagnostic), without timing out.
+The regression reconstructs the legal replay, checks the independent refutation,
+and rejects the old forced-win claim after a completed search iteration.
 
-The first overhead-only candidate (`df977a5`) passed Hex Expert/Hard locally
-7–3 and in branch CI 6–4, but failed Square Expert/Hard at 4–5 with one draw.
-It was not published. Those results do not qualify the revised source.
+Hard/Expert v3 duel search now examines remaining replies whenever its initial
+beam says every examined choice loses for the mover. It stops widening once a
+reply refutes that claim. This applies inside ordinary search and the forced
+horizon extension. Winning alternatives still short-circuit normally, and
+alpha-beta bounds remain bounds. A timeout abandons the incomplete iteration;
+it cannot certify the missing replies. Quiet, non-forced search keeps its beam.
+This is targeted result verification, not the rejected blanket full-width search.
 
-Expert's previous duel schedule was 12 roots/two plies, 12/four, 16/four,
-16/six. The wider four-ply iteration could consume the deadline before Expert
-completed any deeper result than Hard. Expert now completes 12/six before
-attempting 16/six. Hard retains its 12-root, four-ply target. The same 2.2-second
-strategic allocation and five-second total Expert target remain; neither width
-nor depth targets increase. Saved engines and multiplayer retain their prior
-iteration schedule. Worker diagnostics record completed depth/width iterations,
-and a completed-search regression checks the actual Expert progression.
+## Preserve the existing search and release contracts
 
-Correctness checks are the canonical-transition and immutability comparisons in
-`test/game/ai_duel_position_test.dart`, exhaustive winning-move membership/order
-comparisons in `test/game/ai_connections_test.dart`, and the existing tactical,
-cancellation, draw-defense, full-round and saved-engine regressions. Release
-qualification still requires strict analysis, the complete Flutter suite,
-all six representative adjacent-tier groups, browser/account checks, rules
-qualification and two consecutive successful main CI attempts. Native pilot
-results alone do not establish those checks or publication. Hosted source,
-artifact integrity and login checks follow publication.
+Strategic refinement also reuses the existing immutable-stack position and exact
+component-based winning-move checker already used by the safety search. This
+reduces copying and adjudication work within the existing time limits. The
+three-/five-ply forced-loss veto, evaluator, root width/depth targets, Expert's
+original widening schedule and total 200/500/2000/5000 ms targets remain.
+Easy/Medium, multiplayer, saved v1/v2 and opt-in full-width strategies retain their
+existing coverage. No game rules, opening seeds, rating identities, difficulty
+handicaps, CI thresholds or deployment qualification requirements change.
+
+The overhead-only candidate `df977a5` passed Hex Expert/Hard locally 7–3 and in
+CI 6–4, but failed Square Expert/Hard 4–5 with one draw. A depth-before-width
+experiment (`a99c5ba`) also failed required Hex groups and was reverted. Neither
+candidate was published, and their results do not qualify the repaired source.
+Worker diagnostics retain completed depth/width iterations for replay analysis.
+
+Correctness checks include canonical transitions/immutability, exact winning-move
+membership, the independently refuted mate regression, cancellation, draw
+responses and saved-engine behavior. Release still requires strict analysis, the
+complete Flutter suite, all six representative adjacent-tier groups, browser and
+account checks, rules qualification and two consecutive successful main CI
+attempts. Native diagnostics do not replace those checks or qualify the full
+size/player strength matrix. Hosted source, integrity and login are checked after
+publication.

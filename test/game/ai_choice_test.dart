@@ -10,6 +10,7 @@ import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/piece.dart';
 import 'package:stones/services/ai/search_budget.dart';
+import '../../tools/ai_balance_proof.dart';
 
 class CompleteChoiceAI extends MatchAI {
   CompleteChoiceAI(super.level, {super.variation, super.onSearchComplete})
@@ -45,6 +46,13 @@ class CappedExpertAI extends GenerousAI {
   CappedExpertAI({super.onSearchComplete}) : super(BotLevel.expert);
   @override
   int get depth => 2;
+}
+
+class CompleteMateAI extends MatchAI {
+  CompleteMateAI({super.onSearchComplete})
+      : super(BotLevel.hard, yieldDuringSearch: false, tacticalSafety: false);
+  @override
+  Duration get thinkingLimit => const Duration(seconds: 30);
 }
 
 void main() {
@@ -142,27 +150,35 @@ void main() {
     expect(stats.alternatives.length, 16);
   });
 
-  test('Expert completes its extra depth before widening the root set',
-      () async {
-    final game = MatchState.initial(MatchConfig(
+  test('a selective reply beam cannot certify a refuted forced win', () async {
+    var position = MatchState.initial(MatchConfig(
         shape: BoardShape.square,
         size: 3,
-        seats: const [
-          SeatConfig(SeatId.ivory),
-          SeatConfig(SeatId.charcoal)
-        ])).copyWith(ply: 2);
+        seats: const [SeatConfig(SeatId.ivory), SeatConfig(SeatId.charcoal)]));
+    for (final (cell, type) in [
+      (const Cell(1, 1), PieceType.flat),
+      (const Cell(1, 0), PieceType.flat),
+      (const Cell(1, 2), PieceType.standing),
+      (const Cell(0, 0), PieceType.flat),
+      (const Cell(0, 2), PieceType.flat),
+      (const Cell(2, 2), PieceType.standing),
+    ]) {
+      position = MatchRules.play(position, MatchMove.place(cell, type))!;
+    }
+    final proposed = MatchMove.place(const Cell(2, 1), PieceType.flat);
+    expect(
+        BoundedDuelProof(maxNodes: 150000)
+            .solve(MatchRules.play(position, proposed)!, position.current, 8),
+        DuelProof.refuted);
     late MatchSearchStats stats;
-    final move =
-        await GenerousAI(BotLevel.expert, onSearchComplete: (s) => stats = s)
-            .choose(game);
-    expect(MatchRules.play(game, move!), isNotNull);
+    final move = await CompleteMateAI(onSearchComplete: (s) => stats = s)
+        .choose(position, decisionSeed: 0);
+    expect(MatchRules.play(position, move!), isNotNull);
     expect(stats.timedOut, isFalse);
-    expect(stats.completedIterations, [
-      {'depth': 2, 'rootWidth': 12},
-      {'depth': 4, 'rootWidth': 12},
-      {'depth': 6, 'rootWidth': 12},
-      {'depth': 6, 'rootWidth': 16},
-    ]);
+    expect(stats.completedDepth, 4);
+    final result = stats.alternatives.singleWhere((entry) =>
+        jsonEncode(entry['move']) == jsonEncode(move.toMap(position.current)));
+    expect(result['score'] as double, lessThan(100000));
   });
 
   test(

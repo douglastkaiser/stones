@@ -143,6 +143,26 @@ class MatchAI {
     return selected;
   }
 
+  Iterable<(MatchMove, MatchState, double)> _duelCandidates(
+      MatchState game,
+      List<(MatchMove, MatchState, double)> ranked,
+      int count,
+      bool Function() forcedLossForMover,
+      {bool orderPrincipal = true}) sync* {
+    final selected = orderPrincipal
+        ? _ordered(game, ranked, count).toList()
+        : ranked.take(count).toList();
+    yield* selected;
+    if (_v3(game) && level.index >= BotLevel.hard.index) {
+      // A beam can find a winning reply, but cannot prove every reply loses.
+      // Widen only while a purported forced loss still needs that proof.
+      for (final candidate in ranked) {
+        if (!forcedLossForMover()) break;
+        if (!selected.contains(candidate)) yield candidate;
+      }
+    }
+  }
+
   final void Function(MatchSearchStats)? onSearchComplete;
   final BotLevel level;
   final bool yieldDuringSearch;
@@ -151,12 +171,13 @@ class MatchAI {
   int get branching => [4, 8, 12, 16][level.index];
   int _branching(MatchState game) =>
       game.config.seats.length > 2 ? [4, 8, 8, 10][level.index] : branching;
-  // Establish Hard's width, then complete Expert's extra depth before widening.
-  // A wider shallow iteration must not consume the deeper iteration's budget.
+  // Establish the same completed lower-depth result before adding width or
+  // depth. Otherwise additional root moves can make a stronger tier
+  // fall back to the weaker, selective baseline more often.
   int _rootWidth(MatchState game, int stage) => _v3(game) &&
           game.config.seats.length == 2 &&
           level == BotLevel.expert &&
-          stage <= depth
+          stage <= 2
       ? 12
       : _branching(game);
   Duration get thinkingLimit =>
@@ -282,7 +303,7 @@ class MatchAI {
         for (var iteration = 1;
             iteration <= targetDepth + (widenDuel ? 1 : 0);
             iteration++) {
-          final rounds = math.min(iteration, targetDepth);
+          final rounds = widenDuel && iteration > 2 ? iteration - 1 : iteration;
           final plies =
               roundSearch ? rounds * game.config.seats.length : rounds;
           final beam = roundSearch ? (level == BotLevel.medium ? 2 : 3) : null;
@@ -907,7 +928,12 @@ class MatchAI {
         if (forcing.replies.isNotEmpty) {
           var value =
               game.current == root ? double.negativeInfinity : double.infinity;
-          for (final (_, next, _) in forcing.replies.take(beam ?? branching)) {
+          for (final (_, next, _) in _duelCandidates(
+              game,
+              forcing.replies,
+              beam ?? branching,
+              () => game.current == root ? value < -100000 : value > 100000,
+              orderPrincipal: false)) {
             final score = await _duelSearch(
                 next, game.config.seats.length - 1, root, budget, alpha, beta,
                 beam: beam, extend: false);
@@ -924,7 +950,8 @@ class MatchAI {
     var best = maximize ? double.negativeInfinity : double.infinity;
     MatchMove? principal;
     final ranked = await _ranked(game, budget);
-    for (final (move, next, _) in _ordered(game, ranked, beam ?? branching)) {
+    for (final (move, next, _) in _duelCandidates(game, ranked,
+        beam ?? branching, () => maximize ? best < -100000 : best > 100000)) {
       final value = await _duelSearch(
           next, depth - 1, root, budget, alpha, beta,
           beam: beam, extend: extend);

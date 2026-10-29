@@ -1,19 +1,20 @@
 # Shared AI v3 upgrades — 2026-10-23
 
-## 2026-10-29 Hard/Expert strategic-search overhead
+## 2026-10-29 Hard/Expert forced-result verification
 
-[The overhead repair](AI_SEARCH_OVERHEAD.md) reuses the existing immutable-stack
-position and exact component-based win checker in Hard/Expert v3 strategic duel
-search. The search previously used those optimizations only in safety/full-width
-paths. Thinking limits, evaluation, pruning targets and every release gate remain
-unchanged. Timed completion and decisions can change; native pilot outcomes do
-not replace exact-source CI and hosted verification.
+[The duel search repair](AI_SEARCH_OVERHEAD.md) addresses an independently
+refuted forced-win claim: a narrow reply beam cannot prove that every legal
+reply loses. Hard/Expert v3 duels now widen purported forced-loss nodes until
+all replies have been checked or one refutes the claim. Ordinary search and
+forced horizon extensions share this rule. An interrupted iteration is discarded.
+The existing immutable-stack and exact win-checking kernels also reduce overhead.
+Evaluation, thinking limits, root targets and every release gate remain unchanged.
 
-The overhead-only source passed Hex but failed Square Expert/Hard. The follow-up
-changes two scheduling expressions so Expert completes its extra depth at Hard's
-12-root width before widening to 16 roots. This preserves both time limits and
-final depth/width targets. Completed-iteration diagnostics and a search regression
-verify the depth-first schedule; every required group must qualify the new source.
+The overhead-only and depth-ordering candidates failed required groups; the
+original Expert widening schedule is restored. The new regression verifies the
+actual false-mate counterexample against an independent exhaustive solver.
+Completed-iteration diagnostics support replay analysis. Exact-source CI and
+hosted verification, rather than earlier candidate results, qualify publication.
 
 ## 2026-10-28 targeted duel repair — selected native validation
 
