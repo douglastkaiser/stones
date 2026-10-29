@@ -17,54 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ai-ordering:
-    name: AI ordering (${{ matrix.shape }}, ${{ matrix.tier }})
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        shape: [square, hex]
-        tier: [0, 1, 2]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.7'
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - name: Compile production search and tournament runner
-        run: |
-          dart compile exe tools/ai_worker.dart -o /tmp/stones-ai-candidate
-          python3 scripts/ai_strength_ci.py provenance --binary=/tmp/stones-ai-candidate
-          dart compile exe tools/ai_strength.dart -o /tmp/stones-ai-strength
-      - name: Require adjacent-tier ordering
-        shell: bash
-        env:
-          SHAPE: ${{ matrix.shape }}
-          TIER: ${{ matrix.tier }}
-        run: |
-          mkdir -p build/ai-strength
-          git rev-parse HEAD > build/ai-strength/source.txt
-          flutter --version > build/ai-strength/runtime.txt
-          size=5
-          if [[ "$SHAPE" == hex ]]; then size=2; fi
-          /tmp/stones-ai-strength --shape="$SHAPE" --size="$size" --players=2 --tier="$TIER" --seeds=5 --output=build/ai-strength/games.jsonl | tee build/ai-strength/run.log
-      - name: Explain starting-seat and opening effects
-        if: always()
-        shell: bash
-        run: |
-          if [[ -f build/ai-strength/games.jsonl ]]; then
-            python3 scripts/ai_balance_report.py build/ai-strength/games.jsonl --output=build/ai-strength/balance.json
-          fi
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ai-ordering-${{ matrix.shape }}-${{ matrix.tier }}-${{ github.sha }}-${{ github.run_attempt }}
-          path: build/ai-strength
-          retention-days: 30
-
   analyze-and-test:
     name: Analyze & Test
     runs-on: ubuntu-24.04

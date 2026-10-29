@@ -1,7 +1,10 @@
 # Hard/Expert duel search repair — 2026-10-29
 
 Applies to LEARN-01 and PLAN-10; COMPAT-06 remains the adjacent saved-engine
-contract. The release gates remain unchanged.
+contract. This dated repair record retains its original validation requirements.
+The later owner-approved [release-policy change](AI_QUALIFICATION.md) moves slow
+strength tournaments to manual execution and supersedes their deployment-gate
+requirements below; ordinary correctness and release checks remain required.
 
 ## The underlying false forced-result claim
 

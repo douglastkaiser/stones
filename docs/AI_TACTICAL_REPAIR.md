@@ -5,6 +5,11 @@ This repair follows [the original investigation](AI_BALANCE_INVESTIGATION.md)
 and the rejected [full-width/evaluation experiments](AI_DUEL_EXPERIMENTS.md).
 It does not establish perfect-play balance or human Expert strength.
 
+Release-policy follow-up, 2026-10-29: the owner moved slow strength tournaments
+out of automatic CI and deployment gating. References to required tournament
+groups below describe the original repair protocol and evidence. The current
+[qualification policy](AI_QUALIFICATION.md) preserves the studies for manual use.
+
 ## The problem and the smaller repair
 
 A wider search can be worse when it replaces a completed selective result with a

@@ -1,5 +1,27 @@
 # Current release qualification
 
+## Quick-start setup and manual AI strength checks, 2026-10-29
+
+Application `54b6f15` adds shared board-size/difficulty popups for computer games,
+board size/player count for online friend creation, and replay-based detection
+of finished local saves before replacement. SETUP-01, SETUP-03 and SETUP-05 are
+updated. Local Linux validation passed all 1,953 Flutter tests, strict analysis,
+a release web build and isolated Chromium UI/storage checks.
+
+Both full [main CI attempts](https://github.com/douglastkaiser/stones/actions/runs/40958489583)
+passed 16 of 17 jobs, including all ordinary tests, builds, player journeys and
+three-engine account/recovery checks. Rules passed. The unchanged AI binary's
+Square Expert/Hard tournament failed 4–6 then 5–5 after about 22–24 minutes.
+The owner then requested removal of those slow tournaments from routine checks.
+
+The six adjacent-tier jobs are now manual-only and no longer required by Deploy
+Main. Other release checks and the two-consecutive-success requirement remain.
+LEARN-01, PLAN-10 and APP-09 record this policy; the [qualification follow-up](AI_QUALIFICATION.md)
+retains failed-run evidence and the broader strength investigation. Passing
+ordinary release CI must not be described as resolved tier-strength acceptance.
+Current publication/hosted status is recorded in [Deploy Main](https://github.com/douglastkaiser/stones/actions/workflows/deploy-main.yml).
+Physical-device and human-strength acceptance remain separate.
+
 ## Startup and identity refresh, 2026-10-26 (unpublished local candidate)
 
 APP-06, PREF-01 and PREF-05 now describe the shared geometric mark, saved-theme

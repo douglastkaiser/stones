@@ -1,5 +1,15 @@
 # Shared AI v3 upgrades — 2026-10-23
 
+## 2026-10-29 release-policy change: manual strength studies
+
+The owner requested removal of the slow adjacent-tier tournaments from push/PR
+CI and deployment requirements. They now live in the manual-only AI Ordering
+workflow. Unit/tactical regressions remain in the ordinary Flutter suite, and
+all other source/artifact, build, browser, account, rules and hosted checks
+remain required. This supersedes the automatic strength-gate requirements in
+the dated investigation notes below. It does not change the engine or resolve
+Expert/Hard ordering. See [qualification policy and retained failed evidence](AI_QUALIFICATION.md).
+
 ## 2026-10-29 Hard/Expert forced-result verification
 
 [The duel search repair](AI_SEARCH_OVERHEAD.md) addresses an independently
@@ -148,12 +158,14 @@ diagnostics; the tool explicitly identifies that limit in its output.
 
 ### Reproducible adjacent-tier checks
 
-Every push/PR runs six independent native jobs: three adjacent matchups on Square
-5 and two-seat Hex radius 2. Each uses five fixed opening seeds (0–4)
+The manual-only **AI Ordering** workflow runs six independent native jobs:
+three adjacent matchups on Square 5 and two-seat Hex radius 2.
+Each uses five fixed opening seeds (0–4)
 and both AI seat assignments: 60 games total. Every ten-game group must finish
 all trials, complete at least eight games, have at least five decisive games and
 give the stronger tier more wins than losses. Capped games remain unfinished.
-Failure fails CI; Deploy Main explicitly requires all six successful jobs.
+Failure fails that manually requested study. Routine CI and Deploy Main do not
+run or require it.
 These small samples detect regressions; they do not establish universal ordering.
 
 Current Hex Hard/Medium and Expert/Hard samples still fail at 5–5. Every opening

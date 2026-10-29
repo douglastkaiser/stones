@@ -252,8 +252,10 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   improvements and existing repetition/variation policies remain decisive.
   Connectivity orders exact proof work;
   selected native Square-5/Hex-2 Hard/Expert reference evidence supports the
-  repair. Prior local representative tier runs passed; current-source CI must
-  independently qualify ordering. Full size/player strength and
+  repair. Prior local representative tier runs passed; current strength ordering
+  remains unqualified. Slow adjacent-tier studies are manual-only, outside routine
+  CI and deployment gates; see [the qualification policy](AI_QUALIFICATION.md).
+  Full size/player strength and
   browser/device responsiveness remain separate qualification requirements.
   See [the tactical repair](AI_TACTICAL_REPAIR.md) for verification and limits.
   Internal opt-in v3 duel experiments provide completed full-width minimax and a
@@ -284,7 +286,7 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   See [AI upgrades and qualification](AI_UPGRADES.md) for weights and remaining gates,
   and the [Hex balance investigation](AI_BALANCE_INVESTIGATION.md) for opening/seat
   controls and exact bounded defensive counterexamples. Hex tier separation is
-  still unproven; the strict per-board CI gates are retained.
+  still unproven; manual per-board studies retain their strict score thresholds.
   The 2026-10-26 source follow-up establishes Hard-width lower-depth duel results
   before Expert's widest refinement. Multiplayer retains its prior search widths
   and root order. An isolated capstone reserve-credit pilot lost
@@ -298,8 +300,9 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   Optional
   seeded final-choice policies are experimental and disabled in normal play;
   full-window alternative scores and tactical/repetition safeguards apply.
-  Six required native adjacent-tier CI groups cover Square-5 and two-seat Hex-2;
+  Six on-demand native adjacent-tier groups cover Square-5 and two-seat Hex-2;
   a manual full-size/player-count workflow checks held-out ordering separately.
+  These slow tournaments do not run on push/PR or block deployment.
   Immediate wins and blocks are covered at Square 8 and Hex radius 4 for all four
   difficulties at two/four seats; broad strength and device timing remain unqualified.
   Difficulty-strength acceptance is still open (see limits below).
@@ -606,7 +609,9 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   verify required backend rules/indexes before dependent clients, preserve
   bounded cached startup assets, and keep rollback possible. Require two
   consecutive complete CI qualifications for the selected source, including
-  independent three-engine account/recovery checks. Archive and verify the
+  independent three-engine account/recovery checks. Slow AI strength tournaments
+  are manual-only and do not block routine CI or deployment; see the current
+  [qualification policy](AI_QUALIFICATION.md). Archive and verify the
   previous artifact before publication, checking its backend hashes against its
   own committed source even when the new release changes rules or indexes.
   Release tools follow the workflow revision while application bytes remain
@@ -666,7 +671,7 @@ must stay explicit until implementation and acceptance evidence justify changing
 | PLAN-07 · Visual and performance finish | Core menu/table styling exists. Complete coherent learning/account/history/collection surfaces, dense mixed-theme readability, reduced-motion/audio behavior and measured performance on reference phones. Keep five coordinated sets. | [Finishing plan](FINISHING_PLAN.md), packet 10 |
 | PLAN-08 · Account lifecycle and disclosures | Feedback exists. Account/data deletion needs discoverable app/web entry points, reauthentication, retryable cleanup and treatment of shared histories/rooms. Align actual Analytics/retention, privacy text and store disclosures before public release. | [Feedback](FEEDBACK.md), finishing packet 11 |
 | PLAN-09 · Release baseline and parity | Continue exact-source/artifact/backend qualification and rollback. Qualify one source across web and Play Android, actual update/install, old saves, independent accounts and a long-running friend game. Store-track publication and production-access requirements remain separate gates. | [Release readiness](RELEASE_READINESS.md), finishing packets 1 and 12 |
-| PLAN-10 · AI strength | Cached geometry indices and single occupied-top reads reduce search path-cost overhead without changing evaluation scores or thinking limits; differential legal-replay tests cover both geometries and two-to-four seats. Completed opening refinements retain stronger immediate development for near-equal heuristic gains, with forced-result priority and unchanged budgets; a full-six-ply regression prevents faster search from selecting a scattered opening. The current candidate gives Square Hard v3 duels two interior replies, retains Hex Hard's three, and retains Expert's three on both boards, preserving the original depth/root schedule and time targets; exact-source Hard/Medium and Expert/Hard ordering remain pending. Hard/Expert v3 strategic duels verify purported all-replies-lose results beyond the initial beam and reuse immutable-stack sharing, exact component win checks and canonically equivalent allocation-free material probes within unchanged total thinking limits; see [the overhead repair](AI_SEARCH_OVERHEAD.md) for correctness checks and exact-source release requirements. The source uses an exact forced-loss veto in Hard/Expert v3 duels, retaining the original strategy unless a bounded loss is proved and a defense verified. Connectivity orders proof attempts. Selected native confirmation covers 50 distinct openings per board, swapped seats, Square 5/Hex radius 2 and Hard/Expert: 226–161 with 13 draws against the frozen original; aggregate opening-stream-clustered p = 0.0002154. All 400 games and 203 replacements passed independent replay/proof checks. Frozen reference libraries retain original source bytes in isolated reference-only packages, with original rule APIs and shared game contracts still checked; production optimizations cannot silently retune the reference. Four tiers, six unchanged required representative adjacent-tier gates, a manually requested all-size/player-count matrix and resumable reference tooling are implemented. Full-width/weighted-evaluation variants remain opt-in after failed development/latency studies; the capstone reserve-credit pilot was rejected, and organic variation remains opt-in experimental. Full size/player strength qualification, the material-weight pilot grid, human Expert strength and browser/device responsiveness remain open. The selected native result does not qualify the full matrix or publish a release. | [Tactical repair](AI_TACTICAL_REPAIR.md), [confirmation](qa/ai-fix/reference-study.json), [AI upgrades](AI_UPGRADES.md) |
+| PLAN-10 · AI strength | Cached geometry indices and single occupied-top reads reduce search path-cost overhead without changing evaluation scores or thinking limits; differential legal-replay tests cover both geometries and two-to-four seats. Completed opening refinements retain stronger immediate development for near-equal heuristic gains, with forced-result priority and unchanged budgets; a full-six-ply regression prevents faster search from selecting a scattered opening. The current candidate gives Square Hard v3 duels two interior replies, retains Hex Hard's three, and retains Expert's three on both boards, preserving the original depth/root schedule and time targets; exact-source Hard/Medium and Expert/Hard ordering remain pending. Hard/Expert v3 strategic duels verify purported all-replies-lose results beyond the initial beam and reuse immutable-stack sharing, exact component win checks and canonically equivalent allocation-free material probes within unchanged total thinking limits; see [the overhead repair](AI_SEARCH_OVERHEAD.md) for correctness checks and exact-source release requirements. The source uses an exact forced-loss veto in Hard/Expert v3 duels, retaining the original strategy unless a bounded loss is proved and a defense verified. Connectivity orders proof attempts. Selected native confirmation covers 50 distinct openings per board, swapped seats, Square 5/Hex radius 2 and Hard/Expert: 226–161 with 13 draws against the frozen original; aggregate opening-stream-clustered p = 0.0002154. All 400 games and 203 replacements passed independent replay/proof checks. Frozen reference libraries retain original source bytes in isolated reference-only packages, with original rule APIs and shared game contracts still checked; production optimizations cannot silently retune the reference. Four tiers, six manual-only representative adjacent-tier checks with unchanged thresholds, a manually requested all-size/player-count matrix and resumable reference tooling are implemented. Routine CI and deployment no longer require the slow tournaments at the owner’s request; strength acceptance remains open (see [the qualification policy](AI_QUALIFICATION.md)). Full-width/weighted-evaluation variants remain opt-in after failed development/latency studies; the capstone reserve-credit pilot was rejected, and organic variation remains opt-in experimental. Full size/player strength qualification, the material-weight pilot grid, human Expert strength and browser/device responsiveness remain open. The selected native result does not qualify the full matrix or publish a release. | [Tactical repair](AI_TACTICAL_REPAIR.md), [confirmation](qa/ai-fix/reference-study.json), [AI upgrades](AI_UPGRADES.md) |
 | PLAN-11 · Device and usability acceptance | Physical iPhone web sign-in retry, Android back gestures, Play-signed invitations/audio/sharing, native safe areas, keyboard/screen readers, large text and unfamiliar-player trials remain acceptance work. Browser viewport tests do not establish these. | [Release readiness](RELEASE_READINESS.md), [playtesting feedback](PLAYTESTING_FEEDBACK.md) |
 
 Current constraints also remain visible:
