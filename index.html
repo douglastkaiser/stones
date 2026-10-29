@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
@@ -16,13 +18,13 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Stones - A two-player abstract strategy board game inspired by classic connection and stacking games">
 
   <!-- PWA Theme Color -->
-  <meta name="theme-color" content="#795548">
-  <meta name="msapplication-navbutton-color" content="#795548">
-  <meta name="msapplication-TileColor" content="#46505A">
+  <meta name="theme-color" content="#EDE5D7">
+  <meta name="msapplication-navbutton-color" content="#EDE5D7">
+  <meta name="msapplication-TileColor" content="#EDE5D7">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -62,9 +64,9 @@
 
   <!-- Preconnect hints for faster resource loading (LCP optimization) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin="">
-  <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin="">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
 
   <style>
     /* Flutter's semantic labels must not intercept adjacent cell touches when
@@ -79,123 +81,137 @@
       clip-path: polygon(50% 3%, 90.7032% 26.5%, 90.7032% 73.5%,
                          50% 97%, 9.2968% 73.5%, 9.2968% 26.5%);
     }
-    /* Loading indicator styles */
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #46505A;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    :root {
+      color-scheme: light;
+      --backdrop: #EDE5D7;
+      --foreground: #322B25;
+      --accent: #88401F;
     }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-appearance="light"]) {
+        color-scheme: dark;
+        --backdrop: #1B1816; --foreground: #F3E9D5; --accent: #F0B782;
+      }
+    }
+    :root[data-appearance="dark"] {
+      color-scheme: dark;
+      --backdrop: #1B1816; --foreground: #F3E9D5; --accent: #F0B782;
+    }
+    html, body { margin: 0; min-height: 100%; background: var(--backdrop); }
+    .loading-container {
+      box-sizing: border-box;
+      position: fixed; inset: 0; z-index: 2147483647;
+      overflow: auto;
+      display: flex; flex-direction: column; align-items: center;
+      padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+               max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      background: var(--backdrop); color: var(--foreground);
+      font-family: Roboto, Arial, sans-serif;
+      transition: opacity 160ms ease-out;
+    }
+    .loading-content { margin: auto; text-align: center; width: 100%; min-width: 0; max-width: 28rem; }
+    .stones-mark { display: block; width: 100px; height: 100px; margin: 0 auto 16px; }
+    .wordmark { font-size: clamp(1.125rem, 9vw, 1.875rem); letter-spacing: .1em; font-weight: 400; margin: 0; }
     .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #795548;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+      width: 18px; height: 18px; margin: 24px auto 12px;
+      border: 2px solid var(--foreground); border-top-color: transparent;
+      border-radius: 50%; animation: spin 1s linear infinite;
     }
-    .loading-text {
-      margin-top: 20px;
-      font-size: 18px;
+    .loading-text, .loading-help { line-height: 1.5; overflow-wrap: anywhere; }
+    .loading-text { margin: 0; }
+    .loading-help { font-size: .875rem; }
+    #startup-reload {
+      font: inherit; color: var(--backdrop); background: var(--foreground);
+      border: 2px solid var(--foreground); border-radius: 8px;
+      min-height: 48px; padding: 10px 24px; margin-top: 12px; cursor: pointer;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    /* Hide loading once app is ready (CLS optimization: fade instead of abrupt hide) */
-    .loading-container {
-      transition: opacity 0.3s ease-out;
-    }
-    body.loaded .loading-container {
-      opacity: 0;
-      pointer-events: none;
+    #startup-reload:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    body.loaded .loading-container { opacity: 0; pointer-events: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .loading-spinner { animation: none; }
+      .loading-container { transition: none; }
     }
   </style>
-  <style id="splash-screen-style">
-    html {
-      height: 100%
-    }
-
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #795548;
-          background-size: 100% 100%;
-    }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-  </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
+  <script>
+    // SharedPreferences' legacy web backend stores JSON under flutter.<key>.
+    // This runs synchronously in head, before the loader or Flutter can paint.
+    (() => {
+      let preference = 0;
+      try {
+        const raw = localStorage.getItem('flutter.theme_mode');
+        const saved = JSON.parse(raw);
+        if (Number.isInteger(saved) && saved >= 0 && saved <= 2 && raw.trim() === String(saved)) preference = saved;
+      } catch (_) { /* Restricted storage uses system appearance. */ }
+      const system = window.matchMedia('(prefers-color-scheme: dark)');
+      const apply = () => {
+        const dark = preference === 2 || (preference === 0 && system.matches);
+        document.documentElement.dataset.appearance = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#1B1816' : '#EDE5D7';
+      };
+      apply();
+      system.addEventListener('change', apply);
+    })();
   </script>
-<meta name="stones-release-source" content="58a1f56545d165becaa23490f92658c041cfc755">
+<meta name="stones-release-source" content="0f5eb7d2ff765803f9d809db569ace8afd0a7e30">
 </head>
 <body>
-  <picture id="splash-branding">
-    <source srcset="splash/img/branding-1x.png 1x, splash/img/branding-2x.png 2x, splash/img/branding-3x.png 3x, splash/img/branding-4x.png 4x" media="(prefers-color-scheme: light)">
-    <source srcset="splash/img/branding-dark-1x.png 1x, splash/img/branding-dark-2x.png 2x, splash/img/branding-dark-3x.png 3x, splash/img/branding-dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-    <img class="bottom" aria-hidden="true" src="splash/img/branding-1x.png" alt="">
-  </picture>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  <div class="loading-container">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Loading Stones...</div>
+  <div class="loading-container" id="stones-loader">
+    <div class="loading-content">
+      <svg class="stones-mark" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <rect x="32" y="16" width="36" height="16" fill="var(--foreground)"/>
+        <rect x="24" y="40" width="52" height="16" fill="var(--accent)"/>
+        <rect x="16" y="64" width="68" height="16" fill="var(--foreground)"/>
+      </svg>
+      <h1 class="wordmark">STONES</h1>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-text" role="status" aria-live="polite" aria-atomic="true">Loading Stones…</p>
+      <p class="loading-help" id="startup-help" hidden>Startup is taking longer than usual. Check your connection, keep waiting, or reload to try again.</p>
+      <button id="startup-reload" type="button" hidden>Reload</button>
+      <noscript><p>Enable JavaScript to play Stones.</p></noscript>
+    </div>
   </div>
+  <script>
+    (() => {
+      const loader = document.getElementById('stones-loader');
+      const status = loader.querySelector('.loading-text');
+      const reload = document.getElementById('startup-reload');
+      let ready = false;
+      let failed = false;
+      reload.addEventListener('click', () => window.location.reload());
+      const slow = setTimeout(() => {
+        document.getElementById('startup-help').hidden = false;
+        reload.hidden = false;
+        status.textContent = 'Still loading Stones…';
+      }, 15000);
+      window.stonesStartup = {
+        fail() {
+          if (ready || failed) return;
+          failed = true;
+          clearTimeout(slow);
+          status.textContent = 'Stones could not start. Reload to try again.';
+          loader.querySelector('.loading-spinner').hidden = true;
+          reload.hidden = false;
+        }
+      };
+      window.addEventListener('error', event => {
+        const src = event.target?.src || event.filename || '';
+        if (/flutter_bootstrap|\.dart\.js|canvaskit|skwasm/.test(src)) window.stonesStartup.fail();
+      }, true);
+      // Flutter dispatches this after rasterizing its initialized first frame.
+      // runApp() completing alone is not evidence that the interface is visible.
+      window.addEventListener('flutter-first-frame', () => {
+        ready = true;
+        clearTimeout(slow);
+        requestAnimationFrame(() => {
+          document.body.classList.add('loaded');
+          loader.setAttribute('aria-hidden', 'true');
+          loader.inert = true;
+          setTimeout(() => loader.remove(), 180);
+        });
+      }, { once: true });
+    })();
+  </script>
 
   <script>
     // Handle PWA install prompt
@@ -212,7 +228,7 @@
     });
   </script>
 
-  <script src="flutter_bootstrap.62345ba746f4d05ae132.js" async=""></script>
+  <script src="flutter_bootstrap.b8797ee9181735f8c20b.js" async onerror="window.stonesStartup.fail()"></script>
 
   <!-- Firebase SDK (deferred for INP optimization) -->
   <script type="module">
@@ -243,6 +259,5 @@
       setTimeout(() => initFirebase().catch(() => {}), 2000);
     }
   </script>
-
-
-</body></html>
+</body>
+</html>
