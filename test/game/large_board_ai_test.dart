@@ -7,7 +7,42 @@ import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/piece.dart';
 
+class CompletedOpeningExpert extends MatchAI {
+  CompletedOpeningExpert({super.onSearchComplete})
+      : super(BotLevel.expert,
+            yieldDuringSearch: false,
+            duelThinkingLimit: const Duration(minutes: 2));
+  @override
+  Duration get thinkingLimit => const Duration(minutes: 2);
+}
+
 void main() {
+  test('completed Expert refinement preserves connected opening development',
+      () async {
+    final config = MatchConfig(
+        shape: BoardShape.hex,
+        size: 4,
+        seats: const [SeatConfig(SeatId.ivory), SeatConfig(SeatId.charcoal)]);
+    var game = MatchState.initial(config);
+    for (final cell in [const Cell(-4, 0), const Cell(0, 0)]) {
+      game = MatchRules.play(game, MatchMove.place(cell, PieceType.flat))!;
+    }
+    late MatchSearchStats stats;
+    final move =
+        await CompletedOpeningExpert(onSearchComplete: (s) => stats = s)
+            .choose(game);
+    expect(stats.completedDepth, 6);
+    expect(stats.timedOut, isFalse);
+    expect(MatchRules.play(game, move!), isNotNull);
+    expect(move.type, isNotNull);
+    expect(
+        game.geometry.directions
+            .any((d) => const Cell(0, 0).step(d) == move.from),
+        isTrue,
+        reason:
+            'Completing the extra round must not cause a scattered opening');
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
   for (final shape in BoardShape.values) {
     for (final level in [BotLevel.hard, BotLevel.expert]) {
       test('$shape $level develops connected material on the largest board',

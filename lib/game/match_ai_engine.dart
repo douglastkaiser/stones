@@ -328,6 +328,7 @@ class MatchAI {
               : null;
           final iterationScores = <(MatchMove, double)>[];
           MatchMove? iterationMove;
+          double? incumbentScore;
           var score = double.negativeInfinity;
           final selected =
               candidates.take(_rootWidth(game, iteration)).toList();
@@ -356,12 +357,32 @@ class MatchAI {
               value = _utility(game, values, game.current);
             }
             iterationScores.add((move, value));
+            if (identical(move, best)) incumbentScore = value;
             if (value > score) {
               iterationMove = move;
               score = value;
             }
           }
           if (iterationMove != null) {
+            // Keep connected development in the first round after the swap
+            // unless refinement gains more than one development unit. The
+            // incumbent is searched first with an open window, so both values
+            // are exact within this selective search, not fail-low bounds.
+            if (_safetyFor(game) &&
+                !exactAlternatives &&
+                game.ply ~/ game.config.seats.length == 1 &&
+                incumbentScore != null &&
+                incumbentScore.abs() < 100000 &&
+                score.abs() < 100000 &&
+                score - incumbentScore <= 4) {
+              final challenger = selected
+                  .firstWhere((entry) => identical(entry.$1, iterationMove))
+                  .$2;
+              if (_development(selected.first.$2, game.current) >
+                  _development(challenger, game.current)) {
+                iterationMove = best;
+              }
+            }
             stats.alternatives = [
               for (final (move, value) in iterationScores)
                 {

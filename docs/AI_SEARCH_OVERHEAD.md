@@ -147,3 +147,31 @@ checks are not retried by the script, and an exhausted installation still fails.
 The pinned package, platform, checks and publication requirements are unchanged.
 Shell syntax was checked locally; exact-source CI and two complete successful
 main attempts remain required before publication.
+
+## Completed opening refinement stability
+
+The first `caa6509` full run exposed a large-radius Hex development regression.
+The case passed when the deadline left Expert at four plies, but a completed
+six-ply refinement selected a disconnected capstone at `(-2,0)`: its selective
+heuristic value was 8 versus 7 for the connected incumbent. A legal two-move
+opening replay reproduced this with a generous refinement budget; the new
+regression failed before the repair. This makes completed-depth behavior
+observable without relying on CI processor speed.
+
+During the first round after the opening swap, deterministic Hard/Expert v3
+duels now retain the completed incumbent when it has stronger immediate
+development and the deeper positional gain is at most one existing four-point
+development unit. Both compared values are exact within the selective model:
+the incumbent is searched first with an open window, and a replacing challenger
+must exceed alpha. Fail-low bounds are not used as exact ties. Forced-result
+scores, larger improvements and the existing repetition/variation policies keep
+their original priority. This is phase-based opening stability on both boards;
+there is no seed, board-size or capstone restriction. Saved engines and
+multiplayer retain their prior policies.
+
+The original deadline-based large-board checks remain. An additional legal
+opening regression requires all six plies to complete and checks connected
+development. Its generous test-only limit isolates that branch; production
+thinking targets, search depth/width schedules and all release gates remain.
+All 137 focused large-board/choice/round/safety tests and strict analysis passed
+locally. Exact-source CI still must pass twice before deployment.
