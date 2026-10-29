@@ -87,6 +87,25 @@ attempts. Native diagnostics do not replace those checks or qualify the full
 size/player strength matrix. Hosted source, integrity and login are checked after
 publication.
 
+## Expert reply coverage candidate
+
+The optimized source passed all five other representative groups, but Square
+Expert/Hard tied 5–5 in both the first optimized run and `d781e35`; all other
+sixteen jobs passed on the latter. No release was published and that failed run
+was not retried. Repeating the depth-before-width experiment after optimization
+was also rejected locally: one win, four losses and one draw in six games left
+no possible required majority, even if all remaining games won.
+
+Expert previously increased root width and depth while retaining the same
+three-reply interior beam as Hard. The current candidate instead gives Expert
+four replies at each strategic search node. It retains the original root/depth
+schedule, exact forced-result widening, safety proof and 5000 ms total target.
+Hard, other tiers and saved/multiplayer profiles keep their prior reply widths.
+The additional reply improves search coverage; it is not evidence of stronger
+play until its complete exact-source qualification passes. Ninety-six focused
+choice/round/safety tests and strict analysis passed locally; the representative
+native tournament and CI are still pending.
+
 ## Preserve frozen benchmark controls while production evolves
 
 The first optimized source correctly triggered the reference dependency guard:

@@ -316,7 +316,15 @@ class MatchAI {
           final rounds = widenDuel && iteration > 2 ? iteration - 1 : iteration;
           final plies =
               roundSearch ? rounds * game.config.seats.length : rounds;
-          final beam = roundSearch ? (level == BotLevel.medium ? 2 : 3) : null;
+          // Expert must examine more opponent replies as well as more roots.
+          // Extra depth through the same narrow beam can miss a quiet defense.
+          final beam = roundSearch
+              ? (level == BotLevel.medium
+                  ? 2
+                  : _safetyFor(game) && level == BotLevel.expert
+                      ? 4
+                      : 3)
+              : null;
           final iterationScores = <(MatchMove, double)>[];
           MatchMove? iterationMove;
           var score = double.negativeInfinity;
