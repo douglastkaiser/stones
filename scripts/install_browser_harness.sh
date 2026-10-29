@@ -34,5 +34,15 @@ Acquire::https::Timeout "30";
 DPkg::Lock::Timeout "60";
 APT
 
-python3 -m pip install --disable-pip-version-check --retries 2 --timeout 30 playwright==1.62.0
+# pip's connection retries do not cover an interrupted response body.
+# Retry package setup only; browser and application checks still run once.
+for attempt in 1 2 3; do
+  if python3 -m pip install --disable-pip-version-check --retries 2 --timeout 30 playwright==1.62.0; then
+    break
+  fi
+  if (( attempt == 3 )); then
+    exit 1
+  fi
+  echo 'Retrying browser-harness package installation.' >&2
+done
 python3 -m playwright install --with-deps "$@"

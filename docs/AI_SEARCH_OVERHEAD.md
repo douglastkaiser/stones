@@ -87,6 +87,38 @@ attempts. Native diagnostics do not replace those checks or qualify the full
 size/player strength matrix. Hosted source, integrity and login are checked after
 publication.
 
+## Duel reply breadth calibration candidate
+
+The optimized source passed all five other representative groups, but Square
+Expert/Hard tied 5–5 in both the first optimized run and `d781e35`; all other
+sixteen jobs passed on the latter. No release was published and that failed run
+was not retried. Repeating the depth-before-width experiment after optimization
+was also rejected locally: one win, four losses and one draw in six games left
+no possible required majority, even if all remaining games won.
+
+An Expert four-reply candidate (`9589308`) was rejected after Hex Expert/Hard
+again tied 5–5 in CI. Its local Square trial stopped at two wins and four losses
+in six games after that required CI failure; the incomplete local run is not a
+qualification result. That candidate was never promoted to main.
+
+A global two-reply Hard candidate (`9046bca`) passed Square Hard/Medium
+locally 9–1 and in CI, but failed Hex Hard/Medium. Its independent replay covered
+all ten legal completed games; no safety replacements occurred, so the proof
+auditor's nonempty-replacement requirement was not met. The global candidate
+was not promoted. Its Square Expert result remains pending.
+
+The current candidate therefore retains Hex Hard's existing three-reply beam
+and fits Square Hard's shorter strategic allowance with two replies. The breadth
+uses the topology's road-axis count (two for Square, three for Hex); this sets a
+beam size, not a guarantee that each axis is represented. Expert retains three
+replies on both boards. Hard still targets twelve roots and four plies, Expert
+sixteen roots and six plies, with the original Expert widening schedule and
+2000/5000 ms total targets. Exact forced-result widening and the three-/five-ply
+safety checks remain. Saved engines, multiplayer and other tiers retain their
+prior reply widths. All six unchanged adjacent-tier gates must qualify this
+source before adoption; the full size/player strength matrix remains open.
+Qualification is pending.
+
 ## Preserve frozen benchmark controls while production evolves
 
 The first optimized source correctly triggered the reference dependency guard:
@@ -100,3 +132,15 @@ the compiler package alias and reject tampered materialized files or rule APIs.
 All 74 release-tool tests, strict analysis, and complete R/RT/F/S/E/SE/G builder
 integration passed locally. These checks repair the build safeguard without
 waiving any strength or publication gate.
+
+## Browser setup interruption
+
+The topology candidate passed its first five strength groups, analysis/tests,
+builds and account/auth checks while Square Expert was still running, but the
+browser journey job stopped during setup: pip reported an interrupted response
+body (`IncompleteRead`). Its connection retry setting did not recover this
+failure. Package installation now has three bounded attempts. Browser/application
+checks are not retried by the script, and an exhausted installation still fails.
+The pinned package, platform, checks and publication requirements are unchanged.
+Shell syntax was checked locally; exact-source CI and two complete successful
+main attempts remain required before publication.
