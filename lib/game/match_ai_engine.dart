@@ -6,6 +6,7 @@ import 'ai_tactics.dart';
 import 'ai_duel_search.dart';
 import 'ai_duel_position.dart';
 import 'ai_duel_safety.dart';
+import 'ai_duel_tactics.dart';
 import 'ai_road_resilience.dart';
 import 'dart:math' as math;
 import '../models/piece.dart';
@@ -173,6 +174,9 @@ class MatchAI {
       return _chooseFullWidth(
           game, cancelled, decisionSeed, recentPositionKeys);
     }
+    // Use the same immutable-stack sharing as the exact safety search during
+    // strategic refinement, so copying unchanged stacks does not consume it.
+    if (_safetyFor(game)) game = AiDuelPosition.from(game);
     final effectiveSeed = variation == AiMoveVariation.deterministic
         ? null
         : decisionSeed ?? math.Random().nextInt(0x7fffffff);
@@ -644,6 +648,13 @@ class MatchAI {
     final key = 'win:${_key(game)}';
     final cached = _cache?.get<bool>(key);
     if (cached != null) return cached;
+    if (_safetyFor(game)) {
+      final wins =
+          await aiDuelWinningMoves(game, game.current, budget, stopAfter: 1);
+      final result = wins.isNotEmpty;
+      _cache?.put(key, result);
+      return result;
+    }
     final moves =
         _v3(game) ? aiWinCandidates(game) : MatchRules.legalMoves(game);
     for (final move in moves) {

@@ -1,5 +1,14 @@
 # Shared AI v3 upgrades — 2026-10-23
 
+## 2026-10-29 Hard/Expert strategic-search overhead
+
+[The overhead repair](AI_SEARCH_OVERHEAD.md) reuses the existing immutable-stack
+position and exact component-based win checker in Hard/Expert v3 strategic duel
+search. The search previously used those optimizations only in safety/full-width
+paths. Thinking limits, evaluation, pruning targets and every release gate remain
+unchanged. Timed completion and decisions can change; native pilot outcomes do
+not replace exact-source CI and hosted verification.
+
 ## 2026-10-28 targeted duel repair — selected native validation
 
 [The tactical repair](AI_TACTICAL_REPAIR.md) preserves the original strategic
