@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'board_geometry.dart';
 import 'match_config.dart';
 import 'match_state.dart';
@@ -65,7 +67,7 @@ class AiDuelPosition implements MatchState {
     }
     final nextBoard = board == null
         ? this.board
-        : Map<Cell, List<Stone>>.unmodifiable(board.map((cell, stack) {
+        : UnmodifiableMapView<Cell, List<Stone>>(board.map((cell, stack) {
             if (identical(stack, this.board[cell])) {
               return MapEntry(cell, stack);
             }

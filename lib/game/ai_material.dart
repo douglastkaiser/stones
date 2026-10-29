@@ -13,8 +13,8 @@ class AiMaterialWeights {
 }
 
 /// Local legal probes, never an alternative movement/flattening implementation.
-double aiMaterialScore(
-    MatchState game, SeatId seat, AiMaterialWeights weights) {
+double aiMaterialScore(MatchState game, SeatId seat, AiMaterialWeights weights,
+    {bool fastLegalProbes = false}) {
   if (weights.mobility == 0 &&
       weights.crush == 0 &&
       weights.exposure == 0 &&
@@ -49,9 +49,12 @@ double aiMaterialScore(
     var destinations = 0;
     var crushes = 0;
     for (final direction in game.geometry.directions) {
-      final move = MatchMove.spread(entry.key, direction, const [1]);
-      final next = MatchRules.apply(turn, move);
-      if (next == null) continue;
+      final legal = fastLegalProbes
+          ? MatchRules.canSpreadOne(turn, entry.key, direction)
+          : MatchRules.apply(
+                  turn, MatchMove.spread(entry.key, direction, const [1])) !=
+              null;
+      if (!legal) continue;
       destinations++;
       final target = game.topAt(entry.key.step(direction));
       if (target?.type == PieceType.standing && target!.seat != seat) crushes++;

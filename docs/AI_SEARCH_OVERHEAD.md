@@ -25,6 +25,28 @@ alpha-beta bounds remain bounds. A timeout abandons the incomplete iteration;
 it cannot certify the missing replies. Quiet, non-forced search keeps its beam.
 This is targeted result verification, not the rejected blanket full-width search.
 
+## Remove discarded move applications from evaluation
+
+Material evaluation previously applied a one-stone spread in each direction,
+allocated the preview board and discarded it after checking whether it was null.
+Hard/Expert v3 duels now use `MatchRules.canSpreadOne`, a legality-only query for
+that exact one-top-stone/one-final-drop case. Other profiles keep their existing
+probe path. The move transformer and adjudicator are unchanged. Differential
+checks compare the query and every material score with canonical application
+across both geometries, every supported size, two-to-four seats, opening/terminal
+states and wall/capstone rules.
+
+Search-local positions also wrap their freshly created private map without a
+second map copy. Changed stacks remain immutable copies, and an alias regression
+verifies that mutating the caller's supplied map/list cannot alter the position.
+
+A sequential native benchmark covered 38 Square-5/Hex-2 replay positions and
+7,600 complete static/material evaluations per arm. Canonical probes took
+404,559 microseconds and allocation-free probes 99,708 (4.06×), with identical
+checksums. The transition microbenchmark checked 57,992 transitions per arm with
+matching checksums. These measure evaluator/transition cost, not playing strength
+or production latency; exact-source release gates still qualify publication.
+
 ## Preserve the existing search and release contracts
 
 Strategic refinement also reuses the existing immutable-stack position and exact
@@ -50,7 +72,11 @@ matchups passed 6–4, but CI Expert/Hard tied 5–5. Their first differing deci
 in the changed-outcome game was Expert at ply 39: native completed four plies,
 CI only two, and CI returned after 2703 ms of its 5000 ms total. The strategic
 allocation change addresses this lost completed iteration without increasing
-the total thinking target. Those earlier runs do not qualify the revised source.
+the total thinking target. That candidate (`1a44217`) passed locally 7–3 but
+again tied 5–5 in CI: its changed-outcome games first diverged at Expert ply 23
+(four completed plies locally, two in CI) and ply 7 (six locally, four in CI).
+These traces motivated the allocation-free evaluation work above. Those earlier
+runs do not qualify the revised source.
 
 Correctness checks include canonical transitions/immutability, exact winning-move
 membership, the independently refuted mate regression, cancellation, draw

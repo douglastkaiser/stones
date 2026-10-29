@@ -53,7 +53,10 @@ void main() {
     });
     final fast = AiDuelPosition.from(original);
     final raw = [const Stone(SeatId.charcoal, PieceType.flat)];
-    final next = fast.copyWith(board: {...fast.board, const Cell(1, 1): raw});
+    final supplied = {...fast.board, const Cell(1, 1): raw};
+    final next = fast.copyWith(board: supplied);
+    supplied.clear();
+    expect(next.board.length, 2);
     expect(
         identical(next.board[const Cell(0, 0)], fast.board[const Cell(0, 0)]),
         isTrue);

@@ -5,6 +5,25 @@ import 'match_state.dart';
 
 /// One atomic move transformer for both shapes and every supported seat count.
 class MatchRules {
+  /// Legality-only query for one top stone and one final drop. No board is built.
+  /// The full transformer remains authoritative; differential tests cover this
+  /// hot-path query on both geometries, including walls and capstones.
+  static bool canSpreadOne(MatchState game, Cell from, Step direction) {
+    if (game.finished ||
+        game.opening ||
+        !game.geometry.contains(from) ||
+        !game.geometry.directions.contains(direction)) {
+      return false;
+    }
+    final top = game.topAt(from);
+    if (top == null || top.seat != game.current) return false;
+    final target = from.step(direction);
+    if (!game.geometry.contains(target)) return false;
+    final covered = game.topAt(target);
+    return covered?.type != PieceType.capstone &&
+        (covered?.type != PieceType.standing || top.type == PieceType.capstone);
+  }
+
   /// Pure preview/application. Does not advance turns or resolve outcomes.
   static MatchState? apply(MatchState game, MatchMove move) {
     if (game.finished || !game.geometry.contains(move.from)) return null;

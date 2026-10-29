@@ -1086,7 +1086,9 @@ class MatchAI {
     final values = _position(game, endgame: level.index >= BotLevel.hard.index);
     if (_v3(game) && !game.finished) {
       for (final id in game.config.ids) {
-        values[id] = values[id]! + aiMaterialScore(game, id, materialWeights);
+        values[id] = values[id]! +
+            aiMaterialScore(game, id, materialWeights,
+                fastLegalProbes: _safetyFor(game));
         if (game.config.seats.length == 2 && roadResilienceWeight != 0) {
           values[id] = values[id]! +
               AiRoadResilience.measure(game, id).score(roadResilienceWeight);

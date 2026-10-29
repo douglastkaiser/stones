@@ -16,8 +16,13 @@ can return early. Hard, saved engines and multiplayer retain their allocations.
 The overhead-only and depth-ordering candidates failed required groups; the
 original Expert widening schedule is restored. The new regression verifies the
 actual false-mate counterexample against an independent exhaustive solver.
-Completed-iteration diagnostics support replay analysis. Exact-source CI and
-hosted verification, rather than earlier candidate results, qualify publication.
+Completed-iteration diagnostics support replay analysis. Canonically equivalent
+allocation-free single-stone material probes and an owned immutable board-map
+view remove discarded move previews and a redundant map copy. Differential rules,
+score and aliasing regressions verify equivalence; a 38-position native evaluation
+benchmark measured 4.06× speedup with unchanged scores. This is cost evidence,
+not strength qualification. Exact-source CI and hosted verification, rather than
+earlier candidate results, qualify publication.
 
 ## 2026-10-28 targeted duel repair — selected native validation
 
