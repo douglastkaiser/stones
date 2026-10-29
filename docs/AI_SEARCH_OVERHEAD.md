@@ -93,8 +93,11 @@ The optimized source passed all five other representative groups, but Square
 Expert/Hard tied 5–5 in both the first optimized run and `d781e35`; all other
 sixteen jobs passed on the latter. No release was published and that failed run
 was not retried. Repeating the depth-before-width experiment after optimization
-was also rejected locally: one win, four losses and one draw in six games left
-no possible required majority, even if all remaining games won.
+was stopped locally after one win, four losses and one draw in six games,
+an unpromising interim result. The remaining four games were not played, so
+this does not establish a completed strength-gate failure. The unchanged gate
+excludes draws from its decisive-game win share; the incomplete experiment was
+not mathematically eliminated.
 
 An Expert four-reply candidate (`9589308`) was rejected after Hex Expert/Hard
 again tied 5–5 in CI. Its local Square trial stopped at two wins and four losses
