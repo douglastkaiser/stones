@@ -233,38 +233,11 @@ class MatchController extends StateNotifier<MatchSession> {
     final epoch = _epoch;
     final snapshot = await storage.read();
     if (snapshot == null || !mounted || epoch != _epoch) return false;
-    final config =
-        MatchConfig.fromMap(Map<String, dynamic>.from(snapshot['config']));
-    if (config.online) {
-      throw const FormatException('Online games resume through their room');
-    }
-    var game = MatchState.initial(config);
+    final game = replayLocalMatch(snapshot);
+    final config = game.config;
     final records = (snapshot['moves'] as List)
         .map((m) => Map<String, dynamic>.from(m))
         .toList();
-    for (final record in records) {
-      if (record['seat'] != game.current.name) {
-        throw const FormatException('Saved turn mismatch');
-      }
-      final next = MatchRules.play(game, MatchMove.fromMap(record));
-      if (next == null) throw const FormatException('Saved move is illegal');
-      game = next;
-    }
-    if (snapshot['result'] != null) {
-      final result = Map<String, dynamic>.from(snapshot['result']);
-      final reason = ResultReason.values.byName(result['reason'] as String);
-      if (game.finished ||
-          ![ResultReason.time, ResultReason.resignation, ResultReason.abandoned]
-              .contains(reason)) {
-        throw const FormatException('Invalid saved termination');
-      }
-      game = game.copyWith(
-          result: MatchResult(
-              result['winner'] == null
-                  ? null
-                  : SeatId.values.byName(result['winner'] as String),
-              reason));
-    }
     _localMoves = records;
     final clock = snapshot['clock'] == null
         ? null

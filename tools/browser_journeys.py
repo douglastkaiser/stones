@@ -224,6 +224,8 @@ def main():
 
         host.get_by_role('button', name=re.compile('^Square')).tap()
         click(host, 'Online friend game')
+        host.screenshot(path=str(EVIDENCE / 'online-setup-phone.png'))
+        click(host, 'Create room')
         code_label = re.compile(r'^Room U[A-Z]{6}$')
         room_code = host.get_by_label(code_label).or_(host.get_by_text(code_label)).first
         expect(room_code).to_be_visible(timeout=30000)
@@ -254,6 +256,8 @@ def main():
         click(host, 'Back')
         host.get_by_role('button', name=re.compile('^Square')).tap()
         click(host, 'Play the computer')
+        host.screenshot(path=str(EVIDENCE / 'computer-setup-phone.png'))
+        click(host, 'Start game')
         expect(cell(host, 0, 0)).to_be_visible()
         place(host, 0, 0)
         expect(host.get_by_role('button', name=re.compile(r'^Cell .* flat,')))\

@@ -92,6 +92,7 @@ def main():
             ready(host)
             tap(host, 'Square')
             tap(host, 'Online friend game')
+            tap(host, 'Create room')
             pattern = re.compile('^Room U[A-Z]{6}$')
             code_node = host.get_by_label(pattern).or_(host.get_by_text(pattern)).first
             expect(code_node).to_be_visible(timeout=30000)

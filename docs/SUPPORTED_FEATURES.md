@@ -66,19 +66,32 @@ History: `cf126b9`, `87f40d9`, `47191d3`, `7f6d298`, `45d2946`, `2df1b28`.
 
 - **SETUP-01 · Quick starts:** start coached Square practice, ordinary computer play,
   friends on one device, or an online invitation from the game menu without
-  having to understand every advanced setting. Learn with the computer explicitly
-  identifies its Court Mode coaching, Tak! warnings and takebacks.
+  having to understand every advanced setting. Computer play and coached practice
+  open a compact popup with board size and Easy/Medium/Hard/Expert difficulty;
+  the selected level applies to every computer in that preset. Online friend
+  games prompt for board size and two to four total players, with one local host
+  and the remaining seats online. Cancelling a popup leaves the game/save intact
+  and does not authenticate or create a room. Learn with the computer explicitly
+  identifies its Court Mode coaching, Tak! warnings and takebacks. See the
+  [quick-start follow-up](PLAYER_EXPERIENCE.md#quick-start-follow-up-2026-10-29).
 - **SETUP-02 · Square and Hex:** choose either shape; Square defaults to an untimed 5×5
   duel and Hex to an untimed radius-2 three-player variant. Standard Tak and
   additional variants remain distinguishable.
 - **SETUP-03 · Custom tables:** configure Square sizes 3–8 or Hex radii 2–4, two to four
   seats, starter, and supported clock/practice options. Saved setup preferences
-  survive returning to Customize.
+  survive returning to Customize. Quick-start popups reuse Customize's board-size
+  and difficulty controls; individual AI levels and mixed seats remain available
+  in the full editor.
 - **SETUP-04 · Seat choices:** use local humans, remote humans and individually configured
   AI seats, including mixed tables and AI-only observation. Setup makes who will
   control each seat clear.
-- **SETUP-05 · Protect an existing game:** starting or joining another game asks before
-  replacement; cancelling or a failed join preserves the active game and save.
+- **SETUP-05 · Protect an existing game:** starting a local game asks before replacing
+  a saved local match with confirmed moves that has not ended. Empty boards and
+  completed games, including road/flat wins, draws and explicit endings, start
+  without that prompt even after restart. The guard uses the same validated
+  replay as local recovery, so it recognizes results reconstructed from moves.
+  Switching to another online room retains its separate current-session prompt;
+  cancelling either confirmation or a failed join preserves the game and save.
 
 - **SETUP-06 · Identity and seat order:** human color/seat, starter and AI difficulty
   remain distinct choices. Adding/removing a setup seat or changing shape retains

@@ -6,6 +6,8 @@ import 'match_provider.dart';
 import 'match_screen.dart';
 import 'match_setup_form.dart';
 import 'match_preset.dart';
+import 'match_preset_dialog.dart';
+import 'match_storage.dart';
 import 'room_navigation.dart';
 import '../theme/tavern_theme.dart';
 
@@ -37,6 +39,17 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
             : 0);
   }
 
+  Future<void> _startPreset(MatchPreset preset) async {
+    if (_busy) return;
+    final config = preset == MatchPreset.sameDevice
+        ? preset.configuration(widget.shape)
+        : await showDialog<MatchConfig>(
+            context: context,
+            builder: (_) =>
+                MatchPresetDialog(preset: preset, shape: widget.shape));
+    if (config != null && mounted) await _start(config);
+  }
+
   Future<void> _start(MatchConfig config) async {
     if (_busy) return;
     setState(() {
@@ -63,13 +76,9 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
   Future<bool> _allowNewLocal(MatchConfig config) async {
     if (config.online) return true;
     final saved = await ref.read(localMatchStorageProvider).read();
-    if (saved == null ||
-        (saved['moves'] as List).isEmpty ||
-        saved['result'] != null) {
-      return true;
-    }
-    final active = ref.read(matchProvider);
-    if (active.id == saved['id'] && active.game?.finished == true) return true;
+    if (saved == null) return true;
+    final game = replayLocalMatch(saved);
+    if (game.finished || game.ply == 0) return true;
     if (!mounted) return false;
     return await showDialog<bool>(
             context: context,
@@ -135,9 +144,7 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
                                               : const Icon(Icons.chevron_right),
                                           onTap: _busy
                                               ? null
-                                              : () => _start(
-                                                  preset.configuration(
-                                                      widget.shape)))),
+                                              : () => _startPreset(preset))),
                                 if (_busy) const Text('Starting…'),
                                 if (_error != null)
                                   Text(_error!, semanticsLabel: _error),

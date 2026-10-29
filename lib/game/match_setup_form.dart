@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'match_config.dart';
+import 'match_setup_fields.dart';
 import 'match_state.dart';
 
 /// The same seat editor for either shape; local/AI/online is derived from rows.
@@ -59,21 +60,10 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                     onSelected: (_) => _update(_config.copyWith(shape: shape))),
             ]),
             const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-                isExpanded: true,
-                key: ValueKey('size-${_config.shape.name}-${_config.size}'),
-                initialValue: _config.size,
-                decoration: const InputDecoration(labelText: 'Board size'),
-                items: MatchConfig.sizesFor(_config.shape)
-                    .map((size) => DropdownMenuItem(
-                        value: size,
-                        child: Text(_config.shape == BoardShape.square
-                            ? '$size × $size'
-                            : 'Radius $size · ${1 + 3 * size * (size + 1)} cells')))
-                    .toList(),
-                onChanged: (size) {
-                  if (size != null) _update(_config.copyWith(size: size));
-                }),
+            MatchBoardSizeField(
+                shape: _config.shape,
+                size: _config.size,
+                onChanged: (size) => _update(_config.copyWith(size: size))),
             const SizedBox(height: 12),
             Text('${supply.stones} stones + ${supply.caps} caps per player. '
                 '${_config.profile == RulesProfile.standardTak ? 'Standard Tak.' : 'Stones variant: every player shares all opposite-side goals.'}'),
@@ -128,25 +118,12 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                             }),
                         if (seat.control == SeatControl.ai) ...[
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<BotLevel>(
-                              isExpanded: true,
+                          MatchBotLevelField(
                               key: ValueKey(
                                   'level-${seat.id.name}-${seat.level.name}'),
-                              initialValue: seat.level,
-                              decoration: InputDecoration(
-                                  labelText: '${seat.id.label} difficulty'),
-                              items: BotLevel.values
-                                  .map((level) => DropdownMenuItem(
-                                      value: level,
-                                      child: Text(switch (level) {
-                                        BotLevel.easy => 'Easy',
-                                        BotLevel.medium => 'Medium',
-                                        BotLevel.hard => 'Hard',
-                                        BotLevel.expert => 'Expert',
-                                      })))
-                                  .toList(),
+                              level: seat.level,
+                              label: '${seat.id.label} difficulty',
                               onChanged: (level) {
-                                if (level == null) return;
                                 _update(_config.copyWith(
                                     seats: _config.seats
                                         .map((s) => s.id == seat.id

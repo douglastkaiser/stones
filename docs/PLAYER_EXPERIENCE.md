@@ -6,11 +6,13 @@ this record does not claim a deployment or a Play release. See
 
 ## The first ten minutes
 
-Square setup offers four immediate starts: coached practice, ordinary computer
-play, friends on one device, and an online invitation. The presets use an untimed
-5×5 two-player game. Hex remains visible with an untimed radius-2 three-player
-variant. Customize retains the full seat, size, difficulty and clock editor and
-its saved preferences. Starting a local game still checks for an existing save.
+Square setup offers coached practice, ordinary computer play, friends on one
+device, and an online invitation. Computer/practice quick starts prompt for board
+size and difficulty; online creation prompts for size and total players. The
+presets default to an untimed 5×5 two-player game. Hex remains visible with an
+untimed radius-2 three-player variant. Customize retains the full seat, size,
+difficulty and clock editor and its saved preferences. Starting a local game
+checks for an unfinished save with confirmed moves.
 
 Learn presents a nine-lesson Square fundamentals path alongside the full catalog.
 Existing tutorial IDs and prerequisites are preserved. A successful lesson saves
@@ -29,6 +31,41 @@ receives no personal rating or win. Duplicate and interrupted settlement use
 the same immutable receipts as human games. See `SKILL_RATINGS.md` for the
 reporter authorization and repeated-AI contract. This requires publishing the
 updated backend rules before the client release.
+
+## Quick-start follow-up, 2026-10-29
+
+The two computer presets open one reusable popup, sharing board-size and
+difficulty fields with Customize. Easy remains the initial difficulty; all four
+levels can be selected before starting. On Hex, the selected difficulty applies
+to both default computer seats. Online friend creation uses the same popup and
+board-size field, with a two-to-four-player selector; the host is local and every
+other seat needs an invitation. Choices only take effect on Start game/Create
+room. Same-device quick start and the full custom seat editor remain available.
+
+The local replacement guard and recovery share `replayLocalMatch`. Road and flat
+results are derived from the saved moves, while resignation/time/abandonment use
+their explicit saved termination. A finished save no longer triggers replacement
+confirmation when its controller has been cleared or after app restart. An
+unfinished save with confirmed moves still requires confirmation; cancelling
+retains it. Existing save formats and result storage are unchanged.
+
+Local verification uses Flutter 3.47.7 / Dart 3.13.5 on Linux. All 1,953 Flutter
+tests pass, including the 38 focused setup/first-game/Court checks; fatal-info
+analysis also passes. Coverage includes
+both shapes, all four difficulty choices, online counts two through four,
+cancelling without saving or authenticating, selected configurations reaching
+the match controller, cold saved road/flat wins and draws, explicit endings,
+saved custom size/clock settings, mixed-seat editing, and popup layout at
+320×640 with 200% text. A local release web build and a Chromium 154.0.8037.57
+smoke check at 390×844 also pass: the three popups render, a cold saved road permits a fresh
+game without replacement confirmation, and declining replacement preserves an
+unfinished game's saved moves. External Firebase SDK requests were blocked in
+that local browser probe, producing expected import errors; it qualifies local
+UI and storage behavior only. The emulator browser/chat journeys now confirm
+the new popup before starting play; their full multi-client runs were not rerun
+locally for this follow-up. Physical-device and independent live-online
+acceptance remain separate qualification. Publication and hosted verification
+are tracked by the repository's [Deploy Main runs](https://github.com/douglastkaiser/stones/actions/workflows/deploy-main.yml).
 
 ## Local completed-game contract
 
