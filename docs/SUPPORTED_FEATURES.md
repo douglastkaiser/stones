@@ -219,7 +219,10 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
   200/500/2000/5000 ms; the original strategic allocation and all multiplayer/
   saved-v1/v2 budgets remain unchanged. Hard/Expert v3 duel strategic search
   reuses immutable-stack sharing and exact component-based win detection from
-  the safety search to reduce overhead within those same targets; see the
+  the safety search to reduce overhead within those same targets. Expert completes
+  its extra round at 12 roots before widening to 16, preserving a deeper completed
+  result if widening times out. Saved engines and multiplayer retain their prior
+  schedule; see the
   [search overhead repair](AI_SEARCH_OVERHEAD.md). Connectivity orders exact proof work;
   selected native Square-5/Hex-2 Hard/Expert reference evidence supports the
   repair. Prior local representative tier runs passed; current-source CI must

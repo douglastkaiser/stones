@@ -142,6 +142,29 @@ void main() {
     expect(stats.alternatives.length, 16);
   });
 
+  test('Expert completes its extra depth before widening the root set',
+      () async {
+    final game = MatchState.initial(MatchConfig(
+        shape: BoardShape.square,
+        size: 3,
+        seats: const [
+          SeatConfig(SeatId.ivory),
+          SeatConfig(SeatId.charcoal)
+        ])).copyWith(ply: 2);
+    late MatchSearchStats stats;
+    final move =
+        await GenerousAI(BotLevel.expert, onSearchComplete: (s) => stats = s)
+            .choose(game);
+    expect(MatchRules.play(game, move!), isNotNull);
+    expect(stats.timedOut, isFalse);
+    expect(stats.completedIterations, [
+      {'depth': 2, 'rootWidth': 12},
+      {'depth': 4, 'rootWidth': 12},
+      {'depth': 6, 'rootWidth': 12},
+      {'depth': 6, 'rootWidth': 16},
+    ]);
+  });
+
   test(
       'an unanswerable rival fork at the horizon is a forced loss, not a quiet position',
       () async {

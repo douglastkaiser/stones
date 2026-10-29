@@ -9,6 +9,12 @@ paths. Thinking limits, evaluation, pruning targets and every release gate remai
 unchanged. Timed completion and decisions can change; native pilot outcomes do
 not replace exact-source CI and hosted verification.
 
+The overhead-only source passed Hex but failed Square Expert/Hard. The follow-up
+changes two scheduling expressions so Expert completes its extra depth at Hard's
+12-root width before widening to 16 roots. This preserves both time limits and
+final depth/width targets. Completed-iteration diagnostics and a search regression
+verify the depth-first schedule; every required group must qualify the new source.
+
 ## 2026-10-28 targeted duel repair — selected native validation
 
 [The tactical repair](AI_TACTICAL_REPAIR.md) preserves the original strategic

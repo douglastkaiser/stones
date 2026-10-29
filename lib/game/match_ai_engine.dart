@@ -35,6 +35,7 @@ class MatchSearchStats {
   String? timeoutStage;
   int? decisionSeed;
   List<Map<String, Object?>> alternatives = const [];
+  final completedIterations = <Map<String, int>>[];
   String searchModel = 'selective';
   int exhaustiveDepth = 0, nodes = 0, generatedMoves = 0, evaluations = 0;
   int cutoffs = 0, extensionNodes = 0, tacticalChecks = 0;
@@ -150,13 +151,12 @@ class MatchAI {
   int get branching => [4, 8, 12, 16][level.index];
   int _branching(MatchState game) =>
       game.config.seats.length > 2 ? [4, 8, 8, 10][level.index] : branching;
-  // Establish the same completed lower-depth result before adding width or
-  // depth. Otherwise additional root moves can make a stronger tier
-  // fall back to the weaker, selective baseline more often.
+  // Establish Hard's width, then complete Expert's extra depth before widening.
+  // A wider shallow iteration must not consume the deeper iteration's budget.
   int _rootWidth(MatchState game, int stage) => _v3(game) &&
           game.config.seats.length == 2 &&
           level == BotLevel.expert &&
-          stage <= 2
+          stage <= depth
       ? 12
       : _branching(game);
   Duration get thinkingLimit =>
@@ -282,7 +282,7 @@ class MatchAI {
         for (var iteration = 1;
             iteration <= targetDepth + (widenDuel ? 1 : 0);
             iteration++) {
-          final rounds = widenDuel && iteration > 2 ? iteration - 1 : iteration;
+          final rounds = math.min(iteration, targetDepth);
           final plies =
               roundSearch ? rounds * game.config.seats.length : rounds;
           final beam = roundSearch ? (level == BotLevel.medium ? 2 : 3) : null;
@@ -335,6 +335,8 @@ class MatchAI {
                 : iterationMove;
             stats.completedDepth = plies;
             stats.completedRootWidth = selected.length;
+            stats.completedIterations
+                .add({'depth': plies, 'rootWidth': selected.length});
             if (roundSearch) stats.completedRounds = rounds;
             completedScores = iterationScores;
           }
