@@ -175,3 +175,30 @@ development. Its generous test-only limit isolates that branch; production
 thinking targets, search depth/width schedules and all release gates remain.
 All 137 focused large-board/choice/round/safety tests and strict analysis passed
 locally. Exact-source CI still must pass twice before deployment.
+
+## Search path lookup overhead
+
+The `2aedb85` run passed all other 16 jobs, including the corrected WebKit
+account fixture, but Square Expert finished 5–5. Comparison with the passing
+`c61ac43` second attempt found identical openings in all ten games. Two changed
+losses first diverged at plies 13 and 9: Expert completed four plies before its
+deadline where the prior run completed six. The opening stability policy did
+not change those moves. These observations identify deadline sensitivity, not
+a reason to retry a failed strength gate.
+
+Search-position path evaluation now fills empty-cell costs once and reads each
+occupied stack top once through the cached geometry index. Previously it looked
+up every cell and repeatedly looked up occupied tops. Canonical positions retain
+the original calculation. Cost values, path traversal, evaluation weights, move
+policies, search schedules and thinking limits are unchanged.
+
+An AOT path-cost microbenchmark used 37 midgame positions from the actual Square
+and Hex CI replays, with 74,000 evaluations per arm per run. Alternating
+canonical/fast/fast/canonical runs took 495,799 / 380,980 / 390,269 / 506,076
+microseconds, respectively: about 23% less time for this calculation, with all
+checksums exactly 175,000. This is not a whole-engine speed claim. Differential
+tests compare every seat's path cost and the full evaluation on legal replays
+across both geometries, multiple board sizes and two-to-four-seat tables.
+All 141 focused position/choice/round/safety/large-board tests and strict analysis
+passed locally. Exact-source CI must still pass twice; this measurement does
+not qualify or publish the release.

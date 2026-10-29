@@ -1250,18 +1250,34 @@ class MatchAI {
   /// Cache topology, not positions: all moves in a search share one geometry.
   static double pathCost(MatchState game, SeatId seat) {
     final graph = _pathGraphs[game.geometry] ??= _PathGraph(game.geometry);
-    final costs = [
-      for (final cell in game.geometry.cells)
-        if (game.topAt(cell) == null)
-          1
-        else if (game.topAt(cell)!.seat == seat &&
-            game.topAt(cell)!.type != PieceType.standing)
-          0
-        else if (game.topAt(cell)!.type == PieceType.flat)
-          3
-        else
-          6
-    ];
+    final List<int> costs;
+    if (game is AiDuelPosition) {
+      // Search boards are immutable. Empty cells already cost one; index each
+      // occupied top once instead of repeatedly hashing every board lookup.
+      costs = List<int>.filled(game.geometry.cells.length, 1);
+      for (final entry in game.board.entries) {
+        final top = entry.value.last;
+        costs[graph.indices[entry.key]!] =
+            top.seat == seat && top.type != PieceType.standing
+                ? 0
+                : top.type == PieceType.flat
+                    ? 3
+                    : 6;
+      }
+    } else {
+      costs = [
+        for (final cell in game.geometry.cells)
+          if (game.topAt(cell) == null)
+            1
+          else if (game.topAt(cell)!.seat == seat &&
+              game.topAt(cell)!.type != PieceType.standing)
+            0
+          else if (game.topAt(cell)!.type == PieceType.flat)
+            3
+          else
+            6
+      ];
+    }
     final axes = game.config.profile == RulesProfile.legacyHex
         ? [seat.index]
         : List.generate(game.geometry.axisCount, (i) => i);
@@ -1301,6 +1317,7 @@ class _PathGraph {
     final indices = {
       for (var i = 0; i < geometry.cells.length; i++) geometry.cells[i]: i
     };
+    this.indices = indices;
     neighbors = [
       for (final cell in geometry.cells)
         [
@@ -1320,6 +1337,7 @@ class _PathGraph {
         [for (final cell in geometry.cells) geometry.boundary(cell, axis, true)]
     ];
   }
+  late final Map<Cell, int> indices;
   late final List<List<int>> neighbors, starts;
   late final List<List<bool>> ends;
 }

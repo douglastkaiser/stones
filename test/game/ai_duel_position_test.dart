@@ -3,12 +3,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stones/game/ai_duel_position.dart';
 import 'package:stones/game/ai_position.dart';
 import 'package:stones/game/board_geometry.dart';
+import 'package:stones/game/match_ai_engine.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/piece.dart';
 
 void main() {
+  test('search path costs retain canonical scores across board sizes', () {
+    for (final shape in BoardShape.values) {
+      for (final size in shape == BoardShape.square ? [3, 5, 8] : [2, 3, 4]) {
+        for (final seats in [2, 3, 4]) {
+          final cfg = MatchConfig(
+              shape: shape,
+              size: size,
+              seats: SeatId.values.take(seats).map(SeatConfig.new).toList());
+          var game = MatchState.initial(cfg);
+          final random = Random(8710 + size * 10 + seats);
+          for (var ply = 0; ply < 28 && !game.finished; ply++) {
+            final fast = AiDuelPosition.from(game);
+            for (final id in cfg.ids) {
+              expect(MatchAI.pathCost(fast, id), MatchAI.pathCost(game, id));
+            }
+            expect(MatchAI.evaluate(fast), MatchAI.evaluate(game));
+            final moves = MatchRules.legalMoves(game).toList();
+            game = MatchRules.play(game, moves[random.nextInt(moves.length)])!;
+          }
+        }
+      }
+    }
+  });
+
   for (final shape in BoardShape.values) {
     test('$shape search positions preserve every canonical legal transition',
         () {
