@@ -52,7 +52,10 @@ its bounded AI restart wait expires under parallel load; the isolated retry
 passes in two seconds. This is not a clean full-suite claim. An earlier draft run
 also failed the four-seat Hex AI trial's 150-move completion check; that trial
 passes on retry, on untouched baseline `2da3ff8`, and in the fresh final suite.
-No AI or legacy Hex implementation was changed for these checks.
+No AI or legacy Hex implementation was changed for these checks. Release-tool
+qualification also permits the three exact reviewed Court setup changes in the
+live config guard; all other config bytes and archived AI reference bytes remain
+pinned, with negative regressions for clock, engine, Court-policy and wire drift.
 Strict analysis reports no issues. The release web build and final
 emulator-only web build pass; the existing Cupertino font warning remains, and
 the emulator build's default Wasm dry-run reports existing secure-storage limits.

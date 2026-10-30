@@ -22,6 +22,30 @@ class FrozenReferenceTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Canonical game rules changed"):
                 verify_shared_contract(rules)
 
+    def test_only_reviewed_court_setup_changes_can_differ_from_frozen_config(self):
+        verify_shared_contract()
+        manifest = json.loads(MANIFEST.read_text())
+        archived = next(source["snapshot"] for source in manifest["sources"]
+                        if source["source"] == "lib/game/match_config.dart")
+        verify_shared_contract(config_path=Path(archived))
+        original = Path("lib/game/match_config.dart").read_text()
+        changes = (
+            ("clockSeconds > 59940", "clockSeconds > 60000"),
+            ("currentAiEngine = 'shared-search-v3'", "currentAiEngine = 'shared-search-v2'"),
+            ("bool get courtEligible => seats.any((seat) => seat.control != SeatControl.ai);",
+             "bool get courtEligible => true;"),
+            ("newSeats.any((s) => s.control != SeatControl.ai)", "newSeats.isNotEmpty"),
+            ("static const wireVersion = 1", "static const wireVersion = 2"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory) / "match_config.dart"
+            for before, after in changes:
+                with self.subTest(change=before):
+                    self.assertIn(before, original)
+                    candidate.write_text(original.replace(before, after, 1))
+                    with self.assertRaisesRegex(ValueError, "Shared reference game contract changed"):
+                        verify_shared_contract(config_path=candidate)
+
     def test_archived_dependencies_are_exact_original_bytes(self):
         manifest = json.loads(MANIFEST.read_text())
         for source in manifest["sources"]:

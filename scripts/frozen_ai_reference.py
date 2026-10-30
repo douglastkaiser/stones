@@ -14,10 +14,38 @@ SHARED_CONTRACT = {
 }
 
 
-def verify_shared_contract(rules_path=Path("lib/game/match_rules.dart")):
+# These exact setup-only changes broaden Court eligibility. Historical AI
+# comparisons use court=False; keep the archived package and every other config
+# byte pinned, including clocks, rules profiles, serialization and engine IDs.
+COURT_CONFIG_CHANGES = (
+    ("    if (court && !courtEligible) {\n"
+     "      throw ArgumentError('Court Mode requires a human player');\n",
+     "    if (court &&\n"
+     "        (online ||\n"
+     "            !seats.any((s) => s.control == SeatControl.ai) ||\n"
+     "            !seats.any((s) => s.control == SeatControl.localHuman))) {\n"
+     "      throw ArgumentError('Court Mode requires offline humans and AI');\n"),
+    ("  bool get courtEligible => seats.any((seat) => seat.control != SeatControl.ai);\n", ""),
+    ("        court: (court ?? this.court) &&\n"
+     "            newSeats.any((s) => s.control != SeatControl.ai),\n",
+     "        court: (court ?? this.court) &&\n"
+     "            !newSeats.any((s) => s.control == SeatControl.onlineHuman) &&\n"
+     "            newSeats.any((s) => s.control == SeatControl.ai) &&\n"
+     "            newSeats.any((s) => s.control == SeatControl.localHuman),\n"),
+)
+
+
+def verify_shared_contract(rules_path=Path("lib/game/match_rules.dart"), *,
+                           config_path=Path("lib/game/match_config.dart")):
     sources = {source["source"]: source for source in json.loads(MANIFEST.read_text())["sources"]}
     for name in SHARED_CONTRACT:
-        if hashlib.sha256(Path(name).read_bytes()).hexdigest() != sources[name]["sha256"]:
+        data = Path(config_path if name == "lib/game/match_config.dart" else name).read_bytes()
+        if name == "lib/game/match_config.dart":
+            text = data.decode()
+            for current, archived in COURT_CONFIG_CHANGES:
+                text = text.replace(current, archived)
+            data = text.encode()
+        if hashlib.sha256(data).hexdigest() != sources[name]["sha256"]:
             raise ValueError(f"Shared reference game contract changed: {name}")
     rules = Path(rules_path).read_text()
     # The new, separately tested query is additive. Every byte of the original
