@@ -1,5 +1,21 @@
 # Current release qualification
 
+## Court application publication, 2026-10-30
+
+[Stones](https://www.douglastkaiser.com/stones/) serves Court with friends from
+`7a60504`. Two consecutive full CI attempts each passed 1,981 Flutter tests,
+80 release-tool tests, strict analysis and all build/browser jobs; rules passed
+all 158 checks. Deploy Main published the exact second artifact and all three
+hosted verification jobs passed. A public-site Chromium phone-viewport trial
+also passed same-device setup, human-only Tak! warnings, takeback and reload/resume.
+
+Signed Android **1.1.0 (527)** from the same source is built and independently
+verified. It has not been submitted to Play: this workspace has no connected
+Play Console access. Physical devices and real Google credential exchange remain
+unqualified. See the [release, artifacts and rollback record](releases/COURT_20261030.md)
+and [machine-readable evidence](qa/court-release-2026-10-30.json).
+Feature IDs: SETUP-01/03, LEARN-02/08, SAVE-08, ONLINE-05/08/09/10, COMPAT-02.
+
 ## Court backend publication, 2026-10-30
 
 The owner authorized Firestore publication and completed official CLI sign-in.
@@ -13,9 +29,9 @@ ONLINE-09 and ONLINE-10 now record this published backend capability.
 
 See [publication and rollback details](releases/FIREBASE_20261030_COURT.md) and
 [the evidence record](qa/firestore-court-publication-2026-10-30.json).
-The Court application changes remain local source: this task published no web or
-Android build and performed no production game/account/rating writes. Hosted
-Court user journeys and physical-device qualification remain separate.
+This backend phase performed no production game/account/rating writes. The
+subsequent [application publication](releases/COURT_20261030.md) records the web
+release and signed Android build separately from physical-device qualification.
 
 ## Quick-start setup and manual AI strength checks, 2026-10-29
 

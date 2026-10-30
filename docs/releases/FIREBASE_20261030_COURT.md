@@ -40,6 +40,7 @@ deploy/test logs and access checks are in the same task directory.
 
 [Machine-readable publication evidence](../qa/firestore-court-publication-2026-10-30.json)
 records hashes, release time and verification outcomes. Feature inventory IDs:
-**ONLINE-09** and **ONLINE-10**. The backend prerequisite is complete; the new
-Court setup and gameplay UI still require an application release. Physical
-Android/iOS and hosted Court user journeys remain unqualified.
+**ONLINE-09** and **ONLINE-10**. The backend prerequisite is complete. The
+subsequent [application publication](COURT_20261030.md) records the verified web
+release, hosted Court trial and signed Android 527 build. Play submission and
+physical Android/iOS qualification remain pending.

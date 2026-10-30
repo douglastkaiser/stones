@@ -18,8 +18,10 @@ explain provenance; the current behavior below takes precedence over an older
 commit's design or an audit's historical status.
 
 The 2026-10-30 [Court with friends follow-up](COURT_MODE.md#court-with-friends-2026-10-30)
-extends the source setup/coaching contract. Its [backend rules are published](releases/FIREBASE_20261030_COURT.md);
-the application UI remains an unpublished source change.
+extends the setup/coaching contract. Its [backend rules are published](releases/FIREBASE_20261030_COURT.md)
+and the [web application is published and verified](releases/COURT_20261030.md)
+from `7a60504`. Signed Android 527 is ready; Play submission and physical-device
+qualification remain pending.
 
 The 2026-10-22 Google sign-in update below extends this baseline; see
 [its implementation and qualification limits](GOOGLE_SIGN_IN_FIX.md).
@@ -450,8 +452,8 @@ History: `9c1114a`, `b81e5a8`, `25888f1`, `603c86d`, `45d2946`, `2651001`,
   reject stale actions even when later play reaches the same move count. A sole
   human's request needs no opponent vote; a retryable Agree action completes an
   interrupted application. New online Court rooms require updated clients. The
-  revised backend rules were published and verified on 2026-10-30; the new client
-  UI still needs an application release. Existing ordinary and
+  revised backend rules and web client were published and verified on 2026-10-30;
+  signed Android 527 is ready, with Play submission pending. Existing ordinary and
   legacy rooms retain their contracts. See [Court audit](COURT_MODE.md),
   `test/game/court_friend_test.dart` and `tools/hex_rules/court_rules.test.mjs`.
 

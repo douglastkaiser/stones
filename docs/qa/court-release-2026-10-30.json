@@ -1,0 +1,239 @@
+{
+  "source": "7a60504a9d53ea51d7d0cd5886a367549fa0fc02",
+  "implementation_commit": "119337bcd208f02803557912af79458571cf0445",
+  "web": {
+    "url": "https://www.douglastkaiser.com/stones/",
+    "status": "published_and_verified",
+    "deploy_run": 41139522290,
+    "verified_by": "2026-10-30T22:41:36Z",
+    "publishing_commit": "40c5f1cffb5f95bb48c55d7dbcf049a2cb90d783",
+    "artifact": {
+      "id": 13018165925,
+      "name": "web-build-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+      "digest": "sha256:584dc23904744e1a1e1a9c6c799aceac8023ff652a601c8a63b3be030890f6e8",
+      "size_in_bytes": 16959334
+    },
+    "hosted_browsers": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "integrity": "passed",
+    "retained_previous_startup_pairs": 2,
+    "court_trial": {
+      "status": "passed",
+      "source": "7a60504a9d53ea51d7d0cd5886a367549fa0fc02",
+      "platform": "Chromium, 390x844 touch viewport",
+      "journeys": [
+        "same-device options",
+        "human-only Court Tak warning",
+        "takeback",
+        "reload and resume"
+      ],
+      "production_account_or_game_writes": false,
+      "page_errors": [],
+      "completed_utc": "2026-10-30T22:41:18.945771+00:00"
+    }
+  },
+  "qualification": {
+    "ci_run": 41135979611,
+    "attempts": [
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "completed_at": "2026-10-30T22:23:04Z",
+        "flutter_tests_passed": 1981,
+        "release_tool_tests_passed": 80,
+        "all_jobs_passed": true
+      },
+      {
+        "attempt": 2,
+        "conclusion": "success",
+        "completed_at": "2026-10-30T22:38:47Z",
+        "flutter_tests_passed": 1981,
+        "release_tool_tests_passed": 80,
+        "all_jobs_passed": true
+      }
+    ],
+    "rules_run": 41135979452,
+    "firestore_authorization_tests_passed": 158,
+    "earlier_local_full_suite": "1980 passed, 1 bounded legacy Hex recovery wait failure; isolated retry passed; retained in Court audit"
+  },
+  "backend": {
+    "publication_record": "firestore-court-publication-2026-10-30.json",
+    "rules_sha256": "4484497f34b7306346a85d8eaaae6bd95a2e0990e8b5ace2b6baecf78a5c20f4",
+    "indexes_sha256": "a1e2148a12658d0475f03f054493f54c9dbf241d1e46004bfd4a83828098aed3",
+    "additional_backend_change_for_app_publication": false
+  },
+  "android": {
+    "workflow_run": 41135991692,
+    "status": "signed_artifacts_verified",
+    "release": {
+      "commit": "7a60504a9d53ea51d7d0cd5886a367549fa0fc02",
+      "version_name": "1.1.0",
+      "version_code": 527,
+      "flutter": "3.47.7",
+      "package": "com.douglastkaiser.stones",
+      "play_games_enabled": false
+    },
+    "bundle": {
+      "bundle_sha256": "d467de4d751aeb9e1bc7a02249801d7a26bd2ac8b518a4e02dabc89a4a5aff39",
+      "signed_entries_verified": 666,
+      "signature": "verified",
+      "upload_certificate_sha256": "FD:BA:27:BE:F8:1C:84:11:96:FA:B7:75:64:24:2F:68:4E:38:55:06:3D:17:91:65:CB:FD:16:BA:E5:94:D5:65"
+    },
+    "downloaded_archives_match_github_digests": true,
+    "all_four_apks_match_signed_ci_report": true,
+    "separate_flutter_tests_passed": 1981,
+    "play_submission": "not_uploaded",
+    "play_access": "No connected Play Console session or publisher credential in this workspace",
+    "last_verified_alpha_code": 503,
+    "artifact_retention_days": 30
+  },
+  "rollback": {
+    "source": "2da3ff8f2ccb8a544c84ecc056ef8d6af63ad8ed",
+    "publishing_commit": "d35bc58ea7dfa30a50422ab3357f9829c1a73ad9",
+    "artifact_id": 13017717288,
+    "retention_days": 90
+  },
+  "artifacts": {
+    "ci": [
+      {
+        "id": 13018925405,
+        "name": "account-chromium-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:e039c64c3150a150af1a48d3c7c6f4d35d55a6e8f7776154f134acba955b4c17",
+        "size_in_bytes": 3818
+      },
+      {
+        "id": 13018745920,
+        "name": "auth-release-webkit-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:269c05289b0a4e39421d06a37544b58edc9799f3f82a18360ca6d71bbc3ed958",
+        "size_in_bytes": 1902
+      },
+      {
+        "id": 13018530768,
+        "name": "account-firefox-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:9b7d081fc6f4464bc41ba60da6ff70494d81266bdb9ca7111436ee7ddd510f84",
+        "size_in_bytes": 3795
+      },
+      {
+        "id": 13018470779,
+        "name": "browser-journeys-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:c689b2d1da709b447a870afc41a21ec696b9c92162e75a6dfd1c93515672e293",
+        "size_in_bytes": 87971567
+      },
+      {
+        "id": 13018421091,
+        "name": "account-webkit-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:3803be80952b4232053706200832e478f34a48e4c1d219b346fd83aaebe02ac7",
+        "size_in_bytes": 3791
+      },
+      {
+        "id": 13018420782,
+        "name": "startup-evidence-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:9af7ba509db197257a01af7487aabdf9df987600675744586fa89845f22fe612",
+        "size_in_bytes": 991303
+      },
+      {
+        "id": 13018246404,
+        "name": "stones-android-debug-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:649a1fc827a89e773564cd403012be1c46b14be2d228adeb29311a8ecb802916",
+        "size_in_bytes": 96415141
+      },
+      {
+        "id": 13018165925,
+        "name": "web-build-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:584dc23904744e1a1e1a9c6c799aceac8023ff652a601c8a63b3be030890f6e8",
+        "size_in_bytes": 16959334
+      },
+      {
+        "id": 13018040512,
+        "name": "coverage-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:981edc57a11fcb615319d2c88c06371565281d173116a6ad7983df72b8b756d7",
+        "size_in_bytes": 50482
+      },
+      {
+        "id": 13017806865,
+        "name": "auth-release-chromium-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:0919df87fa0ad2b90974721d3ee4fc7040e57c662f75f5e45c65be7680cffdbd",
+        "size_in_bytes": 1906
+      },
+      {
+        "id": 13017467207,
+        "name": "auth-release-firefox-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:4cb3965b94e82d0f0ea9ff1bdca04ee5d828b6cd208e2f227e7c9fbc6c2598bd",
+        "size_in_bytes": 1907
+      },
+      {
+        "id": 13017394615,
+        "name": "emulator-build-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-2",
+        "digest": "sha256:8c709569f70b712236c3d4e099f9cecd5fb81d23f19d03040a4ecc591fad477e",
+        "size_in_bytes": 17052919
+      }
+    ],
+    "deploy": [
+      {
+        "id": 13018960699,
+        "name": "hosted-webkit-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-41139522290-1",
+        "digest": "sha256:f9e57c49ce0ddb49365dbb414e748003406bc51d45ba9c1329e8a8cee3ceded2",
+        "size_in_bytes": 1596
+      },
+      {
+        "id": 13018886624,
+        "name": "hosted-chromium-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-41139522290-1",
+        "digest": "sha256:d94042ff6bed641f5d8aac5911747bea03bd66bef76e416f6ed26c6092ac532c",
+        "size_in_bytes": 1623
+      },
+      {
+        "id": 13018127052,
+        "name": "hosted-firefox-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-41139522290-1",
+        "digest": "sha256:9e02625a57421e0d4b790069e08a4618a51ed79f274b3079b33f0916b8cf905c",
+        "size_in_bytes": 1603
+      },
+      {
+        "id": 13017717288,
+        "name": "rollback-7a60504a9d53ea51d7d0cd5886a367549fa0fc02-41139522290-1",
+        "digest": "sha256:50a24d5a0cada9096b24ca2610bdca53a603da2586b8e92d48061d7ae2d9d8e9",
+        "size_in_bytes": 16956680
+      }
+    ],
+    "android": [
+      {
+        "id": 13017069584,
+        "name": "stones-android-report-527-7a60504",
+        "digest": "sha256:0d8a8d61552d8aa1e5b00c97413e500ce4fb662fd98d9a22ca730b839501db02",
+        "size_in_bytes": 642
+      },
+      {
+        "id": 13017054652,
+        "name": "stones-play-bundle-527-7a60504",
+        "digest": "sha256:1018c8343b932a80450c8177e3c98cabf11755d9c7134340fe76d20234a8fcb0",
+        "size_in_bytes": 73072941
+      },
+      {
+        "id": 13016439920,
+        "name": "stones-android-apks-527-7a60504",
+        "digest": "sha256:0f29c1da439fdb48425058fe0423e0f663cc720ef3c9d57e48e31473cdaefbe2",
+        "size_in_bytes": 89333262
+      }
+    ]
+  },
+  "limits": [
+    "Physical Android/iOS qualification pending",
+    "Real Google credential exchange unverified",
+    "Online Court journeys qualified on demo emulators; no production game writes",
+    "AI tier-strength acceptance is separate from ordinary release CI"
+  ],
+  "inventory_ids": [
+    "SETUP-01",
+    "SETUP-03",
+    "LEARN-02",
+    "LEARN-08",
+    "SAVE-08",
+    "ONLINE-05",
+    "ONLINE-08",
+    "ONLINE-09",
+    "ONLINE-10",
+    "COMPAT-02"
+  ]
+}

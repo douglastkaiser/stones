@@ -36,7 +36,8 @@ skill settlements, including attempts to submit an unassisted configuration
 against a Court room. Previously online Court was excluded at room creation.
 New online Court rooms require updated clients. The tested backend rules were
 [published and read back on 2026-10-30](releases/FIREBASE_20261030_COURT.md);
-the new application UI has not been published.
+the new application UI is [published on the web](releases/COURT_20261030.md)
+from `7a60504`. Signed Android 1.1.0 (527) is ready; Play submission remains pending.
 
 Feature IDs: SETUP-01/03, LEARN-02/08, SAVE-08, ONLINE-05/08/09/10, COMPAT-02.
 Regression sources: `test/game/court_friend_test.dart`, Court navigation/preset/
@@ -56,6 +57,11 @@ No AI or legacy Hex implementation was changed for these checks. Release-tool
 qualification also permits the three exact reviewed Court setup changes in the
 live config guard; all other config bytes and archived AI reference bytes remain
 pinned, with negative regressions for clock, engine, Court-policy and wire drift.
+Subsequent exact-source main CI attempts 1 and 2 each pass all 1,981 Flutter
+tests, all 80 release-tool tests and every build/browser job. Publication and
+three-engine hosted checks pass, as does a public-site Chromium touch trial of
+the popup, human-only Tak! warning, takeback and reload/resume. See the
+[publication record](releases/COURT_20261030.md) for artifacts and remaining limits.
 Strict analysis reports no issues. The release web build and final
 emulator-only web build pass; the existing Cupertino font warning remains, and
 the emulator build's default Wasm dry-run reports existing secure-storage limits.
@@ -77,8 +83,8 @@ Evidence is generated under `build/qa/journeys/`, including
 `summary.json`. Native/backend/build logs and a machine-readable result are
 retained in `build/qa/court-friends/`. Square/Hex enlarged-text portrait/landscape acceptance is covered
 by widget tests; this browser run exercises Square. Production backend rules
-are now published and verified; hosted new application builds, physical
-Android/iOS devices and online Hex browser usability remain unqualified.
+and the web application are now published and verified. Physical Android/iOS
+devices and online Hex browser usability remain unqualified.
 
 
 
