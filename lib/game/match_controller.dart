@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'match_ai.dart';
 import 'match_coaching.dart';
+import 'court_takeback.dart';
 import 'match_clock.dart';
 import 'match_elapsed.dart';
 import 'match_config.dart';
@@ -16,6 +17,7 @@ import 'match_storage.dart';
 import 'match_threats.dart';
 
 const _unchangedElapsed = Object();
+const _unchangedExplanation = Object();
 const _unchangedCourtReply = Object();
 
 class MatchSession {
@@ -53,6 +55,7 @@ class MatchSession {
   bool get ready => game != null && (room?.ready ?? true);
   bool get canPlay =>
       ready &&
+      room?.takeback == null &&
       connected &&
       !busy &&
       !inputLocked &&
@@ -69,7 +72,7 @@ class MatchSession {
           bool? reconnecting,
           bool? paused,
           Object? courtWinningReply = _unchangedCourtReply,
-          String? explanation,
+          Object? explanation = _unchangedExplanation,
           bool? inputLocked,
           MatchClock? clock,
           Object? elapsed = _unchangedElapsed,
@@ -87,7 +90,9 @@ class MatchSession {
           courtWinningReply: identical(courtWinningReply, _unchangedCourtReply)
               ? this.courtWinningReply
               : courtWinningReply as MatchMove?,
-          explanation: explanation ?? this.explanation,
+          explanation: identical(explanation, _unchangedExplanation)
+              ? this.explanation
+              : explanation as String?,
           inputLocked: inputLocked ?? this.inputLocked,
           clock: clock ?? this.clock,
           elapsed: identical(elapsed, _unchangedElapsed)
@@ -383,7 +388,11 @@ class MatchController extends StateNotifier<MatchSession> {
       }, onError: (Object error) {
         if (current()) _disconnected(error);
       }, onDone: () {
-        if (current() && state.game?.finished != true) _disconnected(null);
+        if (current() &&
+            (state.game?.finished != true ||
+                state.game?.config.court == true)) {
+          _disconnected(null);
+        }
       });
     } catch (error) {
       if (current()) _disconnected(error);
@@ -441,7 +450,7 @@ class MatchController extends StateNotifier<MatchSession> {
         !_canAutoRecover ||
         state.connected ||
         state.room == null ||
-        state.game?.finished == true ||
+        (state.game?.finished == true && state.game?.config.court != true) ||
         _reconnecting != null ||
         (_recoveryTimer?.isActive ?? false) ||
         _recoveryAttempts >= recoveryDelays.length) {
@@ -491,7 +500,9 @@ class MatchController extends StateNotifier<MatchSession> {
       }
       final latest = await store().read(room.code).timeout(networkTimeout);
       if (!mounted || epoch != _epoch) return false;
-      if (latest.moves.length < room.moves.length) {
+      if (latest.revision < room.revision ||
+          (latest.revision == room.revision &&
+              latest.moves.length < room.moves.length)) {
         throw const FormatException(
             'Server history is behind the confirmed board');
       }
@@ -520,6 +531,7 @@ class MatchController extends StateNotifier<MatchSession> {
         !state.ready ||
         state.busy ||
         !state.connected ||
+        state.room?.takeback != null ||
         game.config.seat(seat).control == SeatControl.ai ||
         (state.room != null && state.room!.owners[seat] != state.uid)) {
       return false;
@@ -580,8 +592,17 @@ class MatchController extends StateNotifier<MatchSession> {
   }
 
   void _accept(MatchRoom room, {bool fromWatch = false}) {
-    if (state.room != null && room.moves.length < state.room!.moves.length) {
+    final previous = state.room;
+    if (previous != null &&
+        (room.revision < previous.revision ||
+            (room.revision == previous.revision &&
+                room.moves.length < previous.moves.length))) {
       return;
+    }
+    if (previous != null && room.revision > previous.revision) {
+      _searchToken++;
+      _timer?.cancel();
+      _awaitingPly = null;
     }
     final game = state.room == null
         ? room.replay()
@@ -599,7 +620,15 @@ class MatchController extends StateNotifier<MatchSession> {
         game: game,
         room: room,
         clock: room.clock,
+        explanation: previous != null && room.revision > previous.revision
+            ? null
+            : state.explanation,
         elapsed: room.elapsed(game.finished),
+        paused: previous != null &&
+                room.revision > previous.revision &&
+                room.moves.length < previous.moves.length
+            ? false
+            : null,
         connected: true,
         reconnecting: false,
         busy: _awaitingPly != null ||
@@ -670,7 +699,8 @@ class MatchController extends StateNotifier<MatchSession> {
         !state.connected ||
         state.busy ||
         (state.clock?.expired(game.current, DateTime.now()) ?? false) ||
-        game.finished) {
+        game.finished ||
+        state.room?.takeback != null) {
       return false;
     }
     final ai = game.config.seat(game.current).control == SeatControl.ai;
@@ -718,7 +748,8 @@ class MatchController extends StateNotifier<MatchSession> {
       } else {
         _awaitingPly = game.ply + 1;
         await store()
-            .submit(room.code, state.uid!, game.ply, move)
+            .submit(room.code, state.uid!, game.ply, move,
+                expectedRevision: room.revision)
             .timeout(networkTimeout);
         // A committed transaction is not a delivered snapshot. Re-read if the
         // listener has not acknowledged it, retaining the preview until then.
@@ -884,7 +915,72 @@ class MatchController extends StateNotifier<MatchSession> {
     }
   }
 
+  bool get canRequestTakeback {
+    final game = state.game;
+    if (game == null ||
+        !game.config.court ||
+        state.busy ||
+        !state.connected ||
+        !state.ready ||
+        state.room?.takeback != null) {
+      return false;
+    }
+    return confirmedMoves.any((move) {
+      final seat = SeatId.values.byName(move['seat'] as String);
+      return state.room == null
+          ? game.config.seat(seat).control == SeatControl.localHuman
+          : state.room!.owners[seat] == state.uid;
+    });
+  }
+
+  Future<bool> courtTakeback(CourtTakebackAction action) async {
+    final room = state.room;
+    final uid = state.uid;
+    if (room == null ||
+        uid == null ||
+        !room.config.court ||
+        !state.connected ||
+        state.busy) {
+      return false;
+    }
+    final epoch = _epoch;
+    _searchToken++;
+    _timer?.cancel();
+    state = state.copyWith(busy: true);
+    try {
+      await store()
+          .takeback(room.code, uid, room.revision, action)
+          .timeout(networkTimeout);
+      if (!mounted || epoch != _epoch) return false;
+      var latest = await store().read(room.code).timeout(networkTimeout);
+      // A sole human needs no opponent's vote. Finish a durable two-step
+      // decision; the UI can retry approval if the second write is interrupted.
+      if (action == CourtTakebackAction.request &&
+          latest.humanOwners.length == 1 &&
+          latest.takeback?.requestedBy == uid) {
+        await store()
+            .takeback(
+                room.code, uid, latest.revision, CourtTakebackAction.approve)
+            .timeout(networkTimeout);
+        latest = await store().read(room.code).timeout(networkTimeout);
+      }
+      if (!mounted || epoch != _epoch) return false;
+      _accept(latest);
+      return true;
+    } catch (error) {
+      if (mounted && epoch == _epoch) {
+        state = state.copyWith(
+            busy: false,
+            error:
+                'Takeback could not be confirmed. Reconnect or retry: $error');
+        _schedule();
+      }
+      return false;
+    }
+  }
+
   Future<bool> takeBack() async {
+    if (state.room != null) return courtTakeback(CourtTakebackAction.request);
     final game = state.game;
     if (game == null ||
         !game.config.court ||
@@ -925,7 +1021,7 @@ class MatchController extends StateNotifier<MatchSession> {
           busy: false,
           paused: false,
           explanation:
-              'Took back the last human move and the AI replies after it.');
+              'Took back the last human move and any following AI replies.');
       _watchClock();
       _schedule();
       return true;
@@ -1021,6 +1117,7 @@ class MatchController extends StateNotifier<MatchSession> {
 
   bool get _botTurn =>
       state.ready &&
+      state.room?.takeback == null &&
       state.connected &&
       !state.paused &&
       !state.busy &&
@@ -1036,6 +1133,7 @@ class MatchController extends StateNotifier<MatchSession> {
     }
     if (_leaseBusy) return;
     final room = state.room;
+    if (room?.takeback != null) return;
     if (room != null &&
         state.ready &&
         state.connected &&

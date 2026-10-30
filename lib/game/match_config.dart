@@ -85,11 +85,8 @@ class MatchConfig {
         (court && clockSeconds != 0)) {
       throw ArgumentError('Invalid clock or timed Court Mode');
     }
-    if (court &&
-        (online ||
-            !seats.any((s) => s.control == SeatControl.ai) ||
-            !seats.any((s) => s.control == SeatControl.localHuman))) {
-      throw ArgumentError('Court Mode requires offline humans and AI');
+    if (court && !courtEligible) {
+      throw ArgumentError('Court Mode requires a human player');
     }
   }
 
@@ -116,6 +113,7 @@ class MatchConfig {
   final bool court;
   final int clockSeconds;
   final int ratingVersion;
+  bool get courtEligible => seats.any((seat) => seat.control != SeatControl.ai);
   bool get online =>
       seats.any((seat) => seat.control == SeatControl.onlineHuman);
   late final List<SeatId> ids = List.unmodifiable(seats.map((seat) => seat.id));
@@ -152,9 +150,7 @@ class MatchConfig {
         clockSeconds:
             (court ?? this.court) ? 0 : clockSeconds ?? this.clockSeconds,
         court: (court ?? this.court) &&
-            !newSeats.any((s) => s.control == SeatControl.onlineHuman) &&
-            newSeats.any((s) => s.control == SeatControl.ai) &&
-            newSeats.any((s) => s.control == SeatControl.localHuman),
+            newSeats.any((s) => s.control != SeatControl.ai),
         profile: newShape == this.shape && newSeats.length == this.seats.length
             ? profile
             : null,

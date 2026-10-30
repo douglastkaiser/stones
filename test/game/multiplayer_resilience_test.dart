@@ -38,7 +38,9 @@ class ManualWatch extends Stream<MatchRoomUpdate> {
   @override
   StreamSubscription<MatchRoomUpdate> listen(
       void Function(MatchRoomUpdate)? onData,
-      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+      {Function? onError,
+      void Function()? onDone,
+      bool? cancelOnError}) {
     data = onData;
     error = onError;
     done = onDone;
@@ -63,6 +65,7 @@ class UnreliableStore extends fixtures.MemoryMatchRoomStore {
     broadcast();
     return claimed;
   }
+
   @override
   Stream<MatchRoomUpdate> watch(String code) {
     if (watchFailure != null) throw watchFailure!;
@@ -87,12 +90,13 @@ class UnreliableStore extends fixtures.MemoryMatchRoomStore {
   }
 
   @override
-  Future<void> submit(
-      String code, String uid, int expectedPly, MatchMove move) async {
+  Future<void> submit(String code, String uid, int expectedPly, MatchMove move,
+      {int expectedRevision = 0}) async {
     submissions++;
     // Both devices can enter before either transaction confirms its turn.
     await Future<void>.delayed(Duration.zero);
-    await super.submit(code, uid, expectedPly, move);
+    await super.submit(code, uid, expectedPly, move,
+        expectedRevision: expectedRevision);
     if (lostAcknowledgement) throw TimeoutException('Acknowledgement lost');
     broadcast();
   }
@@ -107,8 +111,11 @@ const retryDelays = [
 MatchConfig onlineConfig(BoardShape shape, [int count = 2]) => MatchConfig(
     shape: shape,
     size: shape == BoardShape.square ? 5 : 2,
-    seats: List.generate(count, (i) => SeatConfig(SeatId.values[i],
-        control: i == 0 ? SeatControl.localHuman : SeatControl.onlineHuman)));
+    seats: List.generate(
+        count,
+        (i) => SeatConfig(SeatId.values[i],
+            control:
+                i == 0 ? SeatControl.localHuman : SeatControl.onlineHuman)));
 
 MatchController player(UnreliableStore store, String uid,
         {Future<String> Function()? authenticate}) =>
@@ -145,8 +152,8 @@ void main() {
     final host = await ready(store);
     final original = host.state.game;
     final before = store.reads;
-    store.watches.last.data?.call(
-        const MatchRoomUpdate(null, confirmed: false, connected: false));
+    store.watches.last.data
+        ?.call(const MatchRoomUpdate(null, confirmed: false, connected: false));
     expect(host.state.canPlay, isFalse);
     await until(() => host.state.connected && store.reads > before);
     expect(host.state.game!.board, original!.board);
@@ -186,9 +193,11 @@ void main() {
         old.subscription.cancellationError = StateError('Cleanup failed');
       }
       expect(await host.reconnect(), isTrue);
-      old.error?.call(FirebaseException(plugin: 'cloud_firestore', code: 'permission-denied'));
+      old.error?.call(FirebaseException(
+          plugin: 'cloud_firestore', code: 'permission-denied'));
       old.done?.call();
-      old.data?.call(const MatchRoomUpdate(null, confirmed: false, connected: false));
+      old.data?.call(
+          const MatchRoomUpdate(null, confirmed: false, connected: false));
       expect(host.state.connected, isTrue);
       expect(host.state.error, isNull);
       expect(store.watches.length, 2);
@@ -203,9 +212,11 @@ void main() {
     final store = UnreliableStore();
     final host = await ready(store);
     final before = store.reads;
-    store.readFailure = FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
+    store.readFailure =
+        FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
     store.watches.last.error?.call(store.readFailure!);
-    await until(() => store.reads == before + retryDelays.length && !host.state.busy);
+    await until(
+        () => store.reads == before + retryDelays.length && !host.state.busy);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     expect(store.reads, before + retryDelays.length);
     expect(host.state.connected, isFalse);
@@ -216,11 +227,13 @@ void main() {
     await store.updates.close();
   });
 
-  test('access denial is never treated as a transient transport error', () async {
+  test('access denial is never treated as a transient transport error',
+      () async {
     final store = UnreliableStore();
     final host = await ready(store);
     final before = store.reads;
-    store.watches.last.error?.call(FirebaseException(plugin: 'cloud_firestore', code: 'permission-denied'));
+    store.watches.last.error?.call(FirebaseException(
+        plugin: 'cloud_firestore', code: 'permission-denied'));
     await Future<void>.delayed(const Duration(milliseconds: 100));
     expect(store.reads, before);
     expect(host.state.connected, isFalse);
@@ -229,7 +242,8 @@ void main() {
     await store.updates.close();
   });
 
-  test('silent subscription completion triggers authoritative recovery', () async {
+  test('silent subscription completion triggers authoritative recovery',
+      () async {
     final store = UnreliableStore();
     final host = await ready(store);
     store.watches.last.done?.call();
@@ -239,9 +253,11 @@ void main() {
     await store.updates.close();
   });
 
-  test('synchronous watch failure preserves the room and can recover', () async {
+  test('synchronous watch failure preserves the room and can recover',
+      () async {
     final store = UnreliableStore();
-    store.watchFailure = FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
+    store.watchFailure =
+        FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
     final host = await ready(store);
     expect(host.state.room, isNotNull);
     expect(host.state.connected, isFalse);
@@ -257,9 +273,11 @@ void main() {
     final store = UnreliableStore();
     final host = await ready(store);
     final before = store.reads;
-    store.watchFailure = FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
+    store.watchFailure =
+        FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
     store.watches.single.done?.call();
-    await until(() => store.reads == before + retryDelays.length && !host.state.busy);
+    await until(
+        () => store.reads == before + retryDelays.length && !host.state.busy);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     expect(store.reads, before + retryDelays.length);
     expect(host.state.connected, isFalse);
@@ -275,8 +293,10 @@ void main() {
     store.silentWatch = true;
     final host = await ready(store);
     final before = store.reads;
-    await until(() => !host.state.connected &&
-        !host.state.busy && store.reads == before + retryDelays.length);
+    await until(() =>
+        !host.state.connected &&
+        !host.state.busy &&
+        store.reads == before + retryDelays.length);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     expect(store.reads, before + retryDelays.length);
     expect(await host.reconnect(), isTrue);
@@ -308,8 +328,8 @@ void main() {
     await host.play(MatchRules.legalMoves(host.state.game!).first);
     final before = host.state.game!;
     final reads = store.reads;
-    final payload = Map<String, dynamic>.from(
-        jsonDecode(jsonEncode(store.room!.toMap())));
+    final payload =
+        Map<String, dynamic>.from(jsonDecode(jsonEncode(store.room!.toMap())));
     payload['moves'][0]['x'] = 1;
     final rewritten = MatchRoom.fromMap(payload);
     store.watches.last.data?.call(MatchRoomUpdate(rewritten));
@@ -322,7 +342,8 @@ void main() {
     await store.updates.close();
   });
 
-  test('competing guests take over an expired AI runner without duplicate moves',
+  test(
+      'competing guests take over an expired AI runner without duplicate moves',
       () async {
     final store = UnreliableStore();
     final config = onlineConfig(BoardShape.hex, 3).copyWith(seats: const [
@@ -362,7 +383,8 @@ void main() {
     final store = UnreliableStore();
     final host = await ready(store);
     store.lostAcknowledgement = true;
-    expect(await host.play(MatchRules.legalMoves(host.state.game!).first), isFalse);
+    expect(await host.play(MatchRules.legalMoves(host.state.game!).first),
+        isFalse);
     await until(() => host.state.connected && host.state.game!.ply == 1);
     expect(store.submissions, 1);
     expect(store.room!.moves.length, 1);
@@ -428,11 +450,12 @@ void main() {
   for (final shape in BoardShape.values) {
     for (var count = 2; count <= 4; count++) {
       for (final timed in [false, true]) {
-        test('$shape $count clients converge through loss and cold recovery (timed=$timed)',
+        test(
+            '$shape $count clients converge through loss and cold recovery (timed=$timed)',
             () async {
           final store = UnreliableStore();
-          final config = onlineConfig(shape, count)
-              .copyWith(clockSeconds: timed ? 60 : 0);
+          final config =
+              onlineConfig(shape, count).copyWith(clockSeconds: timed ? 60 : 0);
           await store.create('host', config);
           for (var i = 1; i < count; i++) {
             await store.join('UABCDEF', 'guest$i');
@@ -449,16 +472,21 @@ void main() {
           for (var ply = 0; ply < 40 && !store.room!.replay().finished; ply++) {
             if (ply % 7 == 0) {
               final active = store.watches
-                  .where((watch) => !watch.subscription.cancelled).toList();
+                  .where((watch) => !watch.subscription.cancelled)
+                  .toList();
               final channel = active[random.nextInt(active.length)];
-              channel.data?.call(const MatchRoomUpdate(null, confirmed: false, connected: false));
-              await until(() => clients.every((client) => client.state.connected));
+              channel.data?.call(const MatchRoomUpdate(null,
+                  confirmed: false, connected: false));
+              await until(
+                  () => clients.every((client) => client.state.connected));
             }
             final game = store.room!.replay();
             final owner = store.room!.owners[game.current];
-            final client = clients.singleWhere((client) => client.state.uid == owner);
+            final client =
+                clients.singleWhere((client) => client.state.uid == owner);
             final options = MatchRules.legalMoves(game).take(200).toList();
-            expect(await client.play(options[random.nextInt(options.length)]), isTrue);
+            expect(await client.play(options[random.nextInt(options.length)]),
+                isTrue);
             for (final view in clients) {
               expect(view.state.game!.board, store.room!.replay().board);
               expect(view.state.game!.ply, store.room!.moves.length);

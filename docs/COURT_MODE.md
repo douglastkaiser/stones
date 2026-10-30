@@ -1,6 +1,85 @@
 # Court Mode
 
-## Current shared Court practice (2026-10-28)
+## Court with friends (2026-10-30)
+
+Court is eligible on either shape with two through four seats whenever at least
+one human is present, whether local or online. AI-only setups retain a disabled
+switch with an explanation. All quick-start popups offer Court; only Learn with
+the computer defaults it on. Same-device now opens a popup for board size,
+player count and Court rather than immediately replacing/starting a game.
+Cancellation does not authenticate, create rooms or replace a save.
+
+Court remains untimed, unrated and excluded from match awards. Clock preferences
+for other games remain intact. Human players receive optional legal hints as
+explicit previews; all clients see unchanged-position Tak! warnings. Same-device
+takeback restores the latest human move and removes subsequent AI replies.
+The existing verified-win AI teaching pause remains offline only; online games
+show warnings and use agreed takebacks rather than an automatic teaching pause.
+
+Online participants request their latest human move and all subsequent replies
+be undone. Every distinct human account must agree; one account represents its
+shared local seats. Observers cannot request or vote. One durable pending request
+blocks human and AI moves. Other participants can decline even after agreeing,
+and the requester can cancel. Requests have no automatic expiry and survive
+reloads/disconnects. A sole human automatically agrees; if application is
+interrupted, the visible Agree action retries it.
+
+Room revisions bind submissions and decisions to confirmed state. Requests store
+an exact retained/discarded prefix split; Firestore rules check the split,
+requester ownership, latest decision, actor-only votes and unanimous approval.
+Approval atomically restores the prefix and clears terminal state, including
+from finished games. Replay and reconnect accept shorter confirmed history only
+with a newer Court revision and invalidate old hints, drafts and AI work.
+Ordinary room append-only behavior and existing client rating/award exclusions
+remain. Server guards explicitly reject Court rating votes, result receipts and
+skill settlements, including attempts to submit an unassisted configuration
+against a Court room. Previously online Court was excluded at room creation.
+New online Court rooms require updated clients. The tested backend rules were
+[published and read back on 2026-10-30](releases/FIREBASE_20261030_COURT.md);
+the new application UI has not been published.
+
+Feature IDs: SETUP-01/03, LEARN-02/08, SAVE-08, ONLINE-05/08/09/10, COMPAT-02.
+Regression sources: `test/game/court_friend_test.dart`, Court navigation/preset/
+recovery tests, `tools/hex_rules/court_rules.test.mjs` and the Court portions of
+`tools/browser_journeys.py`.
+
+Source verification on Flutter 3.47.7 / Dart 3.13.5 / Linux: all 90 final focused
+Court/setup/controller tests and the separate 52-test Court/multiplayer resilience
+run pass. A fresh final-source full suite with `--concurrency=4` passes 1,980
+of 1,981 tests. Its sole failure is the unchanged legacy Hex recovery test
+`fresh Hex host and guest return to existing seats and identical saved state`:
+its bounded AI restart wait expires under parallel load; the isolated retry
+passes in two seconds. This is not a clean full-suite claim. An earlier draft run
+also failed the four-seat Hex AI trial's 150-move completion check; that trial
+passes on retry, on untouched baseline `2da3ff8`, and in the fresh final suite.
+No AI or legacy Hex implementation was changed for these checks.
+Strict analysis reports no issues. The release web build and final
+emulator-only web build pass; the existing Cupertino font warning remains, and
+the emulator build's default Wasm dry-run reports existing secure-storage limits.
+All 158 Firestore authorization tests pass, including the 178 seat-combination
+journey inside the unified suite. After the final typed revision guards, all 14
+focused Court/rating/timed-room checks pass again. Before production publication,
+a fresh full run of all 158 authorization tests passes against the final file.
+
+Chromium 154 at a 390×844 phone viewport passes the complete localhost demo
+emulator journey: human-only Tak! warnings, repeated local takebacks and reload,
+new-game popup, saved-game protection, online request persistence across reload,
+cancel, decline, unanimous agreement, prefix restoration and subsequent replay.
+Adjacent learning/navigation, ordinary AI replies and signed-in AI-only ratings
+in both scopes pass too. No browser page errors were recorded. The Auth
+emulator's visible DOM warning is made pointer-transparent by the test harness
+so it cannot intercept the bottom action buttons; production UI is unchanged.
+Evidence is generated under `build/qa/journeys/`, including
+`human-court-warning-phone.png`, `online-setup-phone.png`, traces and
+`summary.json`. Native/backend/build logs and a machine-readable result are
+retained in `build/qa/court-friends/`. Square/Hex enlarged-text portrait/landscape acceptance is covered
+by widget tests; this browser run exercises Square. Production backend rules
+are now published and verified; hosted new application builds, physical
+Android/iOS devices and online Hex browser usability remain unqualified.
+
+
+
+## Earlier shared Court practice (2026-10-28)
 
 Square and Hex setup offer **Learn with the computer**, whose description names
 Court Mode, hints, Tak! warnings and takebacks. **Customize → Game settings**

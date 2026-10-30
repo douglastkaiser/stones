@@ -297,8 +297,11 @@ service cloud.firestore {
              (!creating || data.styles[seat.id] == 'standard')));
       }
       function configShape(c) {
-        return c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion', 'aiEngine']) && c.get('aiEngine', 'shared-search-v1') in ['shared-search-v1','shared-search-v2','shared-search-v3'] && c.get('ratingVersion', 1) in [1, 2, 3] &&
-          c.get('clockSeconds', 0) is int && c.get('clockSeconds', 0) >= 0 && c.get('clockSeconds', 0) <= 59940 &&
+        let clock = c.get('clockSeconds',0);
+        let court = c.get('court',false);
+        return c.keys().hasOnly(['version', 'shape', 'size', 'seats', 'starter', 'profile', 'clockSeconds', 'ratingVersion', 'aiEngine', 'court']) && court is bool &&
+          (!court || clock == 0) && c.get('aiEngine', 'shared-search-v1') in ['shared-search-v1','shared-search-v2','shared-search-v3'] && c.get('ratingVersion', 1) in [1, 2, 3] &&
+          clock is int && clock >= 0 && clock <= 59940 &&
           c.version == 1 && c.size is int &&
           ((c.shape == 'square' && c.size >= 3 && c.size <= 8) ||
            (c.shape == 'hex' && c.size >= 2 && c.size <= 4)) &&
@@ -381,16 +384,81 @@ service cloud.firestore {
             dropAt(drops, 0) + dropAt(drops, 1) + dropAt(drops, 2) + dropAt(drops, 3) + dropAt(drops, 4) +
               dropAt(drops, 5) + dropAt(drops, 6) + dropAt(drops, 7) + dropAt(drops, 8) <= carry));
       }
+      function courtAdvance(before, after) {
+        return before.config.get('court',false)
+          ? (before.get('revision',0) is int && after.revision is int &&
+             after.revision == before.get('revision',0) + 1)
+          : after.get('revision',0) == before.get('revision',0);
+      }
+      function humanAgreed(data, approvals, index) {
+        let seat = data.config.seats[index];
+        return seat.control == 'ai' || data.owners[seat.id] in approvals;
+      }
+      function allAgreed(data, approvals) {
+        return humanAgreed(data, approvals, 0) && humanAgreed(data, approvals, 1) &&
+          (data.config.seats.size() < 3 || humanAgreed(data, approvals, 2)) &&
+          (data.config.seats.size() < 4 || humanAgreed(data, approvals, 3));
+      }
+      function laterReply(p, before, index) {
+        return p.removed.size() <= index ||
+          before.owners[p.removed[index].seat] != request.auth.uid;
+      }
+      function courtRequest(before, after) {
+        let p = after.takeback;
+        return before.get('takeback',null) == null &&
+          after.diff(before).affectedKeys().hasOnly(['takeback','revision']) &&
+          p is map && p.keys().hasAll(['requestedBy','baseRevision','retained','removed','approvals']) &&
+          p.keys().hasOnly(['requestedBy','baseRevision','retained','removed','approvals']) &&
+          p.requestedBy == request.auth.uid && p.baseRevision is int && p.baseRevision == before.get('revision',0) &&
+          p.approvals == [request.auth.uid] && p.retained is list && p.removed is list &&
+          p.removed.size() > 0 && p.removed.size() <= before.config.seats.size() &&
+          before.moves == p.retained.concat(p.removed) &&
+          before.owners[p.removed[0].seat] == request.auth.uid &&
+          laterReply(p, before, 1) && laterReply(p, before, 2) && laterReply(p, before, 3);
+      }
+      function courtVote(before, after) {
+        let p = before.takeback;
+        let q = after.takeback;
+        return p is map && q is map &&
+          after.diff(before).affectedKeys().hasOnly(['takeback','revision']) &&
+          q.diff(p).affectedKeys().hasOnly(['approvals']) &&
+          !(request.auth.uid in p.approvals) &&
+          q.approvals == p.approvals.concat([request.auth.uid]) &&
+          !allAgreed(before, q.approvals);
+      }
+      function courtDismiss(before, after) {
+        let p = before.takeback;
+        return p is map && after.takeback == null &&
+          after.diff(before).affectedKeys().hasOnly(['takeback','revision']);
+      }
+      function courtRewind(before, after) {
+        let p = before.takeback;
+        return p is map && after.takeback == null &&
+          allAgreed(before, p.approvals.concat([request.auth.uid])) &&
+          after.diff(before).affectedKeys().hasOnly(['takeback','revision','moves','resigned','timedOut','finishedAt']) &&
+          after.moves == p.retained && after.resigned == null && after.timedOut == null &&
+          after.get('finishedAt',null) == null;
+      }
+      function courtDecision() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return after.diff(before).affectedKeys().hasAny(['takeback']) &&
+          before.config.get('court',false) && ready(before) &&
+          request.auth.uid in before.owners.values() && courtAdvance(before, after) &&
+          (courtRequest(before, after) || courtVote(before, after) ||
+           courtDismiss(before, after) || courtRewind(before, after));
+      }
       function appendMove() {
         let before = resource.data;
         let after = request.resource.data;
         let seat = currentSeat(before);
         let n = before.moves.size();
         return before.resigned == null && before.timedOut == null && ready(before) &&
+          before.get('takeback',null) == null && courtAdvance(before, after) &&
           (before.owners[seat.id] == request.auth.uid ||
            (seat.control == 'ai' && before.aiRunner == request.auth.uid &&
             before.aiLeaseAt is timestamp && request.time < before.aiLeaseAt + duration.value(30, 's'))) &&
-          after.diff(before).affectedKeys().hasOnly(['moves', 'clock', 'lastMoveAt', 'finishedAt']) &&
+          after.diff(before).affectedKeys().hasOnly(['moves', 'clock', 'lastMoveAt', 'finishedAt', 'revision']) &&
           (after.get('lastMoveAt',null) == before.get('lastMoveAt',null) || after.lastMoveAt == request.time) &&
           (after.get('finishedAt',null) == before.get('finishedAt',null) ||
            (before.get('finishedAt',null) == null && after.finishedAt == request.time)) && clockAppend(before, after, seat.id) &&
@@ -400,9 +468,10 @@ service cloud.firestore {
       function resignSeat() {
         let before = resource.data;
         let after = request.resource.data;
-        return before.resigned == null && before.timedOut == null && ready(before) && validId(after.resigned) &&
+        return before.resigned == null && before.timedOut == null && ready(before) &&
+          before.get('takeback',null) == null && courtAdvance(before, after) && validId(after.resigned) &&
           before.owners[after.resigned] == request.auth.uid &&
-          after.diff(before).affectedKeys().hasOnly(['resigned','finishedAt']) &&
+          after.diff(before).affectedKeys().hasOnly(['resigned','finishedAt','revision']) &&
           (after.get('finishedAt',null) == before.get('finishedAt',null) || after.finishedAt == request.time);
       }
       function runnerLease() {
@@ -458,35 +527,41 @@ service cloud.firestore {
       }
       allow get: if isAuthenticated();
       allow list, delete: if false;
-      allow create: if isAuthenticated() && code.matches('^U[A-Z]{6}$') &&
-        request.resource.data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt', 'clock', 'timedOut', 'ratingKey', 'startedAt', 'lastMoveAt', 'finishedAt']) &&
-        (!('ratingKey' in request.resource.data) ||
-          (request.resource.data.ratingKey is string && request.resource.data.ratingKey.matches('^[0-9a-f]{64}$'))) &&
-        request.resource.data.version == 1 && request.resource.data.code == code &&
-        request.resource.data.host == request.auth.uid && configShape(request.resource.data.config) &&
-        validSeats(request.resource.data, true) && validBoardTheme(request.resource.data.boardTheme) &&
-        request.resource.data.moves is list && request.resource.data.moves.size() == 0 && request.resource.data.resigned == null &&
-        request.resource.data.aiRunner == null && request.resource.data.aiLeaseAt == null &&
-        request.resource.data.timedOut == null && initialClock(request.resource.data) &&
-        request.resource.data.get('lastMoveAt',null) == null && request.resource.data.get('finishedAt',null) == null &&
-        request.resource.data.get('startedAt',null) == null;
+      function createRoom() {
+        let data = request.resource.data;
+        return code.matches('^U[A-Z]{6}$') &&
+        data.keys().hasOnly(['version', 'code', 'host', 'config', 'owners', 'styles', 'boardTheme', 'moves', 'resigned', 'aiRunner', 'aiLeaseAt', 'clock', 'timedOut', 'ratingKey', 'startedAt', 'lastMoveAt', 'finishedAt', 'revision', 'takeback']) &&
+        data.get('revision',0) is int && data.get('revision',0) == 0 && data.get('takeback',null) == null &&
+        (!('ratingKey' in data) ||
+          (data.ratingKey is string && data.ratingKey.matches('^[0-9a-f]{64}$'))) &&
+        data.version == 1 && data.code == code &&
+        data.host == request.auth.uid && configShape(data.config) &&
+        validSeats(data, true) && validBoardTheme(data.boardTheme) &&
+        data.moves is list && data.moves.size() == 0 && data.resigned == null &&
+        data.aiRunner == null && data.aiLeaseAt == null &&
+        data.timedOut == null && initialClock(data) &&
+        data.get('lastMoveAt',null) == null && data.get('finishedAt',null) == null &&
+        data.get('startedAt',null) == null;
+      }
+      allow create: if isAuthenticated() && createRoom();
       allow update: if isAuthenticated() &&
         resource.data.get('ratingReceipt', null) == null &&
-        ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingKey']) &&
+        ((request.resource.data.diff(resource.data).affectedKeys().hasAny(['moves']) && appendMove()) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingKey']) &&
           ratingAccount() && request.auth.uid in resource.data.owners.values() &&
           !('ratingKey' in resource.data) && request.resource.data.ratingKey is string &&
           request.resource.data.ratingKey.matches('^[0-9a-f]{64}$')) ||
          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingReceipt']) &&
-          request.resource.data.ratingReceipt is string &&
+          !resource.data.config.get('court',false) && request.resource.data.ratingReceipt is string &&
           getAfter(/databases/$(database)/documents/ratingResults/$(request.resource.data.ratingReceipt)).data.room == code) ||
          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owners', 'styles', 'startedAt']) &&
           (vacantJoin(0) || vacantJoin(1) ||
            (resource.data.config.seats.size() > 2 && vacantJoin(2)) ||
            (resource.data.config.seats.size() > 3 && vacantJoin(3)))) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves', 'clock', 'lastMoveAt', 'finishedAt']) && appendMove()) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resigned', 'finishedAt']) && resignSeat()) ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resigned', 'finishedAt', 'revision']) && resignSeat()) ||
          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiRunner', 'aiLeaseAt']) && runnerLease()) ||
-         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timedOut', 'finishedAt']) && clockExpiry()));
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timedOut', 'finishedAt']) && clockExpiry()) ||
+         courtDecision());
     }
 
     // Temporary delivery only. Clients never cache message bodies or restore history.
@@ -606,7 +681,7 @@ service cloud.firestore {
       let room = getAfter(/databases/$(database)/documents/matches/$(code)).data;
       let n = room.config.seats.size();
       let gone = room.resigned != null ? room.resigned : room.timedOut;
-      return room.config.get('ratingVersion',1) == 1 && code.matches('^U[A-Z]{6}$') && room.ratingReceipt == id && room.ratingKey == id && r.pool == ratingPool(room.config) &&
+      return !room.config.get('court',false) && room.config.get('ratingVersion',1) == 1 && code.matches('^U[A-Z]{6}$') && room.ratingReceipt == id && room.ratingKey == id && r.pool == ratingPool(room.config) &&
         r.participants.size() == n && r.participants.toSet().size() == n &&
         request.auth.uid in r.participants && r.ply == room.moves.size() && r.ply >= n &&
         r.winner >= -1 && r.winner < n &&
@@ -809,7 +884,7 @@ service cloud.firestore {
       let n = r.participants.size();
       let room = r.room == null ? {} : getAfter(/databases/$(database)/documents/matches/$(r.room)).data;
       let owners = room.get('owners',{});
-      return r.keys().hasOnly(['kind','version','pool','participants','config','winner','reason','names','ply','actor','source','room','moves','at']) &&
+      return !r.config.get('court',false) && r.keys().hasOnly(['kind','version','pool','participants','config','winner','reason','names','ply','actor','source','room','moves','at']) &&
         r.version == 3 && r.config.get('ratingVersion',1) == 3 && n >= 2 && n <= 4 && n == r.config.seats.size() && r.names.size() == n &&
         r.pool == ratingPool(r.config) && r.actor == request.auth.uid && sActor(r) &&
         r.winner >= -1 && r.winner < n && r.reason in ['road','flats','resignation','time'] &&
@@ -866,7 +941,7 @@ service cloud.firestore {
       return i >= r.participants.size() || sAfter(pool,r.participants[i]).lastResult == key;
     }
     function sSettlement(r,s,pool,key) {
-      return r.kind == 'skill' && sActor(r) && pool in ['overall',r.pool] &&
+      return r.kind == 'skill' && !r.config.get('court',false) && sActor(r) && pool in ['overall',r.pool] &&
         s.keys().hasOnly(['source','pool','before','after','at']) && s.source == key && s.pool == pool && s.at == request.time &&
         s.before.keys().toSet() == r.participants.toSet() && s.after.keys().toSet() == r.participants.toSet() &&
         sAtomic(r,pool,key,0) && sAtomic(r,pool,key,1) && sAtomic(r,pool,key,2) && sAtomic(r,pool,key,3);
@@ -955,6 +1030,7 @@ service cloud.firestore {
     match /matches/{code}/ratingVotes/{uid} {
       allow read: if ratingAccount() && request.auth.uid in get(/databases/$(database)/documents/matches/$(code)).data.owners.values();
       allow create, update: if ratingAccount() && request.auth.uid == uid &&
+        !get(/databases/$(database)/documents/matches/$(code)).data.config.get('court',false) &&
         get(/databases/$(database)/documents/matches/$(code)).data.get('ratingReceipt', null) == null &&
         uid in get(/databases/$(database)/documents/matches/$(code)).data.owners.values() &&
         ((get(/databases/$(database)/documents/matches/$(code)).data.config.get('ratingVersion',1) == 1 &&

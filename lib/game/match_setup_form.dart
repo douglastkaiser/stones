@@ -46,7 +46,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
     final online =
         _config.seats.where((s) => s.control == SeatControl.onlineHuman).length;
     final bots = _config.seats.length - local - online;
-    final canUseCourt = online == 0 && bots > 0 && local > 0;
+    final canUseCourt = _config.courtEligible;
     return AbsorbPointer(
         absorbing: _busy,
         child: Column(
@@ -165,10 +165,10 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                       }),
                   const SizedBox(height: 16),
                   Text('$local local · $online online · $bots AI'),
-                  if (online > 0 && bots == 0 && local <= 1)
+                  if (online > 0 && bots == 0 && local <= 1 && !_config.court)
                     const Text(
                         'Competitive ratings: each player needs a separate signed-in account. Results count after every player confirms the same outcome. Names and standings are public.'),
-                  if (bots > 0)
+                  if (bots > 0 && !_config.court)
                     const Text(
                         'Completed rated games update your overall and format ratings, including games against AI. AI profiles are shared across everyone’s games. AI runs on the device.'),
                   if (local == 1 && bots > 0 && online == 0 && !_config.court)
@@ -190,16 +190,15 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Court Mode'),
                       subtitle: Text(canUseCourt
-                          ? 'Hints, Tak! warnings, AI explanations and takebacks. Untimed, unrated practice; no awards.'
-                          : online > 0
-                              ? 'Available offline with a local human and an AI. Change online seats to local human or AI.'
-                              : bots == 0
-                                  ? 'Choose AI for at least one player above to enable coached practice.'
-                                  : 'Choose Local human for at least one player above to enable coached practice.'),
+                          ? 'Hints, Tak! warnings and takebacks. Untimed, unrated practice; no awards.'
+                          : 'Choose a local or online human to enable Court Mode.'),
                       value: _config.court,
                       onChanged: canUseCourt
                           ? (value) => _update(_config.copyWith(court: value))
                           : null),
+                  if (_config.court && online > 0)
+                    const Text(
+                        'Online takebacks need every human player’s agreement.'),
                   if (!_config.court) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(

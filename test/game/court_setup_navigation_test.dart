@@ -59,9 +59,10 @@ void main() {
         await tester.pumpAndSettle();
         final court = find.widgetWithText(SwitchListTile, 'Court Mode');
         await scrollTo(court);
-        expect(tester.widget<SwitchListTile>(court).onChanged, isNull);
-        expect(find.textContaining('Choose AI for at least one player'),
-            findsOneWidget);
+        expect(tester.widget<SwitchListTile>(court).onChanged, isNotNull);
+        await tester.tap(court);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(court).value, isTrue);
 
         // Return to the seats using actual reverse input as well.
         final position = tester
@@ -88,8 +89,6 @@ void main() {
         await tester.pumpAndSettle();
         await scrollTo(court);
         expect(tester.widget<SwitchListTile>(court).onChanged, isNotNull);
-        await tester.tap(court);
-        await tester.pumpAndSettle();
         expect(tester.widget<SwitchListTile>(court).value, isTrue);
         expect(find.text('Clock per player'), findsNothing);
         expect(tester.takeException(), isNull);
@@ -101,7 +100,7 @@ void main() {
     [SeatControl.localHuman, SeatControl.onlineHuman],
     [SeatControl.ai, SeatControl.ai],
   ]) {
-    testWidgets('Court stays visible and unavailable for $controls',
+    testWidgets('Court eligibility follows human seats for $controls',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
           home: Scaffold(
@@ -120,7 +119,8 @@ void main() {
       await tester.pumpAndSettle();
       final court = find.widgetWithText(SwitchListTile, 'Court Mode');
       await tester.ensureVisible(court);
-      expect(tester.widget<SwitchListTile>(court).onChanged, isNull);
+      expect(tester.widget<SwitchListTile>(court).onChanged,
+          controls.contains(SeatControl.localHuman) ? isNotNull : isNull);
       expect(tester.widget<SwitchListTile>(court).value, isFalse);
       expect(tester.takeException(), isNull);
     });

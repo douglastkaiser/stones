@@ -1,0 +1,80 @@
+{
+  "project": "stones-9a6a0",
+  "database": "(default)",
+  "authorization": "Owner explicitly requested Firestore publication and completed Firebase CLI remote sign-in.",
+  "source_base": "2da3ff8",
+  "source_state": "Working tree Court changes; no application publication in this task.",
+  "cli_version": "15.33.0",
+  "command": "firebase deploy --only firestore:rules --project stones-9a6a0 --non-interactive",
+  "published_at": "2026-10-30T20:59:09.069668Z",
+  "ruleset": "projects/stones-9a6a0/rulesets/c94c6cca-e1d8-40cf-a43a-c17191ec4785",
+  "rules_sha256": "4484497f34b7306346a85d8eaaae6bd95a2e0990e8b5ace2b6baecf78a5c20f4",
+  "rollback": {
+    "ruleset": "projects/stones-9a6a0/rulesets/fcda75d9-216e-428f-89cd-1a58d41105d2",
+    "rules_sha256": "6839907f200d69fc0c96138f333827be5a80185c3055e24ebc11cc77788160a5",
+    "backup": "build/qa/firestore-court-20261030/before/"
+  },
+  "verification": {
+    "project": "stones-9a6a0",
+    "verifiedAt": "2026-10-30T20:59:48.158Z",
+    "ruleset": "projects/stones-9a6a0/rulesets/c94c6cca-e1d8-40cf-a43a-c17191ec4785",
+    "rulesSha256": "4484497f34b7306346a85d8eaaae6bd95a2e0990e8b5ace2b6baecf78a5c20f4",
+    "exactRulesMatch": true,
+    "indexesUnchanged": true,
+    "overridesUnchanged": true,
+    "otherReleasesUnchanged": true,
+    "databaseIdentityUnchanged": true,
+    "allIndexesReady": true
+  },
+  "emulator_tests": {
+    "total": 158,
+    "passed": 158,
+    "failed": 0,
+    "log": "build/qa/firestore-court-20261030/rules-tests.log"
+  },
+  "indexes": {
+    "count": 6,
+    "all_ready": true,
+    "unchanged": true,
+    "field_overrides_unchanged": true,
+    "index_file_sha256": "a1e2148a12658d0475f03f054493f54c9dbf241d1e46004bfd4a83828098aed3"
+  },
+  "public_access_checks": {
+    "project": "stones-9a6a0",
+    "read_only": true,
+    "checks": [
+      {
+        "check": "public_overall_ai",
+        "http_status": 200,
+        "passed": true
+      },
+      {
+        "check": "public_square_ai",
+        "http_status": 200,
+        "passed": true
+      },
+      {
+        "check": "private_room_enumeration",
+        "http_status": 403,
+        "passed": true
+      },
+      {
+        "check": "private_rating_receipts",
+        "http_status": 403,
+        "passed": true
+      },
+      {
+        "check": "private_skill_settlements",
+        "http_status": 403,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  "game_account_rating_data_mutated": false,
+  "application_published": false,
+  "inventory_ids": [
+    "ONLINE-09",
+    "ONLINE-10"
+  ]
+}

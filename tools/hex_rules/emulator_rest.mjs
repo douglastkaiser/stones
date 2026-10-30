@@ -35,6 +35,7 @@ function encode(value) {
   if (value instanceof Date) return {timestampValue: value.toISOString()};
   if (value === null) return {nullValue: null};
   if (typeof value === 'string') return {stringValue: value};
+  if (typeof value === 'boolean') return {booleanValue: value};
   if (typeof value === 'number') return {integerValue: String(value)};
   if (Array.isArray(value)) return {arrayValue: {values: value.map(encode)}};
   return {mapValue: {fields: Object.fromEntries(Object.entries(value).map(([key, item]) => [key, encode(item)]))}};
@@ -43,6 +44,7 @@ function decode(value) {
   if ('timestampValue' in value) return new Date(value.timestampValue);
   if ('nullValue' in value) return null;
   if ('stringValue' in value) return value.stringValue;
+  if ('booleanValue' in value) return value.booleanValue;
   if ('integerValue' in value) return Number(value.integerValue);
   if ('arrayValue' in value) return (value.arrayValue.values ?? []).map(decode);
   if ('mapValue' in value) return Object.fromEntries(Object.entries(value.mapValue.fields ?? {}).map(([key, item]) => [key, decode(item)]));

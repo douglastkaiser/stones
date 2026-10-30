@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stones/game/board_geometry.dart';
 import 'package:stones/game/match_config.dart';
+import 'package:stones/game/court_takeback.dart';
 import 'package:stones/game/match_controller.dart';
 import 'package:stones/game/match_room.dart';
 import 'package:stones/game/match_rules.dart';
@@ -62,10 +63,18 @@ class MemoryMatchRoomStore implements MatchRoomStore {
   Stream<MatchRoomUpdate> watch(String code) =>
       updates.stream.map(MatchRoomUpdate.new);
   @override
-  Future<void> submit(
-      String code, String uid, int expectedPly, MatchMove move) async {
-    room = room!.append(uid, expectedPly, move);
+  Future<void> submit(String code, String uid, int expectedPly, MatchMove move,
+      {int expectedRevision = 0}) async {
+    room = room!
+        .append(uid, expectedPly, move, expectedRevision: expectedRevision);
     if (publishOnSubmit) updates.add(room!);
+  }
+
+  @override
+  Future<void> takeback(String code, String uid, int expectedRevision,
+      CourtTakebackAction action) async {
+    room = room!.updateTakeback(uid, expectedRevision, action);
+    updates.add(room!);
   }
 
   @override

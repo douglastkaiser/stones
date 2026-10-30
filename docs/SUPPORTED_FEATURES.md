@@ -17,6 +17,10 @@ tests and product plans. Related fixes are grouped by feature. Commit references
 explain provenance; the current behavior below takes precedence over an older
 commit's design or an audit's historical status.
 
+The 2026-10-30 [Court with friends follow-up](COURT_MODE.md#court-with-friends-2026-10-30)
+extends the source setup/coaching contract. Its [backend rules are published](releases/FIREBASE_20261030_COURT.md);
+the application UI remains an unpublished source change.
+
 The 2026-10-22 Google sign-in update below extends this baseline; see
 [its implementation and qualification limits](GOOGLE_SIGN_IN_FIX.md).
 
@@ -68,9 +72,10 @@ History: `cf126b9`, `87f40d9`, `47191d3`, `7f6d298`, `45d2946`, `2df1b28`.
   friends on one device, or an online invitation from the game menu without
   having to understand every advanced setting. Computer play and coached practice
   open a compact popup with board size and Easy/Medium/Hard/Expert difficulty;
-  the selected level applies to every computer in that preset. Online friend
-  games prompt for board size and two to four total players, with one local host
-  and the remaining seats online. Cancelling a popup leaves the game/save intact
+  the selected level applies to every computer in that preset. Same-device and
+  online friend games prompt for board size and two to four total players; online
+  presets use one local host and the remaining seats online. Every popup offers
+  Court Mode, on by default only for Learn with the computer. Cancelling a popup leaves the game/save intact
   and does not authenticate or create a room. Learn with the computer explicitly
   identifies its Court Mode coaching, Tak! warnings and takebacks. See the
   [quick-start follow-up](PLAYER_EXPERIENCE.md#quick-start-follow-up-2026-10-29).
@@ -81,7 +86,10 @@ History: `cf126b9`, `87f40d9`, `47191d3`, `7f6d298`, `45d2946`, `2df1b28`.
   seats, starter, and supported clock/practice options. Saved setup preferences
   survive returning to Customize. Quick-start popups reuse Customize's board-size
   and difficulty controls; individual AI levels and mixed seats remain available
-  in the full editor.
+  in the full editor. Court is eligible whenever at least one local or online
+  human is seated; enabling it makes the game untimed, unrated and award-free.
+  AI-only setups explain why Court is unavailable. Saved clock preferences for
+  other games remain intact.
 - **SETUP-04 · Seat choices:** use local humans, remote humans and individually configured
   AI seats, including mixed tables and AI-only observation. Setup makes who will
   control each seat clear.
@@ -309,9 +317,10 @@ History: `40c55bb`, `a3869a7`, `a5ab875`, `6018f05`, `7e83417`, `6788062`,
 - **LEARN-02 · Court practice:** play untimed, unrated coached games with free takebacks,
   including recovery of a finished practice position. Inspect legal next-move
   winning threats for each seat on Square and Hex. Customize → Game settings
-  always shows Court Mode; incompatible seats leave the switch disabled with
-  guidance to choose a local human and an AI with no online seats. Changing seats
-  enables the switch immediately when eligible. Before an AI can take a legal
+  always shows Court Mode; only AI-only seats disable it, with guidance to choose
+  a human. Local, online and mixed human/AI games can enable it immediately.
+  Same-device takebacks undo the latest human move and subsequent AI replies;
+  online takebacks follow ONLINE-10. Before an offline AI can take a legal
   immediate win after human play, automatically pause with Tak!, Take back and
   Let AI play. Take back restores the latest human decision, including intervening
   AI replies; allowing the win still permits a finished-game takeback. Applies to
@@ -378,7 +387,10 @@ History: `a6e2adf`, `567376f`, `db47e49`, `d37748b`, `2b914c7`, `2df1b28`, `a72c
   resume from confirmed state when a participant reopens the room; it does not
   run on a cloud game server while all participants are away. A Court loss pause
   saves its verified winning reply and restores the same decision on local reload;
-  failed takeback/continuation saves retain the position and allow retry.
+  failed takeback/continuation saves retain the position and allow retry. Online
+  Court takeback requests and votes survive reload/reconnect and block human/AI
+  moves while pending; confirmed history revisions allow agreed rewinds without
+  admitting stale moves, votes or AI search results.
 
 ## Play with other people
 
@@ -402,7 +414,8 @@ History: `9c1114a`, `b81e5a8`, `25888f1`, `603c86d`, `45d2946`, `2651001`,
   the original identity and active session.
 - **ONLINE-05 · Reconnect:** startup and outages reach a usable error/retry state instead
   of spinning indefinitely. Restore confirmed moves and reconcile interrupted
-  submissions; stale clients cannot overwrite newer play or duplicate AI turns.
+  submissions, including ONLINE-10 Court rewinds to shorter history. Stale clients
+  cannot overwrite newer play or duplicate AI turns.
 - **ONLINE-06 · Temporary room chat:** participants can exchange bounded, masked messages;
   closed/expired messages are unavailable and rejoining does not restore chat
   history. Expiry cleanup continues while the panel is collapsed.
@@ -413,7 +426,7 @@ History: `9c1114a`, `b81e5a8`, `25888f1`, `603c86d`, `45d2946`, `2651001`,
   personal wins/rewards. Preserve supported mixed local/remote/AI seat setups.
 - **ONLINE-08 · Failure containment:** bookmark storage and optional features
   cannot block room creation, joining or a confirmed turn. Preserve the last
-  confirmed board during outages; reject corrupt or rewritten history with a
+  confirmed board during outages; reject corrupt or unauthorized rewritten history with a
   useful recovery state. Bound retries and dispose old identity/subscription work
   so a late response cannot change the current room or account.
 - **ONLINE-09 · Data access and input validation:** preserve authenticated seat/
@@ -423,6 +436,24 @@ History: `9c1114a`, `b81e5a8`, `25888f1`, `603c86d`, `45d2946`, `2651001`,
   receipt/chat data. Do not leak invitation codes into public rating history or
   enable private-room enumeration to implement discovery. Backend authorization
   and App Check configuration need appropriate emulator/deployment evidence.
+  The [2026-10-30 Court backend publication](releases/FIREBASE_20261030_COURT.md)
+  has exact rules readback, 158 emulator authorization checks and five read-only
+  production checks; it changes no indexes or App Check settings.
+
+- **ONLINE-10 · Agreed Court takebacks:** a seated human can request undoing their
+  latest move and all following replies, including after a completed game. Every
+  distinct human account must agree; shared local seats use their controlling
+  account, and observers cannot vote. One pending request blocks moves and AI
+  submissions. Other humans can decline; the requester can cancel. Unanimous
+  agreement atomically restores the retained history and clears terminal state.
+  Requests persist across disconnects with no automatic expiry. Room revisions
+  reject stale actions even when later play reaches the same move count. A sole
+  human's request needs no opponent vote; a retryable Agree action completes an
+  interrupted application. New online Court rooms require updated clients. The
+  revised backend rules were published and verified on 2026-10-30; the new client
+  UI still needs an application release. Existing ordinary and
+  legacy rooms retain their contracts. See [Court audit](COURT_MODE.md),
+  `test/game/court_friend_test.dart` and `tools/hex_rules/court_rules.test.mjs`.
 
 ## Identity, ratings and progression
 
@@ -647,7 +678,7 @@ adapter, deleting an old implementation, or calling a replacement complete.
 | ID / feature | Current contract or parity gap | Evidence |
 | --- | --- | --- |
 | COMPAT-01 · Move history and last-move highlighting | Original Square play has a collapsible notation history and affected-cell highlights. Shared play retains confirmed moves and completed-game step/slider review, but its active screen does not expose the old notation panel or last-move highlight. Keep this parity gap visible; do not assume result review fully replaces in-game history. | `1377230`, `6f89bae`; [legacy screen](../lib/main.dart), [shared screen](../lib/game/match_screen.dart), [review](../lib/game/match_review_screen.dart) |
-| COMPAT-02 · Undo versus takeback | Legacy untimed offline Square offers undo (including human/AI reply pairs); timed undo is disabled. Shared live-match takeback is Court-only. Draft undo is separate and remains available before submission. Broader untimed shared undo is a parity question, not an implemented guarantee. Never restore legacy local-only online undo without a coordinated remote protocol. | `1377230`, `e1fde83`, `f063762`, `a3869a7`; [rules audit](TAK_RULES.md), [controller](../lib/game/match_controller.dart) |
+| COMPAT-02 · Undo versus takeback | Legacy untimed offline Square offers undo (including human/AI reply pairs); timed undo is disabled. Shared live-match takeback is Court-only; online Court uses unanimous, server-authorized rewinds (ONLINE-10). Draft undo is separate and remains available before submission. Broader untimed shared undo is a parity question, not an implemented guarantee. Never restore legacy local-only online undo without a coordinated remote protocol. | `1377230`, `e1fde83`, `f063762`, `a3869a7`; [rules audit](TAK_RULES.md), [controller](../lib/game/match_controller.dart) |
 | COMPAT-03 · Keyboard play | Legacy Square has arrow navigation, Enter activation and Escape cancellation. Shared BoardView now provides arrow-based directional focus traversal with focusable InkWell/actions and zoom-aware cell reveal. Legacy Escape-cancel parity still needs explicit qualification; do not drop accessible actions during navigation changes. | `dff1883`, `fc31e80`; [legacy board](../lib/main.dart), [shared board](../lib/game/board_view.dart), [adaptive UX](ADAPTIVE_GAMEPLAY_UX.md) |
 | COMPAT-04 · Optional Android Play Games | Compile-time-enabled Android integration has separate sign-in, legacy untimed Square cloud-save/explicit restore, achievement and score hooks. It is unavailable on web and does not synchronize shared-game progression. Safe restore cannot silently replace active play; native service configuration/IDs and Play-device qualification are separate prerequisites. | `23d3e84`, `d6c654c`, `4ddf3b1`; [service](../lib/services/play_games_service.dart), [save codec](../lib/services/play_games_save.dart), [tests](../test/play_games_save_test.dart) |
 | COMPAT-05 · Old rooms and saves | Preserve supported old Square, H-prefixed Hex and unified invitation dispatch, codecs, recorded goals, seat ownership and result semantics. Replay through the correct adapter; missing metadata must use its documented fallback rather than current defaults. | `cf126b9`, `b81e5a8`, `401e393`; [room navigation](../lib/game/room_navigation.dart), [shared play](UNIFIED_PLAY_PLAN.md) |

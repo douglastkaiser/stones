@@ -300,3 +300,17 @@ test('v3 cannot create a reset profile with a v3-specific rating ID',async()=>{
  s.receipt.config.aiEngine='shared-search-v3';s.writes[0]=write(`ratingResults/${s.key}`,s.receipt,['at']);
  await reject(commit(s.writes));
 });
+
+test('online Court cannot record a result or settle either skill scope', async()=>{
+ const s=await prepare(source({participants:['alice','bob']}));
+ s.room.config.court=true;
+ s.room.revision=2;
+ await seed(`matches/${code}`,s.room);
+ await reject(put(`matches/${code}/ratingVotes/alice`,s.vote('alice'),'alice'));
+ const forged=structuredClone(s.writes);
+ forged[0].update.fields.config.mapValue.fields.court={booleanValue:true};
+ await reject(commit(forged));
+ await reject(commit(s.writes));
+ await reject(commit(settle(s).writes));
+ await reject(commit(settle(s,s.pool).writes));
+});

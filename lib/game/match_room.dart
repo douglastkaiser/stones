@@ -1,5 +1,6 @@
 import '../models/cosmetics.dart';
 import 'match_config.dart';
+import 'court_takeback.dart';
 import 'match_clock.dart';
 import 'match_elapsed.dart';
 import 'match_rules.dart';
@@ -21,6 +22,8 @@ class MatchRoom {
     Map<SeatId, PieceStyle>? styles,
     this.boardTheme = BoardTheme.classicWood,
     List<Map<String, dynamic>> moves = const [],
+    this.revision = 0,
+    this.takeback,
     this.resigned,
     this.aiRunner,
     this.aiLeaseAt,
@@ -73,6 +76,31 @@ class MatchRoom {
       throw const FormatException(
           'Online identities must occupy distinct seats');
     }
+    if (revision < 0 ||
+        (!config.court && (revision != 0 || takeback != null))) {
+      throw const FormatException('Invalid Court revision');
+    }
+    final decision = takeback;
+    if (decision != null &&
+        (!ready ||
+            decision.baseRevision < 0 ||
+            decision.baseRevision >= revision ||
+            !humanOwners.contains(decision.requestedBy) ||
+            decision.approvals.isEmpty ||
+            decision.approvals.toSet().length != decision.approvals.length ||
+            !decision.approvals.contains(decision.requestedBy) ||
+            !humanOwners.containsAll(decision.approvals) ||
+            decision.removed.isEmpty ||
+            decision.removed.length > config.seats.length ||
+            !_equal(moves, [...decision.retained, ...decision.removed]) ||
+            owners[SeatId.values
+                    .byName(decision.removed.first['seat'] as String)] !=
+                decision.requestedBy ||
+            decision.removed.skip(1).any((move) =>
+                owners[SeatId.values.byName(move['seat'] as String)] ==
+                decision.requestedBy))) {
+      throw const FormatException('Invalid Court takeback');
+    }
     if ((aiRunner == null) != (aiLeaseAt == null) ||
         (aiRunner != null &&
             aiRunner != host &&
@@ -88,6 +116,9 @@ class MatchRoom {
   final Map<SeatId, PieceStyle> styles;
   final BoardTheme boardTheme;
   final List<Map<String, dynamic>> moves;
+  final int revision;
+  final CourtTakeback? takeback;
+  Set<String> get humanOwners => owners.values.whereType<String>().toSet();
   final SeatId? resigned;
   final String? aiRunner;
   final DateTime? aiLeaseAt;
@@ -121,6 +152,8 @@ class MatchRoom {
         startedAt: startedAt,
         lastMoveAt: lastMoveAt,
         finishedAt: finishedAt,
+        revision: revision,
+        takeback: takeback,
         code: code,
         host: host,
         config: config,
@@ -141,6 +174,7 @@ class MatchRoom {
       config.ids.where((id) => owners[id] == uid).toSet();
   bool canMove(String uid, MatchState game, {DateTime? now}) =>
       ready &&
+      takeback == null &&
       resigned == null &&
       timedOut == null &&
       !(clock?.expired(game.current, now ?? DateTime.now()) ?? false) &&
@@ -166,21 +200,26 @@ class MatchRoom {
         !_equal(previous.config.toMap(), config.toMap()) ||
         previous.boardTheme != boardTheme ||
         previous.moves.length != position.ply ||
-        moves.length < previous.moves.length ||
-        (previous.resigned != null && previous.resigned != resigned) ||
-        (previous.timedOut != null && previous.timedOut != timedOut)) {
+        revision < previous.revision) {
       throw const FormatException('Room configuration or history changed');
-    }
-    for (var i = 0; i < previous.moves.length; i++) {
-      if (!_equal(previous.moves[i], moves[i])) {
-        throw const FormatException('Recorded move prefix changed');
-      }
     }
     for (final id in config.ids) {
       if (previous.owners[id] != null &&
           (owners[id] != previous.owners[id] ||
               styles[id] != previous.styles[id])) {
         throw const FormatException('Occupied seat identity or theme changed');
+      }
+    }
+    // Rewinds are server-authorized history revisions, never unconfirmed edits.
+    if (config.court && revision > previous.revision) return replay();
+    if (moves.length < previous.moves.length ||
+        (previous.resigned != null && previous.resigned != resigned) ||
+        (previous.timedOut != null && previous.timedOut != timedOut)) {
+      throw const FormatException('Room history changed without a revision');
+    }
+    for (var i = 0; i < previous.moves.length; i++) {
+      if (!_equal(previous.moves[i], moves[i])) {
+        throw const FormatException('Recorded move prefix changed');
       }
     }
     if (previous.resigned != null || previous.timedOut != null) return position;
@@ -224,6 +263,8 @@ class MatchRoom {
         startedAt: startedAt,
         lastMoveAt: lastMoveAt,
         finishedAt: finishedAt,
+        revision: revision,
+        takeback: takeback,
         code: code,
         host: host,
         config: config,
@@ -252,6 +293,8 @@ class MatchRoom {
         startedAt: startedAt,
         lastMoveAt: lastMoveAt,
         finishedAt: finishedAt,
+        revision: revision,
+        takeback: takeback,
         code: code,
         host: host,
         config: config,
@@ -266,9 +309,11 @@ class MatchRoom {
   }
 
   MatchRoom append(String uid, int expectedPly, MatchMove move,
-      {DateTime? now}) {
+      {DateTime? now, int expectedRevision = 0}) {
     final game = replay();
-    if (game.ply != expectedPly) throw StaleMatchMove();
+    if (game.ply != expectedPly || revision != expectedRevision) {
+      throw StaleMatchMove();
+    }
     if (!canMove(uid, game, now: now) || MatchRules.play(game, move) == null) {
       throw StateError('Stale, unauthorized or illegal move');
     }
@@ -276,6 +321,8 @@ class MatchRoom {
         startedAt: startedAt,
         lastMoveAt: lastMoveAt,
         finishedAt: finishedAt,
+        revision: config.court ? revision + 1 : revision,
+        takeback: takeback,
         code: code,
         host: host,
         config: config,
@@ -290,13 +337,18 @@ class MatchRoom {
   }
 
   MatchRoom resign(String uid, SeatId seat) {
-    if (owners[seat] != uid || !ready || replay().finished) {
+    if (owners[seat] != uid ||
+        !ready ||
+        takeback != null ||
+        replay().finished) {
       throw StateError('Cannot resign this player');
     }
     return MatchRoom(
         startedAt: startedAt,
         lastMoveAt: lastMoveAt,
         finishedAt: finishedAt,
+        revision: config.court ? revision + 1 : revision,
+        takeback: takeback,
         code: code,
         host: host,
         config: config,
@@ -310,10 +362,79 @@ class MatchRoom {
         clock: clock);
   }
 
+  MatchRoom updateTakeback(
+      String uid, int expectedRevision, CourtTakebackAction action) {
+    if (!config.court ||
+        !ready ||
+        !humanOwners.contains(uid) ||
+        revision != expectedRevision) {
+      throw StateError('Stale or unauthorized Court decision');
+    }
+    CourtTakeback? decision = takeback;
+    List<Map<String, dynamic>> records = moves;
+    var rewound = false;
+    switch (action) {
+      case CourtTakebackAction.request:
+        if (decision != null) throw StateError('A takeback is already pending');
+        final index = moves.lastIndexWhere((move) =>
+            owners[SeatId.values.byName(move['seat'] as String)] == uid);
+        if (index < 0) throw StateError('No human move to take back');
+        decision = CourtTakeback(
+            requestedBy: uid,
+            baseRevision: revision,
+            retained: moves.take(index).toList(),
+            removed: moves.skip(index).toList(),
+            approvals: [uid]);
+      case CourtTakebackAction.approve:
+        if (decision == null ||
+            (decision.approvals.contains(uid) && humanOwners.length != 1)) {
+          throw StateError('No takeback awaiting your agreement');
+        }
+        if (!decision.approvals.contains(uid)) decision = decision.approve(uid);
+      case CourtTakebackAction.decline:
+        if (decision == null || decision.requestedBy == uid) {
+          throw StateError('No takeback to decline');
+        }
+        decision = null;
+      case CourtTakebackAction.cancel:
+        if (decision == null || decision.requestedBy != uid) {
+          throw StateError('Only the requester can cancel');
+        }
+        decision = null;
+    }
+    if (action == CourtTakebackAction.approve &&
+        decision != null &&
+        decision.approvals.toSet().containsAll(humanOwners)) {
+      records = decision.retained;
+      decision = null;
+      rewound = true;
+    }
+    return MatchRoom(
+        code: code,
+        host: host,
+        config: config,
+        owners: owners,
+        styles: styles,
+        boardTheme: boardTheme,
+        moves: records,
+        revision: revision + 1,
+        takeback: decision,
+        resigned: rewound ? null : resigned,
+        timedOut: rewound ? null : timedOut,
+        clock: clock,
+        aiRunner: aiRunner,
+        aiLeaseAt: aiLeaseAt,
+        startedAt: startedAt,
+        lastMoveAt: lastMoveAt,
+        finishedAt: rewound ? null : finishedAt);
+  }
+
   Map<String, dynamic> toMap() => {
         'startedAt': startedAt?.toUtc().toIso8601String(),
         'lastMoveAt': lastMoveAt?.toUtc().toIso8601String(),
         'finishedAt': finishedAt?.toUtc().toIso8601String(),
+        if (config.court) 'revision': revision,
+        if (takeback != null) 'takeback': takeback!.toMap(),
         'version': 1,
         'code': code,
         'host': host,
@@ -345,6 +466,10 @@ class MatchRoom {
     final owners = Map<String, dynamic>.from(map['owners']);
     final styles = Map<String, dynamic>.from(map['styles']);
     return MatchRoom(
+        revision: map['revision'] as int? ?? 0,
+        takeback: map['takeback'] == null
+            ? null
+            : CourtTakeback.fromMap(Map<String, dynamic>.from(map['takeback'])),
         startedAt:
             map['startedAt'] == null ? null : DateTime.parse(map['startedAt']),
         lastMoveAt: map['lastMoveAt'] == null

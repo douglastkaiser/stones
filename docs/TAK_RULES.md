@@ -33,7 +33,9 @@ not a rule requiring a call or guaranteeing a forced win. Core validation stays
 in MatchRules. Offline Court now pauses before an AI's verified immediate
 winning reply after human play, offering a takeback or explicit continuation;
 this teaching pause does not change any legal move or outcome. See
-[Court practice](COURT_MODE.md). Court takebacks remain offline, unrated practice. See
+[Court practice](COURT_MODE.md). Court takebacks remain unrated practice; same-device play uses local takebacks
+and online Court uses unanimous, server-authorized rewinds. Court remains untimed
+and available to any human table; AI-only observation is excluded. See
 [playtesting feedback](PLAYTESTING_FEEDBACK.md) for timing, cosmetics, chat and
 verification; these features do not amend official two-player Tak.
 

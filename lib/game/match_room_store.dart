@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/cosmetics.dart';
 import 'match_config.dart';
+import 'court_takeback.dart';
 import 'match_clock.dart';
 import 'match_room.dart';
 import 'match_state.dart';
@@ -20,7 +21,10 @@ abstract class MatchRoomStore {
   Future<MatchRoom> join(String code, String uid);
   Future<MatchRoom> read(String code);
   Stream<MatchRoomUpdate> watch(String code);
-  Future<void> submit(String code, String uid, int expectedPly, MatchMove move);
+  Future<void> submit(String code, String uid, int expectedPly, MatchMove move,
+      {int expectedRevision = 0});
+  Future<void> takeback(String code, String uid, int expectedRevision,
+      CourtTakebackAction action);
   Future<void> resign(String code, String uid, SeatId seat);
   Future<MatchRoom> claimRunner(String code, String uid);
   Future<void> expire(String code, String uid);
@@ -170,15 +174,16 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         return MatchRoomUpdate(decodeRoom(snapshot.data()!));
       });
   @override
-  Future<void> submit(
-          String code, String uid, int expectedPly, MatchMove move) =>
+  Future<void> submit(String code, String uid, int expectedPly, MatchMove move,
+          {int expectedRevision = 0}) =>
       firestore.runTransaction((tx) async {
         final ref = _room(code);
         final snapshot = await tx.get(ref);
         if (!snapshot.exists) throw StateError('Room no longer exists');
         final previous = decodeRoom(snapshot.data()!);
         final game = previous.replay();
-        final updated = previous.append(uid, expectedPly, move);
+        final updated = previous.append(uid, expectedPly, move,
+            expectedRevision: expectedRevision);
         final clock =
             updated.clock == null ? null : _encodeClock(updated.clock!);
         if (clock != null) {
@@ -188,12 +193,35 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         }
         tx.update(ref, {
           'moves': updated.moves,
+          if (updated.config.court) 'revision': updated.revision,
           'lastMoveAt': FieldValue.serverTimestamp(),
           if (updated.replay().finished)
             'finishedAt': FieldValue.serverTimestamp(),
           if (clock != null) 'clock': clock
         });
       });
+  @override
+  Future<void> takeback(String code, String uid, int expectedRevision,
+      CourtTakebackAction action) async {
+    await firestore.runTransaction((tx) async {
+      final ref = _room(code);
+      final snapshot = await tx.get(ref);
+      if (!snapshot.exists) throw StateError('Room no longer exists');
+      final previous = decodeRoom(snapshot.data()!);
+      final updated = previous.updateTakeback(uid, expectedRevision, action);
+      tx.update(ref, {
+        'revision': updated.revision,
+        'takeback': updated.takeback?.toMap(),
+        'moves': updated.moves,
+        'resigned': updated.resigned?.name,
+        'timedOut': updated.timedOut?.name,
+        'finishedAt': updated.finishedAt == null
+            ? null
+            : Timestamp.fromDate(updated.finishedAt!),
+      });
+    });
+  }
+
   @override
   Future<void> resign(String code, String uid, SeatId seat) =>
       firestore.runTransaction((tx) async {
@@ -203,6 +231,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
         final updated = decodeRoom(snapshot.data()!).resign(uid, seat);
         tx.update(ref, {
           'resigned': updated.resigned!.name,
+          if (updated.config.court) 'revision': updated.revision,
           'finishedAt': FieldValue.serverTimestamp()
         });
       });

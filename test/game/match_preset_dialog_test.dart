@@ -94,6 +94,55 @@ void main() {
       });
     }
 
+    for (final preset in [MatchPreset.sameDevice, MatchPreset.online]) {
+      testWidgets(
+          '${shape.name} ${preset.name} offers Court with four human seats',
+          (tester) async {
+        final storage = MemoryMatchStorage();
+        final store = MemoryMatchRoomStore();
+        var authentications = 0;
+        final controller = MatchController(
+            storage: storage,
+            authenticate: () async {
+              authentications++;
+              return 'host';
+            },
+            store: () => store);
+        await tester.pumpWidget(ProviderScope(overrides: [
+          matchProvider.overrideWith((ref) => controller),
+          localMatchStorageProvider.overrideWithValue(storage),
+        ], child: MaterialApp(home: MatchSetupScreen(shape: shape))));
+        await tester.pumpAndSettle();
+        await openPreset(tester, preset);
+        expect(authentications, 0);
+        expect(storage.snapshot, isNull);
+        await selectOption(tester,
+            find.byType(DropdownButtonFormField<int>).last, '4 players');
+        await selectOption(tester, find.byType(MatchBoardSizeField).last,
+            shape == BoardShape.square ? '6 × 6' : 'Radius 3 · 37 cells');
+        final court = find.widgetWithText(SwitchListTile, 'Court Mode');
+        await tester.ensureVisible(court);
+        expect(tester.widget<SwitchListTile>(court).value, isFalse);
+        await tester.tap(court);
+        await tester.pumpAndSettle();
+        await tester.tap(find
+            .widgetWithText(FilledButton,
+                preset == MatchPreset.online ? 'Create room' : 'Start game')
+            .last);
+        await tester.pumpAndSettle();
+        final config = controller.state.game!.config;
+        expect(config.court, isTrue);
+        expect(config.clockSeconds, 0);
+        expect(config.seats, hasLength(4));
+        expect(config.size, shape == BoardShape.square ? 6 : 3);
+        expect(config.seats.every((s) => s.control != SeatControl.ai), isTrue);
+        expect(authentications, preset == MatchPreset.online ? 1 : 0);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        await store.updates.close();
+      });
+    }
+
     for (final count in [2, 3, 4]) {
       testWidgets(
           '${shape.name} online quick start creates $count seats at the selected size',
@@ -175,7 +224,8 @@ void main() {
     for (final preset in [
       MatchPreset.learn,
       MatchPreset.computer,
-      MatchPreset.online
+      MatchPreset.online,
+      MatchPreset.sameDevice
     ]) {
       await openPreset(tester, preset);
       await selectOption(
@@ -200,7 +250,8 @@ void main() {
   for (final preset in [
     MatchPreset.learn,
     MatchPreset.computer,
-    MatchPreset.online
+    MatchPreset.online,
+    MatchPreset.sameDevice
   ]) {
     testWidgets('${preset.name} popup fits a narrow screen with large text',
         (tester) async {

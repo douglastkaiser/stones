@@ -41,12 +41,9 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
 
   Future<void> _startPreset(MatchPreset preset) async {
     if (_busy) return;
-    final config = preset == MatchPreset.sameDevice
-        ? preset.configuration(widget.shape)
-        : await showDialog<MatchConfig>(
-            context: context,
-            builder: (_) =>
-                MatchPresetDialog(preset: preset, shape: widget.shape));
+    final config = await showDialog<MatchConfig>(
+        context: context,
+        builder: (_) => MatchPresetDialog(preset: preset, shape: widget.shape));
     if (config != null && mounted) await _start(config);
   }
 

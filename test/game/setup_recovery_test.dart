@@ -46,6 +46,8 @@ Future<void> startAfterFinishedGame(
   await tester.ensureVisible(find.text('Same-device game'));
   await tester.tap(find.text('Same-device game'));
   await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(FilledButton, 'Start game').last);
+  await tester.pumpAndSettle();
   expect(find.text('Replace your saved local game?'), findsNothing);
   expect(find.byType(MatchScreen), findsOneWidget);
   expect(controller.state.id, isNot(snapshot['id']));

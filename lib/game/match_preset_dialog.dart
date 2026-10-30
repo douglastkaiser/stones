@@ -17,6 +17,7 @@ class _MatchPresetDialogState extends State<MatchPresetDialog> {
   late final _defaults = widget.preset.configuration(widget.shape);
   late int _size = _defaults.size;
   late int _players = _defaults.seats.length;
+  late bool _court = _defaults.court;
   BotLevel _level = BotLevel.easy;
 
   @override
@@ -32,7 +33,11 @@ class _MatchPresetDialogState extends State<MatchPresetDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(widget.preset.description),
+                  Text(_court
+                      ? 'Hints, Tak! warnings and takebacks. Untimed, unrated practice; no awards.'
+                      : widget.preset == MatchPreset.learn
+                          ? MatchPreset.computer.description
+                          : widget.preset.description),
                   const SizedBox(height: 20),
                   MatchBoardSizeField(
                       shape: widget.shape,
@@ -58,6 +63,17 @@ class _MatchPresetDialogState extends State<MatchPresetDialog> {
                             setState(() => _players = count);
                           }
                         }),
+                  const SizedBox(height: 16),
+                  SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Court Mode'),
+                      subtitle:
+                          const Text('Optional coaching · untimed and unrated'),
+                      value: _court,
+                      onChanged: (value) => setState(() => _court = value)),
+                  if (_court && widget.preset == MatchPreset.online)
+                    const Text(
+                        'Online takebacks need every human player’s agreement.'),
                 ])),
         actions: [
           TextButton(
@@ -66,8 +82,10 @@ class _MatchPresetDialogState extends State<MatchPresetDialog> {
           FilledButton(
               onPressed: () => Navigator.pop(
                   context,
-                  widget.preset.configuration(widget.shape,
-                      size: _size, playerCount: _players, level: _level)),
+                  widget.preset
+                      .configuration(widget.shape,
+                          size: _size, playerCount: _players, level: _level)
+                      .copyWith(court: _court)),
               child: Text(_defaults.online ? 'Create room' : 'Start game')),
         ]);
   }

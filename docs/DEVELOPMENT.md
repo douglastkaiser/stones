@@ -236,9 +236,10 @@ AI uses completed iterative-deepening results with difficulty-specific budgets.
 
 ## Court Mode
 
-See [Court Mode](COURT_MODE.md) for the optional square AI coaching contract,
-source customs, threat warnings, takeback semantics and verification. Court
-sessions are untimed, unrated practice; core move validation remains GameRules.
+See [Court Mode](COURT_MODE.md) for optional Square/Hex coaching with local or
+online humans, threat warnings, local takebacks and unanimous online takebacks.
+Court sessions are untimed, unrated practice; AI-only observation is excluded.
+Core move validation remains in MatchRules, with GameRules as a legacy adapter.
 
 ## Verified puzzle studies
 

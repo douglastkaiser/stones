@@ -70,6 +70,9 @@ def ai_profiles():
 
 def ready(page):
     page.locator('flt-glass-pane').wait_for(state='attached', timeout=60000)
+    # The Auth emulator's fixed DOM warning covers Flutter's bottom actions.
+    # Keep the warning visible without letting this test-only overlay eat taps.
+    page.add_style_tag(content='.firebase-emulator-warning { pointer-events: none !important; }')
     page.wait_for_function("""() => {
       const p = document.querySelector('flt-semantics-placeholder');
       if (p) p.click();
@@ -137,7 +140,7 @@ def main():
     summary = EVIDENCE / 'summary.json'
     summary.write_text(json.dumps({'status': 'running'}, indent=2))
     server = subprocess.Popen(['node', 'tools/serve_web.mjs'],
-                              env={**os.environ, 'WEB_ROOT': 'build/integration-web', 'PORT': str(PORT)},
+                              env={**os.environ, 'WEB_ROOT': os.environ.get('STONES_JOURNEY_WEB_ROOT', 'build/integration-web'), 'PORT': str(PORT)},
                               stdout=subprocess.DEVNULL)
     try:
         for attempt in range(50):
@@ -198,9 +201,23 @@ def main():
 
         host.get_by_role('button', name=re.compile('^Square')).tap()
         click(host, 'Same-device game')
+        tap_target(host, host.get_by_role('switch', name=re.compile('^Court Mode')))
+        click(host, 'Start game')
         expect(cell(host, 0, 0)).to_be_visible()
         place(host, 0, 0)
         expect(cell(host, 0, 0)).to_have_accessible_name(re.compile('Charcoal flat'))
+        click(host, 'Match options')
+        tap_target(host, host.get_by_role('menuitem', name='Take back the last human move and any AI replies', exact=True))
+        expect(cell(host, 0, 0)).to_have_accessible_name(re.compile('empty'))
+        place(host, 0, 0)
+        for x, y in [(1, 0), (1, 1), (4, 0), (1, 2), (4, 1), (1, 3)]:
+            place(host, x, y)
+        expect(host.get_by_text(re.compile('^Tak! Ivory can win next move'))).to_be_visible(timeout=30000)
+        host.screenshot(path=str(EVIDENCE / 'human-court-warning-phone.png'))
+        for _ in range(6):
+            click(host, 'Match options')
+            tap_target(host, host.get_by_role('menuitem', name='Take back the last human move and any AI replies', exact=True))
+        expect(cell(host, 1, 0)).to_have_accessible_name(re.compile('empty'))
         host.reload()
         ready(host)
         click(host, 'My games')
@@ -224,6 +241,7 @@ def main():
 
         host.get_by_role('button', name=re.compile('^Square')).tap()
         click(host, 'Online friend game')
+        tap_target(host, host.get_by_role('switch', name=re.compile('^Court Mode')))
         host.screenshot(path=str(EVIDENCE / 'online-setup-phone.png'))
         click(host, 'Create room')
         code_label = re.compile(r'^Room U[A-Z]{6}$')
@@ -248,6 +266,28 @@ def main():
         click(guest, 'Join room')
         expect(cell(guest, 0, 0)).to_have_accessible_name(re.compile('Charcoal flat'), timeout=30000)
         expect(turn_status(guest, 'Charcoal')).to_be_visible(timeout=30000)
+        place(guest, 1, 0)
+        expect(cell(host, 1, 0)).to_have_accessible_name(re.compile('Ivory flat'), timeout=30000)
+        def request_takeback(page):
+            click(page, 'Match options')
+            tap_target(page, page.get_by_role('menuitem', name='Request a takeback of your last move and following replies', exact=True))
+        request_takeback(guest)
+        expect(button(host, 'Agree')).to_be_visible(timeout=30000)
+        guest.reload()
+        ready(guest)
+        click(guest, 'Join room')
+        expect(button(guest, 'Cancel request')).to_be_visible(timeout=30000)
+        click(guest, 'Cancel request')
+        expect(button(host, 'Agree')).not_to_be_visible(timeout=30000)
+        expect(cell(host, 1, 0)).to_have_accessible_name(re.compile('Ivory flat'))
+        request_takeback(guest)
+        click(host, 'Decline')
+        expect(button(guest, 'Cancel request')).not_to_be_visible(timeout=30000)
+        request_takeback(guest)
+        click(host, 'Agree')
+        expect(cell(host, 1, 0)).to_have_accessible_name(re.compile('empty'), timeout=30000)
+        expect(cell(guest, 1, 0)).to_have_accessible_name(re.compile('empty'), timeout=30000)
+        expect(cell(host, 0, 0)).to_have_accessible_name(re.compile('Charcoal flat'))
         place(guest, 1, 0)
         expect(cell(host, 1, 0)).to_have_accessible_name(re.compile('Ivory flat'), timeout=30000)
         guest.screenshot(path=str(EVIDENCE / 'rejoined-friend-phone.png'))
@@ -327,6 +367,8 @@ def main():
             'journeys': ['browser Back/Forward lesson completion and next lesson', 'local save/reload',
                          'completion, read-only review and local rematch',
                          'cold invitation', 'independent clients', 'disconnect/rejoin',
+                         'same-device Court takeback and recovery',
+                         'online Court reload, cancel, decline, agreement and replay',
                          'computer reply', 'signed-in AI-only settlement in both scopes',
                          'AI-only duplicate recovery'],
             'status': 'passed',

@@ -1,5 +1,22 @@
 # Current release qualification
 
+## Court backend publication, 2026-10-30
+
+The owner authorized Firestore publication and completed official CLI sign-in.
+The exact tested Court rules are published to `stones-9a6a0`, default database,
+and readback SHA-256 matches
+`4484497f34b7306346a85d8eaaae6bd95a2e0990e8b5ace2b6baecf78a5c20f4`.
+All 158 Firestore authorization tests passed immediately before publication;
+five read-only production access checks passed afterward. The six READY indexes,
+field overrides, database identity and other rule releases are unchanged.
+ONLINE-09 and ONLINE-10 now record this published backend capability.
+
+See [publication and rollback details](releases/FIREBASE_20261030_COURT.md) and
+[the evidence record](qa/firestore-court-publication-2026-10-30.json).
+The Court application changes remain local source: this task published no web or
+Android build and performed no production game/account/rating writes. Hosted
+Court user journeys and physical-device qualification remain separate.
+
 ## Quick-start setup and manual AI strength checks, 2026-10-29
 
 Application `54b6f15` adds shared board-size/difficulty popups for computer games,

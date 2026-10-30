@@ -19,6 +19,7 @@ import 'board_view.dart';
 import 'board_viewport.dart';
 import 'match_table_layout.dart';
 import 'match_threats.dart';
+import 'court_takeback.dart';
 import '../widgets/open_table_control.dart';
 import 'board_geometry.dart';
 import 'clock_label.dart';
@@ -383,27 +384,31 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final winner = game.result?.winner;
     final road = winner == null ? <Cell>{} : MatchRules.road(game, winner);
     final practiceEnded = widget.studyPanel != null && match.inputLocked;
-    final status = practiceEnded
-        ? 'Practice finished'
-        : game.finished
-            ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
-            : !match.ready
-                ? 'Waiting for online players'
-                : match.reconnecting
-                    ? 'Reconnecting · your board is retained'
-                    : !match.connected
-                        ? 'Disconnected · your board is retained'
-                        : match.paused && match.room == null
-                            ? match.courtWinningReply != null
-                                ? 'Court Mode paused'
-                                : 'Match paused'
-                            : match.paused &&
-                                    game.config.seat(game.current).control ==
-                                        SeatControl.ai
-                                ? 'AI paused'
-                                : match.busy
-                                    ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
-                                    : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
+    final status = match.room?.takeback != null
+        ? 'Waiting for takeback agreement'
+        : practiceEnded
+            ? 'Practice finished'
+            : game.finished
+                ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
+                : !match.ready
+                    ? 'Waiting for online players'
+                    : match.reconnecting
+                        ? 'Reconnecting · your board is retained'
+                        : !match.connected
+                            ? 'Disconnected · your board is retained'
+                            : match.paused && match.room == null
+                                ? match.courtWinningReply != null
+                                    ? 'Court Mode paused'
+                                    : 'Match paused'
+                                : match.paused &&
+                                        game.config
+                                                .seat(game.current)
+                                                .control ==
+                                            SeatControl.ai
+                                    ? 'AI paused'
+                                    : match.busy
+                                        ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
+                                        : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
     final commands = <IconButton>[
       IconButton(
         tooltip: 'Audio settings',
@@ -449,8 +454,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           icon: const Icon(Icons.lightbulb_outline),
         ),
         IconButton(
-          tooltip: 'Take back your last move and AI replies',
-          onPressed: match.busy
+          tooltip: match.room == null
+              ? 'Take back the last human move and any AI replies'
+              : 'Request a takeback of your last move and following replies',
+          onPressed: !_controller.canRequestTakeback
               ? null
               : () async {
                   if (await _controller.takeBack() && mounted) {
@@ -482,7 +489,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         IconButton(
           tooltip: game.config.seats.length == 2 ? 'Resign' : 'End match',
           onPressed:
-              match.busy || !match.connected ? null : () => _resign(match),
+              match.busy || !match.connected || match.room?.takeback != null
+                  ? null
+                  : () => _resign(match),
           icon: const Icon(Icons.flag_outlined),
         ),
     ];
@@ -777,6 +786,49 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   }
 
   Widget? _primaryActions(MatchSession match, MatchState game) {
+    final decision = match.room?.takeback;
+    if (decision != null) {
+      final room = match.room!;
+      final participant = room.humanOwners.contains(match.uid);
+      final requester = decision.requestedBy == match.uid;
+      final requestingSeat =
+          SeatId.values.byName(decision.removed.first['seat'] as String);
+      final canApprove = participant &&
+          (!decision.approvals.contains(match.uid) ||
+              room.humanOwners.length == 1);
+      final enabled = match.connected && !match.busy;
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        Semantics(
+            liveRegion: true,
+            child: Text(
+                '${requestingSeat.label} requests a takeback · ${decision.approvals.length}/${room.humanOwners.length} agreed. '
+                '${decision.removed.length} moves will be undone.',
+                textAlign: TextAlign.center)),
+        Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
+          if (canApprove)
+            FilledButton(
+                onPressed: enabled
+                    ? () =>
+                        _controller.courtTakeback(CourtTakebackAction.approve)
+                    : null,
+                child: const Text('Agree')),
+          if (participant && !requester)
+            TextButton(
+                onPressed: enabled
+                    ? () =>
+                        _controller.courtTakeback(CourtTakebackAction.decline)
+                    : null,
+                child: const Text('Decline')),
+          if (requester)
+            TextButton(
+                onPressed: enabled
+                    ? () =>
+                        _controller.courtTakeback(CourtTakebackAction.cancel)
+                    : null,
+                child: const Text('Cancel request')),
+        ]),
+      ]);
+    }
     if (match.courtWinningReply != null) {
       return Column(
         mainAxisSize: MainAxisSize.min,
