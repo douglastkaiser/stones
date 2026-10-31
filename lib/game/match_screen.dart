@@ -1,6 +1,8 @@
 import '../services/game_wake_lock.dart';
 import '../widgets/room_invitation_actions.dart';
 import '../widgets/audio_controls.dart';
+import '../widgets/music_scene.dart';
+import '../services/music_service.dart';
 
 import 'dart:async';
 
@@ -821,8 +823,16 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         ),
       ),
     );
-    return GameKeepAwake(
-        active: !game.finished && !match.paused, child: screen);
+    return MusicScene(
+        cue: widget.studyPanel != null || game.config.court
+            ? MusicCue.learning
+            : game.finished
+                ? MusicCue.results
+                : game.config.shape == BoardShape.hex
+                    ? MusicCue.hex
+                    : MusicCue.square,
+        child: GameKeepAwake(
+            active: !game.finished && !match.paused, child: screen));
   }
 
   Widget _controls(

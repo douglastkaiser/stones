@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/game_wake_lock.dart';
+import '../services/music_service.dart';
+import '../widgets/music_scene.dart';
 import '../models/piece.dart' show PieceType;
 import '../models/cosmetics.dart';
 import '../providers/cosmetics_provider.dart';
@@ -499,8 +501,10 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                 ])));
       })),
     );
-    return GameKeepAwake(
-        active: !game.finished && !match.paused, child: screen);
+    return MusicScene(
+        cue: game.finished ? MusicCue.results : MusicCue.hex,
+        child: GameKeepAwake(
+            active: !game.finished && !match.paused, child: screen));
   }
 
   String _seatStatus(HexMatchState match, HexSeat seat) {

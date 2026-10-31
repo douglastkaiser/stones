@@ -30,6 +30,8 @@ import 'screens/main_menu_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'game/legacy_achievement_result.dart';
 import 'widgets/audio_controls.dart';
+import 'widgets/music_scene.dart';
+import 'services/music_service.dart';
 import 'services/app_history_observer.dart';
 import 'providers/elite_theme_provider.dart';
 import 'game/match_provider.dart' show ratingStatusProvider;
@@ -145,7 +147,11 @@ class _StonesAppState extends ConsumerState<StonesApp>
     return MaterialApp(
       scaffoldMessengerKey: _messenger,
       navigatorKey: _navigator,
-      navigatorObservers: [_history, gameWakeLockRoutes],
+      navigatorObservers: [
+        _history,
+        gameWakeLockRoutes,
+        ref.watch(musicDirectorProvider)
+      ],
       builder: (context, child) =>
           AudioControls(navigator: _navigator, child: child!),
       title: 'Stones',
@@ -1564,7 +1570,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         ),
       ),
     );
-    return GameKeepAwake(active: !gameState.isGameOver, child: screen);
+    return MusicScene(
+        cue: activeScenario != null || session.isCourtMode
+            ? MusicCue.learning
+            : gameState.isGameOver
+                ? MusicCue.results
+                : MusicCue.square,
+        child: GameKeepAwake(active: !gameState.isGameOver, child: screen));
   }
 
   /// Handle tap on the board frame (outside cells) - cancels stack movement

@@ -602,6 +602,9 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
   contact, with a heavier group/capstone sound and one sound per destination group.
   Crushing and wins retain distinct cues. Duplicate snapshots, reconnect catch-up,
   restore, review, rejected moves and draft edits never replay landing feedback.
+  Effect initialization failure does not gate music; failed optional playback can
+  retry on a later interaction. Existing effects are retained alongside the new
+  soundtrack. See [the music contract](MUSIC.md) for source and qualification limits.
 
 ## Navigation, audio, help and delivery
 
@@ -616,6 +619,12 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
 - **APP-02 · Audio:** reach audio controls throughout the app; change effects and music
   independently and retain preferences. Effects default on, music off; web audio
   begins after user interaction.
+  An original acoustic-style motif has menu, Square, Hex, learning and neutral
+  results arrangements with crossfaded transitions/loops. Court, studies and
+  review use learning music; dialogs retain the underlying page's cue. Covered
+  matches cannot change the visible page's music. Backgrounding pauses both music
+  voices. Text score and renderer are versioned; generated music is a build asset.
+  See [music](MUSIC.md) for regression journeys and platform qualification.
 - **APP-03 · Help:** find the publisher's Core Rules PDF in About with variants clearly
   distinguished from official Tak.
 - **APP-04 · Feedback:** open an editable Problem/Idea/Other report from Settings/About,

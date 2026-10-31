@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/music_service.dart';
+import '../widgets/music_scene.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/piece.dart';
 import 'hex_board.dart';
@@ -43,7 +45,9 @@ class _HexLearningScreenState extends State<HexLearningScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => MusicScene(
+      cue: MusicCue.learning,
+      child: Scaffold(
         appBar: AppBar(title: const Text('Hex tutorials & puzzles')),
         body: Center(
             child: ConstrainedBox(
@@ -83,7 +87,7 @@ class _HexLearningScreenState extends State<HexLearningScreen> {
                               onTap: () => _open(exercise))),
                   ],
                 ]))),
-      );
+      ));
 }
 
 class HexExerciseScreen extends StatefulWidget {
@@ -196,118 +200,124 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
     final exercise = widget.exercise;
     final preview = _planned == null ? null : HexRules.play(_game, _planned!);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(exercise.title)),
-      body: Center(
-          child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(exercise.goal,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        if (exercise.puzzle)
-                          Text(
-                              '${exercise.metadata} · $_steps / ${exercise.moveLimit} moves used'),
-                        const SizedBox(height: 8),
-                        Text(_done
-                            ? 'Objective complete'
-                            : _attempted
-                                ? 'Retry to explore another move'
-                                : '${_game.current.label} · ${_game.opening ? 'place ${_game.current.next.label} flat' : 'connect any opposite sides'}'),
-                        const Text('I: Ivory · Ch: Charcoal · Cu: Copper'),
-                        const Text(
-                            'Every color can connect A to A, B to B, or C to C. Choose any opposite pair.'),
-                        SizedBox(
-                            height: MediaQuery.sizeOf(context)
-                                .width
-                                .clamp(260.0, 420.0),
-                            child: HexBoard(
-                                goalSeat: exercise.initial.current,
-                                turnSeat: _game.current,
-                                preview: _planned != null,
-                                game: preview ?? _game,
-                                inspectionGame: preview == null ? null : _game,
-                                selected: _source,
-                                destinations: _selection.destinations(_game),
-                                road: _done && _game.winner != null
-                                    ? HexRules.road(_game, _game.winner!)
-                                    : {},
-                                onSwipe: _done || _attempted
-                                    ? null
-                                    : (cell, direction) => setState(() =>
-                                        _selection.swipe(
-                                            _game, cell, direction)),
-                                onCell: _done || _attempted ? null : _tap)),
-                        if (!_done &&
-                            !_attempted &&
-                            !_game.opening &&
-                            _source == null)
-                          Wrap(spacing: 8, children: [
-                            for (final type in PieceType.values)
-                              ChoiceChip(
-                                  label: Text(switch (type) {
-                                    PieceType.flat => 'Flat',
-                                    PieceType.standing => 'Wall',
-                                    PieceType.capstone => 'Capstone',
-                                  }),
-                                  selected: _type == type,
-                                  onSelected: !_game
-                                          .reserves[_game.current.index]
-                                          .has(type)
-                                      ? null
-                                      : (_) => setState(() {
-                                            _type = type;
-                                            _planned = null;
-                                          }))
-                          ]),
-                        if (_source != null)
-                          HexMoveControls(
-                              selection: _selection,
-                              game: _game,
-                              onChanged: () => setState(() {})),
-                        if (!_done && !_attempted)
-                          const Text(
-                              'Tap to preview; tap again to place. Tap or drag your stack toward a neighbor. Carry and Drop adjust the spread; Confirm finishes it.'),
-                        if (_feedback != null)
-                          Semantics(
-                              liveRegion: true,
-                              child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
-                                  child: Text(_feedback!))),
-                        Wrap(spacing: 8, runSpacing: 4, children: [
-                          if (_planned != null)
-                            FilledButton(
-                                onPressed: _confirm,
-                                child: const Text('Confirm')),
-                          if (_source != null || _planned != null)
-                            TextButton(
-                                onPressed: () => setState(_clear),
-                                child: const Text('Cancel')),
-                          if (exercise.puzzle)
-                            PuzzleHints(hints: exercise.hints)
-                          else
-                            OutlinedButton(
-                                onPressed: () => setState(() => _hint = !_hint),
-                                child: Text(_hint ? 'Hide hint' : 'Hint')),
-                          OutlinedButton(
-                              onPressed: () => setState(_reset),
-                              child: const Text('Retry')),
-                          if (_done)
-                            FilledButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text(exercise.puzzle
-                                    ? 'Finish puzzle'
-                                    : 'Finish lesson')),
-                        ]),
-                        if (_hint)
-                          Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Text(exercise.hint)),
-                      ])))),
-    );
+    return MusicScene(
+        cue: MusicCue.learning,
+        child: Scaffold(
+          appBar: AppBar(title: Text(exercise.title)),
+          body: Center(
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(exercise.goal,
+                                style: Theme.of(context).textTheme.titleMedium),
+                            if (exercise.puzzle)
+                              Text(
+                                  '${exercise.metadata} · $_steps / ${exercise.moveLimit} moves used'),
+                            const SizedBox(height: 8),
+                            Text(_done
+                                ? 'Objective complete'
+                                : _attempted
+                                    ? 'Retry to explore another move'
+                                    : '${_game.current.label} · ${_game.opening ? 'place ${_game.current.next.label} flat' : 'connect any opposite sides'}'),
+                            const Text('I: Ivory · Ch: Charcoal · Cu: Copper'),
+                            const Text(
+                                'Every color can connect A to A, B to B, or C to C. Choose any opposite pair.'),
+                            SizedBox(
+                                height: MediaQuery.sizeOf(context)
+                                    .width
+                                    .clamp(260.0, 420.0),
+                                child: HexBoard(
+                                    goalSeat: exercise.initial.current,
+                                    turnSeat: _game.current,
+                                    preview: _planned != null,
+                                    game: preview ?? _game,
+                                    inspectionGame:
+                                        preview == null ? null : _game,
+                                    selected: _source,
+                                    destinations:
+                                        _selection.destinations(_game),
+                                    road: _done && _game.winner != null
+                                        ? HexRules.road(_game, _game.winner!)
+                                        : {},
+                                    onSwipe: _done || _attempted
+                                        ? null
+                                        : (cell, direction) => setState(() =>
+                                            _selection.swipe(
+                                                _game, cell, direction)),
+                                    onCell: _done || _attempted ? null : _tap)),
+                            if (!_done &&
+                                !_attempted &&
+                                !_game.opening &&
+                                _source == null)
+                              Wrap(spacing: 8, children: [
+                                for (final type in PieceType.values)
+                                  ChoiceChip(
+                                      label: Text(switch (type) {
+                                        PieceType.flat => 'Flat',
+                                        PieceType.standing => 'Wall',
+                                        PieceType.capstone => 'Capstone',
+                                      }),
+                                      selected: _type == type,
+                                      onSelected: !_game
+                                              .reserves[_game.current.index]
+                                              .has(type)
+                                          ? null
+                                          : (_) => setState(() {
+                                                _type = type;
+                                                _planned = null;
+                                              }))
+                              ]),
+                            if (_source != null)
+                              HexMoveControls(
+                                  selection: _selection,
+                                  game: _game,
+                                  onChanged: () => setState(() {})),
+                            if (!_done && !_attempted)
+                              const Text(
+                                  'Tap to preview; tap again to place. Tap or drag your stack toward a neighbor. Carry and Drop adjust the spread; Confirm finishes it.'),
+                            if (_feedback != null)
+                              Semantics(
+                                  liveRegion: true,
+                                  child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      child: Text(_feedback!))),
+                            Wrap(spacing: 8, runSpacing: 4, children: [
+                              if (_planned != null)
+                                FilledButton(
+                                    onPressed: _confirm,
+                                    child: const Text('Confirm')),
+                              if (_source != null || _planned != null)
+                                TextButton(
+                                    onPressed: () => setState(_clear),
+                                    child: const Text('Cancel')),
+                              if (exercise.puzzle)
+                                PuzzleHints(hints: exercise.hints)
+                              else
+                                OutlinedButton(
+                                    onPressed: () =>
+                                        setState(() => _hint = !_hint),
+                                    child: Text(_hint ? 'Hide hint' : 'Hint')),
+                              OutlinedButton(
+                                  onPressed: () => setState(_reset),
+                                  child: const Text('Retry')),
+                              if (_done)
+                                FilledButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: Text(exercise.puzzle
+                                        ? 'Finish puzzle'
+                                        : 'Finish lesson')),
+                            ]),
+                            if (_hint)
+                              Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Text(exercise.hint)),
+                          ])))),
+        ));
   }
 }

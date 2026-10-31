@@ -1,0 +1,29 @@
+name: Prepare generated music
+description: Render and verify the text-authored soundtrack before Flutter bundles assets.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - uses: actions/cache@v4
+      with:
+        path: assets/sounds/music
+        key: music-${{ runner.os }}-${{ hashFiles('music/**', 'scripts/generate_music.py') }}
+    - name: Install renderer dependencies
+      shell: bash
+      run: |
+        python3 -m pip install -r music/requirements.txt
+        if ! command -v ffmpeg >/dev/null; then
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            brew install ffmpeg
+          else
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+        fi
+    - name: Render and verify soundtrack
+      shell: bash
+      run: |
+        python3 scripts/generate_music.py
+        python3 scripts/generate_music.py --check

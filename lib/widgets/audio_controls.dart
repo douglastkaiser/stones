@@ -1,14 +1,19 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../services/sound_manager.dart';
+import '../services/music_service.dart';
+import '../services/audio_gesture.dart';
+import 'music_scene.dart';
 
 /// One audio owner for the entire app, including learning and online play.
 class AudioControls extends ConsumerStatefulWidget {
   const AudioControls(
       {super.key, required this.child, required this.navigator});
+
+  static void unlock(BuildContext context) =>
+      context.findAncestorStateOfType<_AudioControlsState>()?._unlockAudio();
 
   /// Gameplay supplies an inline audio command instead of an overlapping button.
   static VoidCallback hideFloatingButton(BuildContext context) {
@@ -40,20 +45,29 @@ class _AudioControlsState extends ConsumerState<AudioControls>
     });
   }
 
-  final _music = AudioPlayer();
+  late final _music = ref.read(musicServiceProvider);
+  late final _director = ref.read(musicDirectorProvider);
   bool _unlocked = false, _foreground = true;
+  bool _effectsFailed = false;
   Future<void> _updates = Future.value();
-  bool _started = false;
+  late final VoidCallback _stopGestures;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _foreground = WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    _director.cue.addListener(_musicCueChanged);
+    _musicCueChanged();
+    _stopGestures = listenForAudioGesture(_unlockAudio);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_music.dispose());
+    _stopGestures();
+    _director.cue.removeListener(_musicCueChanged);
+    _music.configure(enabled: false, volume: 0);
     super.dispose();
   }
 
@@ -64,8 +78,10 @@ class _AudioControlsState extends ConsumerState<AudioControls>
   }
 
   void _sync() {
-    if (!_unlocked) return;
     final settings = ref.read(appSettingsProvider);
+    _music.configure(
+        enabled: _unlocked && _foreground, volume: settings.musicVolume);
+    if (!_unlocked) return;
     _updates = _updates.then((_) async {
       if (!mounted) return;
       final sounds = ref.read(soundManagerProvider);
@@ -74,25 +90,29 @@ class _AudioControlsState extends ConsumerState<AudioControls>
       await sounds.setMuted(settings.isSoundMuted);
       if (!mounted) return;
       ref.read(isMutedProvider.notifier).state = settings.isSoundMuted;
-      if (!_foreground || settings.musicVolume == 0) {
-        await _music.pause();
-        return;
-      }
-      await _music.setVolume(settings.musicVolume);
-      if (!_started) {
-        await _music.setReleaseMode(ReleaseMode.loop);
-        await _music.play(AssetSource('sounds/background.wav'));
-        _started = true;
-      } else {
-        await _music.resume();
-      }
+      _effectsFailed = false;
     }).catchError((Object _) {
-      _unlocked = false;
-      /* Browser audio may require another gesture. */
+      _effectsFailed = true;
+      /* An optional effect load must not prevent music or gameplay. */
     });
   }
 
+  void _musicCueChanged() => _music.setCue(_director.cue.value);
+
+  void _unlockAudio() {
+    if (!mounted) return;
+    _music.unlock();
+    if (!_unlocked) {
+      _unlocked = true;
+      _sync();
+    } else {
+      _music.retry();
+      if (_effectsFailed) _sync();
+    }
+  }
+
   void _settings() {
+    _unlockAudio();
     final overlay = widget.navigator.currentState?.overlay;
     if (overlay == null) return;
     showModalBottomSheet<void>(
@@ -106,32 +126,29 @@ class _AudioControlsState extends ConsumerState<AudioControls>
   @override
   Widget build(BuildContext context) {
     ref.listen(appSettingsProvider, (_, next) => _sync());
-    return Listener(
-        onPointerDown: (_) {
-          if (!_unlocked) {
-            _unlocked = true;
-            _sync();
-          }
-        },
-        child: Overlay.wrap(
-            child: Stack(children: [
-          widget.child,
-          if (_inlineOwners == 0)
-            Positioned(
-                right: 12,
-                bottom: 12,
-                child: SafeArea(
-                    child: Material(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        elevation: 2,
-                        borderRadius: BorderRadius.circular(24),
-                        child: IconButton(
-                            tooltip: 'Audio settings',
-                            onPressed: _settings,
-                            icon: const Icon(Icons.volume_up_outlined))))),
-        ])));
+    return MusicScope(
+        director: _director,
+        child: Listener(
+            onPointerDown: (_) => _unlockAudio(),
+            child: Overlay.wrap(
+                child: Stack(children: [
+              widget.child,
+              if (_inlineOwners == 0)
+                Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: SafeArea(
+                        child: Material(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            elevation: 2,
+                            borderRadius: BorderRadius.circular(24),
+                            child: IconButton(
+                                tooltip: 'Audio settings',
+                                onPressed: _settings,
+                                icon: const Icon(Icons.volume_up_outlined))))),
+            ]))));
   }
 }
 
@@ -146,16 +163,23 @@ class AudioSettingsPanel extends ConsumerWidget {
       SwitchListTile(
           title: const Text('Sound effects'),
           value: !settings.isSoundMuted,
-          onChanged: (value) =>
-              ref.read(appSettingsProvider.notifier).setSoundMuted(!value)),
+          onChanged: (value) {
+            AudioControls.unlock(context);
+            unawaited(
+                ref.read(appSettingsProvider.notifier).setSoundMuted(!value));
+          }),
       SwitchListTile(
           secondary: const Icon(Icons.music_note),
           title: const Text('Background music'),
-          subtitle: const Text('A quiet instrumental loop'),
+          subtitle: const Text(
+              'An acoustic theme with variations for play and learning'),
           value: settings.musicVolume > 0,
-          onChanged: (value) => ref
-              .read(appSettingsProvider.notifier)
-              .setMusicVolume(value ? .25 : 0)),
+          onChanged: (value) {
+            AudioControls.unlock(context);
+            unawaited(ref
+                .read(appSettingsProvider.notifier)
+                .setMusicVolume(value ? .25 : 0));
+          }),
     ]));
   }
 }

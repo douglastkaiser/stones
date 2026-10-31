@@ -22,6 +22,8 @@ functions/engine.js.deps
 .flutter-plugins-dependencies
 build/
 coverage/
+assets/sounds/music/
+.music-venv/
 android/local.properties
 android/.gradle/
 android/.kotlin/

@@ -1,4 +1,6 @@
 import 'match_elapsed.dart';
+import '../services/music_service.dart';
+import '../widgets/music_scene.dart';
 import 'package:flutter/material.dart';
 import 'board_view.dart';
 import 'completed_match.dart';
@@ -19,59 +21,63 @@ class _MatchReviewScreenState extends State<MatchReviewScreen> {
   Widget build(BuildContext context) {
     final position = widget.match.positions[_ply];
     final winner = position.result?.winner;
-    return Scaffold(
-        appBar: AppBar(title: const Text('Review game')),
-        body: SafeArea(
-            child: ListView(padding: const EdgeInsets.all(20), children: [
-          const Text('Read-only review · your current game is unchanged'),
-          const SizedBox(height: 12),
-          Center(
-              child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: AspectRatio(
-                      aspectRatio: 1,
-                      child: BoardView(
-                          game: position,
-                          road: winner == null
-                              ? const {}
-                              : MatchRules.road(position, winner))))),
-          const SizedBox(height: 12),
-          Text('Move $_ply of ${widget.match.moves.length}',
-              textAlign: TextAlign.center),
-          if (widget.match.moves.isNotEmpty)
-            Slider(
-                value: _ply.toDouble(),
-                max: widget.match.moves.length.toDouble(),
-                divisions: widget.match.moves.length,
-                label: 'Move $_ply',
-                onChanged: (value) => setState(() => _ply = value.round())),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            IconButton(
-                tooltip: 'First position',
-                onPressed: _ply == 0 ? null : () => setState(() => _ply = 0),
-                icon: const Icon(Icons.first_page)),
-            IconButton(
-                tooltip: 'Previous move',
-                onPressed: _ply == 0 ? null : () => setState(() => _ply--),
-                icon: const Icon(Icons.chevron_left)),
-            IconButton(
-                tooltip: 'Next move',
-                onPressed: _ply == widget.match.moves.length
-                    ? null
-                    : () => setState(() => _ply++),
-                icon: const Icon(Icons.chevron_right)),
-            IconButton(
-                tooltip: 'Final position',
-                onPressed: _ply == widget.match.moves.length
-                    ? null
-                    : () => setState(() => _ply = widget.match.moves.length),
-                icon: const Icon(Icons.last_page)),
-          ]),
-          if (widget.match.durationMs != null)
-            Text(
-                'Game duration ${MatchElapsed.label(Duration(milliseconds: widget.match.durationMs!))}'),
-          if (position.finished)
-            Text(explainResult(position), textAlign: TextAlign.center),
-        ])));
+    return MusicScene(
+        cue: MusicCue.learning,
+        child: Scaffold(
+            appBar: AppBar(title: const Text('Review game')),
+            body: SafeArea(
+                child: ListView(padding: const EdgeInsets.all(20), children: [
+              const Text('Read-only review · your current game is unchanged'),
+              const SizedBox(height: 12),
+              Center(
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 640),
+                      child: AspectRatio(
+                          aspectRatio: 1,
+                          child: BoardView(
+                              game: position,
+                              road: winner == null
+                                  ? const {}
+                                  : MatchRules.road(position, winner))))),
+              const SizedBox(height: 12),
+              Text('Move $_ply of ${widget.match.moves.length}',
+                  textAlign: TextAlign.center),
+              if (widget.match.moves.isNotEmpty)
+                Slider(
+                    value: _ply.toDouble(),
+                    max: widget.match.moves.length.toDouble(),
+                    divisions: widget.match.moves.length,
+                    label: 'Move $_ply',
+                    onChanged: (value) => setState(() => _ply = value.round())),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                IconButton(
+                    tooltip: 'First position',
+                    onPressed:
+                        _ply == 0 ? null : () => setState(() => _ply = 0),
+                    icon: const Icon(Icons.first_page)),
+                IconButton(
+                    tooltip: 'Previous move',
+                    onPressed: _ply == 0 ? null : () => setState(() => _ply--),
+                    icon: const Icon(Icons.chevron_left)),
+                IconButton(
+                    tooltip: 'Next move',
+                    onPressed: _ply == widget.match.moves.length
+                        ? null
+                        : () => setState(() => _ply++),
+                    icon: const Icon(Icons.chevron_right)),
+                IconButton(
+                    tooltip: 'Final position',
+                    onPressed: _ply == widget.match.moves.length
+                        ? null
+                        : () =>
+                            setState(() => _ply = widget.match.moves.length),
+                    icon: const Icon(Icons.last_page)),
+              ]),
+              if (widget.match.durationMs != null)
+                Text(
+                    'Game duration ${MatchElapsed.label(Duration(milliseconds: widget.match.durationMs!))}'),
+              if (position.finished)
+                Text(explainResult(position), textAlign: TextAlign.center),
+            ]))));
   }
 }

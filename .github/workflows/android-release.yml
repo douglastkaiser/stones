@@ -66,6 +66,7 @@ jobs:
           ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
           ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: python3 scripts/android_release_preflight.py
+      - uses: ./.github/actions/prepare-music
       - run: flutter pub get
       - name: Generate branding
         run: |

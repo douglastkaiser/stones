@@ -39,9 +39,14 @@ retain dated legacy behavior and must not replace that current contract.
 
 ### Prerequisites
 - Flutter SDK 3.47.7 (matches the pinned CI version)
+- Python 3.11+ and FFmpeg for the text-authored soundtrack. Follow
+  [music preparation](music/README.md) once per checkout and after score changes;
+  generated audio is intentionally excluded from Git.
 
 ### Running Locally
 ```bash
+# Prepare music first (see music/README.md for venv/dependency setup).
+.music-venv/bin/python scripts/generate_music.py
 flutter run
 ```
 

@@ -38,6 +38,8 @@ jobs:
           channel: stable
           cache: true
 
+      - uses: ./.github/actions/prepare-music
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -93,6 +95,8 @@ jobs:
           channel: stable
           cache: true
 
+      - uses: ./.github/actions/prepare-music
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -124,11 +128,15 @@ jobs:
         run: bash scripts/install_browser_harness.sh chromium
       - name: Verify startup faults, appearance and painted handoff
         run: python3 tools/startup_browser_checks.py --root build/web --real
+      - name: Verify real music playback and navigation
+        run: python3 tools/music_browser_checks.py --root build/web --browser chromium
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: startup-evidence-${{ github.sha }}-${{ github.run_attempt }}
-          path: build/qa/startup
+          path: |
+            build/qa/startup
+            build/qa/music
           if-no-files-found: warn
 
       - id: artifact-name
@@ -157,6 +165,7 @@ jobs:
           flutter-version: '3.47.7'
           channel: stable
           cache: true
+      - uses: ./.github/actions/prepare-music
       - run: flutter pub get
       - run: python3 -m unittest discover -s scripts -p 'test_android_release_preflight.py'
       - name: Generate and verify Android launch surfaces
@@ -187,6 +196,7 @@ jobs:
           flutter-version: '3.47.7'
           channel: stable
           cache: true
+      - uses: ./.github/actions/prepare-music
       - run: flutter pub get
       - name: Clean and build the emulator-only entry point
         run: |
