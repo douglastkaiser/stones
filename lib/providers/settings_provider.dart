@@ -10,6 +10,7 @@ class SettingsKeys {
   static const String boardSize = 'board_size';
   static const String musicVolume = 'music_volume';
   static const String soundMuted = 'sound_muted';
+  static const String placementAnimations = 'placement_animations_enabled';
   static const String themeMode = 'theme_mode';
   static const String chessClockEnabled = 'chess_clock_enabled';
   static const String chessClockDefaults = 'chess_clock_defaults';
@@ -43,6 +44,7 @@ class AppSettings {
   final bool hexModeEnabled;
   final int boardSize;
   final bool isSoundMuted;
+  final bool placementAnimationsEnabled;
   final double musicVolume;
   final ThemeMode themeMode;
   final bool chessClockEnabled;
@@ -52,6 +54,7 @@ class AppSettings {
     this.hexModeEnabled = false,
     this.boardSize = 5,
     this.isSoundMuted = false,
+    this.placementAnimationsEnabled = true,
     this.musicVolume = 0,
     this.themeMode = ThemeMode.system,
     this.chessClockEnabled = false,
@@ -62,6 +65,7 @@ class AppSettings {
     bool? hexModeEnabled,
     int? boardSize,
     bool? isSoundMuted,
+    bool? placementAnimationsEnabled,
     double? musicVolume,
     ThemeMode? themeMode,
     bool? chessClockEnabled,
@@ -71,6 +75,8 @@ class AppSettings {
       hexModeEnabled: hexModeEnabled ?? this.hexModeEnabled,
       boardSize: boardSize ?? this.boardSize,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
+      placementAnimationsEnabled:
+          placementAnimationsEnabled ?? this.placementAnimationsEnabled,
       musicVolume: musicVolume ?? this.musicVolume,
       themeMode: themeMode ?? this.themeMode,
       chessClockEnabled: chessClockEnabled ?? this.chessClockEnabled,
@@ -113,6 +119,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
         hexModeEnabled: read<bool>(SettingsKeys.hexModeEnabled) ?? false,
         boardSize: read<int>(SettingsKeys.boardSize) ?? 5,
         isSoundMuted: read<bool>(SettingsKeys.soundMuted) ?? false,
+        placementAnimationsEnabled:
+            read<bool>(SettingsKeys.placementAnimations) ?? true,
         musicVolume:
             (read<double>(SettingsKeys.musicVolume) ?? 0).clamp(0.0, 1.0),
         themeMode: ThemeMode.values[themeModeIndex],
@@ -152,6 +160,16 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     await prefs.setBool(SettingsKeys.soundMuted, muted);
   }
 
+  Future<void> setPlacementAnimationsEnabled(bool enabled) async {
+    state = state.copyWith(placementAnimationsEnabled: enabled);
+    try {
+      await (await SharedPreferences.getInstance())
+          .setBool(SettingsKeys.placementAnimations, enabled);
+    } catch (_) {
+      // Apply for this session even when browser storage is unavailable.
+    }
+  }
+
   /// Toggle sound muted
   Future<void> toggleSoundMuted() async {
     await setSoundMuted(!state.isSoundMuted);
@@ -186,6 +204,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     await prefs.remove(SettingsKeys.boardSize);
     await prefs.remove(SettingsKeys.hexModeEnabled);
     await prefs.remove(SettingsKeys.soundMuted);
+    await prefs.remove(SettingsKeys.placementAnimations);
     await prefs.remove(SettingsKeys.musicVolume);
     await prefs.remove(SettingsKeys.themeMode);
     await prefs.remove(SettingsKeys.chessClockEnabled);

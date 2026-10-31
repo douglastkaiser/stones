@@ -99,9 +99,19 @@ class StackLayerLayout {
 /// including a wall/cap on a tall stack and stacks containing preview stones.
 class PieceStackView extends StatelessWidget {
   const PieceStackView(
-      {super.key, required this.pieces, this.expanded = false});
+      {super.key,
+      required this.pieces,
+      this.expanded = false,
+      this.landingStart,
+      this.landingProgress = 1,
+      this.heavyLanding = false});
   final List<StackVisualPiece> pieces;
   final bool expanded;
+
+  /// Only newly arriving layers participate; supporting stones stay settled.
+  final int? landingStart;
+  final double landingProgress;
+  final bool heavyLanding;
 
   static Widget stone(StackVisualPiece piece, double width) {
     final height = width * piece.aspect;
@@ -126,7 +136,40 @@ class PieceStackView extends StatelessWidget {
       final layout = StackLayerLayout(
           Size(bounds.maxWidth, bounds.maxHeight), pieces,
           expanded: expanded);
+      final motion = landingStart != null &&
+          !expanded &&
+          !MediaQuery.disableAnimationsOf(context);
+      final pose =
+          LandingPose.at(motion ? landingProgress : 1, heavy: heavyLanding);
+      final arrivals = layout.layers
+          .where((layer) => motion && layer.index >= landingStart!)
+          .toList();
       return Stack(children: [
+        if (arrivals.isNotEmpty)
+          Positioned.fromRect(
+            rect: Rect.fromCenter(
+              center: arrivals.first.rect.bottomCenter - Offset(0, side * .025),
+              width: arrivals.first.rect.width * .92,
+              height: side * .08,
+            ),
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: pose.contact,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(side),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .25),
+                        blurRadius: side * .045,
+                        spreadRadius: side * .005,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         for (final layer in layout.layers)
           AnimatedPositioned.fromRect(
               key: ValueKey((
@@ -135,12 +178,23 @@ class PieceStackView extends StatelessWidget {
                 pieces[layer.index].type,
                 pieces[layer.index].preview
               )),
-              duration: MediaQuery.disableAnimationsOf(context)
+              duration: motion || MediaQuery.disableAnimationsOf(context)
                   ? Duration.zero
                   : const Duration(milliseconds: 140),
               curve: Curves.easeOutCubic,
               rect: layer.rect,
-              child: stone(pieces[layer.index], layer.rect.width)),
+              child: motion && layer.index >= landingStart!
+                  ? Transform.translate(
+                      key: ValueKey('landing-layer-${layer.index}'),
+                      offset: Offset(0, side * pose.lift),
+                      child: Transform.scale(
+                        alignment: Alignment.bottomCenter,
+                        scaleX: pose.width,
+                        scaleY: pose.height,
+                        child: stone(pieces[layer.index], layer.rect.width),
+                      ),
+                    )
+                  : stone(pieces[layer.index], layer.rect.width)),
         if (pieces.length > 1)
           Positioned(
               bottom: side * .04,
@@ -160,6 +214,34 @@ class PieceStackView extends StatelessWidget {
                           fontWeight: FontWeight.bold)))),
       ]);
     }));
+  }
+}
+
+/// A bounded drop/contact/rebound, with contact at 100 ms of a 280 ms landing.
+class LandingPose {
+  const LandingPose(this.lift, this.width, this.height, this.contact);
+  final double lift, width, height, contact;
+
+  factory LandingPose.at(double progress, {bool heavy = false}) {
+    final t = progress.clamp(0.0, 1.0);
+    const impact = 100 / 280;
+    final weight = heavy ? 1.25 : 1.0;
+    if (t < impact) {
+      final approach = t / impact;
+      return LandingPose(
+          -.13 * (1 - approach * approach),
+          1 + .025 * (1 - approach),
+          1 + .025 * (1 - approach),
+          .25 + .75 * approach);
+    }
+    if (t < .52) {
+      final compression = math.sin((t - impact) / (.52 - impact) * math.pi);
+      return LandingPose(0, 1 + .018 * weight * compression,
+          1 - .045 * weight * compression, 1);
+    }
+    final settle = (t - .52) / .48;
+    final rebound = math.sin(settle * math.pi) * (1 - settle);
+    return LandingPose(-.035 * rebound / weight, 1, 1, 1 - settle);
   }
 }
 

@@ -4,6 +4,7 @@ import 'match_state.dart';
 import 'match_storage.dart';
 import 'match_elapsed.dart';
 import 'match_study.dart';
+import 'move_feedback.dart';
 
 /// Learning uses the match shell and engine, with catalog-specific objectives.
 /// Its sandbox never overwrites the player's saved match or competitive result.
@@ -70,6 +71,7 @@ class StudyController extends MatchController {
       return false;
     }
     steps++;
+    final feedback = [ConfirmedMoveFeedback(before, move, next)];
     if (study.puzzle && steps == 1 && !next.finished && study.moveLimit > 1) {
       final replies = study.replies(move);
       if (replies == null) {
@@ -77,11 +79,13 @@ class StudyController extends MatchController {
       } else {
         for (final reply in replies) {
           if (next!.finished) break;
+          final replyBefore = next;
           next = MatchRules.play(next, reply);
           if (next == null) {
             failed = true;
             break;
           }
+          feedback.add(ConfirmedMoveFeedback(replyBefore, reply, next));
         }
       }
     }
@@ -93,6 +97,7 @@ class StudyController extends MatchController {
             (game.finished || steps >= study.moveLimit));
     state = state.copyWith(
         game: game,
+        moveFeedback: MoveFeedbackBatch(feedback),
         inputLocked: solved || failed,
         elapsed: solved || failed
             ? state.elapsed?.frozen(DateTime.now())

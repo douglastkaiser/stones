@@ -26,6 +26,12 @@ enum GameSound {
   stackMoveMarble,
   stackMoveMinimal,
   stackMovePixel,
+  landingWood,
+  landingStone,
+  landingMarble,
+  landingWoodHeavy,
+  landingStoneHeavy,
+  landingMarbleHeavy,
 }
 
 /// Manages game sounds with mute support
@@ -106,6 +112,18 @@ class SoundManager {
         return 'sounds/piece_place_minimal.ogg'; // Use minimal sound
       case GameSound.stackMovePixel:
         return 'sounds/piece_place_pixel.ogg'; // Use pixel sound
+      case GameSound.landingWood:
+        return 'sounds/landing_wood.ogg';
+      case GameSound.landingStone:
+        return 'sounds/landing_stone.ogg';
+      case GameSound.landingMarble:
+        return 'sounds/landing_marble.ogg';
+      case GameSound.landingWoodHeavy:
+        return 'sounds/landing_wood_heavy.ogg';
+      case GameSound.landingStoneHeavy:
+        return 'sounds/landing_stone_heavy.ogg';
+      case GameSound.landingMarbleHeavy:
+        return 'sounds/landing_marble_heavy.ogg';
     }
   }
 
@@ -160,6 +178,34 @@ class SoundManager {
 
   /// Play achievement unlock sound
   Future<void> playAchievementUnlock() => play(GameSound.achievementUnlock);
+
+  /// Contact sound for the shared board. Stack drops use the mover's piece set;
+  /// reserve placements use the board material, matching existing theme choices.
+  Future<void> playLanding(BoardTheme theme,
+      {PieceStyle? stackStyle, bool heavy = false}) {
+    final material = stackStyle == null
+        ? switch (theme) {
+            BoardTheme.classicWood || BoardTheme.kyoto => 0,
+            BoardTheme.darkStone || BoardTheme.morocco => 1,
+            BoardTheme.marble || BoardTheme.celestial => 2,
+          }
+        : switch (stackStyle) {
+            PieceStyle.standard || PieceStyle.kyoto => 0,
+            PieceStyle.stone || PieceStyle.morocco => 1,
+            PieceStyle.polishedMarble => 2,
+          };
+    return play((heavy
+        ? const [
+            GameSound.landingWoodHeavy,
+            GameSound.landingStoneHeavy,
+            GameSound.landingMarbleHeavy
+          ]
+        : const [
+            GameSound.landingWood,
+            GameSound.landingStone,
+            GameSound.landingMarble
+          ])[material]);
+  }
 
   /// Play themed piece placement sound based on board theme
   Future<void> playThemedPiecePlace(BoardTheme theme) {

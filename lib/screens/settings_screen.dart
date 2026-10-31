@@ -61,6 +61,15 @@ class SettingsScreen extends ConsumerWidget {
                   // Theme Section
                   const _SectionHeader(title: 'Appearance'),
                   const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: const Text('Placement animations'),
+                    subtitle: const Text(
+                        'Weighty landings for placed pieces and stack drops. Follows reduced motion.'),
+                    value: settings.placementAnimationsEnabled,
+                    onChanged: ref
+                        .read(appSettingsProvider.notifier)
+                        .setPlacementAnimationsEnabled,
+                  ),
                   _ThemeSelector(
                     currentMode: settings.themeMode,
                     onModeChanged: (mode) async {

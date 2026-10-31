@@ -15,6 +15,7 @@ import 'match_rules.dart';
 import 'match_state.dart';
 import 'match_storage.dart';
 import 'match_threats.dart';
+import 'move_feedback.dart';
 
 const _unchangedElapsed = Object();
 const _unchangedExplanation = Object();
@@ -35,6 +36,7 @@ class MatchSession {
       this.inputLocked = false,
       this.clock,
       this.elapsed,
+      this.moveFeedback,
       this.shortcutWarning,
       this.error});
   final MatchState? game;
@@ -52,6 +54,7 @@ class MatchSession {
   final bool inputLocked;
   final MatchClock? clock;
   final MatchElapsed? elapsed;
+  final MoveFeedbackBatch? moveFeedback;
   bool get ready => game != null && (room?.ready ?? true);
   bool get canPlay =>
       ready &&
@@ -76,6 +79,7 @@ class MatchSession {
           bool? inputLocked,
           MatchClock? clock,
           Object? elapsed = _unchangedElapsed,
+          MoveFeedbackBatch? moveFeedback,
           String? shortcutWarning,
           String? error}) =>
       MatchSession(
@@ -98,6 +102,7 @@ class MatchSession {
           elapsed: identical(elapsed, _unchangedElapsed)
               ? this.elapsed
               : elapsed as MatchElapsed?,
+          moveFeedback: moveFeedback ?? this.moveFeedback,
           shortcutWarning: shortcutWarning ?? this.shortcutWarning,
           error: error);
 }
@@ -593,6 +598,8 @@ class MatchController extends StateNotifier<MatchSession> {
 
   void _accept(MatchRoom room, {bool fromWatch = false}) {
     final previous = state.room;
+    final before = state.game;
+    final live = state.connected && !state.reconnecting;
     if (previous != null &&
         (room.revision < previous.revision ||
             (room.revision == previous.revision &&
@@ -618,6 +625,17 @@ class MatchController extends StateNotifier<MatchSession> {
     _canAutoRecover = false;
     state = state.copyWith(
         game: game,
+        moveFeedback: live &&
+                previous != null &&
+                before != null &&
+                room.revision == previous.revision &&
+                room.moves.length == previous.moves.length + 1 &&
+                game.ply == before.ply + 1
+            ? MoveFeedbackBatch([
+                ConfirmedMoveFeedback(
+                    before, MatchMove.fromMap(room.moves.last), game)
+              ])
+            : null,
         room: room,
         clock: room.clock,
         explanation: previous != null && room.revision > previous.revision
@@ -739,6 +757,8 @@ class MatchController extends StateNotifier<MatchSession> {
         _localWritePending = false;
         state = state.copyWith(
             game: result,
+            moveFeedback:
+                MoveFeedbackBatch([ConfirmedMoveFeedback(game, move, result)]),
             elapsed:
                 result.finished ? state.elapsed?.frozen(now) : state.elapsed,
             clock: result.finished || state.paused ? clock?.frozen(now) : clock,

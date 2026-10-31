@@ -158,6 +158,8 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
 - **PLAY-01 · Placement and opening:** preview and confirm legal flat/wall/capstone
   placements; opening exchanges, supplies and unavailable choices are enforced.
   A new turn/restored position defaults the piece choice to Flat.
+  Shared Square/Hex matches and learning give confirmed placements a short,
+  weighty landing; drafts remain distinct and never trigger contact audio.
 - **PLAY-02 · Inspectable stacks:** inspect either player's stack, even when it is not
   your turn or the game is finished. Read every layer in order, with ownership,
   piece type and theme intact; expand/scroll without resizing the board. In shared
@@ -175,6 +177,9 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
   available alongside board taps, including after the hand empties. Minus returns
   a stone to hand and removes an empty destination, restoring pickup controls if
   the path becomes empty.
+  Confirmed spreads settle arriving groups in route order above their supporting
+  layers, preserving bottom-first order, owner themes and height badges. Feedback
+  never delays input, clocks or the atomic result; new board input settles it.
 - **PLAY-05 · Correct a draft:** undo a drop, drop the remainder, inspect another stack
   and return, or cancel. Blocked/off-path taps explain the constraint and preserve
   the draft. Undo also restores a destination removed with minus; changing the
@@ -570,6 +575,13 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
   shared painters for gameplay/previews; no visual effect can change legality.
   Pieces share bounded side thickness, bevels and contact shadows across all five
   sets, retaining owner colors and flat/wall/capstone identities.
+  Placement animations default on and persist on this device, independently of
+  sound. Disable them in Settings → Appearance; system reduced motion also
+  suppresses the landing drop/rebound. Disabling active motion settles it without
+  replaying it when re-enabled. Shared match/learning landings use bounded contact
+  shadows and a small compression/rebound; spreads finish within 420 ms per move.
+  Existing legacy-screen effects retain their prior behavior. See
+  [placement feedback](PLACEMENT_FEEDBACK.md) for qualification and limits.
 - **PREF-05 · Accessible interaction:** retain focusable actions, descriptive cell
   and stack semantics, an explicit inspect action, status announcements and
   visible selection/focus. Touch and click alternatives must expose everything
@@ -586,6 +598,10 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
   persisted preferences, plus appropriate placement/movement/crushing/win/threat/
   award/turn effects where wired. Inspection/rebuilds must not sound like moves.
   Optional audio failure cannot prevent a legal turn or require sound to play.
+  Shared matches/learning synchronize original wood/stone/marble clacks to landing
+  contact, with a heavier group/capstone sound and one sound per destination group.
+  Crushing and wins retain distinct cues. Duplicate snapshots, reconnect catch-up,
+  restore, review, rejected moves and draft edits never replay landing feedback.
 
 ## Navigation, audio, help and delivery
 

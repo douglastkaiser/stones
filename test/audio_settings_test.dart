@@ -6,6 +6,37 @@ import 'package:stones/providers/settings_provider.dart';
 import 'package:stones/widgets/audio_controls.dart';
 
 void main() {
+  test('placement motion defaults on and persists independently from sound',
+      () async {
+    for (final saved in [null, 'invalid']) {
+      SharedPreferences.setMockInitialValues({
+        if (saved != null) SettingsKeys.placementAnimations: saved,
+      });
+      final defaults = AppSettingsNotifier();
+      await defaults.load();
+      expect(defaults.state.placementAnimationsEnabled, true);
+      defaults.dispose();
+    }
+    final settings = AppSettingsNotifier();
+    await settings.load();
+    await settings.setPlacementAnimationsEnabled(false);
+    await settings.setSoundMuted(true);
+    final restored = AppSettingsNotifier();
+    await restored.load();
+    expect(restored.state.placementAnimationsEnabled, false);
+    expect(restored.state.isSoundMuted, true);
+    await restored.setSoundMuted(false);
+    expect(restored.state.placementAnimationsEnabled, false);
+    await restored.resetToDefaults();
+    expect(restored.state.placementAnimationsEnabled, true);
+    expect(
+        (await SharedPreferences.getInstance())
+            .containsKey(SettingsKeys.placementAnimations),
+        false);
+    settings.dispose();
+    restored.dispose();
+  });
+
   test('music and effects persist independently', () async {
     SharedPreferences.setMockInitialValues({});
     final settings = AppSettingsNotifier();

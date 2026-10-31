@@ -41,6 +41,7 @@ import 'result_explanation.dart';
 import 'completed_match.dart';
 import 'match_history_provider.dart';
 import 'match_review_screen.dart';
+import 'move_feedback.dart';
 import '../providers/player_profile_provider.dart';
 import '../widgets/player_rating_label.dart';
 import '../widgets/match_chat.dart';
@@ -54,7 +55,7 @@ class MatchScreen extends ConsumerStatefulWidget {
 }
 
 class _MatchScreenState extends ConsumerState<MatchScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final _selection = MoveSelection();
   final _viewport = BoardViewportController();
   String? _viewportMatch;
@@ -62,6 +63,83 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   bool _startingAgain = false;
   String? _lastTurnCue, _threatMatch;
   Set<SeatId> _announcedThreats = {};
+  late final AnimationController _landingController;
+  final List<ConfirmedMoveFeedback> _landingQueue = [];
+  final Set<Cell> _landed = {};
+  ConfirmedMoveFeedback? _landing;
+  bool _foreground = true;
+  bool _animateFeedback = true;
+
+  bool get _animationsAllowed =>
+      ref.read(appSettingsProvider).placementAnimationsEnabled &&
+      !MediaQuery.disableAnimationsOf(context);
+  bool get _landingMotion => _animateFeedback && _animationsAllowed;
+
+  void _cancelLandings() {
+    _landingController.stop();
+    _landingQueue.clear();
+    if (_landing != null && mounted) setState(() => _landing = null);
+  }
+
+  void _startLandings(MoveFeedbackBatch batch) {
+    _cancelLandings();
+    if (!_foreground || ModalRoute.of(context)?.isCurrent == false) return;
+    _animateFeedback = _animationsAllowed;
+    _landingQueue.addAll(batch.moves);
+    _nextLanding();
+  }
+
+  void _nextLanding() {
+    if (!mounted) return;
+    if (_landing?.after.finished == true &&
+        !ref.read(appSettingsProvider).isSoundMuted) {
+      unawaited(
+          ref.read(soundManagerProvider).playWin().catchError((Object _) {}));
+    }
+    _landed.clear();
+    setState(() =>
+        _landing = _landingQueue.isEmpty ? null : _landingQueue.removeAt(0));
+    if (_landing == null) return;
+    _landingController.duration =
+        Duration(milliseconds: _landing!.durationMilliseconds);
+    unawaited(_landingController.forward(from: 0));
+    // Without motion the first contact is immediate, including muted play.
+    _landingTick();
+  }
+
+  void _landingTick() {
+    final feedback = _landing;
+    if (feedback == null || !_foreground) return;
+    if (ModalRoute.of(context)?.isCurrent == false) {
+      _cancelLandings();
+      return;
+    }
+    final elapsed = _landingController.value * feedback.durationMilliseconds;
+    final contact =
+        _landingMotion ? ConfirmedMoveFeedback.contactMilliseconds : 0;
+    final match = ref.read(matchProvider);
+    for (final landing in feedback.landings) {
+      if (elapsed < landing.delayMilliseconds + contact ||
+          !_landed.add(landing.cell)) {
+        continue;
+      }
+      if (ref.read(appSettingsProvider).isSoundMuted) continue;
+      final sound = ref.read(soundManagerProvider);
+      final theme =
+          match.room?.boardTheme ?? ref.read(currentBoardThemeProvider).theme;
+      final style = match.room?.styles[feedback.before.current] ??
+          ref.read(currentPieceStyleProvider).style;
+      unawaited((landing.crush
+              ? sound.playWallFlatten()
+              : sound.playLanding(theme,
+                  stackStyle: feedback.move.type == null ? style : null,
+                  heavy: landing.count > 1 ||
+                      feedback.after.topAt(landing.cell)?.type ==
+                          PieceType.capstone))
+          .catchError((Object _) {}));
+    }
+  }
+
   void _cueTurn(MatchSession current) {
     if (!_humanTurn(current)) return;
     final key = '${current.id}:${current.game!.ply}';
@@ -90,6 +168,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_animationsAllowed) _animateFeedback = false;
     _restoreAudioButton ??= AudioControls.hideFloatingButton(context);
   }
 
@@ -99,6 +178,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _controller = ref.read(matchProvider.notifier);
+    _landingController = AnimationController(vsync: this)
+      ..addListener(_landingTick)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) _nextLanding();
+      });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _cueTurn(ref.read(matchProvider));
     });
@@ -128,6 +212,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _controller.suspend();
+    _landingController.dispose();
     _viewport.dispose();
     _restoreAudioButton?.call();
     super.dispose();
@@ -135,6 +220,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (!_foreground) _cancelLandings();
     if (state == AppLifecycleState.resumed &&
         ref.read(matchProvider).room != null &&
         ref.read(matchProvider).game?.finished != true) {
@@ -194,6 +281,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
   }
 
   void _tap(MatchState game, Cell cell) {
+    _cancelLandings();
     if (_inspectPicking || !ref.read(matchProvider).canPlay) {
       _inspect(game, cell);
       return;
@@ -203,12 +291,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     if (confirm) unawaited(_confirm());
   }
 
-  void _inspect(MatchState game, Cell cell) => setState(() {
-        final position =
-            cell == _selection.source ? game : _selection.preview(game) ?? game;
-        _selection.inspect(position, cell);
-        if (position.stackAt(cell).isNotEmpty) _inspectPicking = false;
-      });
+  void _inspect(MatchState game, Cell cell) {
+    _cancelLandings();
+    setState(() {
+      final position =
+          cell == _selection.source ? game : _selection.preview(game) ?? game;
+      _selection.inspect(position, cell);
+      if (position.stackAt(cell).isNotEmpty) _inspectPicking = false;
+    });
+  }
 
   Future<void> _resign(MatchSession match) async {
     final game = match.game!;
@@ -312,39 +403,21 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       _cueTurn(ref.read(matchProvider));
     });
     ref.listen(matchProvider, (previous, next) {
-      final before = previous?.game;
-      final after = next.game;
-      if (before == null ||
-          after == null ||
-          previous?.id != next.id ||
-          after.ply != before.ply + 1 ||
-          ref.read(appSettingsProvider).isSoundMuted) {
-        return;
+      final feedback = next.moveFeedback;
+      if (next.paused || !next.connected) {
+        _cancelLandings();
+      } else if (previous?.id == next.id &&
+          feedback != null &&
+          previous?.moveFeedback?.token != feedback.token) {
+        _startLandings(feedback);
+      } else if (previous?.id != next.id || previous?.game != next.game) {
+        _cancelLandings();
       }
-      final sound = ref.read(soundManagerProvider);
-      final flattened = before.board.keys.any(
-        (cell) =>
-            before.topAt(cell)?.type == PieceType.standing &&
-            after.stackAt(cell).any((p) => p.type == PieceType.flat) &&
-            after.topAt(cell)?.type == PieceType.capstone,
-      );
-      final placed = after.reserves.entries.any(
-        (e) => e.value.total < before.reserves[e.key]!.total,
-      );
-      final feedback = after.finished
-          ? sound.playWin()
-          : flattened
-              ? sound.playWallFlatten()
-              : placed
-                  ? sound.playThemedPiecePlace(
-                      next.room?.boardTheme ??
-                          ref.read(currentBoardThemeProvider).theme,
-                    )
-                  : sound.playThemedStackMove(
-                      next.room?.styles[before.current] ??
-                          ref.read(currentPieceStyleProvider).style,
-                    );
-      unawaited(feedback.catchError((Object _) {}));
+    });
+    // Watch the preference so an in-progress landing settles immediately.
+    ref.listen(appSettingsProvider.select((s) => s.placementAnimationsEnabled),
+        (previous, enabled) {
+      if (!enabled) setState(() => _animateFeedback = false);
     });
     ref.listen(matchProvider.select((s) => (s.id, s.game)), (previous, next) {
       if (previous != next && mounted) {
@@ -577,44 +650,58 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             ),
           ),
         ),
-        board: BoardViewport(
-          controller: _viewport,
-          geometry: game.geometry,
-          child: ListenableBuilder(
-              listenable: _viewport,
-              builder: (context, _) => BoardView(
-                    game: preview ?? game,
-                    original: preview == null ? null : game,
-                    selected: _selection.source ?? _selection.inspected,
-                    drops: _selection.drops,
-                    routeSource: _selection.source,
-                    routeDirection: _selection.direction,
-                    carried: _selection.hand(game),
-                    handCell: _selection.current,
-                    destinations:
-                        match.canPlay ? _selection.destinations(game) : {},
-                    road: road,
-                    styles: styles,
-                    theme: boardTheme,
-                    onCellFocus: (cell) =>
-                        _viewport.reveal(cell, game.geometry),
-                    onCell: (cell) {
-                      if (!_viewport.blocksMoves) _tap(game, cell);
-                    },
-                    onInspect: (cell) {
-                      if (!_viewport.blocksMoves) _inspect(game, cell);
-                    },
-                    onSwipe: !match.canPlay ||
-                            _inspectPicking ||
-                            _viewport.blocksMoves
-                        ? null
-                        : (cell, direction) {
-                            if (!_viewport.blocksMoves) {
-                              setState(() =>
-                                  _selection.swipe(game, cell, direction));
-                            }
-                          },
-                  )),
+        board: Listener(
+          onPointerDown: (_) => _cancelLandings(),
+          onPointerSignal: (_) => _cancelLandings(),
+          child: Focus(
+            skipTraversal: true,
+            includeSemantics: false,
+            onKeyEvent: (node, event) {
+              _cancelLandings();
+              return KeyEventResult.ignored;
+            },
+            child: BoardViewport(
+              controller: _viewport,
+              geometry: game.geometry,
+              child: ListenableBuilder(
+                  listenable: _viewport,
+                  builder: (context, _) => BoardView(
+                        game: preview ?? game,
+                        landing: _landingMotion ? _landing : null,
+                        landingProgress: _landingController,
+                        original: preview == null ? null : game,
+                        selected: _selection.source ?? _selection.inspected,
+                        drops: _selection.drops,
+                        routeSource: _selection.source,
+                        routeDirection: _selection.direction,
+                        carried: _selection.hand(game),
+                        handCell: _selection.current,
+                        destinations:
+                            match.canPlay ? _selection.destinations(game) : {},
+                        road: road,
+                        styles: styles,
+                        theme: boardTheme,
+                        onCellFocus: (cell) =>
+                            _viewport.reveal(cell, game.geometry),
+                        onCell: (cell) {
+                          if (!_viewport.blocksMoves) _tap(game, cell);
+                        },
+                        onInspect: (cell) {
+                          if (!_viewport.blocksMoves) _inspect(game, cell);
+                        },
+                        onSwipe: !match.canPlay ||
+                                _inspectPicking ||
+                                _viewport.blocksMoves
+                            ? null
+                            : (cell, direction) {
+                                if (!_viewport.blocksMoves) {
+                                  setState(() =>
+                                      _selection.swipe(game, cell, direction));
+                                }
+                              },
+                      )),
+            ),
+          ),
         ),
         primaryActions: _primaryActions(match, game),
         controls: const SizedBox.shrink(),

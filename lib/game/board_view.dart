@@ -5,6 +5,7 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 
 import '../models/cosmetics.dart';
+import '../models/piece.dart';
 import '../widgets/board_cell_gestures.dart';
 import '../widgets/piece_stack_view.dart';
 import '../widgets/procedural_painters.dart';
@@ -14,6 +15,7 @@ import 'match_state.dart';
 import 'match_rules.dart';
 import 'stack_move_tray.dart';
 import 'seat_appearance.dart';
+import 'move_feedback.dart';
 
 /// All pixel geometry lives here; legality only sees BoardGeometry.
 class BoardLayout {
@@ -111,6 +113,8 @@ class BoardView extends StatefulWidget {
     this.carried = const [],
     this.handCell,
     this.onSwipe,
+    this.landing,
+    this.landingProgress,
   });
   final MatchState game;
   final MatchState? original;
@@ -127,6 +131,8 @@ class BoardView extends StatefulWidget {
   final Cell? routeSource, handCell;
   final Step? routeDirection;
   final List<Stone> carried;
+  final ConfirmedMoveFeedback? landing;
+  final Animation<double>? landingProgress;
   @override
   State<BoardView> createState() => _BoardViewState();
 }
@@ -182,7 +188,8 @@ class _BoardViewState extends State<BoardView> {
   }
 
   List<StackVisualPiece> _visuals(Cell cell, {bool before = false}) {
-    final stones = (before ? original ?? game : game).stackAt(cell);
+    final stones = (before ? original ?? game : widget.landing?.after ?? game)
+        .stackAt(cell);
     final previous = original?.stackAt(cell);
     var prefix = 0;
     if (!before && previous != null) {
@@ -206,6 +213,33 @@ class _BoardViewState extends State<BoardView> {
           preview: !before && previous != null && i >= prefix,
         ),
     ];
+  }
+
+  Widget _pieces(Cell cell, bool expanded) {
+    final pieces = expanded && original != null && selected == cell
+        ? _visuals(cell, before: true)
+        : _visuals(cell);
+    final feedback = widget.landing;
+    final progress = widget.landingProgress;
+    final landings = feedback?.landings.where((l) => l.cell == cell);
+    final landing =
+        landings == null || landings.isEmpty ? null : landings.first;
+    if (landing == null || progress == null) {
+      return PieceStackView(pieces: pieces, expanded: expanded);
+    }
+    final heavy = landing.count > 1 ||
+        feedback!.after.topAt(cell)?.type == PieceType.capstone;
+    return AnimatedBuilder(
+      animation: progress,
+      builder: (context, _) => PieceStackView(
+        pieces: pieces,
+        expanded: expanded,
+        landingStart: landing.startIndex,
+        landingProgress:
+            landing.progress(progress.value * feedback!.durationMilliseconds),
+        heavyLanding: heavy,
+      ),
+    );
   }
 
   @override
@@ -313,14 +347,7 @@ class _BoardViewState extends State<BoardView> {
                                       children: [
                                         Positioned.fill(
                                           child: RepaintBoundary(
-                                            child: PieceStackView(
-                                              pieces: expanded &&
-                                                      original != null &&
-                                                      selected == cell
-                                                  ? _visuals(cell, before: true)
-                                                  : _visuals(cell),
-                                              expanded: expanded,
-                                            ),
+                                            child: _pieces(cell, expanded),
                                           ),
                                         ),
                                         ..._cellBadges(context, layout, cell),
