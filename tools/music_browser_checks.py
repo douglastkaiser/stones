@@ -96,8 +96,8 @@ def local_request(route, build_root):
     # the exact renderer files shipped in this local build instead, keeping all
     # other external requests blocked and the check independent of CDN access.
     renderer = re.fullmatch(
-        r"https://www\\.gstatic\\.com/flutter-canvaskit/[a-f0-9]+/"
-        r"((?:chromium/)?canvaskit\\.(?:js|wasm))",
+        r"https://www\.gstatic\.com/flutter-canvaskit/[a-f0-9]+/"
+        r"((?:chromium/)?canvaskit\.(?:js|wasm))",
         route.request.url,
     )
     if not renderer:
