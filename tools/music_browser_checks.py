@@ -91,6 +91,37 @@ def click(page, name):
     page.wait_for_timeout(450)  # Let the page transition complete before another input.
 
 
+def local_request(route, build_root):
+    # Flutter's default web build can load its renderer from Google's CDN. Serve
+    # the exact renderer files shipped in this local build instead, keeping all
+    # other external requests blocked and the check independent of CDN access.
+    renderer = re.fullmatch(
+        r"https://www\.gstatic\.com/flutter-canvaskit/[a-f0-9]+/"
+        r"((?:chromium/)?canvaskit\.(?:js|wasm))",
+        route.request.url,
+    )
+    if not renderer:
+        route.abort()
+        return
+
+    asset = build_root / "canvaskit" / renderer.group(1)
+    if not asset.is_file():
+        route.abort()
+        raise FileNotFoundError(
+            f"Flutter requested renderer asset {renderer.group(1)!r}, "
+            f"but it is missing from {asset.parent}. Build the web app with "
+            "its local CanvasKit assets before running this check."
+        )
+    route.fulfill(
+        body=asset.read_bytes(),
+        content_type=(
+            "application/wasm" if asset.suffix == ".wasm"
+            else "application/javascript"
+        ),
+        headers={"access-control-allow-origin": "*"},
+    )
+
+
 def playing(page, cue):
     try:
         page.wait_for_function("""cue => {
@@ -118,7 +149,8 @@ def main():
     args = parser.parse_args()
     out = ROOT / "build/qa/music" / args.browser
     out.mkdir(parents=True, exist_ok=True)
-    handler = functools.partial(Handler, directory=str(ROOT / args.root))
+    build_root = ROOT / args.root
+    handler = functools.partial(Handler, directory=str(build_root))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://127.0.0.1:{server.server_port}/stones/"
@@ -131,7 +163,9 @@ def main():
             browser = getattr(pw, args.browser).launch(**options)
             context = browser.new_context(viewport={"width": 1280, "height": 900})
             context.add_init_script(HOOK)
-            context.route("https://**/*", lambda route: route.abort())
+            context.route(
+                "https://**/*", lambda route: local_request(route, build_root)
+            )
             page = context.new_page()
             page.on("console", lambda message: print(message.text, flush=True)
                     if "Optional music" in message.text else None)
@@ -197,7 +231,9 @@ def main():
             context = browser.new_context(viewport={"width": 1280, "height": 900})
             context.add_init_script(HOOK)
             context.add_init_script("localStorage.setItem('flutter.music_volume', '0.25')")
-            context.route("https://**/*", lambda route: route.abort())
+            context.route(
+                "https://**/*", lambda route: local_request(route, build_root)
+            )
             context.route(re.compile(r"/sounds/(?!music/)"), lambda route: route.abort())
             page = context.new_page()
             ready(page, url)
