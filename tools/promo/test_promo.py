@@ -1,8 +1,11 @@
 """Release-state regressions: rendered copy, QR destination and ZIP instructions."""
 import json
+import io
 from pathlib import Path
+import re
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 
 from PIL import Image
@@ -12,6 +15,20 @@ import generate
 
 
 class AvailabilityTest(unittest.TestCase):
+    def test_qr_svg_ignores_serializer_empty_element_whitespace(self):
+        url = generate.CONFIG['base_url']
+        expected = generate.qr_svg(url)
+        save = generate.qrcode.image.svg.SvgPathImage.save
+
+        def spaced_save(image, stream, *args, **kwargs):
+            buffer = io.BytesIO()
+            save(image, buffer, *args, **kwargs)
+            stream.write(re.sub(rb'\s*/>', b'   />', buffer.getvalue()))
+
+        with mock.patch.object(generate.qrcode.image.svg.SvgPathImage,
+                               'save', spaced_save):
+            self.assertEqual(generate.qr_svg(url), expected)
+
     def test_both_release_states(self):
         source = json.loads((generate.SOURCE / 'config.json').read_text())
         for state in ['testing', 'public']:

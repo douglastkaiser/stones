@@ -82,6 +82,9 @@ def qr_svg(url):
     stream = io.BytesIO()
     qr.make_image(image_factory=qrcode.image.svg.SvgPathImage).save(stream)
     svg = stream.getvalue().decode()
+    # qrcode's optional XML backends differ in empty-element whitespace. Keep
+    # both the QR SVG and its embedded story copy stable across environments.
+    svg = re.sub(r"\s+/>", "/>", svg)
     svg = re.sub(r'(<svg[^>]*>)', r'\1<rect width="100%" height="100%" fill="white"/>', svg, count=1)
     return svg.encode()
 
