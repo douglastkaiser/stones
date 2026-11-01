@@ -695,6 +695,19 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   [listing capture and submission record](releases/STORE_LISTING_20261024.md),
   [Android release](releases/ANDROID_503.md).
 
+- **APP-11 · Promotional sharing kit:** About opens the public, standalone
+  `share/` collection on web and Android. Supporters can download light/dark
+  banners and social graphics, web/Android-testing QR codes, or the complete ZIP;
+  copy absolute image URLs, accessible linked HTML, Markdown and promotional text.
+  Web preview navigation stays relative; copied embeds target production.
+  Clipboard failure offers selectable text. Social and square downloads include
+  the web address. One configured Android release state controls artwork copy,
+  page actions, embed descriptions and QR destinations. CI checks source drift,
+  both release states and actual web-build contents. Android is labeled testing access
+  until public availability is verified; iOS remains informational “coming soon.”
+  Preserve APP-06 branding and APP-07 About/support journeys.
+  Source, regeneration and verification: [promotional kit](../tools/promo/README.md).
+
 ## Historical capabilities and compatibility obligations
 
 These capabilities appear in the full history and remain relevant even where the

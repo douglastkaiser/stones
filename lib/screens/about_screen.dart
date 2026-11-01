@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'feedback_screen.dart';
 import '../models/achievement.dart';
+import '../services/sharing_kit_url.dart';
 import '../providers/providers.dart';
 import '../services/play_games_service.dart';
 import '../services/sound_manager.dart';
@@ -119,6 +120,22 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
+  Future<void> _openSharingKit() async {
+    final url = sharingKitUrl(webBase: kIsWeb ? Uri.base : null);
+    try {
+      if (await launchUrl(url, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // Keep the player in About and provide a useful retry message.
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the sharing kit. Please try again.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,6 +234,19 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                 subtitle: 'Report a problem or share an idea',
                 onTap: () => Navigator.push<void>(context,
                     MaterialPageRoute(builder: (_) => const FeedbackScreen())),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _AboutCard(
+            title: 'Spread the word',
+            children: [
+              _LinkTile(
+                icon: Icons.campaign_outlined,
+                title: 'Get the Stones sharing kit',
+                subtitle: 'Banners, QR codes, social graphics, and easy embeds',
+                onTap: _openSharingKit,
               ),
             ],
           ),

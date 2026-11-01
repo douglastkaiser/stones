@@ -1,0 +1,121 @@
+{
+  "base_url": "https://www.douglastkaiser.com/stones/",
+  "android_url": "https://play.google.com/store/apps/details?id=com.douglastkaiser.stones",
+  "android_enrollment_url": "https://play.google.com/apps/testing/com.douglastkaiser.stones",
+  "short_description": "Every stack changes the road. Play Stones, an abstract strategy game of roads, walls, and capstones.",
+  "long_description": "Build roads. Block paths. Make every stack count. Stones is an abstract strategy game inspired by Tak, with Square and Hex boards, AI opponents, local play, and online matches. Try it in your browser and help spread the word.",
+  "availability_checked": "2026-11-01: public Play listing returned HTTP 404; public release not confirmed.",
+  "android_status": "testing",
+  "android": {
+    "title": "Android testing access",
+    "action": "Join Android testing",
+    "destination": "https://play.google.com/apps/testing/com.douglastkaiser.stones",
+    "qr_action": "join Android testing",
+    "qr_note": "Links to tester enrollment",
+    "instructions": "Android is currently offered through testing. Sign in with your Google account to check eligibility. If you can join, enroll and then open the Play Store listing. Enrollment is not guaranteed; if unavailable, play on the web."
+  },
+  "availability_lines": [
+    "Play on web",
+    "Android testing access",
+    "Coming soon to iOS"
+  ],
+  "availability": "Play on web. Android testing access. Coming soon to iOS.",
+  "items": [
+    {
+      "name": "stones-banner-light",
+      "title": "Banner \u00b7 light",
+      "width": 728,
+      "height": 90,
+      "svg": true,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-banner-dark",
+      "title": "Banner \u00b7 dark",
+      "width": 728,
+      "height": 90,
+      "svg": true,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-rectangle-light",
+      "title": "Rectangle \u00b7 light",
+      "width": 300,
+      "height": 250,
+      "svg": true,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-rectangle-dark",
+      "title": "Rectangle \u00b7 dark",
+      "width": 300,
+      "height": 250,
+      "svg": true,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-social-light",
+      "title": "Social \u00b7 light",
+      "width": 1200,
+      "height": 630,
+      "svg": false,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-social-dark",
+      "title": "Social \u00b7 dark",
+      "width": 1200,
+      "height": 630,
+      "svg": false,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-square-light",
+      "title": "Square \u00b7 light",
+      "width": 1080,
+      "height": 1080,
+      "svg": false,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-square-dark",
+      "title": "Square \u00b7 dark",
+      "width": 1080,
+      "height": 1080,
+      "svg": false,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-story-light",
+      "title": "Story \u00b7 light",
+      "width": 1080,
+      "height": 1920,
+      "svg": false,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "stones-story-dark",
+      "title": "Story \u00b7 dark",
+      "width": 1080,
+      "height": 1920,
+      "svg": false,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "qr-web",
+      "title": "QR \u00b7 web",
+      "width": 984,
+      "height": 984,
+      "svg": true,
+      "destination": "https://www.douglastkaiser.com/stones/"
+    },
+    {
+      "name": "qr-android",
+      "title": "QR \u00b7 android",
+      "width": 984,
+      "height": 984,
+      "svg": true,
+      "destination": "https://play.google.com/apps/testing/com.douglastkaiser.stones"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "base_url": "https://www.douglastkaiser.com/stones/",
+  "android_url": "https://play.google.com/store/apps/details?id=com.douglastkaiser.stones",
+  "android_enrollment_url": "https://play.google.com/apps/testing/com.douglastkaiser.stones",
+  "short_description": "Every stack changes the road. Play Stones, an abstract strategy game of roads, walls, and capstones.",
+  "long_description": "Build roads. Block paths. Make every stack count. Stones is an abstract strategy game inspired by Tak, with Square and Hex boards, AI opponents, local play, and online matches. Try it in your browser and help spread the word.",
+  "availability_checked": "2026-11-01: public Play listing returned HTTP 404; public release not confirmed.",
+  "android_status": "testing"
+}
