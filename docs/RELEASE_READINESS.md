@@ -1,5 +1,21 @@
 # Current release qualification
 
+## City cosmetics web/backend rollout, 2026-11-02
+
+The six-city implementation is on main. The additive Firestore rule is now
+published to `stones-9a6a0` and exactly verified, with all six indexes, field
+overrides and other releases unchanged. All 159 emulator checks and five
+read-only production checks passed. Web publication is awaiting the final
+reader-rollout guard, two complete CI qualifications and Deploy Main hosted
+verification. Android publication is explicitly deferred.
+
+New Jaipur piece writes default off to preserve older app compatibility; eligible
+local Jaipur remains available and new online seats use Porto pieces. Other
+city sets and the existing Jaipur board can ship normally. See the
+[publication/rollback record](releases/CITY_COSMETICS_20261102.md) and
+[backend evidence](qa/city-cosmetics-firestore-2026-11-02.json).
+Feature IDs: ACCOUNT-08/09/12, PREF-03 and APP-09.
+
 ## Court application publication, 2026-10-30
 
 [Stones](https://www.douglastkaiser.com/stones/) serves Court with friends from

@@ -22,6 +22,43 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  test('Jaipur reader rollout preserves local choice and protects online seats',
+      () async {
+    final entitled = StateProvider<bool>((ref) => true);
+    final container = ProviderContainer(overrides: [
+      isBoardThemeUnlockedProvider
+          .overrideWith((ref, city) => ref.watch(entitled)),
+    ]);
+    addTearDown(container.dispose);
+    final selections = container.read(cosmeticsProvider.notifier);
+    for (final style in PieceStyle.values) {
+      await selections.setPieceStyle(style);
+      expect(container.read(currentPieceStyleProvider).style, style);
+      expect(container.read(onlinePieceStyleProvider),
+          onlineCompatiblePieceStyle(style));
+      if (style != PieceStyle.celestial) {
+        expect(container.read(onlinePieceStyleProvider), style);
+      }
+    }
+    await selections.setBoardTheme(BoardTheme.celestial);
+    expect(container.read(shareablePieceStyleProvider), PieceStyle.celestial);
+    expect(container.read(onlinePieceStyleProvider),
+        jaipurOnlinePiecesEnabled ? PieceStyle.celestial : PieceStyle.standard);
+    expect(
+        container.read(currentBoardThemeProvider).theme, BoardTheme.celestial);
+    final loaded = CosmeticsNotifier();
+    await loaded.load();
+    expect(loaded.state.selectedPieceStyle, PieceStyle.celestial);
+    expect(loaded.state.selectedBoardTheme, BoardTheme.celestial);
+    loaded.dispose();
+    container.read(entitled.notifier).state = false;
+    expect(
+        container.read(currentPieceStyleProvider).style, PieceStyle.standard);
+    expect(container.read(onlinePieceStyleProvider), PieceStyle.standard);
+    expect(container.read(cosmeticsProvider).selectedPieceStyle,
+        PieceStyle.celestial);
+  });
+
   testWidgets(
       'legacy new-game city labels and shape swatches fit a 320px phone at 200% text',
       (tester) async {

@@ -1,0 +1,64 @@
+{
+  "project": "stones-9a6a0",
+  "ruleset": "projects/stones-9a6a0/rulesets/a7dead50-87d9-4de6-95b8-b65fb5cc9905",
+  "rulesSha256": "6d1bbbcb5caf41976d5c1064bb2cadb72a106e98c36c0ad7240627e7f22ddbee",
+  "verifiedAt": "2026-11-02T20:28:39.501Z",
+  "rollbackRuleset": "projects/stones-9a6a0/rulesets/c94c6cca-e1d8-40cf-a43a-c17191ec4785",
+  "rollbackRulesSha256": "4484497f34b7306346a85d8eaaae6bd95a2e0990e8b5ace2b6baecf78a5c20f4",
+  "indexCount": 6,
+  "checks": {
+    "rulesMatchSource": true,
+    "baselineMatchedBefore": true,
+    "indexesUnchanged": true,
+    "overridesUnchanged": true,
+    "otherReleasesUnchanged": true,
+    "databaseIdentityUnchanged": true,
+    "allIndexesReady": true,
+    "publicAccessChecksPassed": true
+  },
+  "access": [
+    {
+      "check": "public_overall_ai",
+      "http_status": 200,
+      "passed": true
+    },
+    {
+      "check": "public_square_ai",
+      "http_status": 200,
+      "passed": true
+    },
+    {
+      "check": "private_room_enumeration",
+      "http_status": 403,
+      "passed": true
+    },
+    {
+      "check": "private_rating_receipts",
+      "http_status": 403,
+      "passed": true
+    },
+    {
+      "check": "private_skill_settlements",
+      "http_status": 403,
+      "passed": true
+    }
+  ],
+  "customerDataMutated": false,
+  "authorization": "Owner requested web/backend deployment, deferred full Android release, and completed official Firebase CLI sign-in.",
+  "source_base": "dd2391015fe4d4616a9c178c13abe563246af94a",
+  "cli_version": "15.33.0",
+  "command": "firebase deploy --only firestore:rules --project stones-9a6a0 --non-interactive",
+  "emulator_tests": {
+    "passed": 159,
+    "failed": 0,
+    "workflow": "https://github.com/douglastkaiser/stones/actions/runs/41517411552"
+  },
+  "backup": "build/qa/cities/release/firebase/before/",
+  "android_published": false,
+  "new_jaipur_piece_writers_enabled": false,
+  "inventory_ids": [
+    "ACCOUNT-09",
+    "ACCOUNT-12",
+    "APP-09"
+  ]
+}

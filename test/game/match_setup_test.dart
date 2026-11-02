@@ -3,8 +3,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stones/game/match_config.dart';
 import 'package:stones/game/match_setup_form.dart';
+import 'package:stones/models/cosmetics.dart';
 
 void main() {
+  testWidgets(
+      'online setup previews the compatible style while local setup retains Jaipur',
+      (tester) async {
+    final config = MatchConfig.defaults(BoardShape.square);
+    Future<void> show(MatchConfig candidate) => tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: MatchSetupForm(
+                    key: ValueKey(candidate.online),
+                    initialConfig: candidate,
+                    pieceStyle: PieceStyle.celestial,
+                    onStart: (_) async {})))));
+    await show(config);
+    expect(find.text('Moonstone · Trapezoid'), findsOneWidget);
+    final online = config.copyWith(seats: const [
+      SeatConfig(SeatId.ivory),
+      SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman)
+    ]);
+    await show(online);
+    expect(
+        find.text(jaipurOnlinePiecesEnabled
+            ? 'Moonstone · Trapezoid'
+            : 'Oak · Trapezoid'),
+        findsOneWidget);
+    expect(find.text(jaipurOnlinePiecesNotice),
+        jaipurOnlinePiecesEnabled ? findsNothing : findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final shape in BoardShape.values) {
     for (final width in [320.0, 1366.0]) {
       testWidgets(

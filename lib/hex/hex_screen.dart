@@ -120,7 +120,9 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final match = ref.watch(hexMatchProvider);
-    final pieceStyle = ref.watch(currentPieceStyleProvider);
+    final pieceStyle = _kinds.contains(HexSeatKind.remoteHuman)
+        ? PieceStyleData.forStyle(ref.watch(onlinePieceStyleProvider))
+        : ref.watch(currentPieceStyleProvider);
     String label(HexSeat seat) => pieceStyle.palettes[seat.index].name;
     return Scaffold(
       appBar: AppBar(

@@ -49,7 +49,9 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
 
   @override
   Widget build(BuildContext context) {
-    final style = widget.pieceStyle;
+    final style = _config.online
+        ? onlineCompatiblePieceStyle(widget.pieceStyle)
+        : widget.pieceStyle;
     String label(SeatId id) => SeatAppearance.label(id, style);
     final supply = Reserve.initial(_config);
     final local =
@@ -63,6 +65,8 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_config.online && widget.pieceStyle != style)
+              const Text(jaipurOnlinePiecesNotice),
             Wrap(spacing: 12, runSpacing: 8, children: [
               for (final shape in BoardShape.values)
                 ChoiceChip(

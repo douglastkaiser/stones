@@ -795,7 +795,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
     return OnlineGamePlayer(
         id: user.uid,
         displayName: displayName,
-        pieceStyle: _ref.read(shareablePieceStyleProvider));
+        pieceStyle: _ref.read(onlinePieceStyleProvider));
   }
 
   String _generateRoomCode() {

@@ -86,6 +86,11 @@ class _ThemeGalleryState extends ConsumerState<ThemeGallery> {
                                     : data.description,
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall),
+                            if (_pieces &&
+                                style == PieceStyle.celestial &&
+                                !jaipurOnlinePiecesEnabled)
+                              const Text(jaipurOnlinePiecesNotice,
+                                  textAlign: TextAlign.center),
                             const SizedBox(height: 8),
                             Wrap(
                                 spacing: 8,
@@ -170,6 +175,8 @@ class CityPreviewContent extends ConsumerWidget {
                       : 'Locked',
               style: Theme.of(context).textTheme.titleSmall),
           if (city != BoardTheme.classicWood) Text(cityUnlockRequirement(city)),
+          if (style == PieceStyle.celestial && !jaipurOnlinePiecesEnabled)
+            const Text(jaipurOnlinePiecesNotice),
           const SizedBox(height: 12),
           Text(
               'Board: ${BoardThemeData.forTheme(theme).name} · Pieces: ${pieces.name}'),

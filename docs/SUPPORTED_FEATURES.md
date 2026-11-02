@@ -525,6 +525,9 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   Overall. Check the board host and each piece owner independently; host-controlled
   AI uses the host. Pending, failed or revoked eligibility renders Porto instead,
   including already-open result images. Stored room choices remain immutable.
+  During the reader rollout, eligible Jaipur pieces remain available locally;
+  new online seats use Porto until supported app readers and production rules
+  are ready. The existing Jaipur board remains eligible for online use.
 
 - **ACCOUNT-10 · Safe identity transitions:** restore an existing Firebase identity
   before creating a guest. Linking a guest to a new Google account preserves UID
@@ -546,7 +549,10 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   back safely to Porto; viewing a locked opponent set never writes local
   entitlements. Cosmetic entitlement remains client-enforced. Jaipur adds one
   piece wire identifier; older clients require the tolerant-reader release before
-  new clients write it. See [city cosmetics](CITY_COSMETICS.md) for release order.
+  new clients write it. Shared and legacy room writers default to compatible Porto
+  for Jaipur pieces during this stage, without changing the saved selection,
+  existing rooms or other styles. Setup and previews explain this limit. See
+  [city cosmetics](CITY_COSMETICS.md) for release order.
 - **ACCOUNT-13 · Remembered account:** restore the last Firebase session on Home
   independently of audio and optional Play Games startup, without a new guest or
   Google chooser. SDK-managed persistence remembers the last successful login;
@@ -709,7 +715,10 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   previous artifact before publication, checking its backend hashes against its
   own committed source even when the new release changes rules or indexes.
   Release tools follow the workflow revision while application bytes remain
-  pinned to the selected qualified artifact. Check hosted source/integrity/login
+  pinned to the selected qualified artifact. A web-only city rollout keeps new
+  Jaipur piece writes disabled until Android/other supported readers are ready;
+  enable `STONES_JAIPUR_ONLINE_PIECES` only after that compatibility qualification
+  and the additive rules publication. Check hosted source/integrity/login
   afterward and daily, reporting publication separately from acceptance. Browser
   qualification pins Ubuntu 24.04 and the browser tooling; dependency setup uses
   bounded transport retries and cannot substitute for passing application checks.

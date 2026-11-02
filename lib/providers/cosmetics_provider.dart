@@ -165,6 +165,11 @@ final shareablePieceStyleProvider = Provider<PieceStyle>((ref) {
       ? style
       : PieceStyle.standard;
 });
+
+/// The staged reader release retains local Jaipur while protecting older apps.
+final onlinePieceStyleProvider = Provider<PieceStyle>((ref) =>
+    onlineCompatiblePieceStyle(ref.watch(shareablePieceStyleProvider)));
+
 final shareableBoardThemeProvider = Provider<BoardTheme>((ref) {
   final theme = ref.watch(cosmeticsProvider).selectedBoardTheme;
   return ref.watch(isBoardThemeUnlockedProvider(theme))

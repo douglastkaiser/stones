@@ -68,7 +68,7 @@ def open_chat(page):
 
 
 def message(page):
-    label = 'Ivory: Good game **** friend'
+    label = 'Oak: Good game **** friend'
     return page.get_by_text(label, exact=True).or_(page.get_by_label(label, exact=True))
 
 

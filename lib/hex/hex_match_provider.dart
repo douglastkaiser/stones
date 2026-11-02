@@ -346,7 +346,7 @@ final hexMatchProvider =
           onAllocated: (room, uid) => ref
               .read(savedRoomsProvider.notifier)
               .remember(SavedRoom(code: room.code, uid: uid, hex: true)),
-          pieceStyle: ref.read(shareablePieceStyleProvider),
+          pieceStyle: ref.read(onlinePieceStyleProvider),
           boardTheme: ref.read(shareableBoardThemeProvider)),
       remember: (room, uid) => ref
           .read(savedRoomsProvider.notifier)

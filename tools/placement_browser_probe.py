@@ -125,7 +125,7 @@ def run():
                 tap(button('Confirm move'))
                 wait_contacts(count + 1)
                 expect(cell(count - 2, 0)).to_have_accessible_name(
-                    re.compile(rf'^Cell {count - 2}, 0, Ivory flat, 2 pieces'))
+                    re.compile(rf'^Cell {count - 2}, 0, Oak flat, 2 pieces'))
                 # Muting in-match must suppress the next contact.
                 if touch:
                     tap(button('Match options'))
@@ -154,7 +154,7 @@ def run():
                 tap(button('My games'))
                 tap(button('Continue saved game'))
                 expect(cell(count - 2, 0)).to_have_accessible_name(
-                    re.compile(rf'^Cell {count - 2}, 0, Ivory flat, 2 pieces'))
+                    re.compile(rf'^Cell {count - 2}, 0, Oak flat, 2 pieces'))
                 assert page.evaluate(CONTACTS) == []  # Restore cannot sound like a move.
                 if button('Resume match').count():
                     tap(button('Resume match'))

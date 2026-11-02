@@ -23,6 +23,19 @@ enum PieceStyle {
   celestial, // Jaipur; append to preserve saved indices.
 }
 
+/// Enable writers only after supported app readers and production rules accept
+/// Jaipur. Existing room metadata and local selection are never rewritten.
+const jaipurOnlinePiecesEnabled =
+    bool.fromEnvironment('STONES_JAIPUR_ONLINE_PIECES');
+
+PieceStyle onlineCompatiblePieceStyle(PieceStyle style) =>
+    style == PieceStyle.celestial && !jaipurOnlinePiecesEnabled
+        ? PieceStyle.standard
+        : style;
+
+const jaipurOnlinePiecesNotice =
+    'Jaipur pieces are available for local play. New online seats use Porto pieces.';
+
 /// Board theme definition with colors and metadata
 class BoardThemeData {
   final BoardTheme theme;

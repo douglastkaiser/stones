@@ -24,7 +24,7 @@ final savedLocalMatchProvider = FutureProvider<Map<String, dynamic>?>((ref) {
 });
 final matchRoomStoreProvider = Provider<MatchRoomStore>((ref) =>
     FirestoreMatchRoomStore(FirebaseFirestore.instance,
-        style: ref.watch(shareablePieceStyleProvider),
+        style: ref.watch(onlinePieceStyleProvider),
         theme: ref.watch(shareableBoardThemeProvider)));
 
 final StateNotifierProvider<MatchController, MatchSession> matchProvider =

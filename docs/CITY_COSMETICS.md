@@ -3,7 +3,7 @@
 The approved cosmetics redesign covers Porto, Edinburgh, Florence, Marrakesh,
 Kyoto and Jaipur. These are city-inspired designs rather than claims of historical
 game equipment. Rules, seat IDs, move records and achievement requirements remain
-unchanged. This is a source implementation; production publication is separate.
+unchanged. Publication is tracked in the [release record](releases/CITY_COSMETICS_20261102.md).
 
 ## Visual contract
 
@@ -95,16 +95,41 @@ Cosmetic entitlement remains client-enforced, not a server award ledger.
 
 Before clients write `celestial` piece metadata:
 
-1. Release the tolerant cosmetic readers to supported clients.
+1. Release tolerant cosmetic readers to supported web and app clients.
 2. Publish and verify the additive Firestore whitelist change.
-3. Release Jaipur selection/writes.
+3. Enable `STONES_JAIPUR_ONLINE_PIECES` only after the supported reader rollout
+   and backend qualification are complete. Local Jaipur selection remains usable
+   throughout this staged rollout.
 
 Older unupdated shared-room clients use strict enum parsing and cannot display
-the new pieces. This source change contains both tolerant readers and the new
-writer; the reader-only rollout must precede publishing the writer-capable client.
-Do not claim universal old-client compatibility. Committing or pushing `main`
-does not deploy the client or rules; publication workflows require separate
-manual release actions. No production deployment is performed by this task.
+new Jaipur pieces. The first web publication therefore defaults the writer flag
+off: shared Square/Hex and both legacy online paths assign Porto to new online
+seats when Jaipur is selected. Local selection, previews, eligible local play,
+review and exports retain Jaipur. Other styles are unchanged. Existing recorded
+room cosmetics remain immutable, and readers can already display the new style.
+Setup swatches match the online appearance and previews explain the temporary
+limit. The existing Jaipur board uses a known identifier and remains available
+online to its eligible owner.
+
+The owner authorized web and backend deployment after the initial source handoff,
+with the full Android release deferred. The writer guard keeps those installed
+apps compatible while the web reader release and additive backend rule are
+published. Committing or pushing `main` does not itself publish the app or rules;
+use the qualified Deploy Main workflow and explicit rules publication, then
+verify readback, hosted source/integrity and login handoff. Release evidence is
+recorded separately from the initial local checks below.
+
+## Web/backend release follow-up
+
+The additive rules are published and readback-verified in the
+[November 2 release record](releases/CITY_COSMETICS_20261102.md). The web reader
+rollout guard passed 46 focused city/setup/online checks and 14 checks with the
+future writer flag explicitly enabled; strict analysis is clean. The first main
+CI exposed stale generic-owner browser assertions. Player, chat, placement and
+adaptive journeys now assert Porto ownership names, preserving the same gameplay,
+recovery and identity checks. The final source must complete both required CI
+attempts before Deploy Main publishes its exact artifact. Android deployment
+remains deferred by the owner.
 
 ## Verification
 

@@ -103,7 +103,7 @@ def run():
                     ready(page)
                     tap(button('My games'))
                     tap(button('Continue saved game'))
-                    expect(button(f'Cell {count - 2}, 0, Ivory flat, 2 pieces')).to_be_visible()
+                    expect(button(f'Cell {count - 2}, 0, Oak flat, 2 pieces')).to_be_visible()
                     assert not errors, errors
                     page.wait_for_timeout(300)  # Let Flutter button/menu transitions settle.
                     page.screenshot(path=str(EVIDENCE / f'{name}-confirmed.png'))
