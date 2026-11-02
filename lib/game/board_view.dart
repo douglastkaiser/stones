@@ -208,8 +208,9 @@ class _BoardViewState extends State<BoardView> {
             stones[i].seat,
             styles[stones[i].seat] ?? PieceStyle.standard,
           ),
-          owner: stones[i].seat.label,
-          isLight: stones[i].seat != SeatId.charcoal,
+          owner: SeatAppearance.label(
+              stones[i].seat, styles[stones[i].seat] ?? PieceStyle.standard),
+          identity: SeatAppearance.identity(stones[i].seat),
           preview: !before && previous != null && i >= prefix,
         ),
     ];
@@ -298,7 +299,7 @@ class _BoardViewState extends State<BoardView> {
                                 'board-cell-${game.geometry is HexGeometry ? 'hex' : 'square'}-${cell.x}-${cell.y}',
                             key: ValueKey('cell-${cell.x}-${cell.y}'),
                             label:
-                                'Cell ${cell.x}, ${cell.y}, ${game.topAt(cell) == null ? 'empty' : '${game.topAt(cell)!.seat.label} ${game.topAt(cell)!.type.name}, ${game.stackAt(cell).length} pieces'}${_staged[cell] == null ? '' : ', ${_staged[cell]} staged'}${widget.handCell == cell && widget.carried.isNotEmpty ? ', ${widget.carried.length} carried' : ''}${destinations.contains(cell) ? ', drop one bottom stone' : ''}',
+                                'Cell ${cell.x}, ${cell.y}, ${game.topAt(cell) == null ? 'empty' : '${SeatAppearance.label(game.topAt(cell)!.seat, styles[game.topAt(cell)!.seat] ?? PieceStyle.standard)} ${game.topAt(cell)!.type.name}, ${game.stackAt(cell).length} pieces'}${_staged[cell] == null ? '' : ', ${_staged[cell]} staged'}${widget.handCell == cell && widget.carried.isNotEmpty ? ', ${widget.carried.length} carried' : ''}${destinations.contains(cell) ? ', drop one bottom stone' : ''}',
                             button: true,
                             enabled: onCell != null,
                             selected: selected == cell,
@@ -375,7 +376,6 @@ class _BoardViewState extends State<BoardView> {
     Cell cell,
   ) {
     final palette = Theme.of(context).colorScheme;
-    final top = game.topAt(cell);
     final staged = _staged[cell];
     final hex = game.geometry is HexGeometry;
     Widget badge(
@@ -441,20 +441,11 @@ class _BoardViewState extends State<BoardView> {
       if (staged != null)
         badge(
           'staged-count',
-          '+$staged${layout.unit < 20 ? '' : ' ${top?.seat.symbol ?? ''}'}',
+          '+$staged',
           Alignment.topCenter,
           palette.primaryContainer,
           palette.onPrimaryContainer,
           fontSize: layout.unit < 20 ? 7 : 9,
-        )
-      else if (top != null && !destinations.contains(cell))
-        badge(
-          'stack-owner',
-          top.seat.symbol,
-          Alignment.topRight,
-          SeatAppearance.marker(top.seat),
-          Colors.black,
-          fontSize: (layout.unit * .28).clamp(8, 13),
         ),
       if (widget.handCell == cell &&
           widget.carried.isNotEmpty &&
@@ -574,6 +565,8 @@ class _BoardPainter extends CustomPainter {
   ];
   @override
   void paint(Canvas canvas, Size size) {
+    paintCityBoardFrame(
+        canvas, layout.geometry.cells.map(layout.polygon), theme, layout.unit);
     for (final cell in layout.geometry.cells) {
       final polygon = layout.polygon(cell);
       final bounds = layout.bounds(cell);
@@ -585,13 +578,7 @@ class _BoardPainter extends CustomPainter {
         seed: cell.x * 7 + cell.y,
       ).paint(canvas, bounds.size);
       canvas.restore();
-      canvas.drawPath(
-        polygon,
-        Paint()
-          ..color = theme.gridLine
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1,
-      );
+      paintCityGrid(canvas, polygon, theme, layout.unit);
       for (var axis = 0; axis < layout.geometry.axisCount; axis++) {
         for (final positive in [false, true]) {
           if (!layout.geometry.boundary(cell, axis, positive)) continue;

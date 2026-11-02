@@ -1,3 +1,6 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/cosmetics.dart';
+import '../providers/cosmetics_provider.dart';
 import 'package:flutter/material.dart';
 import '../services/music_service.dart';
 import '../widgets/music_scene.dart';
@@ -90,14 +93,14 @@ class _HexLearningScreenState extends State<HexLearningScreen> {
       ));
 }
 
-class HexExerciseScreen extends StatefulWidget {
+class HexExerciseScreen extends ConsumerStatefulWidget {
   const HexExerciseScreen({super.key, required this.exercise});
   final HexExercise exercise;
   @override
-  State<HexExerciseScreen> createState() => _HexExerciseScreenState();
+  ConsumerState<HexExerciseScreen> createState() => _HexExerciseScreenState();
 }
 
-class _HexExerciseScreenState extends State<HexExerciseScreen> {
+class _HexExerciseScreenState extends ConsumerState<HexExerciseScreen> {
   late HexGame _game;
   final _selection = HexMoveSelection();
   HexCell? get _source => _selection.source;
@@ -198,6 +201,12 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
   @override
   Widget build(BuildContext context) {
     final exercise = widget.exercise;
+    final pieces = ref.watch(currentPieceStyleProvider);
+    String present(String text) =>
+        text.replaceAllMapped(RegExp(r'\b(Ivory|Charcoal|Copper)\b'), (match) {
+          final seat = HexSeat.values.firstWhere((s) => s.label == match[0]);
+          return pieces.palettes[seat.index].name;
+        });
     final preview = _planned == null ? null : HexRules.play(_game, _planned!);
 
     return MusicScene(
@@ -212,18 +221,21 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(exercise.goal,
+                            Text(present(exercise.goal),
                                 style: Theme.of(context).textTheme.titleMedium),
                             if (exercise.puzzle)
                               Text(
                                   '${exercise.metadata} · $_steps / ${exercise.moveLimit} moves used'),
                             const SizedBox(height: 8),
-                            Text(_done
+                            Text(present(_done
                                 ? 'Objective complete'
                                 : _attempted
                                     ? 'Retry to explore another move'
-                                    : '${_game.current.label} · ${_game.opening ? 'place ${_game.current.next.label} flat' : 'connect any opposite sides'}'),
-                            const Text('I: Ivory · Ch: Charcoal · Cu: Copper'),
+                                    : '${_game.current.label} · ${_game.opening ? 'place ${_game.current.next.label} flat' : 'connect any opposite sides'}')),
+                            Text([
+                              for (var i = 0; i < 3; i++)
+                                '${pieces.palettes[i].name} (${PieceIdentity.values[i].label})'
+                            ].join(' · ')),
                             const Text(
                                 'Every color can connect A to A, B to B, or C to C. Choose any opposite pair.'),
                             SizedBox(
@@ -285,7 +297,7 @@ class _HexExerciseScreenState extends State<HexExerciseScreen> {
                                   child: Padding(
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 8),
-                                      child: Text(_feedback!))),
+                                      child: Text(present(_feedback!)))),
                             Wrap(spacing: 8, runSpacing: 4, children: [
                               if (_planned != null)
                                 FilledButton(

@@ -41,8 +41,8 @@ class StackMoveTray extends StatefulWidget {
       type: stone.type,
       style: style,
       colors: SeatAppearance.colors(stone.seat, style),
-      owner: stone.seat.label,
-      isLight: stone.seat != SeatId.charcoal,
+      owner: SeatAppearance.label(stone.seat, style),
+      identity: SeatAppearance.identity(stone.seat),
     );
   }
 

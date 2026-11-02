@@ -178,7 +178,7 @@ void main() {
           of: cell(const Cell(1, 0)), matching: find.byType(PieceStackView)));
       expect(stack.landingStart, 30);
       expect(stack.pieces.length, 31);
-      expect(stack.pieces.last.owner, SeatId.ivory.label);
+      expect(stack.pieces.last.owner, 'Oak');
       expect(find.byKey(const ValueKey('landing-layer-29')), findsNothing);
       expect(find.byKey(const ValueKey('landing-layer-30')), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 101));

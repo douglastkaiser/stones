@@ -55,9 +55,11 @@ void main() {
           await tester.pumpAndSettle();
           final board = tester.getRect(find.byType(BoardView));
           final layout = BoardLayout(board.size, original.geometry);
+          expect(find.byKey(const ValueKey('stack-owner-0,1')), findsNothing);
+          expect(find.text('Ch'), findsNothing);
+          expect(find.text('+1'), findsOneWidget);
           final badges = {
             'staged-count-1,0': const Cell(1, 0),
-            'stack-owner-0,1': const Cell(0, 1),
             if (layout.unit >= 20) ...{
               'carry-count-1,0': const Cell(1, 0),
               'drop-target-2,0': const Cell(2, 0),

@@ -89,7 +89,7 @@ class SettingsScreen extends ConsumerWidget {
                   // Cosmetics Section
                   const _SectionHeader(title: 'Cosmetics'),
                   const Text(
-                      'Five coordinated board and piece sets. Preview every set, then earn your favorites.'),
+                      'Six cities. Choose your board and pieces independently, and preview every style before earning it.'),
                   const SizedBox(height: 12),
                   const ThemeGallery(),
                   const SizedBox(height: 32),

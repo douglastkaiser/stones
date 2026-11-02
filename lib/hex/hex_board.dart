@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cosmetics.dart';
-import '../theme/game_colors.dart';
 import '../providers/cosmetics_provider.dart';
 import '../widgets/procedural_painters.dart';
 import '../widgets/piece_stack_view.dart';
@@ -112,6 +111,10 @@ class HexBoard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fallback = ref.watch(currentPieceStyleProvider);
+    String label(HexSeat seat) =>
+        PieceStyleData.forStyle(pieceStyles?[seat.index] ?? fallback.style)
+            .palettes[seat.index]
+            .name;
     final visualStacks = {
       for (final cell in game.cells)
         cell: _visuals(game.stackAt(cell), fallback,
@@ -123,7 +126,7 @@ class HexBoard extends ConsumerWidget {
       final geometry = HexBoardGeometry(size, game.radius);
       return Semantics(
         label:
-            'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${(turnSeat ?? game.current).label} to play.'} ${game.rulesVersion == 1 ? 'Legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left.' : 'Every color may connect either A pair, B pair or C pair of opposite sides.'}',
+            'Hex board${preview ? ' preview' : ''}, ${game.cells.length} cells. ${game.finished ? 'Finished.' : '${label(turnSeat ?? game.current)} to play.'} ${game.rulesVersion == 1 ? 'Legacy goals: ${label(HexSeat.ivory)} lower left to upper right; ${label(HexSeat.charcoal)} top to bottom; ${label(HexSeat.copper)} lower right to upper left.' : 'Every color may connect either A pair, B pair or C pair of opposite sides.'}',
         child: Stack(children: [
           RepaintBoundary(
               child: CustomPaint(
@@ -148,14 +151,16 @@ class HexBoard extends ConsumerWidget {
                   child: IgnorePointer(
                       child: Semantics(
                           label: game.rulesVersion == 1
-                              ? '${HexSeat.values[axis.index].label} goal ${positive ? 'B' : 'A'}: ${HexSeat.values[axis.index].edgeName(positive)}'
+                              ? '${label(HexSeat.values[axis.index])} goal ${positive ? 'B' : 'A'}: ${HexSeat.values[axis.index].edgeName(positive)}'
                               : 'Shared pair ${axis.marker}: ${HexSeat.values[axis.index].edgeName(positive)}; any color may connect it to its opposite side',
                           child: ExcludeSemantics(
                               child: Container(
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                       color: game.rulesVersion == 1
-                                          ? hexSeatColors[axis.index]
+                                          ? PieceStyleData.forStyle(pieceStyles?[axis.index] ?? fallback.style)
+                                              .palettes[axis.index]
+                                              .primary
                                           : hexPairColors[axis.index],
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
@@ -168,10 +173,7 @@ class HexBoard extends ConsumerWidget {
                                               : 1)),
                                   child: Text(game.rulesVersion == 1 ? '${hexSeatSymbols[axis.index]} ${positive ? 'B' : 'A'}' : axis.marker,
                                       textScaler: TextScaler.noScaling,
-                                      style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold))))))),
+                                      style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold))))))),
           for (final cell in game.cells)
             Positioned(
               left: geometry.center(cell).dx - geometry.unit,
@@ -183,7 +185,7 @@ class HexBoard extends ConsumerWidget {
                 child: MergeSemantics(
                     child: Semantics(
                   label:
-                      'Cell ${cell.q}, ${cell.r}, ${game.stackAt(cell).isEmpty ? 'empty' : '${game.stackAt(cell).last.seat.label} ${game.stackAt(cell).last.type.name}, ${game.stackAt(cell).length} pieces'}',
+                      'Cell ${cell.q}, ${cell.r}, ${game.stackAt(cell).isEmpty ? 'empty' : '${label(game.stackAt(cell).last.seat)} ${game.stackAt(cell).last.type.name}, ${game.stackAt(cell).length} pieces'}',
                   button: true,
                   enabled: onCell != null,
                   selected: selected == cell,
@@ -212,34 +214,6 @@ class HexBoard extends ConsumerWidget {
                                           child: PieceStackView(
                                               pieces: visualStacks[cell]!,
                                               expanded: expanded))),
-                                  if (game.stackAt(cell).isNotEmpty)
-                                    Positioned(
-                                        top: geometry.unit * .35,
-                                        right: geometry.unit * .4,
-                                        child: IgnorePointer(
-                                            child: ExcludeSemantics(
-                                                child: Text(
-                                                    hexSeatSymbols[game
-                                                        .stackAt(cell)
-                                                        .last
-                                                        .seat
-                                                        .index],
-                                                    textScaler:
-                                                        TextScaler.noScaling,
-                                                    style: TextStyle(
-                                                        fontSize:
-                                                            (geometry.unit *
-                                                                    .28)
-                                                                .clamp(8, 13),
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.black,
-                                                        backgroundColor:
-                                                            hexSeatColors[game
-                                                                .stackAt(cell)
-                                                                .last
-                                                                .seat
-                                                                .index]))))),
                                 ])))),
                   ),
                 )),
@@ -273,25 +247,19 @@ class HexBoard extends ConsumerWidget {
       ];
 
   StackVisualPiece _visual(HexStone stone, PieceStyleData fallback,
-          {required bool preview}) =>
-      StackVisualPiece(
-          preview: preview,
-          type: stone.type,
-          style: (pieceStyles == null
-                  ? fallback
-                  : PieceStyleData.forStyle(pieceStyles![stone.seat.index]))
-              .style,
-          colors: stone.seat == HexSeat.copper
-              ? const PieceColors(
-                  primary: Color(0xFFE8A568),
-                  secondary: Color(0xFFB76832),
-                  border: Color(0xFF593418))
-              : (pieceStyles == null
-                      ? fallback
-                      : PieceStyleData.forStyle(pieceStyles![stone.seat.index]))
-                  .colorsForPlayer(stone.seat == HexSeat.ivory),
-          isLight: stone.seat != HexSeat.charcoal,
-          owner: stone.seat.label);
+      {required bool preview}) {
+    final data = pieceStyles == null
+        ? fallback
+        : PieceStyleData.forStyle(pieceStyles![stone.seat.index]);
+    final identity = PieceIdentity.values[stone.seat.index];
+    return StackVisualPiece(
+        preview: preview,
+        type: stone.type,
+        style: data.style,
+        colors: data.colorsForIdentity(identity),
+        identity: identity,
+        owner: data.palettes[stone.seat.index].name);
+  }
 }
 
 class _CellClipper extends CustomClipper<Path> {
@@ -321,6 +289,7 @@ class _HexPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final unit = geometry.unit;
+    paintCityBoardFrame(canvas, game.cells.map(geometry.polygon), theme, unit);
     for (final cell in game.cells) {
       final center = geometry.center(cell);
       final polygon = geometry.polygon(cell);
@@ -330,12 +299,7 @@ class _HexPainter extends CustomPainter {
       getBoardTexturePainter(theme: theme, seed: cell.q * 7 + cell.r)
           .paint(canvas, Size(unit * 2, unit * 2));
       canvas.restore();
-      canvas.drawPath(
-          polygon,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1
-            ..color = theme.gridLine);
+      paintCityGrid(canvas, polygon, theme, unit);
       for (final direction in HexDirection.values) {
         final neighbor = cell.step(direction);
         if (neighbor.inside(game.radius)) continue;

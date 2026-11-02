@@ -256,13 +256,14 @@ void main() {
             .widgetList<PieceStackView>(find.byType(PieceStackView))
             .firstWhere((v) => v.pieces.isNotEmpty);
         expect(stack.pieces.length, 4);
-        expect(stack.pieces.last.owner, 'Jade');
+        expect(stack.pieces.last.owner,
+            PieceStyleData.forStyle(style).palettes[3].name);
         expect(stack.pieces.every((p) => p.style == style), isTrue);
         final inspector = tester
             .widgetList<StackInspection>(find.byType(StackInspection))
             .firstWhere((v) => v.pieces.isNotEmpty);
         expect(inspector.pieces.map((p) => p.owner),
-            ['Ivory', 'Charcoal', 'Copper', 'Jade']);
+            PieceStyleData.forStyle(style).palettes.map((p) => p.name));
         expect(tester.takeException(), isNull);
       }
     });

@@ -60,7 +60,18 @@ final effectiveBoardThemeProvider = Provider.autoDispose
   if (selection.$1 != BoardTheme.celestial) return selection.$1;
   final uid = selection.$2;
   return uid != null &&
-          ref.watch(eliteThemeEligibilityProvider(uid)).valueOrNull == true
+          ref.watch(eliteThemeEligibilityProvider(uid)).asData?.value == true
       ? BoardTheme.celestial
       : BoardTheme.classicWood;
+});
+
+/// A room's piece style is checked against its owner, never its viewer.
+final effectivePieceStyleProvider = Provider.autoDispose
+    .family<PieceStyle, (PieceStyle, String?)>((ref, selection) {
+  if (selection.$1 != PieceStyle.celestial) return selection.$1;
+  final uid = selection.$2;
+  return uid != null &&
+          ref.watch(eliteThemeEligibilityProvider(uid)).asData?.value == true
+      ? PieceStyle.celestial
+      : PieceStyle.standard;
 });

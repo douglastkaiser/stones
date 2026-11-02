@@ -22,6 +22,46 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets(
+      'legacy new-game city labels and shape swatches fit a 320px phone at 200% text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final container = ProviderContainer(overrides: [
+      isBoardThemeUnlockedProvider.overrideWith((ref, city) => true)
+    ]);
+    addTearDown(container.dispose);
+    container.read(gameSessionProvider.notifier).state =
+        const GameSessionConfig(mode: GameMode.vsComputer);
+    await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!),
+            home: const GameScreen())));
+    for (final style in PieceStyle.values) {
+      await container.read(cosmeticsProvider.notifier).setPieceStyle(style);
+      await tester.pump();
+      await tester.tap(find.byTooltip('Game options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('New Game'));
+      await tester.pumpAndSettle();
+      final dialog = find.byType(AlertDialog);
+      for (final palette in PieceStyleData.forStyle(style).palettes.take(2)) {
+        expect(find.descendant(of: dialog, matching: find.text(palette.name)),
+            findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+    }
+    await tester.pumpWidget(const SizedBox());
+  });
+
   test('player styles survive room serialization with safe legacy fallback',
       () {
     for (final style in PieceStyle.values) {
@@ -149,6 +189,14 @@ void main() {
         .map((painter) => painter.theme.theme)
         .toSet();
     expect(boardThemes(), {BoardTheme.morocco});
+    expect(find.text('Host · Marrakesh'), findsOneWidget);
+    expect(find.text('Guest · Kyoto'), findsOneWidget);
+    final ownership = tester
+        .widgetList<Semantics>(find.byType(Semantics))
+        .map((widget) => widget.properties.label ?? '')
+        .join('\n');
+    expect(ownership, contains('Sand capstone'));
+    expect(ownership, contains('Indigo wall'));
     Set<PieceStyle> paintedStyles() => tester
         .widgetList<CustomPaint>(find.byType(CustomPaint))
         .map((widget) => widget.painter)
@@ -177,6 +225,7 @@ void main() {
     await tester.pump();
     expect(paintedStyles(), {PieceStyle.standard});
     expect(boardThemes(), {BoardTheme.classicWood});
+    expect(find.text('Oak · Turn 1'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
@@ -241,10 +290,13 @@ void main() {
         child: const MaterialApp(
             home: Scaffold(
                 body: MatchThemeBadge(
-                    label: 'Opponent', style: PieceStyle.morocco)))));
+                    label: 'Opponent',
+                    style: PieceStyle.morocco,
+                    board: BoardTheme.kyoto)))));
     await tester.tap(find.byType(ActionChip));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Earn either reward'), findsOneWidget);
+    expect(find.textContaining('Unlock by completing either:'), findsOneWidget);
+    expect(find.text('Board: Kyoto · Pieces: Marrakesh'), findsOneWidget);
     expect(find.text('Use'), findsNothing);
     expect(container.read(achievementProvider).unlockedAchievements, isEmpty);
     expect(container.read(cosmeticsProvider).selectedPieceStyle,

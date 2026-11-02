@@ -14,6 +14,7 @@ import 'package:stones/game/match_screen.dart';
 import 'package:stones/game/match_rules.dart';
 import 'package:stones/game/match_state.dart';
 import 'package:stones/models/piece.dart';
+import 'package:stones/models/cosmetics.dart';
 import 'match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
@@ -37,6 +38,22 @@ CompletedMatch finished({String? owner, String id = 'game'}) {
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test(
+      'local cosmetic ownership follows the current account without changing rating ownership',
+      () {
+    final old = finished(owner: 'starting-account');
+    final record = CompletedMatch.capture(
+        MatchSession(id: old.id, uid: old.owner, game: old.finalPosition),
+        old.moves,
+        localPieces: PieceStyle.celestial,
+        localCosmeticOwner: 'current-account');
+    final loaded = CompletedMatch.fromMap(record.toMap());
+    expect(loaded.owner, 'starting-account');
+    expect(loaded.cosmeticHost, 'current-account');
+    expect(loaded.cosmeticOwners.values.toSet(), {'current-account'});
+    expect(loaded.styles.values.toSet(), {PieceStyle.celestial});
+  });
 
   test('history is replayed, immutable and rejects a fabricated road', () {
     final record = finished();
@@ -223,8 +240,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final record = finished();
-    await tester
-        .pumpWidget(MaterialApp(home: MatchReviewScreen(match: record)));
+    await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(home: MatchReviewScreen(match: record))));
     expect(find.text('Move 2 of 2'), findsOneWidget);
     await tester.ensureVisible(find.byTooltip('First position'));
     await tester.tap(find.byTooltip('First position'));

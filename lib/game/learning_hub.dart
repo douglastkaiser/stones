@@ -72,7 +72,7 @@ class _LearningHubState extends ConsumerState<LearningHub> {
                                                 'Learn roads, walls, capstones, stacks and the opening. Then try a coached game.'),
                                             const SizedBox(height: 8),
                                             Text(
-                                                '$learned of ${squareFundamentals.length} lessons · earn the Morocco theme'),
+                                                '$learned of ${squareFundamentals.length} lessons · earn the Marrakesh theme'),
                                             const SizedBox(height: 12),
                                             if (!awards.loaded &&
                                                 awards.storageError == null)

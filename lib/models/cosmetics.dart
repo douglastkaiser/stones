@@ -20,6 +20,7 @@ enum PieceStyle {
   polishedMarble, // Matches Marble
   morocco, // Glazed ceramic
   kyoto, // Lacquer and bamboo
+  celestial, // Jaipur; append to preserve saved indices.
 }
 
 /// Board theme definition with colors and metadata
@@ -72,15 +73,14 @@ class BoardThemeData {
 const List<BoardThemeData> boardThemes = [
   BoardThemeData(
     theme: BoardTheme.celestial,
-    name: 'Celestial',
-    description:
-        'A midnight constellation board for the current #1 established human player.',
+    name: 'Jaipur',
+    description: 'Observatory stone, brass instruments and midnight stars',
     frameOuter: Color(0xFF090C24),
     frameInner: Color(0xFF7371B9),
     background: Color(0xFF101632),
-    gridLine: Color(0xFFC4B5FD),
+    gridLine: Color(0xFFB5995F),
     gridLineShadow: Color(0xFF080B20),
-    gridLineHighlight: Color(0xFFFFE8B0),
+    gridLineHighlight: Color(0xFFF5DCA3),
     cellBackground: Color(0xFF202545),
     cellBackgroundLight: Color(0xFF34365E),
     cellBackgroundDark: Color(0xFF171C38),
@@ -91,8 +91,8 @@ const List<BoardThemeData> boardThemes = [
   // Classic Wood - default, available to all
   BoardThemeData(
     theme: BoardTheme.classicWood,
-    name: 'Classic Wood',
-    description: 'Traditional wooden board',
+    name: 'Porto',
+    description: 'Carved oak, cooperage bands and Atlantic engraving',
     frameOuter: Color(0xFF5D4037),
     frameInner: Color(0xFF795548),
     background: Color(0xFF6D4C41),
@@ -108,43 +108,43 @@ const List<BoardThemeData> boardThemes = [
   // Dark Stone - unlocks with "Strategist" (Beat Hard AI)
   BoardThemeData(
     theme: BoardTheme.darkStone,
-    name: 'Slate',
-    description: 'Slate and granite board',
+    name: 'Edinburgh',
+    description: 'Hand-cut stone panels and carved interlace borders',
     requiredAchievement: AchievementType.strategist,
     frameOuter: Color(0xFF263238),
     frameInner: Color(0xFF37474F),
     background: Color(0xFF455A64),
     gridLine: Color(0xFF1C313A),
     gridLineShadow: Color(0xFF102027),
-    gridLineHighlight: Color(0xFF546E7A),
-    cellBackground: Color(0xFF78909C),
-    cellBackgroundLight: Color(0xFF90A4AE),
-    cellBackgroundDark: Color(0xFF607D8B),
+    gridLineHighlight: Color(0xFFC4C8B5),
+    cellBackground: Color(0xFF93A19E),
+    cellBackgroundLight: Color(0xFFB4BEB4),
+    cellBackgroundDark: Color(0xFF7A8C88),
     woodGrainAccent: Color(0xFF62727B),
     placementSound: 'piece_place_stone',
   ),
   // Marble - unlocks with "Grandmaster" (Beat Expert AI)
   BoardThemeData(
     theme: BoardTheme.marble,
-    name: 'Marble',
-    description: 'Elegant marble surface',
+    name: 'Florence',
+    description: 'Duomo marble geometry, green inlays and rose accents',
     requiredAchievement: AchievementType.grandmaster,
-    frameOuter: Color(0xFF757575),
-    frameInner: Color(0xFF9E9E9E),
-    background: Color(0xFFBDBDBD),
-    gridLine: Color(0xFF616161),
+    frameOuter: Color(0xFF294B40),
+    frameInner: Color(0xFFB9A581),
+    background: Color(0xFFDDD7C9),
+    gridLine: Color(0xFF386657),
     gridLineShadow: Color(0xFF424242),
-    gridLineHighlight: Color(0xFFE0E0E0),
-    cellBackground: Color(0xFFF5F5F5),
+    gridLineHighlight: Color(0xFFE8D7AA),
+    cellBackground: Color(0xFFF5EFE2),
     cellBackgroundLight: Color(0xFFFFFFFF),
-    cellBackgroundDark: Color(0xFFEEEEEE),
-    woodGrainAccent: Color(0xFFE8E8E8),
+    cellBackgroundDark: Color(0xFFE0D9C8),
+    woodGrainAccent: Color(0xFF82958B),
     placementSound: 'piece_place_marble',
   ),
   // Morocco - unlocks with "Student" (Complete all tutorials)
   BoardThemeData(
     theme: BoardTheme.morocco,
-    name: 'Morocco',
+    name: 'Marrakesh',
     description: 'Zellige tiles, cedar and brass',
     requiredAchievement: AchievementType.student,
     frameOuter: Color(0xFF164E50),
@@ -157,177 +157,167 @@ const List<BoardThemeData> boardThemes = [
     cellBackgroundLight: Color(0xFFF4EBD7),
     cellBackgroundDark: Color(0xFFCDBE9C),
     woodGrainAccent: Color(0xFF2B7778),
-    placementSound: 'piece_place_minimal',
+    placementSound: 'piece_place_stone',
   ),
   // Kyoto - unlocks with "Veteran" (Win 50 games)
   BoardThemeData(
     theme: BoardTheme.kyoto,
     name: 'Kyoto',
-    description: 'Bamboo, indigo and lacquer',
+    description: 'Indigo wave fans, bamboo and wooden lattice borders',
     requiredAchievement: AchievementType.veteran,
     frameOuter: Color(0xFF202E49),
     frameInner: Color(0xFF8D6947),
     background: Color(0xFF364764),
-    gridLine: Color(0xFF162238),
+    gridLine: Color(0xFF80603D),
     gridLineShadow: Color(0xFF10192B),
     gridLineHighlight: Color(0xFFCFB485),
-    cellBackground: Color(0xFFD5C6A0),
-    cellBackgroundLight: Color(0xFFE5D8BA),
-    cellBackgroundDark: Color(0xFFBCAD89),
+    cellBackground: Color(0xFFE9DFC6),
+    cellBackgroundLight: Color(0xFFF3EBD7),
+    cellBackgroundDark: Color(0xFFC7B58D),
     woodGrainAccent: Color(0xFF957A50),
-    placementSound: 'piece_place_pixel',
+    placementSound: 'piece_place_wood',
   ),
 ];
 
-/// Piece style definition with colors and metadata
-class PieceStyleData {
-  final PieceStyle style;
+/// Stable visual identities, independent of serialized seats and city material.
+enum PieceIdentity {
+  trapezoid('Trapezoid'),
+  rounded('Rounded'),
+  diamond('Diamond'),
+  hexagonal('Hexagonal');
+
+  const PieceIdentity(this.label);
+  final String label;
+}
+
+class PiecePalette {
+  const PiecePalette(this.name, this.primary, this.border);
   final String name;
-  final String description;
-  final AchievementType? requiredAchievement;
-
-  // Light piece colors
-  final Color lightPrimary;
-  final Color lightSecondary;
-  final Color lightBorder;
-
-  // Dark piece colors
-  final Color darkPrimary;
-  final Color darkSecondary;
-  final Color darkBorder;
-
-  // Stack move sound identifier
-  final String stackMoveSound;
-
-  const PieceStyleData({
-    required this.style,
-    required this.name,
-    required this.description,
-    this.requiredAchievement,
-    required this.lightPrimary,
-    required this.lightSecondary,
-    required this.lightBorder,
-    required this.darkPrimary,
-    required this.darkSecondary,
-    required this.darkBorder,
-    required this.stackMoveSound,
-  });
-
-  /// Get style data by type
-  static PieceStyleData forStyle(PieceStyle style) {
-    return pieceStyles.firstWhere((s) => s.style == style);
-  }
-
-  /// Get PieceColors for a player
-  PieceColors colorsForPlayer(bool isLightPlayer) {
-    if (isLightPlayer) {
-      return PieceColors(
-        primary: lightPrimary,
-        secondary: lightSecondary,
-        border: lightBorder,
-      );
-    } else {
-      return PieceColors(
-        primary: darkPrimary,
-        secondary: darkSecondary,
-        border: darkBorder,
-      );
-    }
-  }
-
-  /// Light player piece colors
-  PieceColors get lightPlayerColors => PieceColors(
-        primary: lightPrimary,
-        secondary: lightSecondary,
-        border: lightBorder,
-      );
-
-  /// Dark player piece colors
-  PieceColors get darkPlayerColors => PieceColors(
-        primary: darkPrimary,
-        secondary: darkSecondary,
-        border: darkBorder,
+  final Color primary, border;
+  PieceColors get colors => PieceColors(
+        primary: primary,
+        secondary: Color.lerp(primary, border, .24)!,
+        border: border,
       );
 }
 
-/// All piece styles - each matches a board theme
-const List<PieceStyleData> pieceStyles = [
-  // Standard - default, matches Classic Wood
+/// Every city supplies all four ownership palettes from one source of truth.
+class PieceStyleData {
+  const PieceStyleData(
+      {required this.style,
+      required this.name,
+      required this.description,
+      this.requiredAchievement,
+      required this.palettes,
+      required this.stackMoveSound});
+  final PieceStyle style;
+  final String name, description, stackMoveSound;
+  final AchievementType? requiredAchievement;
+  final List<PiecePalette> palettes;
+  static PieceStyleData forStyle(PieceStyle style) =>
+      pieceStyles.firstWhere((data) => data.style == style);
+  PieceColors colorsForIdentity(PieceIdentity identity) =>
+      palettes[identity.index].colors;
+  // Legacy square adapters retain their two original ownership slots.
+  PieceColors colorsForPlayer(bool light) => palettes[light ? 0 : 1].colors;
+  PieceColors get lightPlayerColors => palettes[0].colors;
+  PieceColors get darkPlayerColors => palettes[1].colors;
+}
+
+const pieceStyles = [
   PieceStyleData(
-    style: PieceStyle.standard,
-    name: 'Standard',
-    description: 'Classic wooden pieces',
-    lightPrimary: Color(0xFFF5F0E6),
-    lightSecondary: Color(0xFFE8E0D0),
-    lightBorder: Color(0xFF8B7355),
-    darkPrimary: Color(0xFF3D3D3D),
-    darkSecondary: Color(0xFF4A4A4A),
-    darkBorder: Color(0xFF6B6B6B),
-    stackMoveSound: 'stack_move_wood',
-  ),
-  // Stone - matches Dark Stone board, unlocks with "Connected"
+      style: PieceStyle.standard,
+      name: 'Porto',
+      description: 'Carved wood and maritime engraving',
+      stackMoveSound: 'stack_move_wood',
+      palettes: [
+        PiecePalette('Oak', Color(0xFFE9CE93), Color(0xFF75502E)),
+        PiecePalette('Charred Oak', Color(0xFF45382F), Color(0xFF211B18)),
+        PiecePalette('Port Wine', Color(0xFFA74761), Color(0xFF522139)),
+        PiecePalette('Atlantic Blue', Color(0xFF4E9DBB), Color(0xFF174762)),
+      ]),
   PieceStyleData(
-    style: PieceStyle.stone,
-    name: 'Chiseled Stone',
-    description: 'Hewn stone pieces',
-    requiredAchievement: AchievementType.connected,
-    lightPrimary: Color(0xFFB0BEC5),
-    lightSecondary: Color(0xFF90A4AE),
-    lightBorder: Color(0xFF546E7A),
-    darkPrimary: Color(0xFF37474F),
-    darkSecondary: Color(0xFF455A64),
-    darkBorder: Color(0xFF263238),
-    stackMoveSound: 'stack_move_stone',
-  ),
-  // Polished Marble - matches Marble board, unlocks with "Puzzle Solver"
+      style: PieceStyle.stone,
+      name: 'Edinburgh',
+      description: 'Hewn slate and interlaced carving',
+      requiredAchievement: AchievementType.connected,
+      stackMoveSound: 'stack_move_stone',
+      palettes: [
+        PiecePalette('Limestone', Color(0xFFE1DED1), Color(0xFF76756C)),
+        PiecePalette('Basalt', Color(0xFF36414A), Color(0xFF151F29)),
+        PiecePalette('Heather', Color(0xFFAB77AE), Color(0xFF563958)),
+        PiecePalette('Moss', Color(0xFF8CA46A), Color(0xFF40552F)),
+      ]),
   PieceStyleData(
-    style: PieceStyle.polishedMarble,
-    name: 'Polished Marble',
-    description: 'Smooth marble pieces',
-    requiredAchievement: AchievementType.puzzleSolver,
-    lightPrimary: Color(0xFFFFFBF0),
-    lightSecondary: Color(0xFFEEE8DD),
-    lightBorder: Color(0xFF78654F),
-    darkPrimary: Color(0xFF2A3540),
-    darkSecondary: Color(0xFF3A4550),
-    darkBorder: Color(0xFF5A6570),
-    stackMoveSound: 'stack_move_marble',
-  ),
-  // Morocco - matches Morocco board, unlocks with "First Steps"
+      style: PieceStyle.polishedMarble,
+      name: 'Florence',
+      description: 'Polished marble and Florentine lilies',
+      requiredAchievement: AchievementType.puzzleSolver,
+      stackMoveSound: 'stack_move_marble',
+      palettes: [
+        PiecePalette('Carrara', Color(0xFFFFF9EB), Color(0xFF9F8E72)),
+        PiecePalette('Serpentine', Color(0xFF254F46), Color(0xFF102C29)),
+        PiecePalette('Terracotta', Color(0xFFCA7353), Color(0xFF773D29)),
+        PiecePalette('Lapis', Color(0xFF5276BC), Color(0xFF24365F)),
+      ]),
   PieceStyleData(
-    style: PieceStyle.morocco,
-    name: 'Morocco',
-    description: 'Ivory and teal glazed ceramic',
-    requiredAchievement: AchievementType.firstSteps,
-    lightPrimary: Color(0xFFFFF1D7),
-    lightSecondary: Color(0xFFE7CDA4),
-    lightBorder: Color(0xFF886333),
-    darkPrimary: Color(0xFF16777A),
-    darkSecondary: Color(0xFF164A52),
-    darkBorder: Color(0xFF092F36),
-    stackMoveSound: 'stack_move_minimal',
-  ),
-  // Kyoto - matches Kyoto board, unlocks with "Competitor"
+      style: PieceStyle.morocco,
+      name: 'Marrakesh',
+      description: 'Glazed ceramic and brass zellige rosettes',
+      requiredAchievement: AchievementType.firstSteps,
+      stackMoveSound: 'stack_move_stone',
+      palettes: [
+        PiecePalette('Sand', Color(0xFFF4DEAD), Color(0xFF8A6636)),
+        PiecePalette('Majorelle', Color(0xFF3345A5), Color(0xFF171F5C)),
+        PiecePalette('Ochre', Color(0xFFD4952C), Color(0xFF7B4B16)),
+        PiecePalette('Palm', Color(0xFF389276), Color(0xFF164839)),
+      ]),
   PieceStyleData(
-    style: PieceStyle.kyoto,
-    name: 'Kyoto',
-    description: 'Cream and indigo lacquer',
-    requiredAchievement: AchievementType.competitor,
-    lightPrimary: Color(0xFFFFF4DD),
-    lightSecondary: Color(0xFFD9C9A4),
-    lightBorder: Color(0xFF826F4D),
-    darkPrimary: Color(0xFF293F67),
-    darkSecondary: Color(0xFF162743),
-    darkBorder: Color(0xFF9DABC5),
-    stackMoveSound: 'stack_move_pixel',
-  ),
+      style: PieceStyle.kyoto,
+      name: 'Kyoto',
+      description: 'Lacquer, bamboo, waves and plum blossom',
+      requiredAchievement: AchievementType.competitor,
+      stackMoveSound: 'stack_move_wood',
+      palettes: [
+        PiecePalette('Rice Paper', Color(0xFFFFF4DD), Color(0xFF95815F)),
+        PiecePalette('Indigo', Color(0xFF293F67), Color(0xFF111F3B)),
+        PiecePalette('Vermilion', Color(0xFFD95D43), Color(0xFF762D23)),
+        PiecePalette('Matcha', Color(0xFF8EAA62), Color(0xFF435B2F)),
+      ]),
+  PieceStyleData(
+      style: PieceStyle.celestial,
+      name: 'Jaipur',
+      description: 'Observatory stone and brass star charts',
+      stackMoveSound: 'stack_move_marble',
+      palettes: [
+        PiecePalette('Moonstone', Color(0xFFF2EADB), Color(0xFFB49A64)),
+        PiecePalette('Midnight', Color(0xFF34305D), Color(0xFF15132D)),
+        PiecePalette('Pink Sandstone', Color(0xFFE49691), Color(0xFF97524F)),
+        PiecePalette('Turquoise', Color(0xFF48B9BB), Color(0xFF1D626E)),
+      ]),
 ];
 
-/// Unknown or legacy wire names fall back to the base set.
+/// Explicit pairing avoids relying on enum order or metadata list order.
+PieceStyle piecesForBoard(BoardTheme theme) => switch (theme) {
+      BoardTheme.classicWood => PieceStyle.standard,
+      BoardTheme.darkStone => PieceStyle.stone,
+      BoardTheme.marble => PieceStyle.polishedMarble,
+      BoardTheme.morocco => PieceStyle.morocco,
+      BoardTheme.kyoto => PieceStyle.kyoto,
+      BoardTheme.celestial => PieceStyle.celestial,
+    };
+BoardTheme boardForPieces(PieceStyle style) => switch (style) {
+      PieceStyle.standard => BoardTheme.classicWood,
+      PieceStyle.stone => BoardTheme.darkStone,
+      PieceStyle.polishedMarble => BoardTheme.marble,
+      PieceStyle.morocco => BoardTheme.morocco,
+      PieceStyle.kyoto => BoardTheme.kyoto,
+      PieceStyle.celestial => BoardTheme.celestial,
+    };
+
 PieceStyle pieceStyleFromWire(Object? value) =>
     PieceStyle.values.where((style) => style.name == value).firstOrNull ??
     PieceStyle.standard;
-
 BoardTheme boardThemeFromWire(Object? value) =>
     BoardTheme.values.where((theme) => theme.name == value).firstOrNull ??
     BoardTheme.classicWood;

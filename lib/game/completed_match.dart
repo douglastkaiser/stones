@@ -1,3 +1,4 @@
+import '../models/cosmetics.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'match_config.dart';
@@ -7,9 +8,24 @@ import 'match_state.dart';
 
 /// Immutable, replay-validated local history. Reading never awards a result.
 class CompletedMatch {
-  CompletedMatch._(this.id, this.owner, this.config, this.moves, this.result,
-      this.completedAt, this.positions, this.durationMs);
+  CompletedMatch._(
+      this.id,
+      this.owner,
+      this.config,
+      this.moves,
+      this.result,
+      this.completedAt,
+      this.positions,
+      this.durationMs,
+      this.boardTheme,
+      this.styles,
+      this.cosmeticOwners,
+      this.cosmeticHost);
   final int? durationMs;
+  final BoardTheme? boardTheme;
+  final Map<SeatId, PieceStyle> styles;
+  final Map<SeatId, String?> cosmeticOwners;
+  final String? cosmeticHost;
   final String id;
   final String? owner;
   final MatchConfig config;
@@ -20,11 +36,34 @@ class CompletedMatch {
   MatchState get finalPosition => positions.last;
 
   factory CompletedMatch.capture(
-      MatchSession session, List<Map<String, dynamic>> moves) {
+      MatchSession session, List<Map<String, dynamic>> moves,
+      {BoardTheme? localBoard,
+      PieceStyle? localPieces,
+      String? localCosmeticOwner}) {
     if (session.id == null || session.game?.finished != true) {
       throw StateError('Only completed matches can enter history');
     }
     return CompletedMatch.fromMap({
+      if (session.room != null || localBoard != null || localPieces != null)
+        'appearance': {
+          'board':
+              (session.room?.boardTheme ?? localBoard ?? BoardTheme.classicWood)
+                  .name,
+          'pieces': {
+            for (final id in session.game!.config.ids)
+              id.name: (session.room?.styles[id] ??
+                      localPieces ??
+                      PieceStyle.standard)
+                  .name
+          },
+          'owners': {
+            for (final id in session.game!.config.ids)
+              id.name: session.room == null
+                  ? localCosmeticOwner ?? session.uid
+                  : session.room!.owners[id]
+          },
+          'host': session.room?.host ?? localCosmeticOwner ?? session.uid,
+        },
       'durationMs': session.elapsed?.at(DateTime.now()).inMilliseconds,
       'version': 1,
       'id': session.id,
@@ -79,6 +118,15 @@ class CompletedMatch {
       game = game.copyWith(result: result);
       positions[positions.length - 1] = game;
     }
+    final appearance = map['appearance'] is Map
+        ? Map<String, dynamic>.from(map['appearance'])
+        : null;
+    final pieces = appearance?['pieces'] is Map
+        ? Map<String, dynamic>.from(appearance!['pieces'])
+        : const <String, dynamic>{};
+    final owners = appearance?['owners'] is Map
+        ? Map<String, dynamic>.from(appearance!['owners'])
+        : const <String, dynamic>{};
     return CompletedMatch._(
         map['id'],
         map['owner'],
@@ -87,10 +135,33 @@ class CompletedMatch {
         result,
         DateTime.parse(map['completedAt']),
         List.unmodifiable(positions),
-        map['durationMs'] as int?);
+        map['durationMs'] as int?,
+        appearance == null ? null : boardThemeFromWire(appearance['board']),
+        Map.unmodifiable({
+          for (final id in config.ids)
+            if (appearance != null) id: pieceStyleFromWire(pieces[id.name])
+        }),
+        Map.unmodifiable({
+          for (final id in config.ids)
+            if (owners[id.name] is String) id: owners[id.name] as String
+        }),
+        appearance?['host'] is String ? appearance!['host'] as String : null);
   }
 
   Map<String, dynamic> toMap() => {
+        if (boardTheme != null)
+          'appearance': {
+            'board': boardTheme!.name,
+            'pieces': {
+              for (final entry in styles.entries)
+                entry.key.name: entry.value.name
+            },
+            'owners': {
+              for (final entry in cosmeticOwners.entries)
+                entry.key.name: entry.value
+            },
+            'host': cosmeticHost,
+          },
         'durationMs': durationMs,
         'version': 1,
         'id': id,
@@ -125,8 +196,12 @@ class CompletedMatchStorage {
       if (encoded != null) {
         final old = CompletedMatch.fromMap(
             Map<String, dynamic>.from(jsonDecode(encoded)));
-        final before = old.toMap()..remove('completedAt');
-        final after = match.toMap()..remove('completedAt');
+        final before = old.toMap()
+          ..remove('completedAt')
+          ..remove('appearance');
+        final after = match.toMap()
+          ..remove('completedAt')
+          ..remove('appearance');
         if (jsonEncode(before) != jsonEncode(after)) {
           throw StateError('A completed game cannot be replaced');
         }

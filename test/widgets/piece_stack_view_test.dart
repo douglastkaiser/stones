@@ -211,15 +211,15 @@ void main() {
     await tester.longPressAt(rect.topLeft + geometry.center(source));
     await tester.pumpAndSettle();
     expect(find.text('Stack 0, 0 · before move · 2 pieces'), findsOneWidget);
-    expect(find.text('Ivory capstone'), findsOneWidget);
-    expect(find.text('Charcoal flat'), findsOneWidget);
+    expect(find.text('Oak capstone'), findsOneWidget);
+    expect(find.text('Charred Oak flat'), findsOneWidget);
     await tester.tap(find.byTooltip('Close stack inspection'));
     await tester.pumpAndSettle();
     await tester
         .longPressAt(rect.topLeft + geometry.center(const HexCell(1, 0)));
     await tester.pumpAndSettle();
-    expect(find.text('Ivory capstone (preview)'), findsOneWidget);
-    expect(find.text('Charcoal flat (preview)'), findsOneWidget);
+    expect(find.text('Oak capstone (preview)'), findsOneWidget);
+    expect(find.text('Charred Oak flat (preview)'), findsOneWidget);
     expect(original.stackAt(source), hasLength(2));
     await tester.pumpWidget(const SizedBox());
   });
@@ -236,7 +236,7 @@ void main() {
         child: MaterialApp(
             home:
                 Scaffold(body: HexBoard(game: game, onCell: (_) => taps++)))));
-    const label = 'Cell 0, 0, Ivory flat, 1 pieces';
+    const label = 'Cell 0, 0, Oak flat, 1 pieces';
     final cell = find.bySemanticsLabel(label);
     expect(cell, findsOneWidget);
     var node = tester.getSemantics(cell);
@@ -267,7 +267,7 @@ void main() {
     expect(taps, 2);
     await tester.longPress(cell);
     await tester.pumpAndSettle();
-    expect(find.text('Ivory flat'), findsOneWidget);
+    expect(find.text('Oak flat'), findsOneWidget);
     expect(taps, 2);
     semantics.dispose();
     await tester.pumpWidget(const SizedBox());
@@ -358,7 +358,7 @@ void main() {
         await tester.pump();
         expect(
             find.bySemanticsLabel(
-                RegExp('^Cell 0, 0, Copper capstone, 3 pieces')),
+                RegExp('^Cell 0, 0, Heather capstone, 3 pieces')),
             findsOneWidget);
         expect(find.bySemanticsLabel(RegExp(r'^Cu$')), findsNothing);
         expect(find.bySemanticsLabel(RegExp(r'^Ch$')), findsNothing);
@@ -393,13 +393,13 @@ void main() {
         await mouse.removePointer();
         await tester.longPressAt(point);
         await tester.pumpAndSettle();
-        expect(find.text('Copper capstone'), findsOneWidget);
+        expect(find.text('Heather capstone'), findsOneWidget);
         expect(find.text('Top · controls this stack'), findsOneWidget);
-        await tester.scrollUntilVisible(find.text('Charcoal flat'), 100,
+        await tester.scrollUntilVisible(find.text('Indigo flat'), 100,
             scrollable: find.byType(Scrollable).last);
         await tester.scrollUntilVisible(find.text('Bottom'), 100,
             scrollable: find.byType(Scrollable).last);
-        expect(find.text('Ivory flat'), findsOneWidget);
+        expect(find.text('Sand flat'), findsOneWidget);
         expect(find.text('Bottom'), findsOneWidget);
         await tester.tap(find.byTooltip('Close stack inspection'));
         await tester.pumpAndSettle();
@@ -425,7 +425,8 @@ void main() {
             style: style.style,
             colors: style.colorsForPlayer(i.isEven),
             owner: i.isEven ? 'Ivory' : 'Charcoal',
-            isLight: i.isEven,
+            identity:
+                i.isEven ? PieceIdentity.trapezoid : PieceIdentity.rounded,
             preview: i >= 47));
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(

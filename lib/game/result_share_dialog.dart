@@ -1,3 +1,4 @@
+import 'match_appearance.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -175,12 +176,14 @@ class _ResultShareDialogState extends ConsumerState<ResultShareDialog> {
     final viewer = session.room != null && identity?.uid != session.uid
         ? null
         : participant;
-    final data =
-        ResultShareData(session, names: names, viewer: viewer, rating: rating);
+    final styles =
+        resolveMatchPieceStyles(ref, session, requested: widget.styles);
+    final data = ResultShareData(session,
+        names: names, viewer: viewer, rating: rating, styles: styles);
     final boardTheme = ref.watch(effectiveBoardThemeProvider(
         (widget.boardTheme, session.room?.host ?? identity?.uid)));
     final signature =
-        '$boardTheme|${widget.styles}|${data.text}|${session.game!.config.ids.map((id) => '${data.name(id)}:${rating.labelFor(id)}').join('|')}';
+        '$boardTheme|$styles|${data.text}|${session.game!.config.ids.map((id) => '${data.name(id)}:${rating.labelFor(id)}').join('|')}';
     if (_includeBoard) _prepareImage(signature);
     return AlertDialog(
       title: const Text('Share result'),
@@ -215,7 +218,7 @@ class _ResultShareDialogState extends ConsumerState<ResultShareDialog> {
                               data: const MediaQueryData(),
                               child: ResultShareCard(
                                   data: data,
-                                  styles: widget.styles,
+                                  styles: styles,
                                   boardTheme: boardTheme))))),
               if (_png == null && _imageError == null)
                 const Padding(

@@ -209,3 +209,22 @@ test('only a player can resign their owned seat and further appends stop', async
   await assertFails(updateDoc(ref('host'), {moves: [placement('ivory')]}));
   await assertFails(updateDoc(ref('guest'), {resigned: null}));
 });
+
+test('Jaipur pieces create and join on both shapes while room cosmetics remain frozen', async () => {
+  for (const shape of ['square', 'hex']) {
+    await environment.clearFirestore();
+    const data = base(shape);
+    data.styles.ivory = 'celestial';
+    data.boardTheme = 'celestial';
+    await assertSucceeds(setDoc(ref('host'), data));
+    await assertFails(updateDoc(ref('guest'), {'owners.charcoal': 'guest', 'styles.ivory': 'standard'}));
+    await assertSucceeds(updateDoc(ref('guest'), {'owners.charcoal': 'guest', 'styles.charcoal': 'celestial'}));
+    await assertFails(updateDoc(ref('guest'), {'styles.charcoal': 'kyoto'}));
+    await assertFails(updateDoc(ref('host'), {boardTheme: 'classicWood'}));
+    await assertFails(updateDoc(ref('host'), {moves: [placement('ivory')], 'styles.ivory': 'standard'}));
+    await assertSucceeds(updateDoc(ref('host'), {moves: [placement('ivory')]}));
+    const stored = (await getDoc(ref('host'))).data();
+    assert.equal(stored.styles.ivory, 'celestial');
+    assert.equal(stored.styles.charcoal, 'celestial');
+  }
+});

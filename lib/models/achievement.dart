@@ -84,7 +84,7 @@ const achievements = <GameAchievement>[
       track: AchievementTrack.learning,
       tier: AchievementTier.bronze,
       requirements: [AchievementRequirement('fundamentals', 9, 'fundamentals')],
-      unlocksReward: 'Morocco theme'),
+      unlocksReward: 'Marrakesh theme'),
   GameAchievement(
       type: AchievementType.puzzleSolver,
       name: 'Puzzle Master',
@@ -93,7 +93,7 @@ const achievements = <GameAchievement>[
       track: AchievementTrack.learning,
       tier: AchievementTier.platinum,
       requirements: [AchievementRequirement('puzzles', 0, 'studies')],
-      unlocksReward: 'Marble theme'),
+      unlocksReward: 'Florence theme'),
   GameAchievement(
       type: AchievementType.firstSteps,
       name: 'First Steps',
@@ -102,7 +102,7 @@ const achievements = <GameAchievement>[
       track: AchievementTrack.competition,
       tier: AchievementTier.bronze,
       requirements: [AchievementRequirement('easyWins', 3, 'AI duel wins')],
-      unlocksReward: 'Morocco theme'),
+      unlocksReward: 'Marrakesh theme'),
   GameAchievement(
       type: AchievementType.competitor,
       name: 'Competitor',
@@ -122,7 +122,7 @@ const achievements = <GameAchievement>[
       track: AchievementTrack.competition,
       tier: AchievementTier.gold,
       requirements: [AchievementRequirement('hardWins', 10, 'Hard+ duel wins')],
-      unlocksReward: 'Slate theme'),
+      unlocksReward: 'Edinburgh theme'),
   GameAchievement(
       type: AchievementType.grandmaster,
       name: 'Grandmaster',
@@ -134,7 +134,7 @@ const achievements = <GameAchievement>[
         AchievementRequirement('expertWins', 12, 'Expert duel wins'),
         AchievementRequirement('expertSizes', 2, 'board sizes')
       ],
-      unlocksReward: 'Marble theme'),
+      unlocksReward: 'Florence theme'),
   GameAchievement(
       type: AchievementType.connected,
       name: 'Connected',
@@ -146,7 +146,7 @@ const achievements = <GameAchievement>[
         AchievementRequirement('onlineWins', 5, 'online wins'),
         AchievementRequirement('opponents', 3, 'human opponents')
       ],
-      unlocksReward: 'Slate theme'),
+      unlocksReward: 'Edinburgh theme'),
   GameAchievement(
       type: AchievementType.dedicated,
       name: 'Dedicated',

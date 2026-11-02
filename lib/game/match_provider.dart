@@ -50,9 +50,11 @@ final StateNotifierProvider<MatchController, MatchSession> matchProvider =
       final identity = ref.read(accountProvider).identity;
       final achievements = ref.read(achievementProvider.notifier);
       final ratings = ref.read(ratingRepositoryProvider);
-      await ref
-          .read(completedMatchStorageProvider)
-          .save(CompletedMatch.capture(session, event.moves));
+      await ref.read(completedMatchStorageProvider).save(CompletedMatch.capture(
+          session, event.moves,
+          localBoard: ref.read(currentBoardThemeProvider).theme,
+          localPieces: ref.read(currentPieceStyleProvider).style,
+          localCosmeticOwner: identity?.uid));
       if (!active) return;
       ref.invalidate(completedMatchesProvider);
       final achievementWrite = achievements.recordMatch(event);

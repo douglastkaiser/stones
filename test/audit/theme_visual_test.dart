@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -5,16 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stones/models/cosmetics.dart';
+import 'package:stones/game/match_config.dart';
 import 'package:stones/models/piece.dart';
 import 'package:stones/providers/cosmetics_provider.dart';
 import 'package:stones/widgets/procedural_painters.dart';
 import 'package:stones/widgets/theme_gallery.dart';
 
 void main() {
-  test('five piece sets and a board-only reward preserve legacy saved indices',
-      () async {
+  setUpAll(() async {
+    await (FontLoader('StonesSans')
+          ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf')))
+        .load();
+  });
+  test('six city sets preserve legacy saved indices', () async {
     expect(BoardTheme.values.length, 6);
-    expect(PieceStyle.values.length, 5);
+    expect(PieceStyle.values.length, 6);
     for (var i = 0; i < 5; i++) {
       SharedPreferences.setMockInitialValues(
           {CosmeticsKeys.boardTheme: i, CosmeticsKeys.pieceStyle: i});
@@ -35,16 +41,16 @@ void main() {
       () async {
     for (final style in PieceStyle.values) {
       final colors = PieceStyleData.forStyle(style);
-      for (final light in [true, false]) {
+      for (final identity in PieceIdentity.values) {
         for (final type in PieceType.values) {
           for (final size in [const Size(8, 5), const Size(70, 90)]) {
             final recorder = ui.PictureRecorder();
             final canvas = Canvas(recorder)..translate(5, 5);
             ThemedPiecePainter(
                     style: style,
-                    colors: colors.colorsForPlayer(light),
+                    colors: colors.colorsForIdentity(identity),
                     type: type,
-                    isLightPlayer: light)
+                    identity: identity)
                 .paint(canvas, size);
             final picture = recorder.endRecording();
             final image = await picture.toImage(
@@ -97,7 +103,7 @@ void main() {
                 style: PieceStyle.standard,
                 colors: colors,
                 type: PieceType.flat,
-                isLightPlayer: false)
+                identity: PieceIdentity.rounded)
             .shouldRepaint(first),
         isTrue);
   });
@@ -126,42 +132,48 @@ void main() {
         expect(tester.getSize(find.byWidget(sample.widget)).width,
             greaterThan(100));
       }
-      await tester.ensureVisible(find.text('Preview Morocco'));
-      await tester.tap(find.text('Preview Morocco'));
+      await tester.ensureVisible(find.text('Preview Marrakesh'));
+      await tester.tap(find.text('Preview Marrakesh'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
       final previewPaint = find.descendant(
           of: find.byType(AlertDialog),
           matching: find.byWidgetPredicate((widget) =>
               widget is CustomPaint && widget.painter is ThemeSamplePainter));
-      final previewSize = tester.getSize(previewPaint);
-      expect(previewSize.width / previewSize.height, closeTo(1.5, 0.01));
+      final previewSize = tester.getSize(previewPaint.first);
+      expect(previewSize.width / previewSize.height, closeTo(1, 0.01));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
   }
-  test('render a contact sheet of all five live theme painters', () async {
+  test('render six city Square and Hex contact sheets', () async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    canvas.drawColor(const Color(0xFF171B23), BlendMode.src);
-    for (var i = 0; i < 5; i++) {
-      canvas.save();
-      canvas.translate(20 + i * 240.0, 65);
-      ThemeSamplePainter(BoardTheme.values[i])
-          .paint(canvas, const Size(220, 200));
-      canvas.restore();
+    canvas.drawColor(const Color(0xFFF3EBDC), BlendMode.src);
+    for (var i = 0; i < 6; i++) {
+      final city = BoardTheme.values[i];
+      final x = 20 + (i % 2) * 640.0;
+      final y = 20 + (i ~/ 2) * 350.0;
       final text = TextPainter(
           text: TextSpan(
-              text: BoardThemeData.forTheme(BoardTheme.values[i]).name,
-              style: const TextStyle(color: Colors.white, fontSize: 22)),
+              text: BoardThemeData.forTheme(city).name,
+              style: const TextStyle(
+                  color: Colors.black, fontSize: 26, fontFamily: 'StonesSans')),
           textDirection: TextDirection.ltr)
         ..layout();
-      text.paint(canvas, Offset(20 + i * 240.0, 20));
+      text.paint(canvas, Offset(x + 12, y));
+      for (final shape in BoardShape.values) {
+        canvas.save();
+        canvas.translate(x + shape.index * 310, y + 35);
+        ThemeSamplePainter(city, shape: shape)
+            .paint(canvas, const Size(300, 300));
+        canvas.restore();
+      }
     }
     final picture = recorder.endRecording();
-    final image = await picture.toImage(1220, 285);
+    final image = await picture.toImage(1300, 1070);
     final png = (await image.toByteData(format: ui.ImageByteFormat.png))!;
-    final file = File('build/theme-contact-sheet.png');
+    final file = File('build/qa/cities/boards.png');
     await file.parent.create(recursive: true);
     await file.writeAsBytes(png.buffer.asUint8List());
     image.dispose();

@@ -1,4 +1,16 @@
-# Five visual sets
+# City cosmetics
+
+Current contract: [six city boards and pieces](CITY_COSMETICS.md). It supersedes
+this document's earlier five-set appearance and board-only Celestial contracts.
+The original five stored IDs/indices and historical reward ownership remain;
+Jaipur adds a sixth piece style. Board and Pieces select independently, with
+four-player Square/Hex previews and palette-aware labels throughout play.
+
+The sections below retain historical design and verification evidence. Their
+five-set counts, two-player silhouette descriptions, generic color labels,
+board-only reward and paired gallery behavior are no longer the current UI.
+
+## Historical five visual sets
 
 The available sets are Classic Wood, Slate, Marble, Morocco and Kyoto. Exactly
 five enum slots remain. Classic retains the base-game-inspired ivory trapezoid,

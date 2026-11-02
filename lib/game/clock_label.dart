@@ -10,10 +10,12 @@ class ClockLabel extends StatefulWidget {
       {super.key,
       required this.clock,
       required this.seat,
-      this.finished = false});
+      this.finished = false,
+      this.ownerLabel});
   final MatchClock clock;
   final SeatId seat;
   final bool finished;
+  final String? ownerLabel;
   @override
   State<ClockLabel> createState() => _ClockLabelState();
 }
@@ -59,7 +61,7 @@ class _ClockLabelState extends State<ClockLabel> {
             .ceil();
     return Text('${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}',
         semanticsLabel:
-            '${widget.seat.label} clock: ${seconds ~/ 60} minutes ${seconds % 60} seconds');
+            '${widget.ownerLabel ?? widget.seat.label} clock: ${seconds ~/ 60} minutes ${seconds % 60} seconds');
   }
 }
 

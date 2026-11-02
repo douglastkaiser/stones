@@ -1,3 +1,6 @@
+import 'match_appearance.dart';
+import '../widgets/piece_stack_view.dart';
+import '../widgets/match_theme_badge.dart';
 import '../services/game_wake_lock.dart';
 import '../widgets/room_invitation_actions.dart';
 import '../widgets/audio_controls.dart';
@@ -58,6 +61,10 @@ class MatchScreen extends ConsumerStatefulWidget {
 
 class _MatchScreenState extends ConsumerState<MatchScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  Map<SeatId, PieceStyle> _visibleStyles = {};
+  PieceStyle _seatStyle(SeatId id) => _visibleStyles[id] ?? PieceStyle.standard;
+  String _seatLabel(SeatId id) => SeatAppearance.label(id, _seatStyle(id));
+  String _present(String text) => SeatAppearance.describe(text, _visibleStyles);
   final _selection = MoveSelection();
   final _viewport = BoardViewportController();
   String? _viewportMatch;
@@ -200,7 +207,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         builder: (context) => AlertDialog(
           title: Text(widget.title ?? 'Objective'),
           scrollable: true,
-          content: Text(widget.objective!),
+          content: Text(_present(widget.objective!)),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(context),
@@ -257,6 +264,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       final completed = CompletedMatch.capture(
         match,
         _controller.confirmedMoves,
+        localBoard: ref.read(currentBoardThemeProvider).theme,
+        localPieces: ref.read(currentPieceStyleProvider).style,
       );
       await ref.read(completedMatchStorageProvider).save(completed);
       if (!mounted || ref.read(matchProvider).id != match.id) return;
@@ -332,7 +341,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           for (final player in owned)
             TextButton(
               onPressed: () => Navigator.pop(context, player.id),
-              child: Text('${player.id.label} resigns'),
+              child: Text('${_seatLabel(player.id)} resigns'),
             ),
         ],
       ),
@@ -440,11 +449,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       _viewport.fit(notify: false);
     }
     final preview = _selection.preview(game);
-    final styles = match.room?.styles ??
-        {
-          for (final id in game.config.ids)
-            id: ref.watch(currentPieceStyleProvider).style,
-        };
+    final styles = _visibleStyles = resolveMatchPieceStyles(ref, match);
     final BoardTheme selectedBoard =
         match.room?.boardTheme ?? ref.watch(shareableBoardThemeProvider);
     final boardTheme = ref.watch(
@@ -464,7 +469,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         : practiceEnded
             ? 'Practice finished'
             : game.finished
-                ? '${winner?.label ?? (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
+                ? '${winner != null ? _seatLabel(winner) : (game.result!.draw ? 'Draw' : 'Match ended')} · ${game.result!.reason.name}'
                 : !match.ready
                     ? 'Waiting for online players'
                     : match.reconnecting
@@ -482,8 +487,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                             SeatControl.ai
                                     ? 'AI paused'
                                     : match.busy
-                                        ? '${game.current.label} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
-                                        : '${game.current.label} to play${game.opening ? ' · opening exchange' : ''}';
+                                        ? '${_seatLabel(game.current)} · ${game.config.seat(game.current).control == SeatControl.ai ? 'AI thinking' : 'Saving move'}'
+                                        : '${_seatLabel(game.current)} to play${game.opening ? ' · opening exchange' : ''}';
     final commands = <IconButton>[
       IconButton(
         tooltip: 'Audio settings',
@@ -643,7 +648,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             child: Text(
               myTurn && match.room != null
                   ? status.replaceFirst(
-                      '${game.current.label} to play',
+                      '${_seatLabel(game.current)} to play',
                       'Your turn',
                     )
                   : status,
@@ -722,7 +727,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Text(
-                      'Tak! ${threats.map((s) => s.label).join(", ")} can win next move if the position stays unchanged.',
+                      'Tak! ${threats.map((s) => _seatLabel(s)).join(", ")} can win next move if the position stays unchanged.',
                     ),
                   ),
                 ),
@@ -737,7 +742,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                 finished: game.finished,
                 names: {
                   for (final e in match.room!.owners.entries)
-                    if (e.value != null) e.value!: e.key.label,
+                    if (e.value != null) e.value!: _seatLabel(e.key),
                 },
               ),
             if (match.room != null && match.uid == match.room!.host)
@@ -816,7 +821,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             if (match.explanation != null && !practiceEnded)
               Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text(match.explanation!),
+                child: Text(_present(match.explanation!)),
               ),
             if (widget.studyPanel != null && !practiceEnded) widget.studyPanel!,
           ],
@@ -877,7 +882,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         if (source != null && _selection.started)
           Text('Drops along path: ${_selection.drops.join(', ')}'),
         if (source != null && _selection.feedback != null)
-          Semantics(liveRegion: true, child: Text(_selection.feedback!)),
+          Semantics(
+              liveRegion: true, child: Text(_present(_selection.feedback!))),
       ],
     );
   }
@@ -898,7 +904,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         Semantics(
             liveRegion: true,
             child: Text(
-                '${requestingSeat.label} requests a takeback · ${decision.approvals.length}/${room.humanOwners.length} agreed. '
+                '${_seatLabel(requestingSeat)} requests a takeback · ${decision.approvals.length}/${room.humanOwners.length} agreed. '
                 '${decision.removed.length} moves will be undone.',
                 textAlign: TextAlign.center)),
         Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
@@ -932,7 +938,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
         children: [
           Semantics(
             liveRegion: true,
-            child: Text('Tak! ${game.current.label} can win next move.',
+            child: Text('Tak! ${_seatLabel(game.current)} can win next move.',
                 textAlign: TextAlign.center),
           ),
           Wrap(
@@ -1017,8 +1023,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     }
     final uid = match.room?.owners[id];
     return uid == null
-        ? id.label
-        : ref.watch(playerNameProvider(uid)).asData?.value ?? id.label;
+        ? _seatLabel(id)
+        : ref.watch(playerNameProvider(uid)).asData?.value ?? _seatLabel(id);
   }
 
   Widget _moveControls(MatchSession match, MatchState game) {
@@ -1026,7 +1032,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       return Column(
         children: [
           if (match.explanation != null)
-            Text(match.explanation!, textAlign: TextAlign.center),
+            Text(_present(match.explanation!), textAlign: TextAlign.center),
           widget.studyPanel!,
         ],
       );
@@ -1059,6 +1065,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     final record = CompletedMatch.capture(
                       match,
                       _controller.confirmedMoves,
+                      localBoard: ref.read(currentBoardThemeProvider).theme,
+                      localPieces: ref.read(currentPieceStyleProvider).style,
                     );
                     Navigator.push<void>(
                       context,
@@ -1119,7 +1127,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             ),
           ],
           Text(
-            'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${e.key.label} ${e.value}').join(' · ')}',
+            'Exposed flats: ${MatchRules.flatCounts(game).entries.map((e) => '${_seatLabel(e.key)} ${e.value}').join(' · ')}',
           ),
           if (widget.studyPanel == null &&
               match.error != null &&
@@ -1301,7 +1309,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       onTap: () => showDialog<void>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: Text(seat.id.label),
+                          title: Text(_seatLabel(seat.id)),
                           scrollable: true,
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -1309,6 +1317,23 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               Text(
                                 '${game.reserves[seat.id]!.stones} stones · ${game.reserves[seat.id]!.caps} capstones',
                               ),
+                              TextButton(
+                                  onPressed: () => showPieceThemePreview(
+                                      context, _seatStyle(seat.id),
+                                      board:
+                                          ref.read(effectiveBoardThemeProvider((
+                                        match.room?.boardTheme ??
+                                            ref
+                                                .read(currentBoardThemeProvider)
+                                                .theme,
+                                        match.room?.host ??
+                                            ref
+                                                .read(accountProvider)
+                                                .identity
+                                                ?.uid,
+                                      )))),
+                                  child: Text(
+                                      'Preview ${PieceStyleData.forStyle(_seatStyle(seat.id)).name}')),
                               if (seat.control == SeatControl.ai)
                                 PlayerRatingLabel(
                                   uid:
@@ -1320,12 +1345,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                                 PlayerRatingLabel(
                                   uid: match.room!.owners[seat.id]!,
                                   pool: RatingPool.forConfig(game.config),
-                                  fallback: seat.id.label,
+                                  fallback: _seatLabel(seat.id),
                                 ),
                               if (match.clock != null)
                                 ClockLabel(
                                   clock: match.clock!,
                                   seat: seat.id,
+                                  ownerLabel: _seatLabel(seat.id),
                                   finished: game.finished,
                                 ),
                             ],
@@ -1356,34 +1382,32 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 9,
-                              backgroundColor: SeatAppearance.marker(seat.id),
-                              child: Text(
-                                seat.id.symbol,
-                                textScaler: TextScaler.noScaling,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
+                            PieceStackView.stone(
+                                StackVisualPiece(
+                                    type: PieceType.flat,
+                                    style: _seatStyle(seat.id),
+                                    colors: SeatAppearance.colors(
+                                        seat.id, _seatStyle(seat.id)),
+                                    owner: _seatLabel(seat.id),
+                                    identity: SeatAppearance.identity(seat.id)),
+                                24),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    '${seat.id == game.current ? '▸ ' : ''}${seat.id.label}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps}',
+                                    '${seat.id == game.current ? '• ' : ''}${_seatLabel(seat.id)}: ${game.reserves[seat.id]!.stones} + ${game.reserves[seat.id]!.caps}',
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                     semanticsLabel:
-                                        '${seat.id.label}, ${game.reserves[seat.id]!.stones} stones, ${game.reserves[seat.id]!.caps} capstones${seat.id == game.current ? ", current player" : ""}',
+                                        '${_seatLabel(seat.id)}, ${game.reserves[seat.id]!.stones} stones, ${game.reserves[seat.id]!.caps} capstones${seat.id == game.current ? ", current player" : ""}',
                                   ),
                                   if (match.clock != null)
                                     ClockLabel(
                                       clock: match.clock!,
                                       seat: seat.id,
+                                      ownerLabel: _seatLabel(seat.id),
                                       finished: game.finished,
                                     ),
                                 ],

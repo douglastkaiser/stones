@@ -1,3 +1,6 @@
+import '../providers/account_provider.dart';
+import '../providers/elite_theme_provider.dart';
+import '../widgets/piece_stack_view.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -35,15 +38,18 @@ Without a road, a full board or any exhausted total reserve ends the match. Most
 
 This is an experimental variant. Rotate the starting seat between matches. Three independent players can cooperate or compete; there are no teams or elimination. Clocks, ratings, achievements and square-game tutorials do not apply here.''';
 
-void _showRules(BuildContext context, {bool legacy = false}) {
+void _showRules(BuildContext context,
+    {bool legacy = false, PieceStyle style = PieceStyle.standard}) {
   showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
             title: const Text('Three-player hex rules'),
             content: SingleChildScrollView(
-                child: Text(legacy
-                    ? 'This room uses legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left. Only your assigned pair wins.\n\n${hexRulesText.substring(hexRulesText.indexOf('Turns cycle'))}'
-                    : hexRulesText)),
+                child: Text(_hexCityText(
+                    legacy
+                        ? 'This room uses legacy goals: Ivory lower left to upper right; Charcoal top to bottom; Copper lower right to upper left. Only your assigned pair wins.\n\n${hexRulesText.substring(hexRulesText.indexOf('Turns cycle'))}'
+                        : hexRulesText,
+                    List.filled(3, style)))),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -51,6 +57,14 @@ void _showRules(BuildContext context, {bool legacy = false}) {
             ],
           ));
 }
+
+String _hexCityText(String text, List<PieceStyle> styles) =>
+    text.replaceAllMapped(RegExp(r'\b(Ivory|Charcoal|Copper)\b'), (match) {
+      final seat = HexSeat.values.firstWhere((s) => s.label == match[0]);
+      return PieceStyleData.forStyle(styles[seat.index])
+          .palettes[seat.index]
+          .name;
+    });
 
 class HexSetupScreen extends ConsumerStatefulWidget {
   const HexSetupScreen({super.key, this.initialMode = HexSetupMode.local});
@@ -106,6 +120,8 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final match = ref.watch(hexMatchProvider);
+    final pieceStyle = ref.watch(currentPieceStyleProvider);
+    String label(HexSeat seat) => pieceStyle.palettes[seat.index].name;
     return Scaffold(
       appBar: AppBar(
           title: Text('Hex · ${switch (widget.initialMode) {
@@ -153,7 +169,7 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
                 isExpanded: true,
                 initialValue: _kinds[seat.index],
                 decoration: InputDecoration(
-                    labelText: seat.label, border: const OutlineInputBorder()),
+                    labelText: label(seat), border: const OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(
                       value: HexSeatKind.localHuman,
@@ -176,7 +192,7 @@ class _HexSetupScreenState extends ConsumerState<HexSetupScreen> {
                 labelText: 'Starting seat', border: OutlineInputBorder()),
             items: HexSeat.values
                 .map((seat) =>
-                    DropdownMenuItem(value: seat, child: Text(seat.label)))
+                    DropdownMenuItem(value: seat, child: Text(label(seat))))
                 .toList(),
             onChanged:
                 match.busy ? null : (seat) => setState(() => _starter = seat!),
@@ -238,6 +254,11 @@ class HexGameScreen extends ConsumerStatefulWidget {
 
 class _HexGameScreenState extends ConsumerState<HexGameScreen> {
   late final HexMatchController _controller;
+  List<PieceStyle> _visibleStyles = List.filled(3, PieceStyle.standard);
+  String _label(HexSeat seat) =>
+      PieceStyleData.forStyle(_visibleStyles[seat.index])
+          .palettes[seat.index]
+          .name;
   final _selection = HexMoveSelection();
   HexCell? get _source => _selection.source;
   PieceType get _type => _selection.type;
@@ -281,6 +302,20 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
     if (game == null) {
       return const Scaffold(body: Center(child: Text('No hex match loaded')));
     }
+    final local = ref.watch(currentPieceStyleProvider).style;
+    _visibleStyles = [
+      for (final seat in HexSeat.values)
+        ref.watch(effectivePieceStyleProvider((
+          match.room?.pieceStyles[seat.index] ?? local,
+          match.room == null
+              ? ref.watch(accountProvider).identity?.uid
+              : match.room!.owners[seat.index] ?? match.room!.host
+        )))
+    ];
+    final board = ref.watch(effectiveBoardThemeProvider((
+      match.room?.boardTheme ?? ref.watch(currentBoardThemeProvider).theme,
+      match.room?.host ?? ref.watch(accountProvider).identity?.uid
+    )));
     // A sole human's goal stays visible while either bot takes its turn.
     final goalSeat =
         match.controls.length == 1 ? match.controls.single : game.current;
@@ -293,12 +328,12 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
         : !match.ready
             ? 'Waiting for all human seats'
             : game.finished
-                ? '${game.winner?.label ?? 'Draw'} · ${game.reason}'
+                ? '${game.winner == null ? 'Draw' : _label(game.winner!)} · ${game.reason}'
                 : match.busy
-                    ? '${game.current.label} · ${match.kinds[game.current.index] == HexSeatKind.ai ? 'AI thinking' : 'Saving move'}'
+                    ? '${_label(game.current)} · ${match.kinds[game.current.index] == HexSeatKind.ai ? 'AI thinking' : 'Saving move'}'
                     : match.kinds[game.current.index] == HexSeatKind.ai
-                        ? '${game.current.label} · AI turn${match.room == null ? '' : ' (host)'}'
-                        : '${game.current.label} to play${game.opening ? ' · place ${game.current.next.label} flat' : ''}';
+                        ? '${_label(game.current)} · AI turn${match.room == null ? '' : ' (host)'}'
+                        : '${_label(game.current)} to play${game.opening ? ' · place ${_label(game.current.next)} flat' : ''}';
 
     final screen = Scaffold(
       appBar: AppBar(title: const Text('Three-player Hex'), actions: [
@@ -308,8 +343,8 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
               icon: Icon(match.paused ? Icons.play_arrow : Icons.pause),
               tooltip: match.paused ? 'Resume AI' : 'Pause AI'),
         IconButton(
-            onPressed: () =>
-                _showRules(context, legacy: game.rulesVersion == 1),
+            onPressed: () => _showRules(context,
+                legacy: game.rulesVersion == 1, style: local),
             icon: const Icon(Icons.help_outline),
             tooltip: 'Hex rules'),
       ]),
@@ -356,24 +391,26 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                               children: HexSeat.values
                                   .map((seat) => ActionChip(
                                         tooltip:
-                                            '${seat.label} · ${BoardThemeData.forTheme(BoardTheme.values[(match.room?.pieceStyles[seat.index] ?? ref.watch(cosmeticsProvider).selectedPieceStyle).index]).name} pieces. Tap to preview and see unlock requirements.',
+                                            '${_label(seat)} · ${PieceStyleData.forStyle(_visibleStyles[seat.index]).name} pieces. Tap to preview and see unlock requirements.',
                                         onPressed: () => showPieceThemePreview(
-                                            context,
-                                            match.room
-                                                    ?.pieceStyles[seat.index] ??
-                                                ref
-                                                    .read(cosmeticsProvider)
-                                                    .selectedPieceStyle),
-                                        avatar: CircleAvatar(
-                                            backgroundColor:
-                                                hexSeatColors[seat.index],
-                                            child: Text(
-                                                hexSeatSymbols[seat.index],
-                                                style: const TextStyle(
-                                                    color: Colors.black,
-                                                    fontSize: 11))),
+                                            context, _visibleStyles[seat.index],
+                                            board: board),
+                                        avatar: PieceStackView.stone(
+                                            StackVisualPiece(
+                                                type: PieceType.flat,
+                                                style:
+                                                    _visibleStyles[seat.index],
+                                                colors: PieceStyleData.forStyle(
+                                                        _visibleStyles[
+                                                            seat.index])
+                                                    .palettes[seat.index]
+                                                    .colors,
+                                                owner: _label(seat),
+                                                identity: PieceIdentity
+                                                    .values[seat.index]),
+                                            24),
                                         label: Text(
-                                            '${seat.label}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
+                                            '${_label(seat)}: ${game.reserves[seat.index].stones} + ${game.reserves[seat.index].caps} caps\n${_seatStatus(match, seat)}'),
                                         side: BorderSide(
                                             color: seat ==
                                                     (game.finished
@@ -395,7 +432,7 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                                 horizontal: 12, vertical: 4),
                             child: Text(
                                 game.rulesVersion == 1
-                                    ? 'Legacy room · ${goalSeat.label}: ${goalSeat.goalLabel}\nConnect ${hexSeatSymbols[goalSeat.index]} A to ${hexSeatSymbols[goalSeat.index]} B.'
+                                    ? 'Legacy room · ${_label(goalSeat)}: ${goalSeat.goalLabel}\nConnect ${hexSeatSymbols[goalSeat.index]} A to ${hexSeatSymbols[goalSeat.index]} B.'
                                     : 'Any color · A to A, B to B, or C to C\nConnect opposite sides with your exposed flats or caps.',
                                 textAlign: TextAlign.center)),
                       ]),
@@ -407,8 +444,8 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                           child: HexBoard(
                               goalSeat: goalSeat,
                               turnSeat: game.current,
-                              pieceStyles: match.room?.pieceStyles,
-                              boardTheme: match.room?.boardTheme,
+                              pieceStyles: _visibleStyles,
+                              boardTheme: board,
                               preview: _planned != null,
                               game: preview ?? game,
                               inspectionGame: preview == null ? null : game,
@@ -431,7 +468,7 @@ class _HexGameScreenState extends ConsumerState<HexGameScreen> {
                             Column(mainAxisSize: MainAxisSize.min, children: [
                           if (game.finished) ...[
                             Text(
-                                'Exposed flats: ${HexSeat.values.map((seat) => '${seat.label} ${HexRules.flatCounts(game)[seat.index]}').join(' · ')}',
+                                'Exposed flats: ${HexSeat.values.map((seat) => '${_label(seat)} ${HexRules.flatCounts(game)[seat.index]}').join(' · ')}',
                                 textAlign: TextAlign.center),
                             TextButton.icon(
                                 onPressed: () => Navigator.pop(context),

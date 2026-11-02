@@ -133,8 +133,8 @@ void main() {
 
       await place(exercise.solution.first.from);
       expect(find.textContaining('1 / 2 moves used'), findsOneWidget);
-      expect(find.textContaining('Copper:'), findsOneWidget);
-      expect(find.textContaining('Ivory:'), findsOneWidget);
+      expect(find.textContaining('Port Wine:'), findsOneWidget);
+      expect(find.textContaining('Oak:'), findsOneWidget);
       expect(find.text('Finish puzzle'), findsNothing);
       await place(exercise.solution.last.from);
       expect(find.text('Finish puzzle'), findsOneWidget);

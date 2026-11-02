@@ -4,36 +4,27 @@ import '../theme/game_colors.dart';
 import 'match_config.dart';
 
 class SeatAppearance {
-  static Color marker(SeatId seat) => const [
-        Color(0xFFFFE3A0),
-        Color(0xFF607D8B),
-        Color(0xFFE68B54),
-        Color(0xFF78B58C),
-      ][seat.index];
+  static PieceIdentity identity(SeatId seat) =>
+      PieceIdentity.values[seat.index];
+  static PiecePalette palette(SeatId seat, PieceStyle style) =>
+      PieceStyleData.forStyle(style).palettes[seat.index];
+  static String label(SeatId seat, PieceStyle style) =>
+      palette(seat, style).name;
+  static Color marker(SeatId seat, [PieceStyle style = PieceStyle.standard]) =>
+      palette(seat, style).primary;
+  static PieceColors colors(SeatId seat, PieceStyle style) =>
+      palette(seat, style).colors;
 
-  static PieceColors colors(SeatId seat, PieceStyle style) {
-    final data = PieceStyleData.forStyle(style);
-    if (seat == SeatId.ivory || seat == SeatId.charcoal) {
-      return data.colorsForPlayer(seat == SeatId.ivory);
-    }
-    final base = seat == SeatId.copper
-        ? const [
-            Color(0xFFE8A568),
-            Color(0xFFC59779),
-            Color(0xFFDFC0A1),
-            Color(0xFFE2A261),
-            Color(0xFFCB8C65)
-          ][style.index]
-        : const [
-            Color(0xFF80B391),
-            Color(0xFF79A89A),
-            Color(0xFFA5C5B4),
-            Color(0xFFA5B46C),
-            Color(0xFF6B9F7B)
-          ][style.index];
-    return PieceColors(
-        primary: base,
-        secondary: Color.lerp(base, Colors.black, .22)!,
-        border: Color.lerp(base, Colors.black, .60)!);
-  }
+  /// Engine explanations retain stable seat IDs; translate only at display time.
+  static String describe(String text, Map<SeatId, PieceStyle> styles) =>
+      text.replaceAllMapped(
+          RegExp(r'\b(Ivory|Charcoal|Copper|Jade|[Ww]hite|[Bb]lack)\b'),
+          (match) {
+        final seat = switch (match[0]!.toLowerCase()) {
+          'white' => SeatId.ivory,
+          'black' => SeatId.charcoal,
+          _ => SeatId.values.firstWhere((id) => id.label == match[0]),
+        };
+        return label(seat, styles[seat] ?? PieceStyle.standard);
+      });
 }

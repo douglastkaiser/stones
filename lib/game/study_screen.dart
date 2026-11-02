@@ -1,3 +1,5 @@
+import '../providers/cosmetics_provider.dart';
+import 'seat_appearance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/puzzle_hints.dart';
@@ -55,18 +57,26 @@ class _StudyPanel extends ConsumerWidget {
   final bool offerPractice;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(matchProvider);
+    final session = ref.watch(matchProvider);
     final controller = ref.read(matchProvider.notifier) as StudyController;
+    final styles = {
+      for (final id in session.game!.config.ids)
+        id: ref.watch(currentPieceStyleProvider).style
+    };
     return Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
-          Text(study.goal, textAlign: TextAlign.center),
+          Text(SeatAppearance.describe(study.goal, styles),
+              textAlign: TextAlign.center),
           if (study.puzzle)
             Text('${controller.steps}/${study.moveLimit} learner moves'),
           Wrap(alignment: WrapAlignment.center, spacing: 12, children: [
             if (study.hints.isNotEmpty)
               PuzzleHints(
-                  hints: study.hints, onRevealed: controller.markHintUsed),
+                  hints: study.hints
+                      .map((hint) => SeatAppearance.describe(hint, styles))
+                      .toList(),
+                  onRevealed: controller.markHintUsed),
             TextButton.icon(
                 onPressed: controller.reset,
                 icon: const Icon(Icons.refresh),

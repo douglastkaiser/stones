@@ -1,3 +1,5 @@
+import 'package:stones/game/seat_appearance.dart';
+import 'package:stones/models/cosmetics.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
@@ -111,7 +113,10 @@ void main() {
                 (w) => w is DropdownButtonFormField<SeatControl>),
             findsNWidgets(count));
         for (final id in SeatId.values.take(count)) {
-          expect(find.text('${id.label} control'), findsOneWidget);
+          expect(
+              find.text(
+                  '${SeatAppearance.label(id, PieceStyle.standard)} control'),
+              findsOneWidget);
         }
         await tester.scrollUntilVisible(find.text('Start game'), 160,
             scrollable: find.byType(Scrollable).last);

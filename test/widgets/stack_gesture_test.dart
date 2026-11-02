@@ -62,8 +62,8 @@ void main() {
     final pickup = container.read(uiStateProvider).piecesPickedUp;
     await tester.longPress(_cell(2, 2));
     await tester.pumpAndSettle();
-    expect(find.text('Light capstone'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Dark flat'), 100,
+    expect(find.text('Oak capstone'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Charred Oak flat'), 100,
         scrollable: find.byType(Scrollable).last);
     expect(find.text('Bottom'), findsOneWidget);
     await tester.tap(find.byTooltip('Close stack inspection'));
@@ -76,7 +76,7 @@ void main() {
     expect(container.read(uiStateProvider).piecesPickedUp, 3);
     await tester.longPress(_cell(2, 2));
     await tester.pumpAndSettle();
-    expect(find.text('Light capstone'), findsOneWidget);
+    expect(find.text('Oak capstone'), findsOneWidget);
     expect(find.textContaining('before move'), findsOneWidget);
     await tester.tap(find.byTooltip('Close stack inspection'));
     await tester.pumpAndSettle();

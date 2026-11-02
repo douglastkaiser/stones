@@ -38,6 +38,44 @@ import 'game/match_provider.dart' show ratingStatusProvider;
 import 'services/browser_history_platform.dart' show configureBrowserNavigation;
 import 'game/invitation_navigation.dart';
 
+/// Legacy Square chrome follows the same per-owner styles as its board pieces.
+final _squareStylesProvider = Provider<Map<PlayerColor, PieceStyleData>>((ref) {
+  final local = ref.watch(currentPieceStyleProvider);
+  final online = ref.watch(gameSessionProvider).mode == GameMode.online;
+  final room = online ? ref.watch(onlineGameProvider).session : null;
+  return {
+    for (final player in PlayerColor.values)
+      player: room == null
+          ? local
+          : PieceStyleData.forStyle(ref.watch(effectivePieceStyleProvider((
+              (player == PlayerColor.white ? room.white : room.black)
+                      ?.pieceStyle ??
+                  PieceStyle.standard,
+              (player == PlayerColor.white ? room.white : room.black)?.id,
+            )))),
+  };
+});
+
+String _squareLabel(WidgetRef ref, PlayerColor player) {
+  if (ref.watch(gameSessionProvider).mode == GameMode.online) {
+    final room = ref.watch(onlineGameProvider).session;
+    final human = player == PlayerColor.white ? room?.white : room?.black;
+    if (human != null) return human.displayName;
+  }
+  return ref
+      .watch(_squareStylesProvider)[player]!
+      .palettes[player == PlayerColor.white ? 0 : 1]
+      .name;
+}
+
+String _squareDescribe(WidgetRef ref, String text) => text.replaceAllMapped(
+    RegExp(r'\b(White|Black|white|black)\b'),
+    (match) => _squareLabel(
+        ref,
+        match[0]!.toLowerCase() == 'white'
+            ? PlayerColor.white
+            : PlayerColor.black));
+
 void _debugLog(String message) {
   if (!kDebugMode) return;
   developer.log('[GAME] $message', name: 'game');
@@ -494,9 +532,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         builder: (context) => AlertDialog(
               title: const Text('Court Mode · coach'),
               content: SingleChildScrollView(
-                  child: Text([_courtWarning, _courtExplanation]
-                      .where((text) => text.isNotEmpty)
-                      .join('\n\n'))),
+                  child: Text(_squareDescribe(
+                      ref,
+                      [_courtWarning, _courtExplanation]
+                          .where((text) => text.isNotEmpty)
+                          .join('\n\n')))),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context),
@@ -797,18 +837,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final localBoardThemeData = ref.watch(currentBoardThemeProvider);
     final onlineState = ref.watch(onlineGameProvider);
     final isOnline = session.mode == GameMode.online;
+    final onlineRoom = onlineState.session;
+    final hostUid = onlineRoom?.creatorColor == PlayerColor.black
+        ? onlineRoom?.black?.id
+        : onlineRoom?.white?.id;
     final boardThemeData = isOnline
-        ? BoardThemeData.forTheme(
-            onlineState.session?.boardTheme ?? BoardTheme.classicWood)
+        ? BoardThemeData.forTheme(ref.watch(effectiveBoardThemeProvider(
+            (onlineRoom?.boardTheme ?? BoardTheme.classicWood, hostUid))))
         : localBoardThemeData;
-    final playerPieceStyles = isOnline
-        ? <PlayerColor, PieceStyleData>{
-            PlayerColor.white: PieceStyleData.forStyle(
-                onlineState.session?.white?.pieceStyle ?? PieceStyle.standard),
-            PlayerColor.black: PieceStyleData.forStyle(
-                onlineState.session?.black?.pieceStyle ?? PieceStyle.standard),
-          }
-        : const <PlayerColor, PieceStyleData>{};
+    final playerPieceStyles = ref.watch(_squareStylesProvider);
     final activeScenario = session.scenario ?? scenarioState.activeScenario;
     final guidedMove = scenarioState.guidedStepComplete ||
             activeScenario?.type == ScenarioType.puzzle
@@ -1067,7 +1104,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           onPressed: _showCourtExplanation,
                           child: Text(
                               _courtWarning.isNotEmpty
-                                  ? _courtWarning
+                                  ? _squareDescribe(ref, _courtWarning)
                                   : _courtExplanation.startsWith('AI move')
                                       ? 'Court Mode · Why that AI move?'
                                       : 'Court Mode · Untimed practice',
@@ -1096,9 +1133,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                   padding:
                                       const EdgeInsets.symmetric(horizontal: 4),
                                   child: MatchThemeBadge(
-                                      label: color == PlayerColor.white
-                                          ? 'Ivory'
-                                          : 'Charcoal',
+                                      label: _squareLabel(ref, color),
+                                      board: boardThemeData.theme,
                                       style: playerPieceStyles[color]!.style)),
                           ])))
                   : null,
@@ -2671,9 +2707,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 : isDark
                     ? Colors.grey.shade600
                     : Colors.grey.shade300;
-            final chipColor = color == PlayerColor.white
-                ? GameColors.lightPiece
-                : GameColors.darkPiece;
+            final style = ref.read(currentPieceStyleProvider);
 
             return InkWell(
               onTap: () => setState(() => selectedPlayerColor = color),
@@ -2695,19 +2729,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: chipColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark ? Colors.white24 : Colors.black26,
-                        ),
-                      ),
-                    ),
+                    PieceStackView.stone(
+                        _squareVisual(Piece(type: PieceType.flat, color: color),
+                            const {}, style),
+                        16),
                     const SizedBox(width: 8),
-                    Text(
+                    Flexible(
+                        child: Text(
                       title,
                       style: TextStyle(
                         fontWeight:
@@ -2718,7 +2746,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                 ? Colors.white
                                 : null,
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ),
@@ -2823,10 +2851,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   Row(
                     children: [
                       Expanded(
-                          child: buildColorOption('White', PlayerColor.white)),
+                          child: buildColorOption(
+                              ref
+                                  .read(currentPieceStyleProvider)
+                                  .palettes[0]
+                                  .name,
+                              PlayerColor.white)),
                       const SizedBox(width: 8),
                       Expanded(
-                          child: buildColorOption('Black', PlayerColor.black)),
+                          child: buildColorOption(
+                              ref
+                                  .read(currentPieceStyleProvider)
+                                  .palettes[1]
+                                  .name,
+                              PlayerColor.black)),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -2936,7 +2974,12 @@ class _PlayerSidePanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLightPlayer = player == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isLightPlayer);
+    final style = ref.watch(_squareStylesProvider)[player]!;
+    final pieceColors = style.colorsForPlayer(isLightPlayer);
+    Widget stone(PieceType type, double width) => PieceStackView.stone(
+        _squareVisual(Piece(type: type, color: player),
+            ref.watch(_squareStylesProvider), style),
+        width);
     final clockState = ref.watch(chessClockProvider);
 
     final time = isLightPlayer
@@ -2976,18 +3019,10 @@ class _PlayerSidePanel extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Player indicator
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: pieceColors.gradientColors),
-                  border: Border.all(color: pieceColors.border, width: 2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
+              stone(PieceType.flat, 20),
               const SizedBox(height: 4),
               Text(
-                isLightPlayer ? 'Light' : 'Dark',
+                _squareLabel(ref, player),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight:
@@ -3012,16 +3047,7 @@ class _PlayerSidePanel extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 14,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      gradient:
-                          LinearGradient(colors: pieceColors.gradientColors),
-                      border: Border.all(color: pieceColors.border),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                  stone(PieceType.flat, 14),
                   const SizedBox(width: 3),
                   Text(
                     '${pieces.flatStones}',
@@ -3037,10 +3063,7 @@ class _PlayerSidePanel extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CustomPaint(
-                    size: const Size(12, 12),
-                    painter: _SmallHexagonPainter(colors: pieceColors),
-                  ),
+                  stone(PieceType.capstone, 12),
                   const SizedBox(width: 3),
                   Text(
                     '${pieces.capstones}',
@@ -3058,15 +3081,7 @@ class _PlayerSidePanel extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Player indicator
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: pieceColors.gradientColors),
-                  border: Border.all(color: pieceColors.border, width: 1.5),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
+              stone(PieceType.flat, 16),
               const SizedBox(width: 6),
               if (showClock) ...[
                 Text(
@@ -3081,15 +3096,7 @@ class _PlayerSidePanel extends ConsumerWidget {
                 const SizedBox(width: 8),
               ],
               // Compact piece counts
-              Container(
-                width: 12,
-                height: 6,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: pieceColors.gradientColors),
-                  border: Border.all(color: pieceColors.border, width: 0.5),
-                  borderRadius: BorderRadius.circular(1),
-                ),
-              ),
+              stone(PieceType.flat, 12),
               Text(
                 '${pieces.flatStones}',
                 style: TextStyle(
@@ -3097,10 +3104,7 @@ class _PlayerSidePanel extends ConsumerWidget {
                     color: isDark ? Colors.white70 : Colors.black87),
               ),
               const SizedBox(width: 4),
-              CustomPaint(
-                size: const Size(10, 10),
-                painter: _SmallHexagonPainter(colors: pieceColors),
-              ),
+              stone(PieceType.capstone, 10),
               Text(
                 '${pieces.capstones}',
                 style: TextStyle(
@@ -3123,7 +3127,7 @@ class _PlayerSidePanel extends ConsumerWidget {
 }
 
 /// Compact turn indicator for narrow screens - overlays on the board
-class _CompactTurnIndicator extends StatelessWidget {
+class _CompactTurnIndicator extends ConsumerWidget {
   final GameState gameState;
   final bool isThinking;
   final OnlineGameState? onlineState;
@@ -3135,15 +3139,17 @@ class _CompactTurnIndicator extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (gameState.isGameOver) return const SizedBox.shrink();
 
     final isWhite = gameState.currentPlayer == PlayerColor.white;
-    final pieceColors = GameColors.forPlayer(isWhite);
+    final pieceColors = ref
+        .watch(_squareStylesProvider)[gameState.currentPlayer]!
+        .colorsForPlayer(isWhite);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     String turnText =
-        '${isWhite ? 'Light' : 'Dark'} · Turn ${gameState.turnNumber}';
+        '${_squareLabel(ref, gameState.currentPlayer)} · Turn ${gameState.turnNumber}';
     if (onlineState?.localColor != null) {
       final isMyTurn = gameState.currentPlayer == onlineState!.localColor;
       turnText =
@@ -3170,14 +3176,17 @@ class _CompactTurnIndicator extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Text(
+          Flexible(
+              child: Text(
             turnText,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: isDark ? Colors.white : Colors.black87,
             ),
-          ),
+          )),
           if (isThinking) ...[
             const SizedBox(width: 6),
             SizedBox(
@@ -3396,7 +3405,7 @@ class _ScenarioInfoCard extends ConsumerWidget {
           // Only show dialogue/instructions for tutorials, not puzzles
           if (isPuzzle) ...[
             const SizedBox(height: 8),
-            Text(scenario.objective),
+            Text(_squareDescribe(ref, scenario.objective)),
             Text(
                 '${progress.puzzleMoves} / ${scenario.puzzleMoveLimit} moves used · Untimed'),
             if (progress.isFailed(game))
@@ -3409,7 +3418,10 @@ class _ScenarioInfoCard extends ConsumerWidget {
                           : 'Move limit reached without a win. Retry and try another idea.')),
             Wrap(spacing: 8, children: [
               if (scenario.puzzleHints.isNotEmpty)
-                PuzzleHints(hints: scenario.puzzleHints),
+                PuzzleHints(
+                    hints: scenario.puzzleHints
+                        .map((hint) => _squareDescribe(ref, hint))
+                        .toList()),
               TextButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
@@ -3422,7 +3434,7 @@ class _ScenarioInfoCard extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  line,
+                  _squareDescribe(ref, line),
                   style: TextStyle(
                     color: isDark ? Colors.white70 : Colors.grey.shade800,
                     fontSize: 13,
@@ -3437,7 +3449,7 @@ class _ScenarioInfoCard extends ConsumerWidget {
 }
 
 /// Win banner - shows game result prominently without blocking the board
-class _WinBanner extends StatelessWidget {
+class _WinBanner extends ConsumerWidget {
   final GameResult result;
   final WinReason? winReason;
   final VoidCallback onHome;
@@ -3451,7 +3463,7 @@ class _WinBanner extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final winIcon = switch (winReason) {
       WinReason.road => Icons.route,
       WinReason.flats => Icons.emoji_events,
@@ -3461,13 +3473,15 @@ class _WinBanner extends StatelessWidget {
 
     final (title, pieceColors, icon) = switch (result) {
       GameResult.whiteWins => (
-          'Light Wins!',
-          GameColors.lightPlayerColors,
+          '${_squareLabel(ref, PlayerColor.white)} Wins!',
+          ref
+              .watch(_squareStylesProvider)[PlayerColor.white]!
+              .lightPlayerColors,
           winIcon,
         ),
       GameResult.blackWins => (
-          'Dark Wins!',
-          GameColors.darkPlayerColors,
+          '${_squareLabel(ref, PlayerColor.black)} Wins!',
+          ref.watch(_squareStylesProvider)[PlayerColor.black]!.darkPlayerColors,
           winIcon,
         ),
       GameResult.draw => (
@@ -3694,7 +3708,9 @@ class _GameBoardState extends State<_GameBoard> {
         PieceType.standing => 'wall',
         PieceType.capstone => 'capstone',
       };
-      final color = topPiece.color == PlayerColor.white ? 'white' : 'black';
+      final color = _squareVisual(
+              topPiece, widget.playerPieceStyles, widget.pieceStyleData)
+          .owner;
       parts.add('$color $pieceType');
       if (stack.height > 1) {
         parts.add('stack of ${stack.height}');
@@ -3979,8 +3995,8 @@ StackVisualPiece _squareVisual(Piece piece,
       type: piece.type,
       style: style.style,
       colors: style.colorsForPlayer(light),
-      isLight: light,
-      owner: light ? 'Light' : 'Dark',
+      identity: light ? PieceIdentity.trapezoid : PieceIdentity.rounded,
+      owner: style.palettes[light ? 0 : 1].name,
       preview: preview);
 }
 
@@ -4408,6 +4424,10 @@ class _BoardCellState extends State<_BoardCell> with TickerProviderStateMixin {
             child: CustomPaint(
                 painter: getBoardTexturePainter(theme: widget.boardThemeData)),
           ))),
+          Positioned.fill(
+              child: IgnorePointer(
+                  child: CustomPaint(
+                      painter: CitySquareGridPainter(widget.boardThemeData)))),
           Center(child: _buildCellContent()),
         ]),
       ),
@@ -5253,7 +5273,7 @@ class _HexagonIconPainter extends CustomPainter {
 }
 
 /// Move history panel - collapsible sidebar showing moves in algebraic notation
-class _MoveHistoryPanel extends StatelessWidget {
+class _MoveHistoryPanel extends ConsumerWidget {
   final List<MoveRecord> moveHistory;
   final int boardSize;
   final VoidCallback onClose;
@@ -5265,7 +5285,7 @@ class _MoveHistoryPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: 200,
       decoration: BoxDecoration(
@@ -5334,7 +5354,8 @@ class _MoveHistoryPanel extends StatelessWidget {
                     itemCount:
                         (moveHistory.length + 1) ~/ 2, // Number of turn pairs
                     itemBuilder: (context, turnIndex) {
-                      return _buildTurnRow(turnIndex);
+                      return _buildTurnRow(
+                          turnIndex, ref.watch(_squareStylesProvider));
                     },
                   ),
           ),
@@ -5343,7 +5364,9 @@ class _MoveHistoryPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildTurnRow(int turnIndex) {
+  Widget _buildTurnRow(int turnIndex, Map<PlayerColor, PieceStyleData> styles) {
+    final light = styles[PlayerColor.white]!.lightPlayerColors;
+    final dark = styles[PlayerColor.black]!.darkPlayerColors;
     // Each turn has white's move and potentially black's move
     final whiteIndex = turnIndex * 2;
     final blackIndex = whiteIndex + 1;
@@ -5375,13 +5398,11 @@ class _MoveHistoryPanel extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
                 color: hasWhiteMove
-                    ? GameColors.lightPiece.withValues(alpha: 0.5)
+                    ? light.primary.withValues(alpha: 0.5)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
                 border: hasWhiteMove
-                    ? Border.all(
-                        color:
-                            GameColors.lightPieceBorder.withValues(alpha: 0.3))
+                    ? Border.all(color: light.border.withValues(alpha: 0.3))
                     : null,
               ),
               child: Text(
@@ -5390,7 +5411,11 @@ class _MoveHistoryPanel extends StatelessWidget {
                   fontFamily: 'monospace',
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: hasWhiteMove ? Colors.black87 : Colors.transparent,
+                  color: hasWhiteMove
+                      ? (light.primary.computeLuminance() > .4
+                          ? Colors.black87
+                          : Colors.white)
+                      : Colors.transparent,
                 ),
               ),
             ),
@@ -5402,13 +5427,11 @@ class _MoveHistoryPanel extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
                 color: hasBlackMove
-                    ? GameColors.darkPiece.withValues(alpha: 0.3)
+                    ? dark.primary.withValues(alpha: 0.3)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
                 border: hasBlackMove
-                    ? Border.all(
-                        color:
-                            GameColors.darkPieceBorder.withValues(alpha: 0.3))
+                    ? Border.all(color: dark.border.withValues(alpha: 0.3))
                     : null,
               ),
               child: Text(
@@ -5417,7 +5440,11 @@ class _MoveHistoryPanel extends StatelessWidget {
                   fontFamily: 'monospace',
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: hasBlackMove ? Colors.white : Colors.transparent,
+                  color: hasBlackMove
+                      ? (dark.primary.computeLuminance() > .4
+                          ? Colors.black87
+                          : Colors.white)
+                      : Colors.transparent,
                 ),
               ),
             ),
@@ -5425,55 +5452,6 @@ class _MoveHistoryPanel extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Small hexagon painter for piece count display
-class _SmallHexagonPainter extends CustomPainter {
-  final PieceColors colors;
-
-  _SmallHexagonPainter({required this.colors});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    final path = _createHexagonPath(center, radius * 0.85);
-
-    // Fill with gradient
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        colors: colors.gradientColors,
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    canvas.drawPath(path, gradientPaint);
-
-    // Border
-    final borderPaint = Paint()
-      ..color = colors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawPath(path, borderPaint);
-  }
-
-  Path _createHexagonPath(Offset center, double radius) {
-    final path = Path();
-    for (int i = 0; i < 6; i++) {
-      final angle = (i * 60 - 90) * math.pi / 180;
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldRepaint(covariant _SmallHexagonPainter oldDelegate) {
-    return oldDelegate.colors != colors;
   }
 }
 

@@ -192,7 +192,7 @@ class SoundManager {
         : switch (stackStyle) {
             PieceStyle.standard || PieceStyle.kyoto => 0,
             PieceStyle.stone || PieceStyle.morocco => 1,
-            PieceStyle.polishedMarble => 2,
+            PieceStyle.polishedMarble || PieceStyle.celestial => 2,
           };
     return play((heavy
         ? const [
@@ -225,7 +225,9 @@ class SoundManager {
     final sound = switch (style) {
       PieceStyle.standard => GameSound.stackMoveWood,
       PieceStyle.stone => GameSound.stackMoveStone,
-      PieceStyle.polishedMarble => GameSound.stackMoveMarble,
+      PieceStyle.polishedMarble ||
+      PieceStyle.celestial =>
+        GameSound.stackMoveMarble,
       PieceStyle.morocco => GameSound.stackMoveStone,
       PieceStyle.kyoto => GameSound.stackMoveWood,
     };

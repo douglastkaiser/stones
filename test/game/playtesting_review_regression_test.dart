@@ -230,7 +230,7 @@ void main() {
         .update(controller.state.copyWith(game: initial.copyWith(ply: 2)));
     await tester.pump();
     expect(cues(), 2);
-    expect(find.textContaining('Copper to play'), findsOneWidget);
+    expect(find.textContaining('Port Wine to play'), findsOneWidget);
     controller.update(controller.state
         .copyWith(paused: true, game: initial.copyWith(ply: 3)));
     await tester.pump();
@@ -267,6 +267,10 @@ void main() {
         config: config,
         owners: {SeatId.ivory: 'host', SeatId.charcoal: 'guest'},
         boardTheme: BoardTheme.celestial,
+        styles: {
+          SeatId.ivory: PieceStyle.celestial,
+          SeatId.charcoal: PieceStyle.kyoto
+        },
         resigned: SeatId.charcoal);
     final session = MatchSession(
         id: room.code, uid: 'guest', room: room, game: room.replay());
@@ -287,8 +291,19 @@ void main() {
     await tester.pump();
     expect(tester.widget<BoardView>(find.byType(BoardView)).theme,
         BoardTheme.celestial);
+    expect(
+        tester.widget<BoardView>(find.byType(BoardView)).styles[SeatId.ivory],
+        PieceStyle.celestial);
     eligibility.add(false);
     await tester.pumpAndSettle();
+    expect(
+        tester.widget<BoardView>(find.byType(BoardView)).styles[SeatId.ivory],
+        PieceStyle.standard);
+    expect(
+        tester
+            .widget<BoardView>(find.byType(BoardView))
+            .styles[SeatId.charcoal],
+        PieceStyle.kyoto);
     await tester.ensureVisible(find.text('Share result'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Share result'));
@@ -301,6 +316,11 @@ void main() {
     eligibility.add(true);
     await tester.pumpAndSettle();
     expect(
+        tester
+            .widget<ResultShareCard>(find.byType(ResultShareCard))
+            .styles[SeatId.ivory],
+        PieceStyle.celestial);
+    expect(
         tester.widget<ResultShareCard>(find.byType(ResultShareCard)).boardTheme,
         BoardTheme.celestial);
     eligibility.add(false);
@@ -308,6 +328,11 @@ void main() {
     expect(
         tester.widget<ResultShareCard>(find.byType(ResultShareCard)).boardTheme,
         BoardTheme.classicWood);
+    expect(
+        tester
+            .widget<ResultShareCard>(find.byType(ResultShareCard))
+            .styles[SeatId.ivory],
+        PieceStyle.standard);
     expect(tester.widget<BoardView>(find.byType(BoardView).first).theme,
         BoardTheme.classicWood);
     await tester.pumpWidget(const SizedBox.shrink());

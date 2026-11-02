@@ -215,8 +215,8 @@ class _PreviewHomeState extends State<_PreviewHome> {
                       IconButton(
                           tooltip: 'Preview collection',
                           onPressed: () => _sampleList('Piece sets', [
-                                'Classic Wood · Ready to play',
-                                'Morocco · Your first learning reward',
+                                'Porto · Ready to play',
+                                'Marrakesh · Your first learning reward',
                                 'Slate, Marble & Kyoto · Mastery rewards'
                               ]),
                           icon: const Icon(Icons.auto_awesome_outlined)),
@@ -268,7 +268,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
       onMyGames: () => _sampleList('My games', [
             'Your turn · Square with Rowan',
             'Waiting · Hex with friends',
-            'Completed · Ivory won by road'
+            'Completed · Oak won by road'
           ]));
 
   Widget _setup() => Center(
@@ -573,7 +573,7 @@ class _PreviewHomeState extends State<_PreviewHome> {
       _boardScene(_game, interactive: true),
       const SizedBox(height: 16),
       Text(
-          'Classic Wood · $_players players · ${_game.config.profile == RulesProfile.standardTak ? 'Standard Tak' : 'Stones variant'}',
+          'Porto · $_players players · ${_game.config.profile == RulesProfile.standardTak ? 'Standard Tak' : 'Stones variant'}',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall),
     ]);

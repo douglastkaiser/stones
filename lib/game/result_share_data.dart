@@ -1,3 +1,5 @@
+import '../models/cosmetics.dart';
+import 'seat_appearance.dart';
 import 'match_clock.dart';
 import 'match_config.dart';
 import 'match_controller.dart';
@@ -9,8 +11,14 @@ const stonesPlayUrl = 'https://www.douglastkaiser.com/stones/';
 
 class ResultShareData {
   ResultShareData(this.session,
-      {required this.names, required this.viewer, required this.rating});
+      {required this.names,
+      required this.viewer,
+      required this.rating,
+      this.styles = const {}});
   final MatchSession session;
+  final Map<SeatId, PieceStyle> styles;
+  String seatLabel(SeatId id) =>
+      styles.containsKey(id) ? SeatAppearance.label(id, styles[id]!) : id.label;
   final Map<SeatId, String> names;
   final SeatId? viewer;
   final RatingSubmission rating;
@@ -31,9 +39,9 @@ class ResultShareData {
     final seat = game.config.seat(id);
     var value = seat.control == SeatControl.ai
         ? '${seat.level.name[0].toUpperCase()}${seat.level.name.substring(1)} AI'
-        : names[id]?.trim() ?? id.label;
+        : names[id]?.trim() ?? seatLabel(id);
     value = value.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), ' ').trim();
-    if (value.isEmpty) value = id.label;
+    if (value.isEmpty) value = seatLabel(id);
     if (value.runes.length > 40) {
       value = '${String.fromCharCodes(value.runes.take(39))}…';
     }
@@ -43,7 +51,7 @@ class ResultShareData {
             ? other.control == SeatControl.ai && other.level == seat.level
             : names[other.id]?.trim() == names[id]?.trim() &&
                 names[id] != null));
-    return same.isEmpty ? value : '$value (${id.label})';
+    return same.isEmpty ? value : '$value (${seatLabel(id)})';
   }
 
   static String joinNames(List<String> values) => switch (values.length) {

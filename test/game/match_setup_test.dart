@@ -88,10 +88,10 @@ void main() {
                       starts++;
                       await pending.future;
                     })))));
-    await tester.ensureVisible(find.byTooltip('Remove Copper'));
-    await tester.tap(find.byTooltip('Remove Copper'));
+    await tester.ensureVisible(find.byTooltip('Remove Port Wine'));
+    await tester.tap(find.byTooltip('Remove Port Wine'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Remove Ivory'), findsNothing);
+    expect(find.byTooltip('Remove Oak'), findsNothing);
     await tester.ensureVisible(find.text('Start game'));
     await tester.tap(find.text('Start game'));
     await tester.pump();

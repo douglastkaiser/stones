@@ -166,11 +166,13 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
   Square/Hex play, hold fans up to five top layers directly on the board until
   release/cancel; changed display or original inspection layers reset expansion.
   Empty cells retain their tap recognition. Explicit inspection and the full
-  scrollable tray remain available.
+  scrollable tray remain available. Layers carry the owner's city palette name,
+  flat shape identity and material, including carried and preview stones.
 - **PLAY-03 · Explicit pickup:** select a top portion by layer or minus/plus, respecting
   the carry limit. Initial selection takes the legal maximum; subsequent source
   taps take one fewer and wrap from one to maximum. Buttons and layer selection
-  remain available together until dropping begins.
+  remain available together until dropping begins. Next-drop and carried-layer
+  previews preserve the same city names, colors and identity shapes as the board.
 - **PLAY-04 · Draft a spread:** tap neighbors or drag to stage bottom-first drops along
   a straight path. See the carried hand, pieces left behind and staged counts.
   Release never silently commits a spread. Current-drop minus/plus controls stay
@@ -207,7 +209,14 @@ History: `7b5e726`, `f6660ac`, `901a3ad`, `5c3598a`, `2f82bba`, `a72c299`, `c272
   piece choices, waiting/saving/AI-thinking/paused/disconnected states and winning
   road highlights. Compact stacks retain visible layers and a total-height badge;
   their height must not be confused with the carry limit. Decoration and preview
-  marks must not obscure ownership, piece type, source or legal targets.
+  marks must not obscure ownership, piece type, source or legal targets. Ownership
+  uses color and shape; remove floating seat initials and owner suffixes on staged
+  counts. Palette names and matching swatches identify players in controls and
+  accessibility descriptions, including legacy Square reserves, turns, coaching,
+  results and inspection. Human display names remain intact. Stack heights and
+  move feedback remain visible.
+  Material lighting supports ownership and piece-type outlines; ornament and
+  static reflections remain subordinate to selection and move feedback.
 - **PLAY-11 · Precision board navigation:** retain fit overview, density-aware
   zoom targeting a usable cell size, two-finger pan/zoom and explicit mouse Pan
   or Space-drag. Navigation cannot stage or confirm moves, even if a second
@@ -505,12 +514,17 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
 - **ACCOUNT-07 · Mastery collection:** browse 25 achievements, filters, requirement progress,
   points/ranks, earned dates and next goals. Qualified results and learning save
   once, show unlock feedback, and preserve proven migrated rewards.
-- **ACCOUNT-08 · Appearance:** preview the five visual sets, choose board and pieces
-  independently, and preserve each seat's appearance online and in stack layers.
-  Viewing another player's set does not grant ownership.
-- **ACCOUNT-09 · Celestial board:** only the single highest-rated established human in
-  Overall is eligible; revocation or failed eligibility checks restores the
-  default appearance, including an already-open share image.
+- **ACCOUNT-08 · Appearance:** preview Porto, Edinburgh, Florence, Marrakesh, Kyoto
+  and Jaipur. Board and Pieces selectors persist independently. Every preview
+  shows all four flat ownership families, flats/walls/caps, Square and Hex examples,
+  city palette names and exact unlock conditions, including either historical
+  achievement route. In-match inspection uses the same read-only preview;
+  viewing another player's city never grants ownership.
+- **ACCOUNT-09 · Jaipur eligibility:** the former Celestial board and its new
+  matching pieces belong only to the current highest-rated established human in
+  Overall. Check the board host and each piece owner independently; host-controlled
+  AI uses the host. Pending, failed or revoked eligibility renders Porto instead,
+  including already-open result images. Stored room choices remain immutable.
 
 - **ACCOUNT-10 · Safe identity transitions:** restore an existing Firebase identity
   before creating a guest. Linking a guest to a new Google account preserves UID
@@ -529,8 +543,10 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
 - **ACCOUNT-12 · Room-scoped cosmetics:** everyone sees the host's recorded board
   and each seat's recorded piece set, including buried/captured/preview stones.
   Reconnect does not rewrite those choices. Missing or unknown metadata falls
-  back safely to Classic; viewing a locked opponent set never writes local
-  entitlements. Cosmetic entitlement remains client-enforced.
+  back safely to Porto; viewing a locked opponent set never writes local
+  entitlements. Cosmetic entitlement remains client-enforced. Jaipur adds one
+  piece wire identifier; older clients require the tolerant-reader release before
+  new clients write it. See [city cosmetics](CITY_COSMETICS.md) for release order.
 - **ACCOUNT-13 · Remembered account:** restore the last Firebase session on Home
   independently of audio and optional Play Games startup, without a new guest or
   Google chooser. SDK-managed persistence remembers the last successful login;
@@ -565,16 +581,34 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
 - **PREF-02 · Clock defaults:** preserve editable per-board defaults, enablement
   and per-game overrides. Defaults affect new configurations, never reset a
   running game's time bank, and survive temporarily entering untimed Court.
-- **PREF-03 · Five-set continuity:** keep Classic Wood, Slate, Marble, Morocco and
-  Kyoto, real locked previews and earned selection. Preserve saved mixed choices
-  and index migration from Minimalist/Pixel to Morocco/Kyoto. Celestial is a
-  conditional board reward, not a sixth coordinated board-and-piece set.
+- **PREF-03 · City continuity:** retain the existing five preference indices and
+  wire identifiers while renaming Classic Wood → Porto, Slate → Edinburgh,
+  Marble → Florence and Morocco → Marrakesh. Kyoto retains its name. Append
+  Jaipur pieces in slot 5, paired explicitly with the existing Celestial board.
+  Existing mixed selections and Minimalist/Pixel migrations retain their IDs;
+  either old reward still grants both parts of a city. No achievement reset.
 - **PREF-04 · Visual feedback:** preserve legible selection, staged/ghost moves,
   layer transitions and result feedback across both shapes. Shared layer
   animations respect reduced motion. Use bounded, deterministic ornament and
   shared painters for gameplay/previews; no visual effect can change legality.
-  Pieces share bounded side thickness, bevels and contact shadows across all five
-  sets, retaining owner colors and flat/wall/capstone identities.
+  All six cities share bounded depth, bevels and contact shadows. Four persistent
+  flat ownership shapes (trapezoid, rounded, diamond, hexagonal) use city palettes.
+  Walls and capstones have single upright silhouettes without flat-shaped
+  cosmetic bases; genuine supporting stack layers remain visible. Walls are
+  tall, straight-sided slabs with visible top and side faces, clearly distinct
+  from low flats at dense-board sizes; city capstone profiles are distinct. Grid
+  seams/inlays follow actual Square or Hex polygons. Edinburgh uses coursed,
+  carved stone panels and interlaced borders; Florence uses Duomo-inspired
+  green-and-cream marble lozenges and rose inlay; Kyoto uses indigo wave fans
+  and wooden lattice borders. Surface and edge detail simplify on dense boards
+  and stay underneath pieces and move highlights. Static material finishes use
+  matte wood/stone, soft marble polish, gentle ceramic/lacquer sheen and restrained
+  metal inlays. Engraving softens at small sizes; narrow light rims and darker
+  contours preserve separation in mixed board/piece combinations. Continuous
+  outer frames use slim material bands and small corner joins within existing
+  board padding, retaining cell positions and hit targets. Existing city pattern
+  density remains the detail ceiling. Painting remains deterministic.
+  See [city cosmetics](CITY_COSMETICS.md) for visual and compatibility evidence.
   Placement animations default on and persist on this device, independently of
   sound. Disable them in Settings → Appearance; system reduced motion also
   suppresses the landing drop/rebound. Disabling active motion settles it without
@@ -584,8 +618,10 @@ History: `8d2cdfb`, `9961f5e`, `5c6cbf2`, `4843a45`, `6f89bae`, `cfc08a6`,
   [placement feedback](PLACEMENT_FEEDBACK.md) for qualification and limits.
 - **PREF-05 · Accessible interaction:** retain focusable actions, descriptive cell
   and stack semantics, an explicit inspect action, status announcements and
-  visible selection/focus. Touch and click alternatives must expose everything
-  otherwise available by hover/drag. On-board hold expansion is optional: the
+  visible selection/focus. City palette names remain in cell, stack and clock
+  descriptions after visual owner initials are removed. Locked previews retain
+  keyboard-operable actions and identify all four flat ownership shapes. Touch and
+  click alternatives must expose everything otherwise available by hover/drag. On-board hold expansion is optional: the
   persistent tray and accessible Inspect stack action retain full-layer access.
   Web startup announces loading/failure status, exposes keyboard-operable Reload,
   respects reduced motion, safe areas and enlarged text on narrow viewports.

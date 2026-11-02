@@ -94,7 +94,7 @@ void main() {
           overrides: [hexMatchProvider.overrideWith((ref) => controller)],
           child: const MaterialApp(home: HexGameScreen())));
       await tester.pump();
-      expect(find.text('Charcoal · AI thinking'), findsOneWidget);
+      expect(find.text('Charred Oak · AI thinking'), findsOneWidget);
       expect(find.textContaining('Any color · A to A, B to B, or C to C'),
           findsOneWidget);
       final board = tester.widget<HexBoard>(find.byType(HexBoard));
@@ -131,7 +131,7 @@ void main() {
         overrides: [hexMatchProvider.overrideWith((ref) => controller)],
         child: const MaterialApp(home: HexGameScreen())));
     await tester.pump();
-    expect(find.text('Ivory · Road'), findsOneWidget);
+    expect(find.text('Oak · Road'), findsOneWidget);
     final chips =
         tester.widgetList<ActionChip>(find.byType(ActionChip)).toList();
     final primary = Theme.of(tester.element(find.byType(HexGameScreen)))

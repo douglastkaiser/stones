@@ -74,9 +74,7 @@ class CosmeticsNotifier extends StateNotifier<CosmeticsState> {
 
   /// Set the board theme and persist
   Future<void> setTheme(BoardTheme theme) async {
-    final style = theme == BoardTheme.celestial
-        ? state.selectedPieceStyle
-        : PieceStyle.values[theme.index];
+    final style = piecesForBoard(theme);
     state =
         CosmeticsState(selectedBoardTheme: theme, selectedPieceStyle: style);
     final prefs = await SharedPreferences.getInstance();
@@ -113,89 +111,67 @@ final cosmeticsProvider =
   return CosmeticsNotifier();
 });
 
-/// Provider for current board theme data
-final currentBoardThemeProvider = Provider<BoardThemeData>((ref) {
-  final theme = ref.watch(cosmeticsProvider).selectedBoardTheme;
-  return BoardThemeData.forTheme(theme == BoardTheme.celestial &&
-          !ref.watch(isBoardThemeUnlockedProvider(theme))
-      ? BoardTheme.classicWood
-      : theme);
-});
-
-/// Provider for current piece style data
-final currentPieceStyleProvider = Provider<PieceStyleData>((ref) {
-  return ref.watch(cosmeticsProvider).pieceStyleData;
-});
-
-/// Provider for checking if a board theme is unlocked
+/// Both historical achievement routes continue to grant the whole city.
 final isBoardThemeUnlockedProvider =
     Provider.family<bool, BoardTheme>((ref, theme) {
   if (theme == BoardTheme.celestial) {
     final identity = ref.watch(accountProvider).identity;
     return identity != null &&
         !identity.guest &&
-        ref.watch(eliteThemeEligibilityProvider(identity.uid)).valueOrNull ==
+        ref.watch(eliteThemeEligibilityProvider(identity.uid)).asData?.value ==
             true;
   }
-  final themeData = BoardThemeData.forTheme(theme);
-  if (themeData.requiredAchievement == null) return true;
-
+  final boardAward = BoardThemeData.forTheme(theme).requiredAchievement;
+  final pieceAward =
+      PieceStyleData.forStyle(piecesForBoard(theme)).requiredAchievement;
+  if (boardAward == null && pieceAward == null) return true;
   final achievements = ref.watch(achievementProvider);
-  return achievements.isUnlocked(themeData.requiredAchievement!);
+  return (boardAward != null && achievements.isUnlocked(boardAward)) ||
+      (pieceAward != null && achievements.isUnlocked(pieceAward));
 });
 
-/// Provider for checking if a piece style is unlocked
-final isPieceStyleUnlockedProvider =
-    Provider.family<bool, PieceStyle>((ref, style) {
-  final styleData = PieceStyleData.forStyle(style);
-  if (styleData.requiredAchievement == null) return true;
+final isPieceStyleUnlockedProvider = Provider.family<bool, PieceStyle>(
+    (ref, style) =>
+        ref.watch(isBoardThemeUnlockedProvider(boardForPieces(style))));
 
-  final achievements = ref.watch(achievementProvider);
-  return achievements.isUnlocked(styleData.requiredAchievement!);
-});
-
-/// Provider for unlock requirement text for a board theme
-final boardThemeUnlockRequirementProvider =
-    Provider.family<String?, BoardTheme>((ref, theme) {
+/// Requirements are visible even after earning a city; previewing grants nothing.
+String cityUnlockRequirement(BoardTheme theme) {
   if (theme == BoardTheme.celestial) {
-    return 'Current #1 established human player in Overall ratings only. Access ends when you lose the top spot.';
+    return 'Be the current #1 established human player in Overall ratings. Access ends when you lose the top spot. Sign in to verify eligibility.';
   }
-  final themeData = BoardThemeData.forTheme(theme);
-  if (themeData.requiredAchievement == null) return null;
+  final requirements = {
+    BoardThemeData.forTheme(theme).requiredAchievement,
+    PieceStyleData.forStyle(piecesForBoard(theme)).requiredAchievement,
+  }
+      .whereType<AchievementType>()
+      .map((type) => GameAchievement.forType(type)
+          .description
+          .replaceFirst(RegExp(r'\.+$'), ''))
+      .toList();
+  if (requirements.isEmpty) return 'Available to everyone.';
+  return 'Unlock by completing either: ${requirements.join(' OR ')}.';
+}
 
-  final isUnlocked = ref.watch(isBoardThemeUnlockedProvider(theme));
-  if (isUnlocked) return null;
-
-  final achievement = GameAchievement.forType(themeData.requiredAchievement!);
-  return 'Unlock: ${achievement.description}';
-});
-
-/// Provider for unlock requirement text for a piece style
+final boardThemeUnlockRequirementProvider =
+    Provider.family<String?, BoardTheme>(
+        (ref, theme) => cityUnlockRequirement(theme));
 final pieceStyleUnlockRequirementProvider =
-    Provider.family<String?, PieceStyle>((ref, style) {
-  final styleData = PieceStyleData.forStyle(style);
-  if (styleData.requiredAchievement == null) return null;
+    Provider.family<String?, PieceStyle>(
+        (ref, style) => cityUnlockRequirement(boardForPieces(style)));
 
-  final isUnlocked = ref.watch(isPieceStyleUnlockedProvider(style));
-  if (isUnlocked) return null;
-
-  final achievement = GameAchievement.forType(styleData.requiredAchievement!);
-  return 'Unlock: ${achievement.description}';
-});
-
-/// Advertise only an earned selection. Viewing another style grants nothing.
 final shareablePieceStyleProvider = Provider<PieceStyle>((ref) {
   final style = ref.watch(cosmeticsProvider).selectedPieceStyle;
-  final unlocked = ref.watch(isPieceStyleUnlockedProvider(style)) ||
-      ref.watch(isBoardThemeUnlockedProvider(BoardTheme.values[style.index]));
-  return unlocked ? style : PieceStyle.standard;
+  return ref.watch(isPieceStyleUnlockedProvider(style))
+      ? style
+      : PieceStyle.standard;
 });
-
 final shareableBoardThemeProvider = Provider<BoardTheme>((ref) {
   final theme = ref.watch(cosmeticsProvider).selectedBoardTheme;
-  final unlocked = ref.watch(isBoardThemeUnlockedProvider(theme)) ||
-      (theme != BoardTheme.celestial &&
-          ref.watch(
-              isPieceStyleUnlockedProvider(PieceStyle.values[theme.index])));
-  return unlocked ? theme : BoardTheme.classicWood;
+  return ref.watch(isBoardThemeUnlockedProvider(theme))
+      ? theme
+      : BoardTheme.classicWood;
 });
+final currentBoardThemeProvider = Provider<BoardThemeData>(
+    (ref) => BoardThemeData.forTheme(ref.watch(shareableBoardThemeProvider)));
+final currentPieceStyleProvider = Provider<PieceStyleData>(
+    (ref) => PieceStyleData.forStyle(ref.watch(shareablePieceStyleProvider)));

@@ -17,13 +17,13 @@ class StackVisualPiece {
       required this.style,
       required this.colors,
       required this.owner,
-      this.isLight = true,
+      this.identity = PieceIdentity.trapezoid,
       this.preview = false});
   final PieceType type;
   final PieceStyle style;
   final PieceColors colors;
   final String owner;
-  final bool isLight;
+  final PieceIdentity identity;
   final bool preview;
   String get description => '$owner ${switch (type) {
         PieceType.flat => 'flat',
@@ -36,18 +36,18 @@ class StackVisualPiece {
       type == other.type &&
       style == other.style &&
       owner == other.owner &&
-      isLight == other.isLight &&
+      identity == other.identity &&
       preview == other.preview &&
       colors.primary == other.colors.primary &&
       colors.secondary == other.colors.secondary &&
       colors.border == other.colors.border;
   @override
-  int get hashCode => Object.hash(type, style, owner, isLight, preview,
+  int get hashCode => Object.hash(type, style, owner, identity, preview,
       colors.primary, colors.secondary, colors.border);
 
   double get aspect => switch (type) {
         PieceType.flat => .55,
-        PieceType.standing => 1.0,
+        PieceType.standing => 1.08,
         PieceType.capstone => .85,
       };
 }
@@ -125,7 +125,7 @@ class PieceStackView extends StatelessWidget {
                     style: piece.style,
                     colors: piece.colors,
                     type: piece.type,
-                    isLightPlayer: piece.isLight))));
+                    identity: piece.identity))));
   }
 
   @override

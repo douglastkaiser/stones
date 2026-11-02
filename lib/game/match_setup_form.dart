@@ -1,3 +1,8 @@
+import '../models/cosmetics.dart';
+import '../models/piece.dart';
+import '../widgets/piece_stack_view.dart';
+import 'stack_move_tray.dart';
+import 'seat_appearance.dart';
 import 'package:flutter/material.dart';
 import 'match_config.dart';
 import 'match_setup_fields.dart';
@@ -6,8 +11,12 @@ import 'match_state.dart';
 /// The same seat editor for either shape; local/AI/online is derived from rows.
 class MatchSetupForm extends StatefulWidget {
   const MatchSetupForm(
-      {super.key, required this.initialConfig, required this.onStart});
+      {super.key,
+      required this.initialConfig,
+      required this.onStart,
+      this.pieceStyle = PieceStyle.standard});
   final MatchConfig initialConfig;
+  final PieceStyle pieceStyle;
   final Future<void> Function(MatchConfig) onStart;
   @override
   State<MatchSetupForm> createState() => _MatchSetupFormState();
@@ -40,6 +49,8 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
 
   @override
   Widget build(BuildContext context) {
+    final style = widget.pieceStyle;
+    String label(SeatId id) => SeatAppearance.label(id, style);
     final supply = Reserve.initial(_config);
     final local =
         _config.seats.where((s) => s.control == SeatControl.localHuman).length;
@@ -78,14 +89,20 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                       padding: const EdgeInsets.all(12),
                       child: Column(children: [
                         Row(children: [
+                          PieceStackView.stone(
+                              StackMoveTray.visual(
+                                  Stone(seat.id, PieceType.flat),
+                                  {seat.id: style}),
+                              28),
+                          const SizedBox(width: 8),
                           Expanded(
                               child: Text(
-                                  '${seat.id.symbol} · ${seat.id.label}',
+                                  '${label(seat.id)} · ${SeatAppearance.identity(seat.id).label}',
                                   style:
                                       Theme.of(context).textTheme.titleMedium)),
                           if (_config.seats.length > 2)
                             IconButton(
-                                tooltip: 'Remove ${seat.id.label}',
+                                tooltip: 'Remove ${label(seat.id)}',
                                 onPressed: () =>
                                     _update(_config.removePlayer(seat.id)),
                                 icon: const Icon(Icons.person_remove_outlined)),
@@ -96,7 +113,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                                 'control-${seat.id.name}-${seat.control.name}'),
                             initialValue: seat.control,
                             decoration: InputDecoration(
-                                labelText: '${seat.id.label} control'),
+                                labelText: '${label(seat.id)} control'),
                             items: const [
                               DropdownMenuItem(
                                   value: SeatControl.localHuman,
@@ -122,7 +139,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                               key: ValueKey(
                                   'level-${seat.id.name}-${seat.level.name}'),
                               level: seat.level,
-                              label: '${seat.id.label} difficulty',
+                              label: '${label(seat.id)} difficulty',
                               onChanged: (level) {
                                 _update(_config.copyWith(
                                     seats: _config.seats
@@ -158,7 +175,7 @@ class _MatchSetupFormState extends State<MatchSetupForm> {
                           const InputDecoration(labelText: 'Starting player'),
                       items: _config.ids
                           .map((id) => DropdownMenuItem(
-                              value: id, child: Text(id.label)))
+                              value: id, child: Text(label(id))))
                           .toList(),
                       onChanged: (id) {
                         if (id != null) _update(_config.copyWith(starter: id));

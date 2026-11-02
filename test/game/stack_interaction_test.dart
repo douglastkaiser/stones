@@ -242,7 +242,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(StackMoveTray), findsOneWidget);
           expect(find.text('Taking 3 of 3 · 0 stay here'), findsOneWidget);
-          expect(find.text('Next to drop: Charcoal flat'), findsOneWidget);
+          expect(find.text('Next to drop: Charred Oak flat'), findsOneWidget);
           await capture(tester, key,
               '${shape.name}-${size.width.toInt()}-${brightness.name}-pickup');
           expect(

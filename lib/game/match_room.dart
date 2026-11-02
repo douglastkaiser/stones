@@ -464,7 +464,8 @@ class MatchRoom {
       throw const FormatException('Room clock does not match configuration');
     }
     final owners = Map<String, dynamic>.from(map['owners']);
-    final styles = Map<String, dynamic>.from(map['styles']);
+    final styles = Map<String, dynamic>.from(
+        map['styles'] ?? {for (final id in config.ids) id.name: 'standard'});
     return MatchRoom(
         revision: map['revision'] as int? ?? 0,
         takeback: map['takeback'] == null
@@ -483,9 +484,9 @@ class MatchRoom {
         config: config,
         owners: owners.map((key, value) =>
             MapEntry(SeatId.values.byName(key), value as String?)),
-        styles: styles.map((key, value) => MapEntry(SeatId.values.byName(key),
-            PieceStyle.values.byName(value as String))),
-        boardTheme: BoardTheme.values.byName(map['boardTheme'] as String),
+        styles: styles.map((key, value) =>
+            MapEntry(SeatId.values.byName(key), pieceStyleFromWire(value))),
+        boardTheme: boardThemeFromWire(map['boardTheme']),
         moves: (map['moves'] as List)
             .map((m) => Map<String, dynamic>.from(m))
             .toList(),

@@ -94,7 +94,7 @@ class _GameMenuState extends State<GameMenu> {
           const SizedBox(height: 8),
           Text(
               _showHomeRoad
-                  ? 'Ivory connects opposite edges. That’s a win.'
+                  ? 'Oak connects opposite edges. That’s a win.'
                   : 'The top stone controls the stack. Move it to change the board.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium),

@@ -178,9 +178,7 @@ void main() {
                   expect(before.width, greaterThan(680));
                   if (count == 4) {
                     expect(
-                      find
-                          .textContaining('${SeatId.values.last.label}:')
-                          .hitTestable(),
+                      find.textContaining('Atlantic Blue:').hitTestable(),
                       findsOneWidget,
                     );
                   }

@@ -1,3 +1,4 @@
+import '../providers/cosmetics_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
@@ -157,6 +158,10 @@ class _MatchSetupScreenState extends ConsumerState<MatchSetupScreen> {
                                       AbsorbPointer(
                                           absorbing: _busy,
                                           child: MatchSetupForm(
+                                              pieceStyle: ref
+                                                  .watch(
+                                                      currentPieceStyleProvider)
+                                                  .style,
                                               initialConfig: widget.preset
                                                       ?.configuration(
                                                           widget.shape) ??
