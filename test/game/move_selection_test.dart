@@ -26,6 +26,33 @@ MatchState position(BoardShape shape,
 }
 
 void main() {
+  test('preview reuse invalidates for replacements and preserves mutable hands',
+      () {
+    final game = position(BoardShape.square);
+    final selection = MoveSelection()..tap(game, const Cell(0, 0));
+    final preview = selection.preview(game);
+    expect(identical(selection.preview(game), preview), isTrue);
+    final hand = selection.hand(game)..clear();
+    expect(hand, isEmpty);
+    expect(selection.hand(game), [charcoal, ivory, ivory]);
+    final replacement = game.copyWith(board: {
+      const Cell(0, 0): [ivory, cap, ivory]
+    });
+    expect(replacement.ply, game.ply);
+    expect(selection.hand(replacement), [ivory, cap, ivory]);
+    expect(identical(selection.preview(replacement), preview), isFalse);
+    selection.carry = 1;
+    expect(selection.hand(replacement), [ivory]);
+    selection.clear();
+    expect(selection.preview(replacement), isNull);
+    selection.choose(MatchMove.place(const Cell(1, 1), PieceType.standing));
+    expect(selection.preview(replacement)!.topAt(const Cell(1, 1))!.type,
+        PieceType.standing);
+    selection.choose(MatchMove.place(const Cell(1, 1), PieceType.flat));
+    expect(selection.preview(replacement)!.topAt(const Cell(1, 1))!.type,
+        PieceType.flat);
+  });
+
   for (final shape in BoardShape.values) {
     for (var seats = 2; seats <= 4; seats++) {
       test(

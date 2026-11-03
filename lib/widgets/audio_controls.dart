@@ -125,7 +125,9 @@ class _AudioControlsState extends ConsumerState<AudioControls>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(appSettingsProvider, (_, next) => _sync());
+    ref.listen(
+        appSettingsProvider.select((s) => (s.isSoundMuted, s.musicVolume)),
+        (_, next) => _sync());
     return MusicScope(
         director: _director,
         child: Listener(

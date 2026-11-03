@@ -15,7 +15,7 @@ class CompletedMatch {
       this.moves,
       this.result,
       this.completedAt,
-      this.positions,
+      this.finalPosition,
       this.durationMs,
       this.boardTheme,
       this.styles,
@@ -32,8 +32,27 @@ class CompletedMatch {
   final List<Map<String, dynamic>> moves;
   final MatchResult result;
   final DateTime completedAt;
-  final List<MatchState> positions;
-  MatchState get finalPosition => positions.last;
+  final MatchState finalPosition;
+  List<MatchState>? _positions;
+  void Function()? _onPositionsRequested;
+
+  /// Summaries need only the fully validated final position. Review retains
+  /// intermediate states on demand, with the same immutable List API.
+  List<MatchState> get positions {
+    if (_positions case final positions?) return positions;
+    _onPositionsRequested?.call();
+    _onPositionsRequested = null;
+    var game = MatchState.initial(config);
+    final positions = [game];
+    for (final move in moves) {
+      game = MatchRules.play(game, MatchMove.fromMap(move))!;
+      positions.add(game);
+    }
+    positions[positions.length - 1] = finalPosition;
+    return _positions = List.unmodifiable(positions);
+  }
+
+  int get retainedPositionCount => _positions?.length ?? 1;
 
   factory CompletedMatch.capture(
       MatchSession session, List<Map<String, dynamic>> moves,
@@ -92,7 +111,6 @@ class CompletedMatch {
       return Map<String, dynamic>.unmodifiable(record);
     }).toList();
     var game = MatchState.initial(config);
-    final positions = [game];
     for (final record in moves) {
       if (record['seat'] != game.current.name) {
         throw const FormatException('History turn mismatch');
@@ -100,7 +118,6 @@ class CompletedMatch {
       final next = MatchRules.play(game, MatchMove.fromMap(record));
       if (next == null) throw const FormatException('Illegal history move');
       game = next;
-      positions.add(game);
     }
     final result = MatchResult(
         map['winner'] == null ? null : SeatId.values.byName(map['winner']),
@@ -116,7 +133,6 @@ class CompletedMatch {
         throw const FormatException('History has no adjudicated board result');
       }
       game = game.copyWith(result: result);
-      positions[positions.length - 1] = game;
     }
     final appearance = map['appearance'] is Map
         ? Map<String, dynamic>.from(map['appearance'])
@@ -134,7 +150,7 @@ class CompletedMatch {
         List.unmodifiable(moves),
         result,
         DateTime.parse(map['completedAt']),
-        List.unmodifiable(positions),
+        game,
         map['durationMs'] as int?,
         appearance == null ? null : boardThemeFromWire(appearance['board']),
         Map.unmodifiable({
@@ -186,6 +202,64 @@ class CompletedMatchPage {
 class CompletedMatchStorage {
   static const prefix = 'completed_match_v1:';
   Future<void> _writes = Future.value();
+  static const _metadataLimit = 1024;
+  static const _matchLimit = 32;
+  static const _characterLimit = 2 * 1024 * 1024;
+  final _metadata = <String, (String, DateTime?)>{};
+  final _validated = <String, (String, CompletedMatch?)>{};
+  int _metadataCharacters = 0, _matchCharacters = 0;
+  (String?, bool)? _scope;
+
+  int get cachedMetadataCount => _metadata.length;
+  int get cachedMatchCount => _validated.length;
+
+  void _removeMatch(String key) {
+    final old = _validated.remove(key);
+    if (old == null) return;
+    _matchCharacters -= old.$1.length;
+    old.$2?._onPositionsRequested = null;
+  }
+
+  void _cacheMatch(String key, String encoded, CompletedMatch? match) {
+    _removeMatch(key);
+    if (encoded.length > _characterLimit || match?._positions != null) return;
+    while (_validated.isNotEmpty &&
+        (_validated.length >= _matchLimit ||
+            _matchCharacters + encoded.length > _characterLimit)) {
+      _removeMatch(_validated.keys.first);
+    }
+    _validated[key] = (encoded, match);
+    _matchCharacters += encoded.length;
+    if (match != null) {
+      match._onPositionsRequested = () {
+        if (identical(_validated[key]?.$2, match)) _removeMatch(key);
+      };
+    }
+  }
+
+  void _cacheMetadata(String key, String encoded, DateTime? completedAt) {
+    final old = _metadata.remove(key);
+    if (old != null) _metadataCharacters -= old.$1.length;
+    if (encoded.length > _characterLimit) return;
+    while (_metadata.isNotEmpty &&
+        (_metadata.length >= _metadataLimit ||
+            _metadataCharacters + encoded.length > _characterLimit)) {
+      _metadataCharacters -= _metadata.remove(_metadata.keys.first)!.$1.length;
+    }
+    _metadata[key] = (encoded, completedAt);
+    _metadataCharacters += encoded.length;
+  }
+
+  void _setScope(String? owner, bool includeGuest) {
+    final scope = (owner, includeGuest);
+    if (_scope == scope) return;
+    for (final key in _validated.keys.toList()) {
+      _removeMatch(key);
+    }
+    _metadata.clear();
+    _metadataCharacters = 0;
+    _scope = scope;
+  }
 
   Future<void> save(CompletedMatch match) {
     final write = _writes.then((_) async {
@@ -225,9 +299,18 @@ class CompletedMatchStorage {
       {bool includeGuest = false, int? limit}) async {
     if (limit != null && limit < 1) throw ArgumentError.value(limit, 'limit');
     final prefs = await SharedPreferences.getInstance();
-    final entries = <(DateTime, Map<String, dynamic>)>[];
+    _setScope(owner, includeGuest);
+    final keys = prefs.getKeys();
+    for (final key in _metadata.keys.where((k) => !keys.contains(k)).toList()) {
+      _metadataCharacters -= _metadata.remove(key)!.$1.length;
+    }
+    for (final key
+        in _validated.keys.where((k) => !keys.contains(k)).toList()) {
+      _removeMatch(key);
+    }
+    final entries = <(DateTime, String, String, Map<String, dynamic>?)>[];
     var unreadable = 0;
-    for (final key in prefs.getKeys().where((key) => key.startsWith(prefix))) {
+    for (final key in keys.where((key) => key.startsWith(prefix))) {
       List<dynamic> identity;
       try {
         identity = jsonDecode(Uri.decodeComponent(key.substring(prefix.length)))
@@ -240,23 +323,51 @@ class CompletedMatchStorage {
         continue;
       }
       try {
-        final map =
-            Map<String, dynamic>.from(jsonDecode(prefs.getString(key)!));
+        final encoded = prefs.getString(key)!;
+        final cached = _metadata[key];
+        if (cached != null && cached.$1 == encoded) {
+          _cacheMetadata(key, encoded, cached.$2);
+          if (cached.$2 == null) {
+            unreadable++;
+          } else {
+            entries.add((cached.$2!, key, encoded, null));
+          }
+          continue;
+        }
+        _removeMatch(key);
+        final map = Map<String, dynamic>.from(jsonDecode(encoded));
         if (map['owner'] != identity[0] || map['id'] != identity[1]) {
           throw const FormatException('History identity mismatch');
         }
-        entries.add((DateTime.parse(map['completedAt']), map));
+        final time = DateTime.parse(map['completedAt']);
+        _cacheMetadata(key, encoded, time);
+        entries.add((time, key, encoded, map));
       } catch (_) {
+        final raw = prefs.get(key);
+        if (raw is String) _cacheMetadata(key, raw, null);
         unreadable++;
       }
     }
     entries.sort((a, b) => b.$1.compareTo(a.$1));
     final result = <CompletedMatch>[];
     for (final entry in entries.take(limit ?? entries.length)) {
-      try {
-        result.add(CompletedMatch.fromMap(entry.$2));
-      } catch (_) {
+      final cached = _validated[entry.$2];
+      CompletedMatch? match;
+      if (cached != null && cached.$1 == entry.$3) {
+        match = cached.$2;
+      } else {
+        try {
+          match = CompletedMatch.fromMap(
+              entry.$4 ?? Map<String, dynamic>.from(jsonDecode(entry.$3)));
+        } catch (_) {
+          // A negative cache is tied to the exact raw record; repairs revalidate.
+        }
+      }
+      _cacheMatch(entry.$2, entry.$3, match);
+      if (match == null) {
         unreadable++;
+      } else {
+        result.add(match);
       }
     }
     return CompletedMatchPage(result,

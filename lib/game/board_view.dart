@@ -1,6 +1,7 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show setEquals, listEquals;
+import 'package:flutter/foundation.dart' show setEquals, listEquals, mapEquals;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 
@@ -46,7 +47,11 @@ class BoardLayout {
   final Size size;
   final BoardGeometry geometry;
   late final double unit;
-  Offset center(Cell cell) => geometry is HexGeometry
+  final _centers = <Cell, Offset>{};
+  final _bounds = <Cell, Rect>{};
+  final _polygons = <Cell, Path>{};
+  Offset center(Cell cell) => _centers.putIfAbsent(cell, () => _center(cell));
+  Offset _center(Cell cell) => geometry is HexGeometry
       ? Offset(
           size.width / 2 + unit * math.sqrt(3) * (cell.x + cell.y / 2),
           size.height / 2 + unit * 1.5 * cell.y,
@@ -55,9 +60,14 @@ class BoardLayout {
           size.width / 2 + unit * (2 * cell.x + 1 - geometry.size),
           size.height / 2 + unit * (2 * cell.y + 1 - geometry.size),
         );
-  Rect bounds(Cell cell) =>
-      Rect.fromCenter(center: center(cell), width: unit * 2, height: unit * 2);
-  Path polygon(Cell cell) {
+  Rect bounds(Cell cell) => _bounds.putIfAbsent(
+      cell,
+      () => Rect.fromCenter(
+          center: center(cell), width: unit * 2, height: unit * 2));
+
+  /// Shared immutable geometry: callers must not mutate the returned path.
+  Path polygon(Cell cell) => _polygons.putIfAbsent(cell, () => _polygon(cell));
+  Path _polygon(Cell cell) {
     if (geometry is SquareGeometry) {
       return Path()..addRect(bounds(cell).deflate(unit * .04));
     }
@@ -149,6 +159,50 @@ class _BoardViewState extends State<BoardView> {
   void Function(Cell, Step)? get onSwipe => widget.onSwipe;
   Cell? _dragCell;
   Offset? _dragOffset;
+  BoardLayout? _layout;
+  BoardMaterialCache? _materials;
+  MatchState? _visualGame, _visualOriginal, _visualAfter;
+  Map<SeatId, PieceStyle> _visualStyles = const {};
+  final _displayVisuals = <Cell, List<StackVisualPiece>>{};
+  final _originalVisuals = <Cell, List<StackVisualPiece>>{};
+  Cell? _stagedSource;
+  Step? _stagedDirection;
+  List<int> _stagedDrops = const [];
+  Map<Cell, int> _staged = const {};
+
+  void _syncPresentation() {
+    if (!identical(_visualGame, game) ||
+        !identical(_visualOriginal, original) ||
+        !identical(_visualAfter, widget.landing?.after) ||
+        !mapEquals(_visualStyles, styles)) {
+      _visualGame = game;
+      _visualOriginal = original;
+      _visualAfter = widget.landing?.after;
+      _visualStyles = Map.of(styles);
+      _displayVisuals.clear();
+      _originalVisuals.clear();
+    }
+    if (_stagedSource != widget.routeSource ||
+        _stagedDirection != widget.routeDirection ||
+        !listEquals(_stagedDrops, widget.drops)) {
+      _stagedSource = widget.routeSource;
+      _stagedDirection = widget.routeDirection;
+      _stagedDrops = List.of(widget.drops);
+      final counts = <Cell, int>{};
+      var cell = widget.routeSource;
+      for (final drop in widget.drops) {
+        cell = cell!.step(widget.routeDirection!);
+        counts[cell] = drop;
+      }
+      _staged = counts;
+    }
+  }
+
+  @override
+  void dispose() {
+    _materials?.dispose();
+    super.dispose();
+  }
 
   void _resetDrag() {
     if (!mounted || _dragCell == null) return;
@@ -167,16 +221,6 @@ class _BoardViewState extends State<BoardView> {
     return base.topAt(cell)?.seat == base.current;
   }
 
-  Map<Cell, int> get _staged {
-    final counts = <Cell, int>{};
-    var cell = widget.routeSource;
-    for (final drop in widget.drops) {
-      cell = cell!.step(widget.routeDirection!);
-      counts[cell] = drop;
-    }
-    return counts;
-  }
-
   @override
   void didUpdateWidget(BoardView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -187,7 +231,11 @@ class _BoardViewState extends State<BoardView> {
     }
   }
 
-  List<StackVisualPiece> _visuals(Cell cell, {bool before = false}) {
+  List<StackVisualPiece> _visuals(Cell cell, {bool before = false}) =>
+      (before ? _originalVisuals : _displayVisuals)
+          .putIfAbsent(cell, () => _buildVisuals(cell, before: before));
+
+  List<StackVisualPiece> _buildVisuals(Cell cell, {required bool before}) {
     final stones = (before ? original ?? game : widget.landing?.after ?? game)
         .stackAt(cell);
     final previous = original?.stackAt(cell);
@@ -246,11 +294,22 @@ class _BoardViewState extends State<BoardView> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
-          final layout = BoardLayout(
-            Size(constraints.maxWidth, constraints.maxHeight),
-            game.geometry,
-          );
+          _syncPresentation();
+          final size = Size(constraints.maxWidth, constraints.maxHeight);
+          if (_layout?.size != size ||
+              !identical(_layout?.geometry, game.geometry)) {
+            _materials?.dispose();
+            _materials = null;
+            _layout = BoardLayout(size, game.geometry);
+          }
+          final layout = _layout!;
           final material = BoardThemeData.forTheme(theme);
+          if (_materials?.theme != material) {
+            _materials?.dispose();
+            _materials = game.geometry.cells.length <= 128
+                ? BoardMaterialCache(layout, material)
+                : null;
+          }
           return Shortcuts(
             shortcuts: const {
               SingleActivator(LogicalKeyboardKey.arrowLeft):
@@ -285,6 +344,7 @@ class _BoardViewState extends State<BoardView> {
                         widget.routeSource,
                         widget.routeDirection,
                         widget.drops,
+                        _materials,
                       ),
                     ),
                   ),
@@ -539,6 +599,87 @@ class _CellClipper extends CustomClipper<Path> {
       cell != old.cell;
 }
 
+/// Retain exact vector commands, interleaved with overlays in the original
+/// cell order. This avoids changing dense-board blending or zoom resolution.
+class BoardMaterialCache {
+  BoardMaterialCache(this.layout, this.theme);
+  final BoardLayout layout;
+  final BoardThemeData theme;
+  ui.Picture? _frame;
+  final _cells = <Cell, ui.Picture>{};
+
+  int get recordedCells => _cells.length;
+
+  ui.Picture _record(void Function(Canvas) paint) {
+    final recorder = ui.PictureRecorder();
+    paint(Canvas(recorder));
+    return recorder.endRecording();
+  }
+
+  void paintFrame(Canvas canvas) =>
+      canvas.drawPicture(_frame ??= _record((c) => paintCityBoardFrame(
+          c, layout.geometry.cells.map(layout.polygon), theme, layout.unit)));
+
+  void paintCell(Canvas canvas, Cell cell) =>
+      canvas.drawPicture(_cells.putIfAbsent(
+          cell,
+          () =>
+              _record((c) => _paintBoardCellMaterial(c, layout, theme, cell))));
+
+  void dispose() {
+    _frame?.dispose();
+    _frame = null;
+    for (final picture in _cells.values) {
+      picture.dispose();
+    }
+    _cells.clear();
+  }
+}
+
+void _paintBoardCellMaterial(
+    Canvas canvas, BoardLayout layout, BoardThemeData theme, Cell cell) {
+  const pairColors = [
+    Color(0xFFDED3BA),
+    Color(0xFFB8C8BE),
+    Color(0xFFC7BED5),
+  ];
+  final polygon = layout.polygon(cell);
+  final bounds = layout.bounds(cell);
+  canvas.save();
+  canvas.clipPath(polygon);
+  canvas.translate(bounds.left, bounds.top);
+  getBoardTexturePainter(
+    theme: theme,
+    seed: cell.x * 7 + cell.y,
+  ).paint(canvas, bounds.size);
+  canvas.restore();
+  paintCityGrid(canvas, polygon, theme, layout.unit);
+  for (var axis = 0; axis < layout.geometry.axisCount; axis++) {
+    for (final positive in [false, true]) {
+      if (!layout.geometry.boundary(cell, axis, positive)) continue;
+      final center = layout.center(cell);
+      final vector = layout.geometry is SquareGeometry
+          ? axis == 0
+              ? Offset(positive ? 1 : -1, 0)
+              : Offset(0, positive ? 1 : -1)
+          : switch (axis) {
+              0 => Offset(positive ? .866 : -.866, positive ? -.5 : .5),
+              1 => Offset(0, positive ? 1 : -1),
+              _ => Offset(positive ? -.866 : .866, positive ? -.5 : .5),
+            };
+      final anchor = center + vector * layout.unit * .82;
+      final tangent = Offset(-vector.dy, vector.dx) * layout.unit * .26;
+      canvas.drawLine(
+        anchor - tangent,
+        anchor + tangent,
+        Paint()
+          ..color = pairColors[axis]
+          ..strokeWidth = math.max(2, layout.unit * .09),
+      );
+    }
+  }
+}
+
 class _BoardPainter extends CustomPainter {
   _BoardPainter(
     this.layout,
@@ -549,6 +690,7 @@ class _BoardPainter extends CustomPainter {
     this.routeSource,
     this.routeDirection,
     this.drops,
+    this.materials,
   );
   final BoardLayout layout;
   final BoardThemeData theme;
@@ -558,50 +700,22 @@ class _BoardPainter extends CustomPainter {
   final Cell? routeSource;
   final Step? routeDirection;
   final List<int> drops;
-  static const pairColors = [
-    Color(0xFFDED3BA),
-    Color(0xFFB8C8BE),
-    Color(0xFFC7BED5),
-  ];
+  final BoardMaterialCache? materials;
   @override
   void paint(Canvas canvas, Size size) {
-    paintCityBoardFrame(
-        canvas, layout.geometry.cells.map(layout.polygon), theme, layout.unit);
+    final cache = materials;
+    if (cache == null) {
+      paintCityBoardFrame(canvas, layout.geometry.cells.map(layout.polygon),
+          theme, layout.unit);
+    } else {
+      cache.paintFrame(canvas);
+    }
     for (final cell in layout.geometry.cells) {
       final polygon = layout.polygon(cell);
-      final bounds = layout.bounds(cell);
-      canvas.save();
-      canvas.clipPath(polygon);
-      canvas.translate(bounds.left, bounds.top);
-      getBoardTexturePainter(
-        theme: theme,
-        seed: cell.x * 7 + cell.y,
-      ).paint(canvas, bounds.size);
-      canvas.restore();
-      paintCityGrid(canvas, polygon, theme, layout.unit);
-      for (var axis = 0; axis < layout.geometry.axisCount; axis++) {
-        for (final positive in [false, true]) {
-          if (!layout.geometry.boundary(cell, axis, positive)) continue;
-          final center = layout.center(cell);
-          final vector = layout.geometry is SquareGeometry
-              ? axis == 0
-                  ? Offset(positive ? 1 : -1, 0)
-                  : Offset(0, positive ? 1 : -1)
-              : switch (axis) {
-                  0 => Offset(positive ? .866 : -.866, positive ? -.5 : .5),
-                  1 => Offset(0, positive ? 1 : -1),
-                  _ => Offset(positive ? -.866 : .866, positive ? -.5 : .5),
-                };
-          final anchor = center + vector * layout.unit * .82;
-          final tangent = Offset(-vector.dy, vector.dx) * layout.unit * .26;
-          canvas.drawLine(
-            anchor - tangent,
-            anchor + tangent,
-            Paint()
-              ..color = pairColors[axis]
-              ..strokeWidth = math.max(2, layout.unit * .09),
-          );
-        }
+      if (cache == null) {
+        _paintBoardCellMaterial(canvas, layout, theme, cell);
+      } else {
+        cache.paintCell(canvas, cell);
       }
       if (destinations.contains(cell)) {
         canvas.drawPath(polygon, Paint()..color = const Color(0x22275C51));

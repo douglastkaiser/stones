@@ -383,9 +383,14 @@ History: `a6e2adf`, `567376f`, `db47e49`, `d37748b`, `2b914c7`, `2df1b28`, `a72c
   active play; completed duration stays frozen when evidence is available.
 - **SAVE-03 · My games:** return through saved-room shortcuts and browse device-local
   completed history, scoped to the appropriate account/guest. A damaged record
-  does not hide the readable games.
+  does not hide the readable games. Repeated reads may reuse bounded, account-scoped
+  validated summaries only while their raw records are unchanged; repairs and
+  removals invalidate reuse. Pending room resumes and errors survive history
+  scrolling and header changes. See [shared performance audit](PERFORMANCE_STAGE2.md).
 - **SAVE-04 · Review:** replay a completed game's moves without mutating live play,
-  submitting ratings again or earning duplicate rewards.
+  submitting ratings again or earning duplicate rewards. Intermediate positions
+  may be retained on demand after full validation; opening review preserves every
+  position and releases the record from the summary cache.
 - **SAVE-05 · Play again:** start a local rematch with a new identity and rotated starter
   after completion processing; a failed save preserves the finished game.
 - **SAVE-06 · Share a result:** preview/copy text or a link, invoke supported native/Web
@@ -434,7 +439,10 @@ History: `9c1114a`, `b81e5a8`, `25888f1`, `603c86d`, `45d2946`, `2651001`,
   cannot overwrite newer play or duplicate AI turns.
 - **ONLINE-06 · Temporary room chat:** participants can exchange bounded, masked messages;
   closed/expired messages are unavailable and rejoining does not restore chat
-  history. Expiry cleanup continues while the panel is collapsed.
+  history. Expiry cleanup continues while the panel is collapsed. Received cleanup
+  identifiers may be persisted in one serialized owner-scoped batch; unchanged
+  polls need not rebuild the panel. Preserve the three-second delivery cadence,
+  retry, ordering and cleanup; never persist message text.
 
 - **ONLINE-07 · Waiting and observing:** distinguish waiting for human seats,
   waiting for an AI runner and watching an AI-only table from a playable human
@@ -706,6 +714,16 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   stacks, four seats and optional audio/assets cannot make ordinary play unusable.
   Measure on named devices; proposed latency/frame/startup targets in the finishing
   plan are acceptance goals, not established measurements.
+  Settings consumers update independently. Static city previews retain the full
+  shared painter and cache images at device resolution within a shared 32 MiB
+  image budget, falling back to vector rendering without lowering detail.
+  [Performance audit](PERFORMANCE_AUDIT.md) records rendering/rebuild evidence,
+  cache invalidation/disposal regressions and remaining Android Firefox acceptance.
+  Shared boards reuse geometry, draft derivation and static vector commands while
+  preserving paint order and detail. Lazy collections keep every entry/action
+  reachable, preserve focused rows and release unused resources. The
+  [shared performance audit](PERFORMANCE_STAGE2.md) records cache bounds,
+  rendering parity, history/chat checks and remaining platform qualification.
 - **APP-09 · Delivery compatibility:** preserve signed Android package/update
   identity, monotonically valid version codes, source-labelled artifacts, web
   base paths/cold invitation routes and previous-save readers. CI, room rules,

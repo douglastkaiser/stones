@@ -29,6 +29,9 @@ class MatchChatService {
   final DateTime joinedAt = DateTime.now().toUtc();
   String get _cleanupKey => 'chat_cleanup_ids_v1:$uid';
   static Future<void> _cleanupWrites = Future.value();
+  // SharedPreferences updates memory before its platform write completes.
+  // Retry even an equivalent batch after a failed durable write.
+  static final _unpersistedCleanupKeys = <String>{};
   String get _base {
     final project = Firebase.app().options.projectId;
     // The repository's integration entry point uses this isolated demo project.
@@ -47,13 +50,25 @@ class MatchChatService {
     };
   }
 
-  Future<void> _remember(String path, DateTime expiry) {
+  /// Persist only cleanup identifiers, in one owner-scoped serialized batch.
+  Future<void> rememberCleanupIds(Iterable<(String, DateTime)> documents) {
+    final values = documents
+        .map((entry) => '${entry.$1}|${entry.$2.millisecondsSinceEpoch}')
+        .toList();
+    if (values.isEmpty) return Future.value();
     final write = _cleanupWrites.then((_) async {
       final prefs = await SharedPreferences.getInstance();
       final entries = prefs.getStringList(_cleanupKey) ?? [];
-      final value = '$path|${expiry.millisecondsSinceEpoch}';
-      if (!entries.contains(value)) {
-        await prefs.setStringList(_cleanupKey, [...entries, value]);
+      final seen = entries.toSet();
+      final added = [
+        for (final value in values)
+          if (seen.add(value)) value
+      ];
+      if (added.isNotEmpty || _unpersistedCleanupKeys.contains(_cleanupKey)) {
+        _unpersistedCleanupKeys.add(_cleanupKey);
+        if (await prefs.setStringList(_cleanupKey, [...entries, ...added])) {
+          _unpersistedCleanupKeys.remove(_cleanupKey);
+        }
       }
     });
     _cleanupWrites = write.catchError((Object _) {});
@@ -105,7 +120,7 @@ class MatchChatService {
             .join();
     final path = 'matches/$room/chat/$id';
     final expiry = DateTime.now().toUtc().add(const Duration(minutes: 5));
-    await _remember(path, expiry);
+    await rememberCleanupIds([(path, expiry)]);
     final response = await _client
         .post(Uri.parse('$_base:commit'),
             headers: await _headers(),
@@ -192,19 +207,25 @@ class MatchChatService {
       throw StateError('Chat unavailable. Check your connection and retry.');
     }
     final result = <ChatMessage>[];
-    for (final row in jsonDecode(response.body) as List) {
-      final doc = row['document'];
-      if (doc == null) continue;
-      final fields = doc['fields'];
-      final path = (doc['name'] as String).split('/documents/').last;
-      final expiry = DateTime.parse(fields['expiresAt']['timestampValue']);
-      await _remember(path, expiry);
-      result.add(ChatMessage(
-          path.split('/').last,
-          fields['sender']['stringValue'],
-          filterChatText(fields['text']['stringValue']),
-          DateTime.parse(fields['createdAt']['timestampValue']),
-          expiry));
+    final cleanupIds = <(String, DateTime)>[];
+    try {
+      for (final row in jsonDecode(response.body) as List) {
+        final doc = row['document'];
+        if (doc == null) continue;
+        final fields = doc['fields'];
+        final path = (doc['name'] as String).split('/documents/').last;
+        final expiry = DateTime.parse(fields['expiresAt']['timestampValue']);
+        cleanupIds.add((path, expiry));
+        result.add(ChatMessage(
+            path.split('/').last,
+            fields['sender']['stringValue'],
+            filterChatText(fields['text']['stringValue']),
+            DateTime.parse(fields['createdAt']['timestampValue']),
+            expiry));
+      }
+    } finally {
+      // Even a malformed later row must not lose earlier cleanup identifiers.
+      await rememberCleanupIds(cleanupIds);
     }
     return result.reversed.toList();
   }

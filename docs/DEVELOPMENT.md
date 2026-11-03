@@ -1,5 +1,12 @@
 # Development map
 
+The [performance audit](PERFORMANCE_AUDIT.md) covers Firefox-on-Android settings
+lag, full-detail preview caching, isolated settings/audio updates, reproducible
+browser/work-count probes and remaining physical-device measurements.
+The [app-wide benefit/effort review](PERFORMANCE_OPPORTUNITIES.md) ranks the next
+shared rendering, collection, history, audio and I/O opportunities, with measured
+work counts, platform coverage and feature-preservation gates.
+
 The [startup and identity audit](STARTUP_IDENTITY.md) records shared branding,
 initialized appearance, loader recovery, generator guards and remaining native
 launch/device qualification.
@@ -255,3 +262,7 @@ in CI, deploy and previews. It fingerprints the JavaScript entrypoint and bootst
 without changing gameplay. Main deployment retains two previous startup pairs for
 cached HTML, with exact filename validation and bounded storage. The six Python
 checks run with `python -m unittest scripts.test_prepare_web_release`.
+
+Shared performance implementation and repeatable regression evidence:
+[PERFORMANCE_STAGE2.md](PERFORMANCE_STAGE2.md). Its generated fixtures live in
+`build/qa/performance-stage2/`; keep timing runs separate from compilers/tests.

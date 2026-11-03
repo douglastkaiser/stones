@@ -314,13 +314,25 @@ void main() {
     await tester.pumpAndSettle();
     Finder card(String name) =>
         find.ancestor(of: find.text(name), matching: find.byType(Card));
-    void expectHumanRanks() {
+    Future<void> reveal(Finder target) async {
+      final position =
+          tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(target, 200);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> expectHumanRanks() async {
       for (final entry in {
         'Alice': 1,
         'Bob': 2,
         'Carol': 2,
         'Dana': 4,
       }.entries) {
+        await reveal(find.text(entry.key));
         expect(
           find.descendant(
             of: card(entry.key),
@@ -329,32 +341,40 @@ void main() {
           findsOneWidget,
         );
       }
+      await reveal(find.text('New'));
       expect(
         find.descendant(of: card('New'), matching: find.textContaining('#')),
         findsNothing,
       );
     }
 
-    expectHumanRanks();
-    for (final ai in ['Expert AI', 'Hard AI']) {
+    await expectHumanRanks();
+    final rowPositions = <String, double>{};
+    for (final ai in ['Expert AI', 'Alice', 'Hard AI']) {
+      await reveal(find.text(ai));
+      final position =
+          tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+      rowPositions[ai] = tester.getTopLeft(card(ai)).dy + position.pixels;
+      if (ai == 'Alice') continue;
       expect(
         find.descendant(of: card(ai), matching: find.textContaining('#')),
         findsNothing,
       );
     }
     expect(
-      tester.getTopLeft(card('Expert AI')).dy,
-      lessThan(tester.getTopLeft(card('Alice')).dy),
+      rowPositions['Expert AI'],
+      lessThan(rowPositions['Alice']!),
     );
     expect(
-      tester.getTopLeft(card('Alice')).dy,
-      lessThan(tester.getTopLeft(card('Hard AI')).dy),
+      rowPositions['Alice'],
+      lessThan(rowPositions['Hard AI']!),
     );
-    await tester.ensureVisible(find.text('Humans'));
+    await reveal(find.text('Humans'));
     await tester.tap(find.text('Humans'));
     await tester.pumpAndSettle();
-    expectHumanRanks();
+    await expectHumanRanks();
     expect(find.text('Expert AI'), findsNothing);
+    await reveal(find.text('AI'));
     await tester.tap(find.text('AI'));
     await tester.pumpAndSettle();
     expect(find.textContaining(RegExp(r'^#')), findsNothing);
@@ -513,7 +533,9 @@ void main() {
         expect(tester.takeException(), isNull);
         Future<void> reveal(Finder finder) async {
           for (var i = 0; i < 20; i++) {
-            final y = tester.getCenter(finder).dy;
+            final y = finder.evaluate().isEmpty
+                ? size.height
+                : tester.getCenter(finder).dy;
             if (y > 100 && y < size.height - 80) {
               return;
             }

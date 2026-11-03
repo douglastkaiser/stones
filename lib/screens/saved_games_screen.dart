@@ -1,3 +1,4 @@
+import '../widgets/lazy_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
@@ -59,93 +60,72 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
     return Scaffold(
         appBar: AppBar(title: const Text('My games')),
         body: SafeArea(
-            child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                    child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 620),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                  'Games saved on this device. Use the original account or browser profile to resume online rooms.'),
-                              const SizedBox(height: 16),
-                              if (saved.isLoading)
-                                const LinearProgressIndicator(),
-                              if (saved.hasError)
-                                const Text(
-                                    'The local save could not be read. Try reopening My games.'),
-                              if (saved.valueOrNull != null || local) ...[
-                                PlayModeCard(
-                                    title: 'Continue saved game',
-                                    description: _resuming
-                                        ? 'Loading saved state...'
-                                        : 'Resume your local board and players.',
-                                    icon: Icons.play_arrow,
-                                    featured: true,
-                                    onTap: _resuming ? () {} : _resume),
-                                const SizedBox(height: 16),
-                              ],
-                              if (legacy) ...[
-                                PlayModeCard(
-                                    title: 'Continue previous game',
-                                    description: 'Resume your earlier game.',
-                                    icon: Icons.play_arrow,
-                                    onTap: () => Navigator.push<void>(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const GameScreen()))),
-                                const SizedBox(height: 16),
-                              ],
-                              const SavedOnlineGames(),
-                              if (history.hasError) ...[
-                                const Text(
-                                    'Completed games could not be read. Saved records have been kept.'),
-                                TextButton(
-                                    onPressed: () => ref
-                                        .invalidate(completedMatchesProvider),
-                                    child: const Text('Retry game history')),
-                              ],
-                              if (history.valueOrNull?.unreadableCount
-                                  case final int count when count > 0)
-                                const Text(
-                                    'Some completed games could not be read. Other games are available; saved records have been kept.'),
-                              if (history.valueOrNull?.matches.isNotEmpty ==
-                                  true) ...[
-                                Text('Completed games on this device',
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge),
-                                for (final match in history.value!.matches)
-                                  ListTile(
-                                      title: Text(
-                                          '${match.config.shape.name} · ${match.config.seats.length} players · ${match.moves.length} moves'),
-                                      subtitle: Text(
-                                          explainResult(match.finalPosition)),
-                                      trailing: const Icon(Icons.history),
-                                      onTap: () => Navigator.push<void>(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) => MatchReviewScreen(
-                                                  match: match)))),
-                              ],
-                              if (history.valueOrNull?.hasMore == true)
-                                TextButton(
-                                    onPressed: () =>
-                                        setState(() => _historyLimit += 10),
-                                    child: const Text(
-                                        'Show more completed games')),
-                              const Text(
-                                  'Have another game? Open its invitation link or enter its room code.'),
-                              const SizedBox(height: 12),
-                              OutlinedButton.icon(
-                                  onPressed: () => Navigator.push<void>(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const JoinRoomScreen())),
-                                  icon: const Icon(Icons.link),
-                                  label: const Text('Join a friend')),
-                            ]))))));
+            child: ConstrainedListView(maxWidth: 620, children: [
+          const Text(
+              'Games saved on this device. Use the original account or browser profile to resume online rooms.'),
+          const SizedBox(height: 16),
+          if (saved.isLoading) const LinearProgressIndicator(),
+          if (saved.hasError)
+            const Text(
+                'The local save could not be read. Try reopening My games.'),
+          if (saved.valueOrNull != null || local) ...[
+            PlayModeCard(
+                title: 'Continue saved game',
+                description: _resuming
+                    ? 'Loading saved state...'
+                    : 'Resume your local board and players.',
+                icon: Icons.play_arrow,
+                featured: true,
+                onTap: _resuming ? () {} : _resume),
+            const SizedBox(height: 16),
+          ],
+          if (legacy) ...[
+            PlayModeCard(
+                title: 'Continue previous game',
+                description: 'Resume your earlier game.',
+                icon: Icons.play_arrow,
+                onTap: () => Navigator.push<void>(context,
+                    MaterialPageRoute(builder: (_) => const GameScreen()))),
+            const SizedBox(height: 16),
+          ],
+          const SavedOnlineGames(key: ValueKey('saved-online-shortcuts')),
+          if (history.hasError) ...[
+            const Text(
+                'Completed games could not be read. Saved records have been kept.'),
+            TextButton(
+                onPressed: () => ref.invalidate(completedMatchesProvider),
+                child: const Text('Retry game history')),
+          ],
+          if (history.valueOrNull?.unreadableCount case final int count
+              when count > 0)
+            const Text(
+                'Some completed games could not be read. Other games are available; saved records have been kept.'),
+          if (history.valueOrNull?.matches.isNotEmpty == true) ...[
+            Text('Completed games on this device',
+                style: Theme.of(context).textTheme.titleLarge),
+            for (final match in history.value!.matches)
+              ListTile(
+                  title: Text(
+                      '${match.config.shape.name} · ${match.config.seats.length} players · ${match.moves.length} moves'),
+                  subtitle: Text(explainResult(match.finalPosition)),
+                  trailing: const Icon(Icons.history),
+                  onTap: () => Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => MatchReviewScreen(match: match)))),
+          ],
+          if (history.valueOrNull?.hasMore == true)
+            TextButton(
+                onPressed: () => setState(() => _historyLimit += 10),
+                child: const Text('Show more completed games')),
+          const Text(
+              'Have another game? Open its invitation link or enter its room code.'),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+              onPressed: () => Navigator.push<void>(context,
+                  MaterialPageRoute(builder: (_) => const JoinRoomScreen())),
+              icon: const Icon(Icons.link),
+              label: const Text('Join a friend')),
+        ])));
   }
 }

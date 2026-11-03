@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-03T17:17:08.544462+00:00",
+  "integrated_main_base": "945d79a2bd7d17ffe979f853bdd7d762e9ff9eca",
+  "purpose": "Preserve the newer unified city gallery while promoting the performance work to main. This validates integration; older comparative timings retain their original source/artifact scope.",
+  "feature_contracts": [
+    "ACCOUNT-08",
+    "APP-08",
+    "PREF-01\u201306",
+    "SAVE-03",
+    "SAVE-04",
+    "ONLINE-06"
+  ],
+  "source": {
+    "all_lib_dart_manifest_sha256": "c0b0440673f9d30174fb3bd9b014181aead15b7dab5bd2c0bc5b8175325e26f4",
+    "runtime_files_changed_since_measured_candidate": {
+      "lib/widgets/theme_gallery.dart": {
+        "before": "90bb1cb862673220c8dc02552c0eb3cfa6d409d4aa13ca0148b8d757987da2c3",
+        "after": "dbcd3ecdf071c08cbbb03d6765e1498c3f3ec7df7e7b9cda5212c0004c3433ae"
+      }
+    },
+    "browser_probe_sha256": "423f015e0192aed4d41ecc11932829c5ea27a79f70441cd22e4338009d23ba2c"
+  },
+  "verification": {
+    "full_suite_passed": 2088,
+    "concurrency": 2,
+    "gallery_cache_room_tests_passed": 52,
+    "strict_analysis": "passed, no issues",
+    "formatting": "26 changed Dart files clean",
+    "release_web": "passed; existing wasm dry-run/font warnings do not qualify wasm",
+    "byte_identical_board_renderings": 216,
+    "browsers": {
+      "firefox": {
+        "version": "153.0",
+        "passed": true,
+        "page_errors": 0,
+        "gallery_layout": "unified",
+        "raw": "build/qa/main-promotion/browser-firefox/results.json"
+      },
+      "chromium": {
+        "version": "154.0.8037.57",
+        "passed": true,
+        "page_errors": 0,
+        "gallery_layout": "unified",
+        "raw": "build/qa/main-promotion/browser-chromium/results.json"
+      }
+    },
+    "preexisting_analyzer_changes_excluded_from_commit": true
+  },
+  "release_artifact_sha256": {
+    "main.dart.js": "8c9dc63560675ec9faf28e26e537ad7e4adce0b23e903db20bf8f5586fb89df2",
+    "flutter_bootstrap.js": "e47709b824fdc8e0f06a148435d8845dff88bb0386df6763778d30119c727bda"
+  },
+  "limits": [
+    "No new comparative timing claim for the changed unified-gallery layout",
+    "No deployment or physical-device qualification; source push triggers CI, publishing stays manual"
+  ]
+}

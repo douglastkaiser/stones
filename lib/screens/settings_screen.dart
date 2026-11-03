@@ -15,14 +15,11 @@ import '../services/services.dart';
 import '../theme/theme.dart';
 
 /// Settings screen with sound toggle, chess clock toggle, and theme toggle
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(appSettingsProvider);
-    final playGames = ref.watch(playGamesServiceProvider);
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -61,23 +58,7 @@ class SettingsScreen extends ConsumerWidget {
                   // Theme Section
                   const _SectionHeader(title: 'Appearance'),
                   const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: const Text('Placement animations'),
-                    subtitle: const Text(
-                        'Weighty landings for placed pieces and stack drops. Follows reduced motion.'),
-                    value: settings.placementAnimationsEnabled,
-                    onChanged: ref
-                        .read(appSettingsProvider.notifier)
-                        .setPlacementAnimationsEnabled,
-                  ),
-                  _ThemeSelector(
-                    currentMode: settings.themeMode,
-                    onModeChanged: (mode) async {
-                      await ref
-                          .read(appSettingsProvider.notifier)
-                          .setThemeMode(mode);
-                    },
-                  ),
+                  const _AppearanceSettings(),
                   const SizedBox(height: 32),
 
                   // Chess Clock Defaults Section
@@ -97,51 +78,91 @@ class SettingsScreen extends ConsumerWidget {
                   // Play Games Section
                   const _SectionHeader(title: 'Google Play Games'),
                   const SizedBox(height: 12),
-                  _PlayGamesSection(
-                    playGames: playGames,
-                    onRestore: () async {
-                      final restored = await ref
-                          .read(playGamesServiceProvider.notifier)
-                          .restoreCloudGame();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(restored
-                                ? 'Cloud match restored. Return to the menu to continue.'
-                                : ref
-                                        .read(playGamesServiceProvider)
-                                        .errorMessage ??
-                                    'No compatible cloud save found.')));
-                      }
-                    },
-                    onManualSignIn: () async {
-                      await ref
-                          .read(playGamesServiceProvider.notifier)
-                          .manualSignIn();
-                      // Check if there was an error
-                      final updatedState = ref.read(playGamesServiceProvider);
-                      if (updatedState.errorMessage != null &&
-                          context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(updatedState.errorMessage!),
-                            backgroundColor: Colors.red.shade700,
-                            duration: const Duration(seconds: 5),
-                          ),
-                        );
-                      } else if (updatedState.isSignedIn && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Successfully signed in as ${updatedState.player?.displayName ?? 'User'}'),
-                            backgroundColor: Colors.green.shade700,
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
-                  ),
+                  const _PlayGamesSettings(),
                 ],
               ))),
+    );
+  }
+}
+
+/// Only appearance controls subscribe to appearance preferences.
+class _AppearanceSettings extends ConsumerWidget {
+  const _AppearanceSettings();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (animations, mode) = ref.watch(appSettingsProvider
+        .select((s) => (s.placementAnimationsEnabled, s.themeMode)));
+    return Column(children: [
+      SwitchListTile(
+        title: const Text('Placement animations'),
+        subtitle: const Text(
+            'Weighty landings for placed pieces and stack drops. Follows reduced motion.'),
+        value: animations,
+        onChanged: ref
+            .read(appSettingsProvider.notifier)
+            .setPlacementAnimationsEnabled,
+      ),
+      _ThemeSelector(
+        currentMode: mode,
+        onModeChanged: (mode) async {
+          await ref.read(appSettingsProvider.notifier).setThemeMode(mode);
+        },
+      ),
+    ]);
+  }
+}
+
+class _PlayGamesSettings extends ConsumerWidget {
+  const _PlayGamesSettings();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playGames = ref.watch(playGamesServiceProvider);
+    return _PlayGamesSection(
+      playGames: playGames,
+      onRestore: () async {
+        // A lazy list section can unmount while a platform request is pending.
+        // Keep completion feedback scoped to the screen, as before extraction.
+        final screen = Scaffold.of(context);
+        final providers = ProviderScope.containerOf(context);
+        final restored = await ref
+            .read(playGamesServiceProvider.notifier)
+            .restoreCloudGame();
+        if (screen.mounted) {
+          ScaffoldMessenger.of(screen.context).showSnackBar(SnackBar(
+              content: Text(restored
+                  ? 'Cloud match restored. Return to the menu to continue.'
+                  : providers.read(playGamesServiceProvider).errorMessage ??
+                      'No compatible cloud save found.')));
+        }
+      },
+      onManualSignIn: () async {
+        final screen = Scaffold.of(context);
+        final providers = ProviderScope.containerOf(context);
+        await ref.read(playGamesServiceProvider.notifier).manualSignIn();
+        if (!screen.mounted) return;
+        // Check if there was an error
+        final updatedState = providers.read(playGamesServiceProvider);
+        if (updatedState.errorMessage != null) {
+          ScaffoldMessenger.of(screen.context).showSnackBar(
+            SnackBar(
+              content: Text(updatedState.errorMessage!),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        } else if (updatedState.isSignedIn) {
+          ScaffoldMessenger.of(screen.context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Successfully signed in as ${updatedState.player?.displayName ?? 'User'}'),
+              backgroundColor: Colors.green.shade700,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
     );
   }
 }
@@ -280,7 +301,8 @@ class _ChessClockDefaultsSectionState
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(appSettingsProvider);
+    final defaults =
+        ref.watch(appSettingsProvider.select((s) => s.chessClockDefaults));
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -288,7 +310,9 @@ class _ChessClockDefaultsSectionState
       final controller = _controllers[size]!;
       final focusNode = _focusNodes[size]!;
       if (!focusNode.hasFocus) {
-        final minutes = settings.chessClockSecondsForSize(size) ~/ 60;
+        final minutes =
+            (defaults[size] ?? ChessClockDefaults.getTimeForBoardSize(size)) ~/
+                60;
         final text = minutes.toString();
         if (controller.text != text) {
           controller.text = text;

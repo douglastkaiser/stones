@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cosmetics.dart';
@@ -221,7 +224,7 @@ class CityPreviewContent extends ConsumerWidget {
   }
 }
 
-class ThemeSample extends StatelessWidget {
+class ThemeSample extends StatefulWidget {
   const ThemeSample(
       {super.key,
       required this.theme,
@@ -231,14 +234,147 @@ class ThemeSample extends StatelessWidget {
   final PieceStyle? style;
   final BoardShape shape;
   @override
+  State<ThemeSample> createState() => _ThemeSampleState();
+}
+
+class _ThemeSampleState extends State<ThemeSample> {
+  (BoardTheme, PieceStyle?, BoardShape, Size, double)? _key;
+  _PreviewRaster? _raster;
+
+  @override
+  void dispose() {
+    _raster?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => Semantics(
       label:
-          '${BoardThemeData.forTheme(theme).name} ${shape.name} board with all four players’ flats, walls and capstones',
+          '${BoardThemeData.forTheme(widget.theme).name} ${widget.shape.name} board with all four players’ flats, walls and capstones',
       image: true,
       child: AspectRatio(
           aspectRatio: 1,
-          child: CustomPaint(
-              painter: ThemeSamplePainter(theme, style: style, shape: shape))));
+          child: LayoutBuilder(builder: (context, bounds) {
+            final size = bounds.biggest;
+            final ratio = MediaQuery.devicePixelRatioOf(context);
+            final key = (widget.theme, widget.style, widget.shape, size, ratio);
+            if (_key != key) {
+              _key = key;
+              _raster?.dispose();
+              _raster = _PreviewRaster.create(size, ratio);
+              final raster = _raster;
+              if (raster != null) {
+                final painter = ThemeSamplePainter(widget.theme,
+                    style: widget.style, shape: widget.shape);
+                // Show the vector immediately. Prepare the exact-size raster
+                // after this frame, without delaying the initial preview.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  unawaited(raster.render(painter, size, () {
+                    if (mounted && identical(_raster, raster)) setState(() {});
+                  }));
+                });
+              }
+            }
+            return RepaintBoundary(
+                child: CustomPaint(
+                    painter: _RasterThemeSamplePainter(widget.theme,
+                        style: widget.style,
+                        shape: widget.shape,
+                        image: _raster?.image)));
+          })));
+}
+
+/// Exact device-resolution images only; a full vector preview remains available
+/// when the budget is exhausted. Reservations include in-flight rasterizations.
+class _PreviewRaster {
+  _PreviewRaster(this.width, this.height, this.bytes);
+  static const _maxBytes = 32 * 1024 * 1024;
+  static int _reservedBytes = 0;
+  final int width, height, bytes;
+  ui.Image? image;
+  bool _disposed = false;
+  bool _rendering = false;
+  bool _released = false;
+
+  static _PreviewRaster? create(Size size, double ratio) {
+    if (!size.isFinite || size.isEmpty || !ratio.isFinite || ratio <= 0) {
+      return null;
+    }
+    final width = (size.width * ratio).ceil();
+    final height = (size.height * ratio).ceil();
+    final bytes = width * height * 4;
+    if (_reservedBytes + bytes > _maxBytes) return null;
+    _reservedBytes += bytes;
+    return _PreviewRaster(width, height, bytes);
+  }
+
+  Future<void> render(
+      ThemeSamplePainter painter, Size size, VoidCallback ready) async {
+    if (_disposed) return;
+    _rendering = true;
+    final recorder = ui.PictureRecorder();
+    ui.Picture? picture;
+    try {
+      final canvas = Canvas(recorder)
+        ..scale(width / size.width, height / size.height);
+      painter.paint(canvas, size);
+      picture = recorder.endRecording();
+      final result = await picture.toImage(width, height);
+      if (_disposed) {
+        result.dispose();
+      } else {
+        image = result;
+        ready();
+      }
+    } catch (_) {
+      // Optional caching cannot prevent a full-detail vector preview.
+      dispose();
+    } finally {
+      picture?.dispose();
+      if (recorder.isRecording) recorder.endRecording().dispose();
+      _rendering = false;
+      if (_disposed) _release();
+    }
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    image?.dispose();
+    image = null;
+    if (!_rendering) _release();
+  }
+
+  void _release() {
+    if (_released) return;
+    _released = true;
+    _reservedBytes -= bytes;
+  }
+}
+
+class _RasterThemeSamplePainter extends ThemeSamplePainter {
+  const _RasterThemeSamplePainter(super.theme,
+      {super.style, super.shape, this.image});
+  final ui.Image? image;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final raster = image;
+    if (raster == null) {
+      super.paint(canvas, size);
+    } else {
+      canvas.drawImageRect(
+          raster,
+          Rect.fromLTWH(
+              0, 0, raster.width.toDouble(), raster.height.toDouble()),
+          Offset.zero & size,
+          Paint()..filterQuality = FilterQuality.low);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RasterThemeSamplePainter old) =>
+      super.shouldRepaint(old) || image != old.image;
 }
 
 /// Same geometry, grid, textures, layer proportions and pieces as live play.

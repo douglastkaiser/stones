@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-03T07:47:00.053203+00:00",
+  "base_commit": "44c45a1d59d01b91bc2b682bfcde03b6e09e6dbc",
+  "scope": "App-wide benefit/effort exploration following the settings optimization; no production behavior changes in this follow-up.",
+  "environment": {
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "host": "Linux managed workspace",
+    "renderer": "Flutter test software renderer",
+    "storage": "Mock SharedPreferences; synthetic owner and saved games",
+    "no_device_latency_or_fps_qualification": true
+  },
+  "runtime_files_still_match_prior_performance_candidate": true,
+  "source_sha256": {
+    "lib/game/board_view.dart": "8e67b152ba7076389d8fe40bafbe8a4587709507a0d0220e16183ae5cbf4ecf3",
+    "lib/game/move_selection.dart": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+    "lib/game/match_screen.dart": "257f03650456ca2293936a4b4d50cf911d7fb8b40a7d93dc24b27e571c94e449",
+    "lib/game/completed_match.dart": "1bf8e2e111e4173e5a0fe0fa97e77ad6fcf7de3925f926d38505c2b277acb5be",
+    "lib/game/match_storage.dart": "cf0bf54fa7b3658a36c3213731f05ae16fbfc2c0347e5d046c2180d36a5aa6cb",
+    "lib/game/match_room.dart": "4a4ab58976d2f116501dd907af885690731946b3d811351e70f6f3c121db603c",
+    "lib/game/match_room_store.dart": "284332ef00c4c851ed01328ea1db04977e691062a9b67909596a6571dc3568ef",
+    "lib/game/match_ai.dart": "a10cc35c5ce4f45ddc5914342737a459bfa77699b524bab7f3ac350c5a4cd43e",
+    "lib/game/match_threats.dart": "f0224f4350b515b2c170e72c91279a6d26be373588ea557644018a2498c16fd1",
+    "lib/game/ai_road_connections.dart": "d1532004c0d6a60ba8bc721045469e53b092b787d61d9669d7460f2985e70f98",
+    "lib/game/match_state.dart": "9902e319ffce04b1306b3820b8fed7c1963bec4215a6c32e4f724578df4c7c0c",
+    "lib/models/cosmetics.dart": "2d6a25142840cb78b6970a2d344d7c726e5712d62fbf165e740f7e9e552c8703",
+    "lib/widgets/theme_gallery.dart": "90bb1cb862673220c8dc02552c0eb3cfa6d409d4aa13ca0148b8d757987da2c3",
+    "lib/widgets/piece_stack_view.dart": "6a023765cbe8aa42361e570b5998f035bd52c78ecc89d318353a130d8d7d4c7f",
+    "lib/widgets/procedural_painters.dart": "6acd4bf2d21ee288aff46d0ac779b80c4ae54746c5ece95f41b2ab98140d0d53",
+    "lib/screens/leaderboard_screen.dart": "e25af84def4ce7353c3813d3acfd33741120ebd69810831c2e038f29353500c9",
+    "lib/screens/saved_games_screen.dart": "57f2b7f813718f5e73b3a6b243daa6418d26f4f2a01a381d8176e4760947f72f",
+    "lib/screens/achievements_screen.dart": "b247719b3e7b313b32561d870d3a9b8348983fc58a50e035b6e8b0c3cf069ec2",
+    "lib/game/learning_hub.dart": "9eee1e37b2caa80a4891a795620cbdf5f3dac0422b627303e230ba369afec204",
+    "lib/screens/main_menu_screen.dart": "5b701b9e312f453cfc7f51b77652251421985d52017639a11342bbc3205be2fc",
+    "lib/providers/elo_provider.dart": "18aa59bd7f3df2e8c567664453d6cb45782979449bcdf1117c5e39e1ca6f0bbb",
+    "lib/providers/player_profile_provider.dart": "4d66d23c9c6e617577ddcbdf01905e637bfc2413076694b3fab71b5db235b804",
+    "lib/services/rating_repository.dart": "c6b640bf0ecae0e7922dd661ec6ee492742b9b84281cadd6fb00f8e335d8c7de",
+    "lib/services/player_profile_repository.dart": "cd52b1e5b8e42816f446e730c6a6fa8e582e4fac4f410547b1274aa4f6de546b",
+    "lib/services/sound_manager.dart": "be7f6956d72cddb57811364accfadd2269799d8836a2bf99125ac29d420dd48f",
+    "lib/services/music_service.dart": "21475cd0f451d8fea73d4254c92cc32b439aabf8c6ddcd31f7ec91bbc13aa1b0",
+    "lib/services/music_voice_web.dart": "777003bcfbe5ea796de6ebfa2e37bdec2d590f908013ea10277e43c27127adae",
+    "lib/services/music_voice_native.dart": "20c72e18f0058216b6aab96c6724e04186ba3f7be738ab2c16df81c34967eb45",
+    "lib/services/match_chat_service.dart": "0f8b69cf3e89448863962069bec431ea169bdb04bb704d919e87b133802f0593",
+    "lib/widgets/match_chat.dart": "1eb0fa064fb6759667ce64d53991567c8cd8f499fe046e30ef838bd3049fb96c",
+    "lib/game/result_share_dialog.dart": "dc10d46886b08570a10e0c846eadcf9a9466bcf4de6f7f64f08e7753806a6348",
+    "lib/progression/progress_repository.dart": "d3018d37c901fe4cf94ff7f361aab706d4f40e9404084c1e67bd77171d8631a7",
+    "tools/performance_opportunity_probe_test.dart": "7601cd57db8ed67a7495c7f0837bb712e7db6675620735ff3a73c0c785630e2f"
+  },
+  "observations": [
+    {
+      "shape": "square",
+      "cells": 64,
+      "dropCount": 7,
+      "selectionChanges": 20,
+      "wholeBoardPainterVisits": 20,
+      "staticTextureCellsRepainted": 1280,
+      "instrumentedRouteCellSteps": 19040,
+      "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+    },
+    {
+      "shape": "hex",
+      "cells": 61,
+      "dropCount": 8,
+      "selectionChanges": 20,
+      "wholeBoardPainterVisits": 20,
+      "staticTextureCellsRepainted": 1220,
+      "instrumentedRouteCellSteps": 20960,
+      "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+    },
+    {
+      "storedMatches": 100,
+      "movesPerMatch": 40,
+      "pageLimit": 10,
+      "elapsedMicroseconds": 36240,
+      "retainedReplayPositions": 410,
+      "storedJsonBytes": 342190,
+      "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+    },
+    {
+      "storedMatches": 100,
+      "movesPerMatch": 40,
+      "pageLimit": 20,
+      "elapsedMicroseconds": 32893,
+      "retainedReplayPositions": 820,
+      "storedJsonBytes": 342190,
+      "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+    },
+    {
+      "storedMatches": 100,
+      "movesPerMatch": 40,
+      "pageLimit": 20,
+      "elapsedMicroseconds": 28956,
+      "retainedReplayPositions": 820,
+      "storedJsonBytes": 342190,
+      "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+    },
+    {
+      "storedMatches": 500,
+      "movesPerMatch": 40,
+      "pageLimit": 10,
+      "elapsedMicroseconds": 40330,
+      "retainedReplayPositions": 410,
+      "storedJsonBytes": 1711390,
+      "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+    },
+    {
+      "storedMatches": 500,
+      "movesPerMatch": 40,
+      "pageLimit": 20,
+      "elapsedMicroseconds": 77093,
+      "retainedReplayPositions": 820,
+      "storedJsonBytes": 1711390,
+      "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+    },
+    {
+      "storedMatches": 500,
+      "movesPerMatch": 40,
+      "pageLimit": 20,
+      "elapsedMicroseconds": 55826,
+      "retainedReplayPositions": 820,
+      "storedJsonBytes": 1711390,
+      "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+    }
+  ],
+  "other_source_facts": {
+    "sound_identities": 24,
+    "distinct_sound_asset_paths": 19,
+    "audio_dependency_already_has_shared_asset_cache": true,
+    "native_ai_already_uses_compute": true,
+    "web_ai_already_cooperatively_yields": true,
+    "room_replay_memoized_and_incremental": true,
+    "clock_labels_already_rebuild_independently": true,
+    "piece_painter_compares_visible_fields": true
+  },
+  "priorities": [
+    "Per-build/per-immutable-input board, draft, geometry and palette reuse",
+    "Separate static board material from dynamic overlays; measure zoom/DPR-safe reuse",
+    "Lazy gallery and collection rows, with focus/semantics and name freshness",
+    "Bounded reuse of validated history; demand-driven retained replay positions",
+    "Batch chat cleanup-ID writes; skip equivalent presentation updates",
+    "Narrow remaining reactive subscriptions, preserving confirmation/error signals",
+    "Coalesce equivalent in-flight rank/profile refresh work with identity/generation guards",
+    "Measure bounded sound setup concurrency and independent startup scheduling",
+    "Profile and release obsolete inactive browser audio-buffer references",
+    "Measure and reuse local completion/replay/serialization work without skipping validation",
+    "Investigate stale native search and blocking web segments before worker changes",
+    "Measure cold web transport/code loading and export work before architecture changes"
+  ],
+  "checks": {
+    "diagnostic_probe": {
+      "command": "flutter test --no-pub tools/performance_opportunity_probe_test.dart --reporter expanded",
+      "result": "passed",
+      "cases": 3,
+      "log": "build/qa/performance-opportunities/probe.log",
+      "sha256": "1f94b52642fed247d22c3fcbe3672150ebbc17980d53235c83dd777c7a7ebc30"
+    },
+    "strict_analysis": {
+      "command": "flutter analyze --no-pub --fatal-infos",
+      "result": "passed; no issues",
+      "log": "build/qa/performance-opportunities/analyze.log",
+      "sha256": "d08e6c38d8a4dc548101b70a14d0e13bf10513416e917c860e9383c8ceabfd1d"
+    },
+    "formatting": {
+      "command": "dart format --output=none --set-exit-if-changed tools/performance_opportunity_probe_test.dart",
+      "result": "passed; 0 changes"
+    }
+  },
+  "feature_inventory_update": "No additional supported behavior or documented limitation changed; existing APP-08 contract is unchanged by this exploratory follow-up.",
+  "limits": [
+    "Work counters use synthetic presentation rebuilds on valid spread fixtures; not full human input journeys.",
+    "History timings are one exploratory debug-VM run, not release browser/native-device results.",
+    "Benefit/effort rankings are hypotheses to test; no projected speedup percentages are claimed.",
+    "Native iOS and desktop product qualification require their platform projects/devices; no new platform support is asserted.",
+    "No phone measurements, real-account/backend performance qualification, production writes or deployment."
+  ]
+}

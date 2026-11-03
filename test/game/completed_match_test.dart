@@ -39,6 +39,63 @@ CompletedMatch finished({String? owner, String id = 'game'}) {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  test('validated summaries reuse raw records and release reviews from cache',
+      () async {
+    final storage = CompletedMatchStorage();
+    await storage.save(finished(owner: 'alice'));
+    final first = (await storage.list('alice')).single;
+    expect(first.retainedPositionCount, 1);
+    expect(storage.cachedMatchCount, 1);
+    expect(identical((await storage.list('alice')).single, first), isTrue);
+    final positions = first.positions;
+    expect(first.retainedPositionCount, 3);
+    expect(storage.cachedMatchCount, 0);
+    expect(identical(first.positions, positions), isTrue);
+    expect(() => positions.clear(), throwsUnsupportedError);
+    expect(positions.last, same(first.finalPosition));
+    expect((await storage.list('alice')).single, isNot(same(first)));
+    await storage.list('bob');
+    expect(storage.cachedMatchCount, 0);
+    expect(storage.cachedMetadataCount, 0);
+    expect((await storage.list('alice')).single.retainedPositionCount, 1);
+  });
+
+  test('raw repairs, mutations and removals invalidate bounded history caches',
+      () async {
+    final storage = CompletedMatchStorage();
+    final prefs = await SharedPreferences.getInstance();
+    String key(String id) =>
+        '${CompletedMatchStorage.prefix}${Uri.encodeComponent(jsonEncode([
+              'alice',
+              id
+            ]))}';
+    for (var i = 0; i < 40; i++) {
+      await storage.save(finished(owner: 'alice', id: '$i'));
+    }
+    expect((await storage.list('alice')).length, 40);
+    expect(storage.cachedMatchCount, 32);
+    final original = prefs.getString(key('0'))!;
+    final broken = Map<String, dynamic>.from(jsonDecode(original))
+      ..['moves'] = [
+        {'seat': 'charcoal', 'x': 99, 'y': 99, 'type': 'flat'}
+      ];
+    await prefs.setString(key('0'), jsonEncode(broken));
+    expect((await storage.readPage('alice')).unreadableCount, 1);
+    expect((await storage.readPage('alice')).unreadableCount, 1);
+    await prefs.setString(key('0'), original);
+    expect((await storage.readPage('alice')).unreadableCount, 0);
+    await prefs.setString(key('0'), 'bad json');
+    expect((await storage.readPage('alice')).unreadableCount, 1);
+    await prefs.setString(key('0'), original);
+    expect((await storage.list('alice')).length, 40);
+    for (final id in List.generate(40, (i) => '$i')) {
+      await prefs.remove(key(id));
+    }
+    expect(await storage.list('alice'), isEmpty);
+    expect(storage.cachedMetadataCount, 0);
+    expect(storage.cachedMatchCount, 0);
+  });
+
   test(
       'local cosmetic ownership follows the current account without changing rating ownership',
       () {

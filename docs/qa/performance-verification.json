@@ -1,0 +1,554 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-11-03",
+  "recorded_at_utc": "2026-11-03T06:59:58.478492+00:00",
+  "base_commit": "44c45a1d59d01b91bc2b682bfcde03b6e09e6dbc",
+  "hosted_source": "95439d23502e0e247ccf3e194dc12b928759d14e",
+  "candidate_state": "Uncommitted local source; no push, deployment, Play publication or production data writes.",
+  "environment": {
+    "platform": "Linux managed cloud workspace",
+    "cpu_quota": 2,
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "primary_browser": "Desktop Firefox 153.0",
+    "viewport": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 1,
+    "graphics": "Software; no /dev/dri GPU device",
+    "input": "Wheel; browser semantics enabled"
+  },
+  "inventory_ids_updated": [
+    "APP-08"
+  ],
+  "feature_contracts_verified": [
+    "PREF-01",
+    "PREF-02",
+    "PREF-03",
+    "PREF-04",
+    "PREF-05",
+    "PREF-06",
+    "APP-02",
+    "APP-06",
+    "APP-08"
+  ],
+  "preserved_local_changes": [
+    "analysis_options.yaml"
+  ],
+  "source_sha256": {
+    "lib/main.dart": "6ea2fd0c12ac7f47c160042f47effa561b1383328bf976bc51513d5755db9d44",
+    "lib/screens/settings_screen.dart": "ed7cd2ba78976b0e597c0a385d837769d6d2a27bf5a211bc0abfbe000fa3c532",
+    "lib/widgets/audio_controls.dart": "09e40b73b470e660e4600b08369b6e75e962c0601aaa6fea376f18731835c086",
+    "lib/widgets/theme_gallery.dart": "90bb1cb862673220c8dc02552c0eb3cfa6d409d4aa13ca0148b8d757987da2c3",
+    "test/audit/settings_performance_test.dart": "a4ffad403446ea74667f67f8cb88b55cea221916bd00afd3ae9dac23b3ac6e5d",
+    "test/widgets/theme_sample_cache_test.dart": "67b27cbd195ea0e88a58be51e175578f3c8d7698af72bb211a71fff21180fa31",
+    "test/audio_music_integration_test.dart": "88dc409ea956ed6d68971e76b615913721acab667f2ccb84a76b94a98b06401b",
+    "tools/performance_browser_probe.py": "ea9e2a56b951fa6f95f7368f174c523e9b6c2b10c9a6fafcbbe7aab319c4334b"
+  },
+  "checks": {
+    "full_suite": {
+      "path": "build/qa/performance/final-tests.log",
+      "sha256": "9e34df9a4d7d5844b94d55e183f390f6d5d438fe930759b852103c22d5a68454",
+      "result": "passed",
+      "command": "flutter test --no-pub --concurrency=2 --reporter expanded",
+      "tests": 2070,
+      "scope": "Cache and isolated-consumer candidate; followed by the small screen-scoped async feedback guard and two additional regression cases, qualified by the final focused run."
+    },
+    "final_focused": {
+      "path": "build/qa/performance/final-focused.log",
+      "sha256": "9b813b27c4aef980e7c9c789780191c3322057f374d48f977d7ef8d552859d05",
+      "result": "passed",
+      "command": "flutter test --no-pub test/audit/settings_performance_test.dart test/widgets/theme_sample_cache_test.dart test/audio_music_integration_test.dart --reporter expanded",
+      "tests": 12
+    },
+    "strict_analysis": {
+      "path": "build/qa/performance/final-analyze.log",
+      "sha256": "3169b7517f60547143aa4dcfed01ed87f445879413479da8747e54ee606baaa1",
+      "result": "passed",
+      "command": "flutter analyze --no-pub --fatal-infos"
+    },
+    "release_web": {
+      "path": "build/qa/performance/final-build.log",
+      "sha256": "bf37182314165670dc9046ecb5c78fb5627d1ae883df23dd63037e4a901590c2",
+      "result": "passed",
+      "command": "flutter build web --release --no-pub --base-href /stones/ --no-web-resources-cdn --no-wasm-dry-run",
+      "warning": "Existing missing Cupertino icon-font warning; Material icons remain bundled."
+    },
+    "shared_ai_diagnostic": {
+      "path": "build/qa/performance/ai-probe.log",
+      "sha256": "9d0323feb61cce413d398eb921d30bbaec9e6aa28b780208c099f4e8177a5fc7",
+      "result": "passed",
+      "command": "flutter test --no-pub tools/shared_performance_probe_test.dart --reporter expanded",
+      "tests": 16,
+      "scope": "Cooperative Flutter VM diagnostic under concurrent verification; not browser or phone timing acceptance. The legacy scope string in this tool is not the current runner identity."
+    },
+    "firefox-profile": {
+      "result": "passed",
+      "browser": {
+        "engine": "firefox",
+        "version": "153.0"
+      },
+      "page_errors": 0,
+      "evidence": "build/qa/performance/firefox-profile/results.json",
+      "sha256": "fc5343b76039fdc0f9beef6b37df7603ea7e0132df6ca8b34f7e446cb0dd3cbd",
+      "timing_scope": "Separate diagnostic/functional run with concurrent verification; excluded from the paired comparison."
+    },
+    "chromium-check": {
+      "result": "passed",
+      "browser": {
+        "engine": "chromium",
+        "version": "154.0.8037.57"
+      },
+      "page_errors": 0,
+      "evidence": "build/qa/performance/chromium-check/results.json",
+      "sha256": "ab4e032c79d749a92a6a0aea620b80bd04d533367f2d09f621edb7c0eed70fcb",
+      "timing_scope": "Separate diagnostic/functional run with concurrent verification; excluded from the paired comparison."
+    },
+    "markdown_links": {
+      "result": "passed",
+      "local_targets_checked": 163,
+      "files": [
+        "docs/PERFORMANCE_AUDIT.md",
+        "docs/DEVELOPMENT.md",
+        "docs/SUPPORTED_FEATURES.md"
+      ]
+    },
+    "formatting": {
+      "result": "passed",
+      "command": "dart format --output=none --set-exit-if-changed <7 changed Dart files>",
+      "changed_files": 0
+    },
+    "diff_whitespace": {
+      "result": "passed",
+      "command": "git diff --check"
+    },
+    "python_probe_syntax": {
+      "result": "passed",
+      "command": "python -m py_compile tools/performance_browser_probe.py"
+    }
+  },
+  "deterministic_work_counts": {
+    "scroll_frames": 60,
+    "viewports": [
+      [
+        390,
+        844
+      ],
+      [
+        844,
+        390
+      ],
+      [
+        1366,
+        900
+      ]
+    ],
+    "gallery_sample_paints_before_after": [
+      0,
+      0
+    ],
+    "dialog_sample_paints_before_after": [
+      120,
+      0
+    ],
+    "unrelated_app_rebuilds_before_after": [
+      2,
+      0
+    ],
+    "unrelated_settings_route_rebuilds_before_after": [
+      2,
+      0
+    ]
+  },
+  "rendering_parity": [
+    {
+      "shape": "square",
+      "combinations": 36,
+      "result": "byte-identical",
+      "sha256": "6df90a1acb6bb6bdf61dbbee883ad5ac43498bbd94544bc70866fc294db92075"
+    },
+    {
+      "shape": "hex",
+      "combinations": 36,
+      "result": "byte-identical",
+      "sha256": "24417f7ae90059d07426f9cda5bac12e1534167f998bc5579cc70ddfa6720b67"
+    }
+  ],
+  "preview_cache": {
+    "max_reserved_rgba_bytes": 33554432,
+    "pending_disposal_holds_reservation": true,
+    "native_device_resolution": true,
+    "fallback": "Original full-detail vector painter",
+    "total_browser_memory_bounded": false
+  },
+  "web_artifact_sha256": {
+    "main.dart.js": "122165e6b710eed45bc657f2ef718776e378f9b26bab07cf72c4f51944d35adc",
+    "flutter_bootstrap.js": "5bff2a9e861c7b59410184862f1be33c584ebc360a63541ec46294ade2dfda43"
+  },
+  "final_compiled_web_modules_match_timed_candidate": true,
+  "browser_comparison": {
+    "scope": "Five paired sequential desktop Firefox runs; median of per-run p95 callback gaps; not device FPS or visible-input acceptance.",
+    "steps": 12,
+    "data": {
+      "before": {
+        "browser": {
+          "engine": "firefox",
+          "version": "153.0"
+        },
+        "artifact": {
+          "root": "/workspace/stones/build/performance-before",
+          "sha256": {
+            "main.dart.js": "3435f7bac8ecf61117039cbba1865f5e1083b72b38d85e7a88fee3d10ca7f93b",
+            "flutter_bootstrap.js": "e47709b824fdc8e0f06a148435d8845dff88bb0386df6763778d30119c727bda"
+          }
+        },
+        "scenarios": {
+          "settings-gallery-scroll": {
+            "medianP95AnimationFrameGapMs": 433.21999999999935,
+            "perRunP95Ms": [
+              449.3199999999997,
+              432.65999999999985,
+              433.46000000000095,
+              433.21999999999935,
+              416.65999999999985
+            ],
+            "worstGapMs": 683.0199999999986,
+            "gapsOver100Ms": 142,
+            "samples": 180
+          },
+          "settings-dialog-scroll": {
+            "medianP95AnimationFrameGapMs": 649.6599999999999,
+            "perRunP95Ms": [
+              650.4800000000032,
+              616.9399999999987,
+              649.6599999999999,
+              749.7599999999984,
+              633.6200000000026
+            ],
+            "worstGapMs": 750.7000000000007,
+            "gapsOver100Ms": 110,
+            "samples": 182
+          },
+          "settings-postgame-scroll": {
+            "medianP95AnimationFrameGapMs": 416.95999999999185,
+            "perRunP95Ms": [
+              433.0599999999977,
+              400.09999999999127,
+              433.74000000000524,
+              416.22000000000116,
+              416.95999999999185
+            ],
+            "worstGapMs": 716.3600000000006,
+            "gapsOver100Ms": 131,
+            "samples": 159
+          },
+          "achievements & piece sets-scroll": {
+            "medianP95AnimationFrameGapMs": 66.44000000000233,
+            "perRunP95Ms": [
+              217.3399999999965,
+              66.63999999999942,
+              66.44000000000233,
+              66.41999999999825,
+              50.520000000004075
+            ],
+            "worstGapMs": 283.3600000000006,
+            "gapsOver100Ms": 10,
+            "samples": 200
+          },
+          "learn-scroll": {
+            "medianP95AnimationFrameGapMs": 49.75999999999476,
+            "perRunP95Ms": [
+              49.45999999999185,
+              50.30000000000291,
+              50.179999999993015,
+              49.75999999999476,
+              49.39999999999418
+            ],
+            "worstGapMs": 67.4600000000064,
+            "gapsOver100Ms": 0,
+            "samples": 215
+          },
+          "my games-scroll": {
+            "medianP95AnimationFrameGapMs": 17.20000000001164,
+            "perRunP95Ms": [
+              17.139999999999418,
+              17.180000000007567,
+              17.220000000001164,
+              17.320000000006985,
+              17.20000000001164
+            ],
+            "worstGapMs": 33.21999999998661,
+            "gapsOver100Ms": 0,
+            "samples": 159
+          },
+          "leaderboard-scroll": {
+            "medianP95AnimationFrameGapMs": 33.36000000000058,
+            "perRunP95Ms": [
+              33.18000000000757,
+              33.24000000000524,
+              100.36000000000058,
+              100.72000000000116,
+              33.36000000000058
+            ],
+            "worstGapMs": 299.1600000000035,
+            "gapsOver100Ms": 10,
+            "samples": 201
+          }
+        },
+        "startup": {
+          "freshContextToReadyMs": 1518.1280489996425,
+          "reloadToReadyMs": 1086.9698630003768
+        }
+      },
+      "after": {
+        "browser": {
+          "engine": "firefox",
+          "version": "153.0"
+        },
+        "artifact": {
+          "root": "/workspace/stones/build/web",
+          "sha256": {
+            "main.dart.js": "122165e6b710eed45bc657f2ef718776e378f9b26bab07cf72c4f51944d35adc",
+            "flutter_bootstrap.js": "5bff2a9e861c7b59410184862f1be33c584ebc360a63541ec46294ade2dfda43"
+          }
+        },
+        "scenarios": {
+          "settings-gallery-scroll": {
+            "medianP95AnimationFrameGapMs": 100.59999999999945,
+            "perRunP95Ms": [
+              116.76000000000022,
+              100.10000000000036,
+              100.35999999999967,
+              100.59999999999945,
+              116.90000000000055
+            ],
+            "worstGapMs": 150.1800000000003,
+            "gapsOver100Ms": 25,
+            "samples": 182
+          },
+          "settings-dialog-scroll": {
+            "medianP95AnimationFrameGapMs": 267.2000000000007,
+            "perRunP95Ms": [
+              266.8600000000006,
+              267.2000000000007,
+              267.2399999999998,
+              266.880000000001,
+              282.47999999999956
+            ],
+            "worstGapMs": 283.8799999999992,
+            "gapsOver100Ms": 84,
+            "samples": 147
+          },
+          "settings-postgame-scroll": {
+            "medianP95AnimationFrameGapMs": 100.44000000000233,
+            "perRunP95Ms": [
+              100.62000000000262,
+              100.44000000000233,
+              100.26000000000204,
+              100.22000000000116,
+              100.74000000000524
+            ],
+            "worstGapMs": 117,
+            "gapsOver100Ms": 24,
+            "samples": 182
+          },
+          "achievements & piece sets-scroll": {
+            "medianP95AnimationFrameGapMs": 66.13999999999942,
+            "perRunP95Ms": [
+              67.25999999999476,
+              50.54000000000087,
+              66.13999999999942,
+              50.62000000000262,
+              215.77999999999884
+            ],
+            "worstGapMs": 267.1999999999971,
+            "gapsOver100Ms": 10,
+            "samples": 200
+          },
+          "learn-scroll": {
+            "medianP95AnimationFrameGapMs": 49.700000000004366,
+            "perRunP95Ms": [
+              50.30000000000291,
+              50.320000000006985,
+              49.700000000004366,
+              34.200000000004366,
+              34.18000000000029
+            ],
+            "worstGapMs": 50.580000000001746,
+            "gapsOver100Ms": 0,
+            "samples": 211
+          },
+          "my games-scroll": {
+            "medianP95AnimationFrameGapMs": 17.239999999997963,
+            "perRunP95Ms": [
+              17.19999999999709,
+              17.239999999997963,
+              17.239999999997963,
+              17.360000000000582,
+              17.540000000000873
+            ],
+            "worstGapMs": 183.62000000000262,
+            "gapsOver100Ms": 1,
+            "samples": 159
+          },
+          "leaderboard-scroll": {
+            "medianP95AnimationFrameGapMs": 34.18000000000029,
+            "perRunP95Ms": [
+              99.83999999999651,
+              33.36000000000058,
+              34.18000000000029,
+              116.84000000000378,
+              33.279999999998836
+            ],
+            "worstGapMs": 283.58000000000175,
+            "gapsOver100Ms": 7,
+            "samples": 195
+          }
+        },
+        "startup": {
+          "freshContextToReadyMs": 1537.0795630005887,
+          "reloadToReadyMs": 1086.190969999734
+        }
+      }
+    }
+  },
+  "paired_run_evidence": [
+    {
+      "label": "before-1",
+      "path": "build/qa/performance/before-1/results.json",
+      "sha256": "40d912bb3e8eb2c42f98256f8c68a5f9a3f09642f4b4ff9bac62b7ee4203d8f8",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "before-2",
+      "path": "build/qa/performance/before-2/results.json",
+      "sha256": "7b23cc44360ce3512ece98ba8f34b0680669c8285d008e7bff4cd5f560a8b5e4",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "before-3",
+      "path": "build/qa/performance/before-3/results.json",
+      "sha256": "9711c4466eb3e6d21ee9e6fc66e33d71ab6f5e5fadfa0dbddb4e50d4e84a5dfa",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "before-4",
+      "path": "build/qa/performance/before-4/results.json",
+      "sha256": "282245772d7b9f6b4d91c04bf0a8a62aad25d49e0563f3b592b532f17aa443ef",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "before-5",
+      "path": "build/qa/performance/before-5/results.json",
+      "sha256": "a0e80bdd918ad6fcd01439d0b10baedf7256c03bb9d1b6facaeefab7688eec30",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "after-1",
+      "path": "build/qa/performance/after-1/results.json",
+      "sha256": "4bec5869ecf937b9ef91a962d893ca04162337074391d780783bfcdebbc325e9",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "after-2",
+      "path": "build/qa/performance/after-2/results.json",
+      "sha256": "c6d21661f6f520941aa4ecfd529fc5f547493be60d29a742c74f0c4710b12533",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "after-3",
+      "path": "build/qa/performance/after-3/results.json",
+      "sha256": "8087fc8422b34678a3830e49fc599ce711f105a85e0e0ae772067dcc03c47c89",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "after-4",
+      "path": "build/qa/performance/after-4/results.json",
+      "sha256": "a2b0b4edecd87af6a320b00c8e25184cb874ad17da38f3f4dfb19d1de4c4b8ac",
+      "status": "passed",
+      "pageErrors": 0
+    },
+    {
+      "label": "after-5",
+      "path": "build/qa/performance/after-5/results.json",
+      "sha256": "9a34f0f6e286ab38e93b5d3d62589ae7c1c629a157933203277e1502e83a43a6",
+      "status": "passed",
+      "pageErrors": 0
+    }
+  ],
+  "firefox_profile": {
+    "path": "build/qa/performance/firefox-profile/firefox-profile.json",
+    "sha256": "4486934e81d24783e2d4394c4b9c573ce20c3e2b63bf031c64ec804f26844190",
+    "summary": {
+      "scope": "Separate diagnostic run with profiler and competing tests; not timing acceptance. Leaf sample attribution is unsymbolicated, not a full CPU-cost model.",
+      "intervals": [
+        {
+          "scenario": "settings-gallery-scroll",
+          "samples": 806,
+          "leafSamplesInCanvasKitWasm": 652,
+          "gcOrCycleCollectionMarkers": 0
+        },
+        {
+          "scenario": "settings-dialog-scroll",
+          "samples": 2010,
+          "leafSamplesInCanvasKitWasm": 1889,
+          "gcOrCycleCollectionMarkers": 1
+        },
+        {
+          "scenario": "settings-postgame-scroll",
+          "samples": 1093,
+          "leafSamplesInCanvasKitWasm": 967,
+          "gcOrCycleCollectionMarkers": 1
+        },
+        {
+          "scenario": "achievements & piece sets-scroll",
+          "samples": 629,
+          "leafSamplesInCanvasKitWasm": 495,
+          "gcOrCycleCollectionMarkers": 2
+        },
+        {
+          "scenario": "learn-scroll",
+          "samples": 475,
+          "leafSamplesInCanvasKitWasm": 364,
+          "gcOrCycleCollectionMarkers": 1
+        },
+        {
+          "scenario": "my games-scroll",
+          "samples": 217,
+          "leafSamplesInCanvasKitWasm": 9,
+          "gcOrCycleCollectionMarkers": 0
+        },
+        {
+          "scenario": "leaderboard-scroll",
+          "samples": 340,
+          "leafSamplesInCanvasKitWasm": 251,
+          "gcOrCycleCollectionMarkers": 1
+        }
+      ]
+    }
+  },
+  "hosted_integrity": {
+    "path": "build/qa/performance/hosted-baseline.log",
+    "sha256": "649cb218de6e417a54da7b775e1c2b72275dea41885716c23c41e35d0c869851",
+    "result": "passed",
+    "evidence": "build/qa/performance/hosted-baseline.json",
+    "observed_source": "95439d23502e0e247ccf3e194dc12b928759d14e",
+    "integrity": "passed"
+  },
+  "qualification_limits": [
+    "Reported Android phone model, OS and Firefox version unknown; no physical phone attached.",
+    "Desktop rAF callback gaps are not compositor-dropped frames, phone FPS or verified visible-input latency.",
+    "Physical 60 Hz and p95 visible input <=100 ms acceptance remain open.",
+    "Actual Android GPU/heap/GC and music-on memory, toolbar resizing, TalkBack, background/resume, populated history and live-account/backend performance remain unqualified.",
+    "Native Play Games callback lifetime uses an isolated service; real platform sign-in/restore remains separate."
+  ]
+}

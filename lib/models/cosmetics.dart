@@ -207,7 +207,8 @@ class PiecePalette {
   const PiecePalette(this.name, this.primary, this.border);
   final String name;
   final Color primary, border;
-  PieceColors get colors => PieceColors(
+  static final _colors = Expando<PieceColors>();
+  PieceColors get colors => _colors[this] ??= PieceColors(
         primary: primary,
         secondary: Color.lerp(primary, border, .24)!,
         border: border,

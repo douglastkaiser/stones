@@ -1,3 +1,4 @@
+import '../widgets/lazy_collections.dart';
 import '../game/match_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,172 +87,142 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         ]),
         body: RefreshIndicator(
             onRefresh: () => ref.read(eloProvider.notifier).fetchLeaderboard(),
-            child: ListView(padding: const EdgeInsets.all(16), children: [
-              Center(
-                  child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 840),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text('Find your standing',
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall),
-                            Text(pool.label),
-                            const SizedBox(height: 16),
-                            _select(
-                                'Leaderboard',
-                                pool.isOverall ? 'overall' : 'format',
-                                ['overall', 'format'],
-                                (value) => _pool(value == 'overall'
-                                    ? const RatingPool.overall()
-                                    : RatingPool.standard)),
-                            if (!pool.isOverall)
-                              Wrap(spacing: 12, runSpacing: 12, children: [
-                                _select(
-                                    'Board', pool.shape.name, ['square', 'hex'],
-                                    (value) {
-                                  final shape = BoardShape.values.byName(value);
-                                  _pool(RatingPool(
-                                      shape,
-                                      shape == BoardShape.square ? 5 : 2,
-                                      pool.players,
-                                      shape == BoardShape.square &&
-                                              pool.players == 2
-                                          ? RulesProfile.standardTak
-                                          : RulesProfile.sharedRoads,
-                                      pool.clock));
-                                }),
-                                _select(
-                                    'Size',
-                                    '${pool.size}',
-                                    MatchConfig.sizesFor(pool.shape)
-                                        .map((s) => '$s')
-                                        .toList(),
-                                    (v) => _pool(RatingPool(
-                                        pool.shape,
-                                        int.parse(v),
-                                        pool.players,
-                                        pool.profile,
-                                        pool.clock))),
-                                _select('Players', '${pool.players}',
-                                    ['2', '3', '4'], (v) {
-                                  final players = int.parse(v);
-                                  _pool(RatingPool(
-                                      pool.shape,
-                                      pool.size,
-                                      players,
-                                      pool.shape == BoardShape.square &&
-                                              players == 2
-                                          ? RulesProfile.standardTak
-                                          : RulesProfile.sharedRoads,
-                                      pool.clock));
-                                }),
-                                _select(
-                                    'Clock category',
-                                    pool.clock,
-                                    ['open', 'fast', 'long'],
-                                    (v) => _pool(RatingPool(
-                                        pool.shape,
-                                        pool.size,
-                                        pool.players,
-                                        pool.profile,
-                                        v))),
-                              ]),
-                            const SizedBox(height: 16),
-                            if (state.uid == null)
-                              Card(
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                                'Sign in with Google for your account rating and rank.'),
-                                            TextButton(
-                                                onPressed: () => Navigator.push<
-                                                        void>(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            const SettingsScreen())),
-                                                child: const Text(
-                                                    'Open account settings'))
-                                          ])))
-                            else
-                              Card(
-                                  child: InkWell(
-                                      onTap: () => _openPlayer(own ??
-                                          EloRating(
-                                              id: state.uid!,
-                                              displayName: 'You',
-                                              pool: pool.id)),
-                                      child: Padding(
-                                          padding: const EdgeInsets.all(16),
-                                          child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text('Your standing',
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium),
-                                                Text(own == null
-                                                    ? 'Unrated · complete a rated game'
-                                                    : '${own.ratingLabel} · ${own.provisional ? "Provisional · ${own.gamesPlayed} games" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
-                                                if (own?.uncertaintyLabel !=
-                                                    null)
-                                                  Text(own!.uncertaintyLabel!),
-                                                if (own?.skill != null)
-                                                  Text(own!.confidenceLabel),
-                                                if (own != null)
-                                                  Text(
-                                                      '${own.wins} wins · ${own.losses} losses · ${own.draws} draws'),
-                                              ])))),
-                            if (state.loading) const LinearProgressIndicator(),
-                            if (state.errorMessage != null)
-                              Card(
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(state.errorMessage!),
-                                            TextButton(
-                                                onPressed: () => ref
-                                                    .read(eloProvider.notifier)
-                                                    .fetchLeaderboard(),
-                                                child: const Text('Retry'))
-                                          ]))),
-                            const SizedBox(height: 12),
-                            Wrap(spacing: 8, children: [
-                              for (final filter in ['All', 'Humans', 'AI'])
-                                ChoiceChip(
-                                    label: Text(filter),
-                                    selected: _filter == filter,
-                                    onSelected: (_) =>
-                                        setState(() => _filter = filter)),
-                            ]),
-                            const SizedBox(height: 12),
-                            Text(
-                                '${pool.isOverall ? "Overall" : "Format"} standings · provisional ratings are marked ?'),
-                            if (entries.isEmpty &&
-                                !state.loading &&
-                                state.errorMessage == null)
-                              const Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Text(
-                                      'No rated players in this ladder yet.')),
-                            for (final player in entries)
-                              _entry(
-                                  player,
-                                  player.isAi || player.provisional
-                                      ? null
-                                      : competitionRank(
-                                          player.rating, state.leaderboard),
-                                  state.uid),
-                          ]))),
+            child: ConstrainedListView(maxWidth: 840, children: [
+              Text('Find your standing',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              Text(pool.label),
+              const SizedBox(height: 16),
+              _select(
+                  'Leaderboard',
+                  pool.isOverall ? 'overall' : 'format',
+                  ['overall', 'format'],
+                  (value) => _pool(value == 'overall'
+                      ? const RatingPool.overall()
+                      : RatingPool.standard)),
+              if (!pool.isOverall)
+                Wrap(spacing: 12, runSpacing: 12, children: [
+                  _select('Board', pool.shape.name, ['square', 'hex'], (value) {
+                    final shape = BoardShape.values.byName(value);
+                    _pool(RatingPool(
+                        shape,
+                        shape == BoardShape.square ? 5 : 2,
+                        pool.players,
+                        shape == BoardShape.square && pool.players == 2
+                            ? RulesProfile.standardTak
+                            : RulesProfile.sharedRoads,
+                        pool.clock));
+                  }),
+                  _select(
+                      'Size',
+                      '${pool.size}',
+                      MatchConfig.sizesFor(pool.shape)
+                          .map((s) => '$s')
+                          .toList(),
+                      (v) => _pool(RatingPool(pool.shape, int.parse(v),
+                          pool.players, pool.profile, pool.clock))),
+                  _select('Players', '${pool.players}', ['2', '3', '4'], (v) {
+                    final players = int.parse(v);
+                    _pool(RatingPool(
+                        pool.shape,
+                        pool.size,
+                        players,
+                        pool.shape == BoardShape.square && players == 2
+                            ? RulesProfile.standardTak
+                            : RulesProfile.sharedRoads,
+                        pool.clock));
+                  }),
+                  _select(
+                      'Clock category',
+                      pool.clock,
+                      ['open', 'fast', 'long'],
+                      (v) => _pool(RatingPool(pool.shape, pool.size,
+                          pool.players, pool.profile, v))),
+                ]),
+              const SizedBox(height: 16),
+              if (state.uid == null)
+                Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                  'Sign in with Google for your account rating and rank.'),
+                              TextButton(
+                                  onPressed: () => Navigator.push<void>(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const SettingsScreen())),
+                                  child: const Text('Open account settings'))
+                            ])))
+              else
+                Card(
+                    child: InkWell(
+                        onTap: () => _openPlayer(own ??
+                            EloRating(
+                                id: state.uid!,
+                                displayName: 'You',
+                                pool: pool.id)),
+                        child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Your standing',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium),
+                                  Text(own == null
+                                      ? 'Unrated · complete a rated game'
+                                      : '${own.ratingLabel} · ${own.provisional ? "Provisional · ${own.gamesPlayed} games" : state.rank == null ? "Rank pending" : "Rank #${state.rank}"}'),
+                                  if (own?.uncertaintyLabel != null)
+                                    Text(own!.uncertaintyLabel!),
+                                  if (own?.skill != null)
+                                    Text(own!.confidenceLabel),
+                                  if (own != null)
+                                    Text(
+                                        '${own.wins} wins · ${own.losses} losses · ${own.draws} draws'),
+                                ])))),
+              if (state.loading) const LinearProgressIndicator(),
+              if (state.errorMessage != null)
+                Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(state.errorMessage!),
+                              TextButton(
+                                  onPressed: () => ref
+                                      .read(eloProvider.notifier)
+                                      .fetchLeaderboard(),
+                                  child: const Text('Retry'))
+                            ]))),
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, children: [
+                for (final filter in ['All', 'Humans', 'AI'])
+                  ChoiceChip(
+                      label: Text(filter),
+                      selected: _filter == filter,
+                      onSelected: (_) => setState(() => _filter = filter)),
+              ]),
+              const SizedBox(height: 12),
+              Text(
+                  '${pool.isOverall ? "Overall" : "Format"} standings · provisional ratings are marked ?'),
+              if (entries.isEmpty &&
+                  !state.loading &&
+                  state.errorMessage == null)
+                const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('No rated players in this ladder yet.')),
+              for (final player in entries)
+                _entry(
+                    player,
+                    player.isAi || player.provisional
+                        ? null
+                        : competitionRank(player.rating, state.leaderboard),
+                    state.uid),
             ])));
   }
 

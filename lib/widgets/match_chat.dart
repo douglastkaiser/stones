@@ -50,7 +50,8 @@ class _MatchChatState extends State<MatchChat> {
   }
 
   Future<void> _cleanup({bool finished = false}) async {
-    if (mounted) {
+    if (mounted &&
+        _messages.values.any((m) => !m.expiresAt.isAfter(DateTime.now()))) {
       setState(() => _messages.removeWhere(
           (_, message) => !message.expiresAt.isAfter(DateTime.now())));
     }
@@ -72,26 +73,48 @@ class _MatchChatState extends State<MatchChat> {
       final messages = await _service.receive();
       if (!mounted || widget.finished) return;
       final follow = !_scroll.hasClients || _scroll.position.extentAfter < 40;
-      setState(() {
-        _error = null;
-        _messages.removeWhere(
+      final next = Map<String, ChatMessage>.of(_messages)
+        ..removeWhere(
             (_, message) => message.expiresAt.isBefore(DateTime.now()));
-        for (final message in messages) {
-          _messages[message.id] = message;
-        }
-        while (_messages.length > 100) {
-          _messages.remove(_messages.keys.first);
-        }
-      });
-      if (follow) {
+      for (final message in messages) {
+        next[message.id] = message;
+      }
+      while (next.length > 100) {
+        next.remove(next.keys.first);
+      }
+      final changed = _error != null ||
+          next.length != _messages.length ||
+          next.entries.any((entry) {
+            final old = _messages[entry.key];
+            final value = entry.value;
+            return old == null ||
+                old.sender != value.sender ||
+                old.text != value.text ||
+                old.createdAt != value.createdAt ||
+                old.expiresAt != value.expiresAt;
+          });
+      if (changed) {
+        setState(() {
+          _error = null;
+          _messages
+            ..clear()
+            ..addAll(next);
+        });
+      }
+      if (follow && changed) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _scroll.hasClients) {
             _scroll.jumpTo(_scroll.position.maxScrollExtent);
           }
         });
+      } else if (follow &&
+          _scroll.hasClients &&
+          _scroll.position.extentAfter > 0) {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Chat unavailable. Retrying…');
+      const error = 'Chat unavailable. Retrying…';
+      if (mounted && _error != error) setState(() => _error = error);
     } finally {
       _polling = false;
     }

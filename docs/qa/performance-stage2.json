@@ -1,0 +1,845 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-03T16:32:47.132239+00:00",
+  "base_commit": "44c45a1d59d01b91bc2b682bfcde03b6e09e6dbc",
+  "scope": "Stage two on top of the settings candidate. Addresses opportunities 1\u20135; finite gallery/grid pilots excluded after measurement. No publication or physical-device qualification.",
+  "environment": {
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "host": "Managed Linux, 2 CPU quota; software graphics",
+    "browser": {
+      "engine": "firefox",
+      "version": "153.0"
+    },
+    "viewport": [
+      390,
+      844
+    ],
+    "device_pixel_ratio": 1,
+    "semantics_enabled": true,
+    "scroll_steps": 12,
+    "scenario_settling_wait_ms": 1000,
+    "production_account_database_analytics_blocked": true
+  },
+  "source": {
+    "all_lib_dart_files": 206,
+    "all_lib_dart_manifest_sha256": "dad54da3af6abfcf48214f1408a36abdfd3d264bb40ef8b073066ed51b56714f",
+    "changed_runtime_files_since_stage2_baseline": {
+      "lib/game/board_view.dart": {
+        "before": "8e67b152ba7076389d8fe40bafbe8a4587709507a0d0220e16183ae5cbf4ecf3",
+        "after": "a3084e89e5a6910342556ff8cad8307b2c56276c124f9c57906461853e331862"
+      },
+      "lib/game/completed_match.dart": {
+        "before": "1bf8e2e111e4173e5a0fe0fa97e77ad6fcf7de3925f926d38505c2b277acb5be",
+        "after": "ae58df646ff2185749e780ede5018a9260c27dba335bf23fc109ef29646085b5"
+      },
+      "lib/game/move_selection.dart": {
+        "before": "0215534ba38e43370d076325afe6bd6f5723c8f196e32febd02b01f7e72f38bb",
+        "after": "d41a62accf2b8f57593497c45da85e8228b19a0715b381cdfaa6cf01ea88b389"
+      },
+      "lib/models/cosmetics.dart": {
+        "before": "2d6a25142840cb78b6970a2d344d7c726e5712d62fbf165e740f7e9e552c8703",
+        "after": "eb7c42775f06906d32de76aff2ad1afd2a32f33a263d60287db5dbff2e468fd5"
+      },
+      "lib/screens/leaderboard_screen.dart": {
+        "before": "e25af84def4ce7353c3813d3acfd33741120ebd69810831c2e038f29353500c9",
+        "after": "ef0c903246c3a0ab1a90c60deb2cf51fc2928ccd4d7492a8ccafa8731545b4b4"
+      },
+      "lib/screens/saved_games_screen.dart": {
+        "before": "57f2b7f813718f5e73b3a6b243daa6418d26f4f2a01a381d8176e4760947f72f",
+        "after": "bd0a2e9de17b5871a4dc26cb901a737da7b662da898edb8d66a0076729cf4437"
+      },
+      "lib/services/match_chat_service.dart": {
+        "before": "0f8b69cf3e89448863962069bec431ea169bdb04bb704d919e87b133802f0593",
+        "after": "4dd16fe3f47820e648a22e9bcb2de359d58a613115d9b9c685bab8729292fc95"
+      },
+      "lib/widgets/lazy_collections.dart": {
+        "before": null,
+        "after": "728f61d1c936347d21c19b989a0616f09458ac0cd509111ed18ab21fd3ee947b"
+      },
+      "lib/widgets/match_chat.dart": {
+        "before": "1eb0fa064fb6759667ce64d53991567c8cd8f499fe046e30ef838bd3049fb96c",
+        "after": "35668e160df3f22e72d5f3efbbcda06dde65f01eda9fe36451818c0ecaed9096"
+      },
+      "lib/widgets/saved_online_games.dart": {
+        "before": "1d213d71ca0ee9674ba9bcb205f7c23a7c0ab5877784c0a0dce8d49d7721f835",
+        "after": "2c0a373af1cdb56a4a785f7dde510af2899893b9d989b9c824bafe8715c27a5e"
+      }
+    },
+    "probe_sha256": "79275bdf6f74c63b8ac1ce54e0e6edb219fca3f960c42d7ad6a6316c1ee95b5e",
+    "render_probe_sha256": "ec7caf725860df0e4d215ede3441817e69c19243b813487517ffeb8ebce3403f",
+    "browser_probe_sha256": "2482179fe858bcffb7e5e671956211e4dc09c8ae992b5916e21758b12f68585b"
+  },
+  "artifacts": {
+    "before": {
+      "root": "build/performance-stage2-before",
+      "sha256": {
+        "main.dart.js": "122165e6b710eed45bc657f2ef718776e378f9b26bab07cf72c4f51944d35adc",
+        "flutter_bootstrap.js": "5bff2a9e861c7b59410184862f1be33c584ebc360a63541ec46294ade2dfda43"
+      }
+    },
+    "after": {
+      "root": "build/web",
+      "sha256": {
+        "main.dart.js": "449b0e796fc61f972c5139562eed531c081d392ef1295e5023d5ddc359cbff0b",
+        "flutter_bootstrap.js": "e47709b824fdc8e0f06a148435d8845dff88bb0386df6763778d30119c727bda"
+      }
+    }
+  },
+  "verification": {
+    "full_suite": {
+      "passed": 2081,
+      "concurrency": 2,
+      "log": "build/qa/performance-stage2/full-tests.log",
+      "scope": "Before the final saved-shortcut keepalive/key guards; shared model/rules/rendering source unchanged afterward"
+    },
+    "final_affected_suites": {
+      "passed": 55,
+      "log": "build/qa/performance-stage2/final-collection-lifecycle.log",
+      "scope": "Exact final saved-shortcut/list lifecycle, keyboard, recovery, standings and community UI source"
+    },
+    "strict_analysis": "passed, no issues",
+    "release_web": "passed, JS CanvasKit; existing wasm dry-run incompatibility/font warnings do not qualify wasm",
+    "render_pngs": {
+      "compared": 216,
+      "byte_identical": true,
+      "matrix": "2 shapes \u00d7 3 sizes \u00d7 6 board themes \u00d7 6 piece styles, dense overlapping highlights",
+      "png_manifest_sha256": "aaf6197e34b36c9f0477b07175aca5e04d52b57af9f76c048679e70f5626caae"
+    },
+    "firefox_paired_journeys": 5,
+    "firefox_page_errors": 0,
+    "final_chromium_journey": "passed, no page errors",
+    "targeted_coverage_across_full_and_final_focused_suites": [
+      "board_render_cache_test.dart",
+      "lazy_collections_test.dart",
+      "chat_batching_test.dart",
+      "match_chat_lifecycle_test.dart",
+      "completed_match_test.dart",
+      "move_selection_test.dart",
+      "rating_system_test.dart",
+      "settings_performance_test.dart"
+    ],
+    "preserved_preexisting_analysis_options_diff": true
+  },
+  "rejected_gallery_lazy_pilot": {
+    "reason": "Two candidate Firefox journeys regressed settings/gallery callback gaps despite passing correctness tests. Reverted to prior cached gallery before final qualification.",
+    "raw_evidence": "build/qa/performance-stage2/rejected-gallery-lazy/",
+    "before_gallery_p95_raf_ms": 100.9,
+    "candidate_gallery_p95_raf_ms": [
+      216.8,
+      233.4
+    ],
+    "before_postgame_p95_raf_ms": 100.6,
+    "candidate_postgame_p95_raf_ms": [
+      216.8,
+      217.5
+    ]
+  },
+  "rejected_achievement_grid_pilot": {
+    "reason": "Mixed scroll timing and avoidable row rebuilding; finite grid restored, responsive-row prototype excluded.",
+    "raw_evidence": "build/qa/performance-stage2/rejected-achievement-lazy/",
+    "before_median_per_run_p95_raf_ms": 67.0,
+    "candidate_median_per_run_p95_raf_ms": 83.5
+  },
+  "work_probes": {
+    "before": [
+      {
+        "collections": {
+          "mountedSettingsSamples": 6,
+          "mountedAchievementCards": 25,
+          "mountedLeaderboardRows": 50
+        },
+        "square": {
+          "shape": "square",
+          "cells": 64,
+          "dropCount": 7,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 1280,
+          "staticTextureCellReplays": 1280,
+          "instrumentedRouteCellSteps": 19040,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "hex": {
+          "shape": "hex",
+          "cells": 61,
+          "dropCount": 8,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 1220,
+          "staticTextureCellReplays": 1220,
+          "instrumentedRouteCellSteps": 20960,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "history": [
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 36708,
+            "retainedReplayPositions": 410,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 42218,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 48427,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 64951,
+            "retainedReplayPositions": 410,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 91732,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 59596,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          }
+        ]
+      },
+      {
+        "collections": {
+          "mountedSettingsSamples": 6,
+          "mountedAchievementCards": 25,
+          "mountedLeaderboardRows": 50
+        },
+        "square": {
+          "shape": "square",
+          "cells": 64,
+          "dropCount": 7,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 1280,
+          "staticTextureCellReplays": 1280,
+          "instrumentedRouteCellSteps": 19040,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "hex": {
+          "shape": "hex",
+          "cells": 61,
+          "dropCount": 8,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 1220,
+          "staticTextureCellReplays": 1220,
+          "instrumentedRouteCellSteps": 20960,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "history": [
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 31703,
+            "retainedReplayPositions": 410,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 32989,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 30430,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 42055,
+            "retainedReplayPositions": 410,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 65068,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 61140,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          }
+        ]
+      },
+      {
+        "collections": {
+          "mountedSettingsSamples": 6,
+          "mountedAchievementCards": 25,
+          "mountedLeaderboardRows": 50
+        },
+        "square": {
+          "shape": "square",
+          "cells": 64,
+          "dropCount": 7,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 1280,
+          "staticTextureCellReplays": 1280,
+          "instrumentedRouteCellSteps": 19040,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "hex": {
+          "shape": "hex",
+          "cells": 61,
+          "dropCount": 8,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 1220,
+          "staticTextureCellReplays": 1220,
+          "instrumentedRouteCellSteps": 20960,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "history": [
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 33934,
+            "retainedReplayPositions": 410,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 34668,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 33266,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 36349,
+            "retainedReplayPositions": 410,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 84544,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 54870,
+            "retainedReplayPositions": 820,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          }
+        ]
+      }
+    ],
+    "after": [
+      {
+        "collections": {
+          "mountedSettingsSamples": 6,
+          "mountedAchievementCards": 25,
+          "mountedLeaderboardRows": 3
+        },
+        "square": {
+          "shape": "square",
+          "cells": 64,
+          "dropCount": 7,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 0,
+          "staticTextureCellReplays": 1280,
+          "instrumentedRouteCellSteps": 140,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "hex": {
+          "shape": "hex",
+          "cells": 61,
+          "dropCount": 8,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 0,
+          "staticTextureCellReplays": 1220,
+          "instrumentedRouteCellSteps": 160,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "history": [
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 32660,
+            "retainedReplayPositions": 10,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 16223,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 707,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 40830,
+            "retainedReplayPositions": 10,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 17150,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 2198,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          }
+        ]
+      },
+      {
+        "collections": {
+          "mountedSettingsSamples": 6,
+          "mountedAchievementCards": 25,
+          "mountedLeaderboardRows": 3
+        },
+        "square": {
+          "shape": "square",
+          "cells": 64,
+          "dropCount": 7,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 0,
+          "staticTextureCellReplays": 1280,
+          "instrumentedRouteCellSteps": 140,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "hex": {
+          "shape": "hex",
+          "cells": 61,
+          "dropCount": 8,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 0,
+          "staticTextureCellReplays": 1220,
+          "instrumentedRouteCellSteps": 160,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "history": [
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 33793,
+            "retainedReplayPositions": 10,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 32776,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 715,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 46921,
+            "retainedReplayPositions": 10,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 19086,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 2131,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          }
+        ]
+      },
+      {
+        "collections": {
+          "mountedSettingsSamples": 6,
+          "mountedAchievementCards": 25,
+          "mountedLeaderboardRows": 3
+        },
+        "square": {
+          "shape": "square",
+          "cells": 64,
+          "dropCount": 7,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 0,
+          "staticTextureCellReplays": 1280,
+          "instrumentedRouteCellSteps": 140,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "hex": {
+          "shape": "hex",
+          "cells": 61,
+          "dropCount": 8,
+          "selectionChanges": 20,
+          "wholeBoardPainterVisits": 20,
+          "staticTextureCellCommandRecordings": 0,
+          "staticTextureCellReplays": 1220,
+          "instrumentedRouteCellSteps": 160,
+          "scope": "Legal spread fixture; VM paint/work counts, not FPS"
+        },
+        "history": [
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 31717,
+            "retainedReplayPositions": 10,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 17966,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 100,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 708,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 342190,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 10,
+            "elapsedMicroseconds": 41337,
+            "retainedReplayPositions": 10,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 26335,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          },
+          {
+            "storedMatches": 500,
+            "movesPerMatch": 40,
+            "pageLimit": 20,
+            "elapsedMicroseconds": 2361,
+            "retainedReplayPositions": 20,
+            "storedJsonBytes": 1711390,
+            "scope": "Mock preferences, Flutter VM; not browser/native device latency"
+          }
+        ]
+      }
+    ]
+  },
+  "browser_comparison": {
+    "scope": "Five sequential pairs, alternate before/after order, 1000 ms settling before each warmed-scroll sample, no competing test/compiler/browser. Callback gaps are diagnostic, not compositor FPS or verified visible input latency.",
+    "scenarios": {
+      "settings-gallery-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            116.05999999999949,
+            100.15999999999985,
+            100.07999999999993,
+            100.65999999999985,
+            100.46000000000004
+          ],
+          "median_per_run_p95_raf_gap_ms": 100.46000000000004
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            100.63999999999942,
+            100.73999999999978,
+            100.25999999999931,
+            100.72000000000116,
+            100.68000000000029
+          ],
+          "median_per_run_p95_raf_gap_ms": 100.68000000000029
+        }
+      },
+      "settings-dialog-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            283.6399999999994,
+            266.4599999999991,
+            267,
+            283.2599999999984,
+            266.9400000000005
+          ],
+          "median_per_run_p95_raf_gap_ms": 267
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            283.84000000000015,
+            283.2600000000002,
+            267.3600000000006,
+            299.97999999999956,
+            283.6399999999994
+          ],
+          "median_per_run_p95_raf_gap_ms": 283.6399999999994
+        }
+      },
+      "settings-postgame-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            100.72000000000116,
+            100.66000000000349,
+            100.61999999999534,
+            100.54000000000087,
+            100.26000000000204
+          ],
+          "median_per_run_p95_raf_gap_ms": 100.61999999999534
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            116.84000000000378,
+            100.72000000000116,
+            100.4800000000032,
+            100.40000000000146,
+            100.58000000000175
+          ],
+          "median_per_run_p95_raf_gap_ms": 100.58000000000175
+        }
+      },
+      "achievements & piece sets-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            50.30000000000291,
+            50.45999999999913,
+            50.54000000000087,
+            50.61999999999534,
+            50.36000000000058
+          ],
+          "median_per_run_p95_raf_gap_ms": 50.45999999999913
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            50.520000000004075,
+            50.44000000000233,
+            83.16000000000349,
+            50.37999999999738,
+            66.5
+          ],
+          "median_per_run_p95_raf_gap_ms": 50.520000000004075
+        }
+      },
+      "learn-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            50.36000000000058,
+            49.279999999998836,
+            49.54000000000087,
+            49.720000000001164,
+            49.279999999998836
+          ],
+          "median_per_run_p95_raf_gap_ms": 49.54000000000087
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            33.63999999999942,
+            34.220000000001164,
+            33.9600000000064,
+            34.220000000001164,
+            49.61999999999534
+          ],
+          "median_per_run_p95_raf_gap_ms": 34.220000000001164
+        }
+      },
+      "my games-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            17.139999999999418,
+            17.159999999996217,
+            17.220000000001164,
+            17.160000000003492,
+            17.139999999999418
+          ],
+          "median_per_run_p95_raf_gap_ms": 17.159999999996217
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            17.18000000000029,
+            17.159999999996217,
+            17.219999999993888,
+            17.31999999999971,
+            17.18000000000029
+          ],
+          "median_per_run_p95_raf_gap_ms": 17.18000000000029
+        }
+      },
+      "leaderboard-scroll": {
+        "before": {
+          "per_run_p95_raf_gap_ms": [
+            33.13999999999942,
+            33.38000000000466,
+            33.220000000001164,
+            33.220000000001164,
+            33.23999999999796
+          ],
+          "median_per_run_p95_raf_gap_ms": 33.220000000001164
+        },
+        "after": {
+          "per_run_p95_raf_gap_ms": [
+            33.28000000000611,
+            32.720000000001164,
+            17.160000000003492,
+            17.37999999999738,
+            17.24000000000524
+          ],
+          "median_per_run_p95_raf_gap_ms": 17.37999999999738
+        }
+      }
+    },
+    "median_startup_ms": {
+      "before": {
+        "freshContext": 1534.5177769995644,
+        "reload": 1117.30327999976
+      },
+      "after": {
+        "freshContext": 1557.7910620013427,
+        "reload": 1114.70624300091
+      }
+    }
+  },
+  "navigation_overlap_diagnostic": {
+    "raw_evidence": "build/qa/performance-stage2/navigation-overlap/",
+    "interpretation": "Earlier list samples overlapped route transitions and are separate from the final warmed-scroll comparison; do not treat protocol changes as app gains."
+  },
+  "limits": [
+    "No physical Android Firefox/Chrome/native Android timing or memory/battery qualification",
+    "No Safari/WebKit or real assistive-technology qualification",
+    "No live populated cloud/backend fault journey in browser comparison",
+    "Opportunities 6\u201312 remain measurement-gated; no AI strength/channel/renderer/storage-format changes"
+  ],
+  "feature_contracts_updated": [
+    "APP-08",
+    "SAVE-03",
+    "SAVE-04",
+    "ONLINE-06"
+  ]
+}

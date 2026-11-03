@@ -16,6 +16,10 @@ class MoveSelection {
   final List<int> _drops = [];
   final List<(List<int>, Step?)> _history = [];
   String? feedback;
+  (MatchState, Cell?, int, Step?, MatchMove?)? _previewKey;
+  List<int> _previewDrops = const [];
+  MatchState? _previewPosition;
+  List<Stone> _previewHand = const [];
 
   List<int> get drops => List.unmodifiable(_drops);
   int get dropped => _drops.fold(0, (sum, value) => sum + value);
@@ -42,20 +46,46 @@ class MoveSelection {
     _drops.clear();
     _history.clear();
     feedback = null;
+    _previewKey = null;
+    _previewPosition = null;
+    _previewHand = const [];
+    _previewDrops = const [];
   }
 
   static Cell end(MatchMove move) => move.end;
 
-  MatchState? preview(MatchState game) => source != null
-      ? MatchRules.previewSpread(game, source!, carry, direction, _drops)
-          .position
-      : _placement == null
-          ? null
-          : MatchRules.apply(game, _placement!);
+  void _resolvePreview(MatchState game) {
+    final key = (game, source, carry, direction, _placement);
+    var sameDrops = _previewDrops.length == _drops.length;
+    for (var i = 0; sameDrops && i < _drops.length; i++) {
+      sameDrops = _previewDrops[i] == _drops[i];
+    }
+    if (_previewKey == key && sameDrops) return;
+    _previewKey = key;
+    _previewDrops = List.of(_drops);
+    if (source != null) {
+      final spread =
+          MatchRules.previewSpread(game, source!, carry, direction, _drops);
+      _previewPosition = spread.position;
+      _previewHand = List.unmodifiable(spread.hand);
+    } else {
+      _previewPosition =
+          _placement == null ? null : MatchRules.apply(game, _placement!);
+      _previewHand = const [];
+    }
+  }
 
-  List<Stone> hand(MatchState game) => source == null
-      ? const []
-      : MatchRules.previewSpread(game, source!, carry, direction, _drops).hand;
+  MatchState? preview(MatchState game) {
+    _resolvePreview(game);
+    return _previewPosition;
+  }
+
+  List<Stone> hand(MatchState game) {
+    if (source == null) return const [];
+    _resolvePreview(game);
+    // Retain the fresh, independently mutable list returned by this API.
+    return List.of(_previewHand);
+  }
 
   void inspect(MatchState game, Cell cell) {
     if (game.stackAt(cell).isNotEmpty) inspected = cell;

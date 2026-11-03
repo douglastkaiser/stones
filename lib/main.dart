@@ -109,6 +109,8 @@ class StonesApp extends ConsumerStatefulWidget {
 
 class _StonesAppState extends ConsumerState<StonesApp>
     with WidgetsBindingObserver {
+  late final _lightTheme = TavernTheme.build(Brightness.light);
+  late final _darkTheme = TavernTheme.build(Brightness.dark);
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   final _navigator = GlobalKey<NavigatorState>();
   final _history = AppHistoryObserver();
@@ -174,7 +176,7 @@ class _StonesAppState extends ConsumerState<StonesApp>
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(appSettingsProvider);
+    final themeMode = ref.watch(appSettingsProvider.select((s) => s.themeMode));
 
     ref.listen(ratingStatusProvider, (previous, next) {
       if (previous != next) ref.invalidate(eliteThemeEligibilityProvider);
@@ -193,9 +195,9 @@ class _StonesAppState extends ConsumerState<StonesApp>
       builder: (context, child) =>
           AudioControls(navigator: _navigator, child: child!),
       title: 'Stones',
-      theme: TavernTheme.build(Brightness.light),
-      darkTheme: TavernTheme.build(Brightness.dark),
-      themeMode: settings.themeMode,
+      theme: _lightTheme,
+      darkTheme: _darkTheme,
+      themeMode: themeMode,
       routes: {'/': (_) => const MainMenuScreen()},
       onGenerateInitialRoutes: (route) => initialInvitationRoutes(route,
           home: const MainMenuScreen(), browserUri: kIsWeb ? Uri.base : null),

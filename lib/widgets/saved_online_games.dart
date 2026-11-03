@@ -13,7 +13,12 @@ class SavedOnlineGames extends ConsumerStatefulWidget {
   ConsumerState<SavedOnlineGames> createState() => _SavedOnlineGamesState();
 }
 
-class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames> {
+class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames>
+    with AutomaticKeepAliveClientMixin<SavedOnlineGames> {
+  // A pending resume or error survives history scrolling, as in the original
+  // single-column page. The section is released when the page is disposed.
+  @override
+  bool get wantKeepAlive => true;
   String? _loading;
   String? _error;
 
@@ -58,6 +63,7 @@ class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final rooms = ref.watch(savedRoomsProvider);
     if (rooms.isEmpty && _error == null) return const SizedBox.shrink();
     return Padding(

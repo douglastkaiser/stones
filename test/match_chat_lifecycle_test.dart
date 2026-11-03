@@ -6,7 +6,8 @@ import 'package:stones/widgets/match_chat.dart';
 class _Chat extends MatchChatService {
   _Chat() : super('room', 'uid');
   int cleanups = 0, receives = 0, finishes = 0;
-  bool closed = false, failCleanup = false;
+  bool closed = false, failCleanup = false, failReceive = false;
+  List<ChatMessage> messages = [];
   @override
   Future<void> cleanup({bool finished = false}) async {
     cleanups++;
@@ -17,7 +18,8 @@ class _Chat extends MatchChatService {
   @override
   Future<List<ChatMessage>> receive() async {
     receives++;
-    return [];
+    if (failReceive) throw StateError('offline');
+    return messages;
   }
 
   @override
@@ -28,6 +30,63 @@ class _Chat extends MatchChatService {
 }
 
 void main() {
+  testWidgets(
+      'quiet polls avoid rebuilds but preserve updates, recovery and expiry',
+      (tester) async {
+    final chat = _Chat();
+    final now = DateTime.now();
+    chat.messages = [
+      ChatMessage('1', 'uid', 'hello', now, now.add(const Duration(minutes: 5)))
+    ];
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: MatchChat(
+                room: 'room',
+                uid: 'uid',
+                names: const {'uid': 'Alice'},
+                serviceFactory: (_, __) => chat))));
+    await tester.tap(find.text('Game chat'));
+    await tester.pumpAndSettle();
+    var builds = 0;
+    debugOnRebuildDirtyWidget = (element, builtOnce) {
+      if (element.widget is MatchChat) builds++;
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+    await tester.pump(const Duration(seconds: 3));
+    expect(builds, 0);
+    expect(find.text('Alice: hello'), findsOneWidget);
+    chat.failReceive = true;
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(find.text('Chat unavailable. Retrying…'), findsOneWidget);
+    builds = 0;
+    await tester.pump(const Duration(seconds: 3));
+    expect(builds, 0);
+    chat.failReceive = false;
+    chat.messages = [
+      ChatMessage(
+          '1', 'uid', 'updated', now, now.add(const Duration(minutes: 5)))
+    ];
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(find.text('Alice: updated'), findsOneWidget);
+    expect(find.text('Chat unavailable. Retrying…'), findsNothing);
+    chat.messages = [
+      ChatMessage('expired', 'uid', 'temporary', now,
+          now.subtract(const Duration(seconds: 1)))
+    ];
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    chat.messages = [];
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(find.text('Alice: temporary'), findsNothing);
+    expect(find.text('Alice: updated'), findsOneWidget);
+    debugOnRebuildDirtyWidget = null;
+    await tester.pumpWidget(const SizedBox());
+    expect(chat.closed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
       'collapsed chat cleans expiry IDs without polling messages; finish and dispose stop timers',
       (tester) async {
