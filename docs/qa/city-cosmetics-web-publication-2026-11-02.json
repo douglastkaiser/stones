@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-11-03T03:32:15.537970+00:00",
+  "applicationSource": "95439d23502e0e247ccf3e194dc12b928759d14e",
+  "site": "https://www.douglastkaiser.com/stones/",
+  "ci": {
+    "run": 41520052627,
+    "twoConsecutiveCompletePasses": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "url": "https://github.com/douglastkaiser/stones/actions/runs/41520052627/attempts/1",
+        "jobsPassed": 12,
+        "flutterTests": 2061,
+        "releaseToolTests": 83,
+        "strictAnalysis": "passed",
+        "jobs": [
+          "Analyze & Test",
+          "Promotional kit",
+          "Compile Android",
+          "Build Web",
+          "Build emulator application",
+          "Browser player journeys",
+          "Account checks (webkit)",
+          "Account checks (chromium)",
+          "Account checks (firefox)",
+          "Production auth recovery (webkit)",
+          "Production auth recovery (chromium)",
+          "Production auth recovery (firefox)"
+        ]
+      },
+      {
+        "attempt": 2,
+        "url": "https://github.com/douglastkaiser/stones/actions/runs/41520052627/attempts/2",
+        "jobsPassed": 12,
+        "flutterTests": 2061,
+        "releaseToolTests": 83,
+        "strictAnalysis": "passed",
+        "jobs": [
+          "Analyze & Test",
+          "Promotional kit",
+          "Compile Android",
+          "Build Web",
+          "Build emulator application",
+          "Account checks (webkit)",
+          "Account checks (chromium)",
+          "Account checks (firefox)",
+          "Browser player journeys",
+          "Production auth recovery (firefox)",
+          "Production auth recovery (chromium)",
+          "Production auth recovery (webkit)"
+        ]
+      }
+    ]
+  },
+  "firestoreCi": {
+    "run": 41520052631,
+    "testsPassed": 159,
+    "conclusion": "success"
+  },
+  "deployment": {
+    "run": 41527422590,
+    "url": "https://github.com/douglastkaiser/stones/actions/runs/41527422590",
+    "conclusion": "success",
+    "artifact": "web-build-95439d23502e0e247ccf3e194dc12b928759d14e-2",
+    "publishedAtUtc": "2026-11-02T21:21:45Z",
+    "publishingCommit": "77744b2643f05975f50f097c63265759a7360861",
+    "hostedVerification": [
+      {
+        "browser": "firefox",
+        "conclusion": "success"
+      },
+      {
+        "browser": "webkit",
+        "conclusion": "success"
+      },
+      {
+        "browser": "chromium",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "liveVerification": {
+    "observedAtUtc": "2026-11-03T03:31:13.608315+00:00",
+    "source": "95439d23502e0e247ccf3e194dc12b928759d14e",
+    "integrity": "passed",
+    "retainedStartupPairs": 2,
+    "currentStartupPair": [
+      "flutter_bootstrap.2b0aead83dc1274622df.js",
+      "main.9bd5606de12571f87796.dart.js"
+    ],
+    "cosmeticsBrowser": [
+      {
+        "viewport": [
+          390,
+          844
+        ],
+        "status": "passed",
+        "pageErrors": [],
+        "checks": [
+          "Board/Pieces navigation",
+          "locked requirements",
+          "four players and three types",
+          "Square and Hex previews",
+          "Jaipur temporary requirement",
+          "no preference writes"
+        ]
+      },
+      {
+        "viewport": [
+          1366,
+          900
+        ],
+        "status": "passed",
+        "pageErrors": [],
+        "checks": [
+          "Board/Pieces navigation",
+          "locked requirements",
+          "four players and three types",
+          "Square and Hex previews",
+          "Jaipur temporary requirement",
+          "no preference writes",
+          "keyboard preview activation"
+        ]
+      }
+    ],
+    "cosmeticsBrowserProductionBackendTraffic": "blocked; no customer writes"
+  },
+  "backend": {
+    "ruleset": "projects/stones-9a6a0/rulesets/a7dead50-87d9-4de6-95b8-b65fb5cc9905",
+    "rulesSha256": "6d1bbbcb5caf41976d5c1064bb2cadb72a106e98c36c0ad7240627e7f22ddbee",
+    "finalReadbackAtUtc": "2026-11-03T03:31:24.423Z",
+    "indexesUnchanged": true,
+    "fieldOverridesUnchanged": true,
+    "allSixIndexesReady": true,
+    "evidence": "city-cosmetics-firestore-2026-11-02.json"
+  },
+  "rollback": {
+    "previousApplicationSource": "66443b2492a1f458c17e56d60b5f8fe400f6ad55",
+    "artifact": {
+      "name": "rollback-95439d23502e0e247ccf3e194dc12b928759d14e-41527422590-1",
+      "id": 13180277707,
+      "digest": "sha256:e29465f39b4002799d485179f90d215714faad94ff5335b896e6b10306e303f9",
+      "url": "https://github.com/douglastkaiser/stones/actions/runs/41527422590/artifacts/13180277707"
+    },
+    "retentionDays": 90,
+    "ruleset": "projects/stones-9a6a0/rulesets/c94c6cca-e1d8-40cf-a43a-c17191ec4785",
+    "rulesSha256": "4484497f34b7306346a85d8eaaae6bd95a2e0990e8b5ace2b6baecf78a5c20f4"
+  },
+  "compatibility": {
+    "newOnlineJaipurPieceWritersEnabled": false,
+    "localJaipurAvailableToEligibleOwner": true,
+    "jaipurBoardAvailableOnlineToEligibleHost": true,
+    "newOnlineJaipurPieceSelectionUses": "Porto",
+    "existingRoomCosmeticsRewritten": false
+  },
+  "android": {
+    "ciDebugCompilation": "passed in both attempts",
+    "signedReleaseStarted": false,
+    "playUploadPerformed": false,
+    "publication": "deferred by owner"
+  },
+  "additionalChecks": {
+    "localCompatibilityChecks": 46,
+    "futureWriterFlagChecks": 14,
+    "emulatorPlayerJourneys": "passed",
+    "emulatorChatDeliveryAndNoHistory": "passed"
+  },
+  "qualificationLimits": {
+    "physicalDeviceChecks": "not performed",
+    "physicalScreenReaderChecks": "not performed",
+    "realGoogleCredentialExchange": "not performed",
+    "uncoachedHumanReadabilityStudy": "not performed"
+  },
+  "inventoryIds": [
+    "ACCOUNT-08",
+    "ACCOUNT-09",
+    "ACCOUNT-12",
+    "PREF-03",
+    "APP-09"
+  ],
+  "followupScope": "Release records and a manually verified chat-probe selector only; published runtime remains the twice-qualified application source."
+}

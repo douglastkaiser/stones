@@ -551,8 +551,9 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   piece wire identifier; older clients require the tolerant-reader release before
   new clients write it. Shared and legacy room writers default to compatible Porto
   for Jaipur pieces during this stage, without changing the saved selection,
-  existing rooms or other styles. Setup and previews explain this limit. See
-  [city cosmetics](CITY_COSMETICS.md) for release order.
+  existing rooms or other styles. Setup and previews explain this limit. The web
+  reader and additive rules are published; app readers remain a later rollout. See
+  [city cosmetics](CITY_COSMETICS.md) for release order and current limits.
 - **ACCOUNT-13 · Remembered account:** restore the last Firebase session on Home
   independently of audio and optional Play Games startup, without a new guest or
   Google chooser. SDK-managed persistence remembers the last successful login;
@@ -728,6 +729,10 @@ History: `92550dd`, `928b515`, `7036dd9`, `911af8f`, `2df1b28`, `a72c299`,
   publication; store acceptance does not qualify physical-device updates, login
   or saved-game use. See [Android 1.1.0 (503)](releases/ANDROID_503.md) for
   exact source/artifact, Alpha review submission and retained device limits.
+  The [city web/backend release](releases/CITY_COSMETICS_20261102.md) is published
+  from `95439d2` after two complete 12-job CI passes and three-engine hosted
+  verification. Its exact second artifact and verified rollback are recorded;
+  signed Android publication remains deferred.
 
 - **APP-10 · Store presentation:** Play descriptions and artwork reflect the
   distributed game's actual Square/Hex, two-to-four-player, AI and learning

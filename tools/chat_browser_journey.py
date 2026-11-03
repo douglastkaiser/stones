@@ -64,7 +64,9 @@ def open_chat(page):
     page.mouse.move(380, 250)
     page.mouse.wheel(0, 400)
     page.wait_for_timeout(400)
-    expect(page.get_by_role('textbox', name='Message')).to_have_count(1)
+    # Flutter exposes the hint separately from the accessible input name. The
+    # expanded chat has one textbox; retain the unique-field assertion.
+    expect(page.get_by_role('textbox')).to_have_count(1)
 
 
 def message(page):
@@ -105,7 +107,7 @@ def main():
             expect(cell).to_be_visible(timeout=30000)
             open_chat(host)
             open_chat(guest)
-            host.get_by_role('textbox', name='Message').click()
+            host.get_by_role('textbox').click()
             host.keyboard.type('Good game damn friend', delay=50)
             host.mouse.move(180, 500)
             host.mouse.wheel(0, 500)

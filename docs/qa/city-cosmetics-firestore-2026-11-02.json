@@ -60,5 +60,7 @@
     "ACCOUNT-09",
     "ACCOUNT-12",
     "APP-09"
-  ]
+  ],
+  "finalReadbackAtUtc": "2026-11-03T03:31:24.423Z",
+  "finalReadbackMatchesSource": true
 }

@@ -1,19 +1,25 @@
 # Current release qualification
 
-## City cosmetics web/backend rollout, 2026-11-02
+## City cosmetics web/backend publication, 2026-11-02
 
-The six-city implementation is on main. The additive Firestore rule is now
-published to `stones-9a6a0` and exactly verified, with all six indexes, field
-overrides and other releases unchanged. All 159 emulator checks and five
-read-only production checks passed. Web publication is awaiting the final
-reader-rollout guard, two complete CI qualifications and Deploy Main hosted
-verification. Android publication is explicitly deferred.
+**Published and hosted-verified.** [Stones](https://www.douglastkaiser.com/stones/)
+serves city cosmetics source `95439d2`. Both complete CI attempts passed all 12
+jobs, each with 2,061 Flutter tests, 83 release-tool tests and strict analysis.
+All 159 Firestore checks passed. Deploy Main published the exact second artifact;
+Chromium, Firefox and WebKit hosted source/integrity/login-handoff checks passed.
+Public-site phone/desktop cosmetics checks passed with zero page errors. Fresh
+November 3 readbacks still match the web source and published rules.
 
-New Jaipur piece writes default off to preserve older app compatibility; eligible
-local Jaipur remains available and new online seats use Porto pieces. Other
-city sets and the existing Jaipur board can ship normally. See the
-[publication/rollback record](releases/CITY_COSMETICS_20261102.md) and
-[backend evidence](qa/city-cosmetics-firestore-2026-11-02.json).
+The additive Firestore rule is published to `stones-9a6a0`, with six READY indexes,
+field overrides, database identity and other releases unchanged. Five read-only
+production access checks passed. No customer game/account/rating data was changed.
+
+Android publication is explicitly deferred. New Jaipur piece writes default off
+for older app compatibility; eligible local Jaipur remains available and new
+online seats use Porto pieces. Other city sets and the existing Jaipur board are
+live normally. Physical-device and real Google credential-exchange qualification
+remain separate. See the [publication and rollback record](releases/CITY_COSMETICS_20261102.md)
+and [machine evidence](qa/city-cosmetics-web-publication-2026-11-02.json).
 Feature IDs: ACCOUNT-08/09/12, PREF-03 and APP-09.
 
 ## Court application publication, 2026-10-30

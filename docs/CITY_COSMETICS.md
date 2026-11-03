@@ -119,21 +119,27 @@ use the qualified Deploy Main workflow and explicit rules publication, then
 verify readback, hosted source/integrity and login handoff. Release evidence is
 recorded separately from the initial local checks below.
 
-## Web/backend release follow-up
+## Published web/backend release
 
-The additive rules are published and readback-verified in the
-[November 2 release record](releases/CITY_COSMETICS_20261102.md). The web reader
-rollout guard passed 46 focused city/setup/online checks and 14 checks with the
-future writer flag explicitly enabled; strict analysis is clean. The first main
-CI exposed stale generic-owner browser assertions. Player, chat, placement and
-adaptive journeys now assert Porto ownership names, preserving the same gameplay,
-recovery and identity checks. The final source must complete both required CI
-attempts before Deploy Main publishes its exact artifact. Android deployment
-remains deferred by the owner.
+Application `95439d2` and the additive Firestore rules are published and verified.
+Both complete CI attempts passed all 12 jobs, including 2,061 Flutter tests and
+83 release-tool tests per attempt, strict analysis, builds, player journeys and
+three-engine account/production-auth recovery checks. All 159 Firestore checks
+passed. Deploy Main published the exact second artifact and all three hosted
+source/integrity/Google-handoff jobs passed. Public-site phone/desktop cosmetics
+checks passed with zero page errors, and November 3 readbacks still match the
+selected web source and backend rules. See the [release/rollback record](releases/CITY_COSMETICS_20261102.md).
 
-## Verification
+The default-off writer guard passed 46 focused city/setup/online checks and 14
+checks with the future writer flag enabled. Initial CI exposed stale generic-owner
+browser assertions; those now use Porto labels. Independent emulator player and
+chat journeys passed, including filtered delivery and absence of chat history
+after reconnect. Android deployment remains deferred. The compatibility guard
+above remains active while supported app readers roll out.
 
-Final qualification uses Linux, Flutter 3.47.7 and Dart 3.13.5. Logs, contact sheets,
+## Initial local verification
+
+Initial local qualification used Linux, Flutter 3.47.7 and Dart 3.13.5. Logs, contact sheets,
 small-piece comparisons, 48 light/dark full gameplay captures, preview captures and
 a source-hashed manifest are retained locally in `build/qa/cities/`. Generated
 artifacts are review evidence, not shipped assets.
@@ -174,6 +180,5 @@ python tools/city_cosmetics_browser_probe.py
 
 Physical Android/iPhone interaction, VoiceOver/TalkBack and uncoached human
 readability trials remain unqualified. Automated viewports and rendered captures
-do not establish those usability claims. They must be recorded separately before
-release acceptance; production publication retains the compatibility sequence
-above.
+do not establish those usability claims. Record those separately for device/usability acceptance; the web publication
+evidence above does not qualify them.
