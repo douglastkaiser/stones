@@ -54,8 +54,8 @@ Board geometry, hit targets and control layout do not depend on cosmetic choice.
 | City naming and themed palette names | Stable metadata identifiers with six city display names and all 24 palette names; explicit mappings and persistence tests |
 | Theme-appropriate front symbols | Compass, interlace, lily, rosette, plum/waves and astronomical engraving in the shared painter |
 | Branded grid including Hex | Shared polygon-based grid and frame painters; all 36 mixed board/piece combinations on both geometries |
-| Complete live previews | Candidate board with selected pieces or candidate pieces with selected board; four players × three types and Square/Hex examples |
-| One selection action per category | Independent Board/Pieces tabs; Preview plus Use board, Use pieces, Selected or disabled Locked; persistence and 200% text tests |
+| Complete city previews | Each Settings card and expanded preview keeps its matching city board and pieces; four players × three types and Square/Hex examples |
+| One selection action per category | One gallery without tabs; each card has Preview, Use board and Use pieces, with independent selected/locked labels; persistence and 200% text tests |
 | Exact unlock requirements | Ownership state, “Available to everyone,” both achievement routes with explicit either/OR wording; locked preview tests |
 | Temporary Jaipur access | Owner-specific fail-closed checks for board/pieces, AI host ownership, open play/review/export refresh; eligibility and emulator tests |
 | Remove floating owner initials | Piece owner badges and staged-count owner suffixes removed; heights, carry/staged counts and target feedback retained |
@@ -63,12 +63,37 @@ Board geometry, hit targets and control layout do not depend on cosmetic choice.
 | Compatibility and feature contracts | Original enum slots and room cosmetics preserved, additive celestial piece ID and tolerant readers; ACCOUNT-08/09/12, PREF-03/04/05, PLAY-02/03/10 updated |
 | Subtle finish and usable dense boards | Simplified details, stable bounds, 8×8 Square and radius-4 Hex phone/desktop captures in light/dark; stack/spread/crushing regressions |
 
+Settings uses one responsive gallery on mobile and desktop. Selecting one part
+never changes the other preference or the matching set displayed on any card or
+expanded Settings preview. The current-selection summary identifies mixed sets;
+players see their equipped combination when playing. Both selection buttons stay
+available together, wrapping vertically at narrow widths or enlarged text.
+
 Settings previews never grant ownership or equip locked cosmetics. Opponent
 inspection uses the same read-only preview content with the board in use and
 never changes preferences. Palette labels resolve from each owner's piece style,
 independently of the board. Engine labels remain stable internally and are
 translated at presentation. Cell and stack accessibility descriptions retain
 ownership after visual initials are removed.
+
+## Unified gallery verification · 2026-11-03
+
+ACCOUNT-08 now uses a single gallery with independent board/piece actions and
+fixed city previews. ACCOUNT-12's host-board/player-piece behavior is unchanged.
+On Linux with Flutter 3.47.7 / Dart 3.13.5, 99 targeted tests passed across city
+cosmetics, theme visuals, legacy online cosmetics, shared rooms, multiplayer
+recovery regressions and resilience. Two focused gallery tests also passed after
+adding settled-frame captures. Strict `flutter analyze --no-pub --fatal-infos`
+reported no issues after creating the checkout's missing ignored music directory;
+no music assets or analyzer configuration were changed by this work.
+
+The new regressions cover independent saved selections, fixed previews, locked
+buttons, phone/desktop layouts at 200% text, both host and guest views ignoring
+local cosmetic changes, and four distinct player styles surviving Square/Hex
+play, serialization and rejoin. Reviewed widget captures are under
+`build/qa/cities/gallery-*.png`, including `gallery-controls-320.png`.
+These are local widget/model checks, not a live backend or physical-device trial.
+No deployment was performed. Jaipur's staged online-piece fallback is retained.
 
 ## Persistence, eligibility and release order
 

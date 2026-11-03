@@ -515,7 +515,10 @@ History: `4ddf3b1`, `2b02dd7`, `69e3c6e`, `afb68ea`, `4c7ca14`, `911af8f`,
   points/ranks, earned dates and next goals. Qualified results and learning save
   once, show unlock feedback, and preserve proven migrated rewards.
 - **ACCOUNT-08 · Appearance:** preview Porto, Edinburgh, Florence, Marrakesh, Kyoto
-  and Jaipur. Board and Pieces selectors persist independently. Every preview
+  and Jaipur in one gallery without category tabs. Each city card and its expanded
+  Settings preview show that city's matching board and pieces, regardless of the
+  current selections. Separate Use board and Use pieces buttons persist choices
+  independently and identify each selected or locked part. Every expanded preview
   shows all four flat ownership families, flats/walls/caps, Square and Hex examples,
   city palette names and exact unlock conditions, including either historical
   achievement route. In-match inspection uses the same read-only preview;

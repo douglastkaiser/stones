@@ -9,33 +9,15 @@ import '../game/match_config.dart';
 import 'piece_stack_view.dart';
 import 'procedural_painters.dart';
 
-/// Board and Pieces have independent selections, previews and persistence.
-class ThemeGallery extends ConsumerStatefulWidget {
+/// Each city previews its matching set; board and pieces equip independently.
+class ThemeGallery extends ConsumerWidget {
   const ThemeGallery({super.key});
-  @override
-  ConsumerState<ThemeGallery> createState() => _ThemeGalleryState();
-}
 
-class _ThemeGalleryState extends ConsumerState<ThemeGallery> {
-  bool _pieces = false;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentBoard = ref.watch(currentBoardThemeProvider).theme;
     final currentPieces = ref.watch(currentPieceStyleProvider).style;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SegmentedButton<bool>(
-        segments: const [
-          ButtonSegment(
-              value: false, label: Text('Board'), icon: Icon(Icons.grid_on)),
-          ButtonSegment(
-              value: true,
-              label: Text('Pieces'),
-              icon: Icon(Icons.category_outlined)),
-        ],
-        selected: {_pieces},
-        onSelectionChanged: (value) => setState(() => _pieces = value.single),
-      ),
-      const SizedBox(height: 12),
       Text(
           'Board: ${BoardThemeData.forTheme(currentBoard).name} · Pieces: ${PieceStyleData.forStyle(currentPieces).name}',
           key: const ValueKey('current-cosmetics')),
@@ -54,12 +36,11 @@ class _ThemeGalleryState extends ConsumerState<ThemeGallery> {
                   final style = piecesForBoard(city);
                   final unlocked =
                       ref.watch(isBoardThemeUnlockedProvider(city));
-                  final active = unlocked &&
-                      (_pieces ? currentPieces == style : currentBoard == city);
-                  final sampleBoard = _pieces ? currentBoard : city;
-                  final samplePieces = _pieces ? style : currentPieces;
+                  final boardActive = unlocked && currentBoard == city;
+                  final piecesActive = unlocked && currentPieces == style;
+                  final active = boardActive || piecesActive;
                   void preview() => showCityPreview(context,
-                      theme: sampleBoard, style: samplePieces, city: city);
+                      theme: city, style: style, city: city);
                   return Card(
                       margin: EdgeInsets.zero,
                       clipBehavior: Clip.antiAlias,
@@ -75,49 +56,51 @@ class _ThemeGalleryState extends ConsumerState<ThemeGallery> {
                       child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(children: [
-                            ThemeSample(
-                                theme: sampleBoard, style: samplePieces),
+                            ThemeSample(theme: city, style: style),
                             const SizedBox(height: 8),
                             Text(data.name,
                                 style: Theme.of(context).textTheme.titleMedium),
-                            Text(
-                                _pieces
-                                    ? PieceStyleData.forStyle(style).description
-                                    : data.description,
+                            Text(data.description,
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall),
-                            if (_pieces &&
-                                style == PieceStyle.celestial &&
+                            Text(PieceStyleData.forStyle(style).description,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall),
+                            if (style == PieceStyle.celestial &&
                                 !jaipurOnlinePiecesEnabled)
                               const Text(jaipurOnlinePiecesNotice,
                                   textAlign: TextAlign.center),
                             const SizedBox(height: 8),
                             Wrap(
                                 spacing: 8,
+                                runSpacing: 8,
                                 alignment: WrapAlignment.center,
                                 children: [
                                   TextButton(
                                       onPressed: preview,
                                       child: Text('Preview ${data.name}')),
                                   FilledButton.tonal(
-                                      onPressed: !unlocked || active
+                                      onPressed: !unlocked || boardActive
                                           ? null
-                                          : () {
-                                              final notifier = ref.read(
-                                                  cosmeticsProvider.notifier);
-                                              if (_pieces) {
-                                                notifier.setPieceStyle(style);
-                                              } else {
-                                                notifier.setBoardTheme(city);
-                                              }
-                                            },
-                                      child: Text(active
-                                          ? 'Selected'
+                                          : () => ref
+                                              .read(cosmeticsProvider.notifier)
+                                              .setBoardTheme(city),
+                                      child: Text(boardActive
+                                          ? 'Board selected'
                                           : !unlocked
-                                              ? 'Locked'
-                                              : _pieces
-                                                  ? 'Use pieces'
-                                                  : 'Use board')),
+                                              ? 'Board locked'
+                                              : 'Use board')),
+                                  FilledButton.tonal(
+                                      onPressed: !unlocked || piecesActive
+                                          ? null
+                                          : () => ref
+                                              .read(cosmeticsProvider.notifier)
+                                              .setPieceStyle(style),
+                                      child: Text(piecesActive
+                                          ? 'Pieces selected'
+                                          : !unlocked
+                                              ? 'Pieces locked'
+                                              : 'Use pieces')),
                                 ]),
                           ])));
                 })),

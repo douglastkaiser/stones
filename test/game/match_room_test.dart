@@ -14,6 +14,63 @@ MatchRoom room(MatchConfig config) =>
     });
 
 void main() {
+  for (final shape in BoardShape.values) {
+    test(
+        '${shape.name} preserves host board and each player style through play and rejoin',
+        () {
+      final config = MatchConfig(
+          shape: shape,
+          size: shape == BoardShape.square ? 5 : 2,
+          seats: const [
+            SeatConfig(SeatId.ivory),
+            SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman),
+            SeatConfig(SeatId.copper, control: SeatControl.onlineHuman),
+            SeatConfig(SeatId.jade, control: SeatControl.onlineHuman),
+          ]);
+      var current = MatchRoom(
+          code: 'UABCDEF',
+          host: 'host',
+          config: config,
+          owners: const {
+            SeatId.ivory: 'host',
+            SeatId.charcoal: null,
+            SeatId.copper: null,
+            SeatId.jade: null,
+          },
+          boardTheme: BoardTheme.kyoto,
+          styles: const {
+            SeatId.ivory: PieceStyle.morocco,
+            SeatId.charcoal: PieceStyle.standard,
+            SeatId.copper: PieceStyle.standard,
+            SeatId.jade: PieceStyle.standard,
+          });
+      current = current
+          .join('guest-1', PieceStyle.polishedMarble)
+          .join('guest-2', PieceStyle.stone)
+          .join('guest-3', PieceStyle.kyoto);
+      const styles = {
+        SeatId.ivory: PieceStyle.morocco,
+        SeatId.charcoal: PieceStyle.polishedMarble,
+        SeatId.copper: PieceStyle.stone,
+        SeatId.jade: PieceStyle.kyoto,
+      };
+      for (var ply = 0; ply < 4; ply++) {
+        final game = current.replay();
+        current = current.append(current.owners[game.current]!, ply,
+            MatchMove.place(game.geometry.cells[ply], PieceType.flat));
+        current = MatchRoom.fromMap(current.toMap());
+        expect(current.boardTheme, BoardTheme.kyoto);
+        expect(current.styles, styles);
+        expect(current.join('host', PieceStyle.standard), same(current));
+        for (var guest = 1; guest <= 3; guest++) {
+          expect(
+              current.join('guest-$guest', PieceStyle.standard), same(current));
+        }
+      }
+      expect(current.replay().ply, 4);
+    });
+  }
+
   test('AI lease expires and a guest can continue without the host', () {
     final config = MatchConfig.defaults(BoardShape.hex).copyWith(seats: const [
       SeatConfig(SeatId.ivory, control: SeatControl.ai),

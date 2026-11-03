@@ -30,12 +30,13 @@ import '../game/match_controller_test.dart'
     show MemoryMatchStorage, MemoryMatchRoomStore;
 
 class _Fixture extends MatchController {
-  _Fixture(MatchState game)
+  _Fixture(MatchState game, {MatchRoom? room, String? uid})
       : super(
             storage: MemoryMatchStorage(),
             authenticate: () async => 'host',
             store: () => MemoryMatchRoomStore()) {
-    state = MatchSession(id: 'city-fixture', game: game);
+    state = MatchSession(
+        id: room?.code ?? 'city-fixture', game: game, room: room, uid: uid);
   }
 }
 
@@ -150,6 +151,59 @@ void main() {
     expect(read.styles[SeatId.ivory], PieceStyle.standard);
     expect(read.styles[SeatId.charcoal], PieceStyle.celestial);
   });
+
+  for (final shape in BoardShape.values) {
+    for (final viewer in ['host', 'guest']) {
+      testWidgets(
+          '${shape.name} $viewer sees room board and player styles despite local selections',
+          (tester) async {
+        final room = MatchRoom(
+            code: 'UABCDEF',
+            host: 'host',
+            config: MatchConfig(
+                shape: shape,
+                size: shape == BoardShape.square ? 5 : 2,
+                seats: const [
+                  SeatConfig(SeatId.ivory),
+                  SeatConfig(SeatId.charcoal, control: SeatControl.onlineHuman),
+                ]),
+            owners: const {SeatId.ivory: 'host', SeatId.charcoal: 'guest'},
+            styles: const {
+              SeatId.ivory: PieceStyle.morocco,
+              SeatId.charcoal: PieceStyle.polishedMarble,
+            },
+            boardTheme: BoardTheme.kyoto);
+        final container = ProviderContainer(overrides: [
+          matchProvider.overrideWith(
+              (ref) => _Fixture(room.replay(), room: room, uid: viewer)),
+          isBoardThemeUnlockedProvider.overrideWith((ref, city) => true),
+        ]);
+        addTearDown(container.dispose);
+        await tester.pumpWidget(UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: MatchScreen())));
+        await tester.pumpAndSettle();
+        void expectRoomAppearance() {
+          final board = tester.widget<BoardView>(find.byType(BoardView));
+          expect(board.theme, BoardTheme.kyoto);
+          expect(board.styles, room.styles);
+        }
+
+        expectRoomAppearance();
+        await container
+            .read(cosmeticsProvider.notifier)
+            .setBoardTheme(BoardTheme.darkStone);
+        await container
+            .read(cosmeticsProvider.notifier)
+            .setPieceStyle(PieceStyle.kyoto);
+        await tester.pumpAndSettle();
+        expectRoomAppearance();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+      });
+    }
+  }
 
   testWidgets(
       'recorded mixed city review retains owner styles and revokes Jaipur',
@@ -317,7 +371,7 @@ void main() {
 
   for (final size in [const Size(320, 568), const Size(1366, 900)]) {
     testWidgets(
-        'independent selectors and complete locked previews at $size and 200% text',
+        'unified independent selectors and fixed previews at $size and 200% text',
         (tester) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
@@ -356,10 +410,10 @@ void main() {
           BoardTheme.kyoto);
       expect(container.read(cosmeticsProvider).selectedPieceStyle,
           PieceStyle.standard);
-      await tester.ensureVisible(find.text('Pieces'));
-      await tester.tap(find.text('Pieces'));
-      await tester.pumpAndSettle();
-      expect(find.text('Use board'), findsNothing);
+      expect(find.byType(SegmentedButton<bool>), findsNothing);
+      expect(find.text('Use board'), findsWidgets);
+      expect(find.text('Board selected'), findsOneWidget);
+      expect(find.text('Pieces selected'), findsOneWidget);
       final useFlorence = find.descendant(
           of: card('Florence'),
           matching: find.widgetWithText(FilledButton, 'Use pieces'));
@@ -370,12 +424,23 @@ void main() {
           BoardTheme.kyoto);
       expect(container.read(cosmeticsProvider).selectedPieceStyle,
           PieceStyle.polishedMarble);
+      for (final sample
+          in tester.widgetList<ThemeSample>(find.byType(ThemeSample))) {
+        expect(sample.style, piecesForBoard(sample.theme));
+      }
+      final loaded = CosmeticsNotifier();
+      await loaded.load();
+      expect(loaded.state.selectedBoardTheme, BoardTheme.kyoto);
+      expect(loaded.state.selectedPieceStyle, PieceStyle.polishedMarble);
+      loaded.dispose();
       await tester.ensureVisible(find.text('Preview Florence'));
+      await tester.pumpAndSettle();
+      await capture(tester, 'gallery-controls-${size.width.toInt()}', boundary);
       await tester.tap(find.text('Preview Florence'));
       await tester.pumpAndSettle();
       final preview =
           tester.widget<CityPreviewContent>(find.byType(CityPreviewContent));
-      expect(preview.theme, BoardTheme.kyoto);
+      expect(preview.theme, BoardTheme.marble);
       expect(preview.style, PieceStyle.polishedMarble);
       expect(
           find.descendant(
@@ -389,6 +454,14 @@ void main() {
       await capture(tester, 'preview-${size.width.toInt()}', boundary);
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
+      final lockedBoard = tester.widget<FilledButton>(find.descendant(
+          of: card('Jaipur'),
+          matching: find.widgetWithText(FilledButton, 'Board locked')));
+      final lockedPieces = tester.widget<FilledButton>(find.descendant(
+          of: card('Jaipur'),
+          matching: find.widgetWithText(FilledButton, 'Pieces locked')));
+      expect(lockedBoard.onPressed, isNull);
+      expect(lockedPieces.onPressed, isNull);
       await tester.ensureVisible(find.text('Preview Jaipur'));
       await tester.tap(find.text('Preview Jaipur'));
       await tester.pumpAndSettle();
@@ -400,8 +473,8 @@ void main() {
           PieceStyle.polishedMarble);
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Board'));
-      await tester.tap(find.text('Board'));
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('current-cosmetics')));
       await tester.pumpAndSettle();
       await capture(tester, 'gallery-${size.width.toInt()}', boundary);
       await tester.pumpWidget(const SizedBox());
