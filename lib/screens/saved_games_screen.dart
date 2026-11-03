@@ -9,10 +9,12 @@ import '../game/match_history_provider.dart';
 import '../game/match_review_screen.dart';
 import '../game/result_explanation.dart';
 import '../widgets/saved_online_games.dart';
+import '../widgets/account_online_games.dart';
+import '../providers/account_provider.dart';
 import '../widgets/play_mode_card.dart';
 import 'game_screen.dart';
 
-/// Device shortcuts today; the account-backed index is a separate finishing packet.
+/// Account rooms coexist with device-local play and completed history.
 class SavedGamesScreen extends ConsumerStatefulWidget {
   const SavedGamesScreen({super.key});
   @override
@@ -48,6 +50,7 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final identity = ref.watch(accountProvider.select((s) => s.identity));
     final legacy = ref.watch(
             gameSessionProvider.select((s) => s.mode != GameMode.online)) &&
         ref.watch(gameStateProvider.select((s) =>
@@ -62,7 +65,7 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
         body: SafeArea(
             child: ConstrainedListView(maxWidth: 620, children: [
           const Text(
-              'Games saved on this device. Use the original account or browser profile to resume online rooms.'),
+              'Signed-in online games follow your account. Local games and completed history stay on this device.'),
           const SizedBox(height: 16),
           if (saved.isLoading) const LinearProgressIndicator(),
           if (saved.hasError)
@@ -89,6 +92,10 @@ class _SavedGamesScreenState extends ConsumerState<SavedGamesScreen> {
             const SizedBox(height: 16),
           ],
           const SavedOnlineGames(key: ValueKey('saved-online-shortcuts')),
+          if (identity != null && !identity.guest)
+            AccountOnlineGames(
+                key: ValueKey('account-games-${identity.uid}'),
+                uid: identity.uid),
           if (history.hasError) ...[
             const Text(
                 'Completed games could not be read. Saved records have been kept.'),

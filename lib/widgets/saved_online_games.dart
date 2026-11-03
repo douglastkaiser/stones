@@ -1,3 +1,4 @@
+import '../providers/account_provider.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -64,7 +65,11 @@ class _SavedOnlineGamesState extends ConsumerState<SavedOnlineGames>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final rooms = ref.watch(savedRoomsProvider);
+    final uid = ref.watch(accountProvider.select((s) => s.identity?.uid));
+    final rooms = ref
+        .watch(savedRoomsProvider)
+        .where((room) => uid != null && room.uid == uid)
+        .toList();
     if (rooms.isEmpty && _error == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),

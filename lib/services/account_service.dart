@@ -1,3 +1,4 @@
+import 'turn_notification_service.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -130,6 +131,7 @@ class FirebaseAccountService implements AccountService {
   Future<void> signOut() async {
     // Sign Firebase out first so a failed optional native cleanup cannot leave
     // the app silently authenticated after the UI reports a sign-out.
+    await turnNotificationService.beforeSignOut();
     await _auth.signOut();
     if (!kIsWeb && _google != null) {
       try {

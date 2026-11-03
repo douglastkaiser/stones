@@ -82,6 +82,9 @@ jobs:
       - name: Run analyzer
         run: flutter analyze --fatal-infos
 
+      - name: Test turn notification sender
+        run: node --test tools/turn_notifications/worker.test.mjs
+
       - name: Run tests
         run: flutter test --coverage
 

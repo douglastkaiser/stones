@@ -28,7 +28,9 @@ Future<Widget?> loadInvitedRoom(WidgetRef ref, String invitation,
   }
   if (!ref.context.mounted) return null;
   final current = ref.read(matchProvider);
-  if (current.room?.code == code && current.game != null) {
+  if (current.room?.code == code &&
+      current.game != null &&
+      (expectedUid == null || current.uid == expectedUid)) {
     return const MatchScreen();
   }
   final hasActiveGame = current.game != null ||

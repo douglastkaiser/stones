@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../services/account_game_repository.dart';
+import '../services/turn_notification_outbox.dart';
 import 'dart:developer' as developer;
 import 'dart:math';
 
@@ -311,7 +313,12 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
       // awaiting acknowledgement can still find a room the server committed.
       await _rememberRoom(code, user.uid);
       if (!mounted || operation != _roomEpoch) return;
-      await _firestore.collection('games').doc(code).set(data);
+      await _firestore.runTransaction((tx) async {
+        final roomRef = _firestore.collection('games').doc(code);
+        await indexJoinedRoom(
+            tx, _firestore, SavedRoom(code: code, uid: user.uid, hex: false));
+        tx.set(roomRef, data);
+      });
       if (!mounted || operation != _roomEpoch) return;
       _debugLog('Game created, setting up listener as $creatorColor');
       state = state.copyWith(
@@ -383,6 +390,8 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
         final data = snapshot.data();
         if (data == null) throw Exception('Game data missing.');
         final existing = OnlineGameSession.fromSnapshot(code, data);
+        // Register only after the transaction has validated a seat below.
+        final pointer = SavedRoom(code: code, uid: user.uid, hex: false);
         _debugLog(
             'Found game: boardSize=${existing.boardSize}, moves=${existing.moves.length}, currentTurn=${existing.currentTurn}, creatorColor=${existing.creatorColor}');
 
@@ -392,6 +401,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
               ? PlayerColor.white
               : PlayerColor.black;
           joinedSession = existing;
+          await indexJoinedRoom(txn, _firestore, pointer);
           await _rememberRoom(code, user.uid);
           return;
         }
@@ -422,6 +432,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             white: joinerPlayer,
             status: OnlineStatus.playing,
           );
+          await indexJoinedRoom(txn, _firestore, pointer);
           await _rememberRoom(code, user.uid);
           txn.update(docRef, {
             'white': joinerPlayer.toMap(),
@@ -436,6 +447,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
             black: joinerPlayer,
             status: OnlineStatus.playing,
           );
+          await indexJoinedRoom(txn, _firestore, pointer);
           await _rememberRoom(code, user.uid);
           txn.update(docRef, {
             'black': joinerPlayer.toMap(),
@@ -444,6 +456,7 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           });
         }
         _debugLog('Updating game status to playing, joiner is $joinerColor');
+        enqueueTurn(txn, _firestore, pointer, ply: existing.moves.length);
       });
 
       if (!mounted || operation != _roomEpoch) return;
@@ -590,6 +603,16 @@ class OnlineGameController extends StateNotifier<OnlineGameState> {
           'winner': winner,
           'lastMoveAt': FieldValue.serverTimestamp(),
         });
+        if (nextStatus == OnlineStatus.playing.name) {
+          enqueueTurn(
+              txn,
+              _firestore,
+              SavedRoom(
+                  code: activeSession.roomCode,
+                  uid: FirebaseAuth.instance.currentUser!.uid,
+                  hex: false),
+              ply: moves.length);
+        }
       });
       if (mounted && epoch == _roomEpoch) {
         state = state.copyWith(reconnecting: false);

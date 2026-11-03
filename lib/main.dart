@@ -1,3 +1,6 @@
+import 'providers/account_provider.dart';
+import 'game/join_room_screen.dart';
+import 'services/turn_notification_service.dart';
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
@@ -114,6 +117,7 @@ class _StonesAppState extends ConsumerState<StonesApp>
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   final _navigator = GlobalKey<NavigatorState>();
   final _history = AppHistoryObserver();
+  StreamSubscription<Map<String, dynamic>>? _turnOpens;
   bool _noticeScheduled = false;
   void _announceAwards(List<AchievementType> pending) {
     if (_noticeScheduled || pending.isEmpty) return;
@@ -157,11 +161,20 @@ class _StonesAppState extends ConsumerState<StonesApp>
   void initState() {
     super.initState();
     _history.initialize();
+    _turnOpens = turnNotificationService.opened.listen((data) {
+      if (!mounted || data['uid'] != ref.read(accountProvider).identity?.uid) {
+        return;
+      }
+      _navigator.currentState?.push<void>(MaterialPageRoute(
+          builder: (_) => JoinRoomScreen(
+              invitation: data['code'] as String, resumeOnly: true)));
+    });
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    _turnOpens?.cancel();
     _history.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -176,6 +189,13 @@ class _StonesAppState extends ConsumerState<StonesApp>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(accountProvider.select((s) => s.identity), (previous, next) {
+      if (turnAlertsReleased) {
+        unawaited(turnNotificationService
+            .setIdentity(next != null && !next.guest ? next.uid : null)
+            .catchError((Object _) {}));
+      }
+    });
     final themeMode = ref.watch(appSettingsProvider.select((s) => s.themeMode));
 
     ref.listen(ratingStatusProvider, (previous, next) {

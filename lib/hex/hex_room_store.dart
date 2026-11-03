@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'hex_game.dart';
 import '../models/cosmetics.dart';
 import 'hex_room.dart';
+import '../providers/saved_rooms_provider.dart';
+import '../services/account_game_repository.dart';
+import '../services/turn_notification_outbox.dart';
 
 abstract class HexRoomStore {
   Future<HexRoom> create(
@@ -54,6 +57,8 @@ class FirestoreHexRoomStore implements HexRoomStore {
       final created = await firestore.runTransaction<bool>((transaction) async {
         final doc = _room(code);
         if ((await transaction.get(doc)).exists) return false;
+        await indexJoinedRoom(
+            transaction, firestore, SavedRoom(code: code, uid: uid, hex: true));
         transaction.set(doc, room.toMap());
         return true;
       });
@@ -76,11 +81,16 @@ class FirestoreHexRoomStore implements HexRoomStore {
           room.replay();
           final joined = room.join(uid, pieceStyle: pieceStyle);
           await onAllocated?.call(joined, uid);
+          final pointer = SavedRoom(code: code, uid: uid, hex: true);
+          await indexJoinedRoom(transaction, firestore, pointer);
           if (!identical(joined, room)) {
             transaction.update(doc, {
               'owners': joined.toMap()['owners'],
               'pieceStyles': joined.toMap()['pieceStyles'],
             });
+            if (joined.ready && !room.ready) {
+              enqueueTurn(transaction, firestore, pointer, ply: 0);
+            }
           }
           return joined;
         });
@@ -129,5 +139,10 @@ class FirestoreHexRoomStore implements HexRoomStore {
           'moves.$expectedPly': updated.moves.last,
           'ply': updated.moves.length,
         });
+        if (!updated.replay().finished) {
+          enqueueTurn(transaction, firestore,
+              SavedRoom(code: code, uid: uid, hex: true),
+              ply: updated.moves.length);
+        }
       });
 }

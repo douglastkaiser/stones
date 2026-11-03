@@ -1,0 +1,9 @@
+name = "stones-turn-notifications"
+main = "worker.mjs"
+compatibility_date = "2026-11-03"
+[triggers]
+crons = ["* * * * *"]
+[vars]
+ENABLED = "false"
+FIREBASE_PROJECT_ID = "stones-9a6a0"
+# Set SERVICE_ACCOUNT_EMAIL and SERVICE_ACCOUNT_PRIVATE_KEY using wrangler secret.

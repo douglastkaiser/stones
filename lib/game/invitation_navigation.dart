@@ -18,7 +18,11 @@ List<Route<dynamic>> initialInvitationRoutes(String platformRoute,
 
 Route<void> invitationRoute(RouteSettings settings) => MaterialPageRoute<void>(
     settings: settings,
-    builder: (_) => JoinRoomScreen(invitation: settings.name ?? ''));
+    builder: (_) => JoinRoomScreen(
+        invitation: settings.name ?? '',
+        resumeOnly:
+            Uri.tryParse(settings.name ?? '')?.queryParameters['resume'] ==
+                '1'));
 
 bool _hasRoom(Uri uri) {
   try {

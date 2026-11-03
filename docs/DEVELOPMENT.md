@@ -266,3 +266,7 @@ checks run with `python -m unittest scripts.test_prepare_web_release`.
 Shared performance implementation and repeatable regression evidence:
 [PERFORMANCE_STAGE2.md](PERFORMANCE_STAGE2.md). Its generated fixtures live in
 `build/qa/performance-stage2/`; keep timing runs separate from compilers/tests.
+
+The [account persistence candidate](ONLINE_ACCOUNT_PERSISTENCE.md) describes the
+private game index and disabled-by-default turn notification implementation,
+provisioning, free-tier feasibility gate and remaining acceptance.

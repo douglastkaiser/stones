@@ -1,3 +1,6 @@
+import 'package:stones/providers/account_provider.dart';
+import 'package:stones/services/account_service.dart';
+import '../support/fake_account_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,7 +68,8 @@ void main() {
     rooms.publish();
     expect(controller.state.busy, isTrue);
     expect(controller.state.canPlay, isFalse);
-    for (var i = 0; i < 100 && controller.state.game!.ply < 1; i++) {
+    // Bound recovery without treating a busy CI host as a device latency benchmark.
+    for (var i = 0; i < 500 && controller.state.game!.ply < 1; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
     expect(controller.state.game!.ply, 1);
@@ -276,7 +280,8 @@ void main() {
         botDelay: Duration.zero);
     addTearDown(restoredHost.dispose);
     await restoredHost.join('HABCDEF', expectedUid: 'host');
-    for (var i = 0; i < 100 && restoredHost.state.game!.ply < 3; i++) {
+    // Bound recovery without treating a busy CI host as a device latency benchmark.
+    for (var i = 0; i < 500 && restoredHost.state.game!.ply < 3; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
     expect(restoredHost.state.game!.ply, 3,
@@ -310,11 +315,19 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      final account = AccountController(
+          FakeAccount()
+            ..current = const AccountIdentity(uid: 'host', guest: true),
+          hasActiveRoom: () => false);
+      await account.initialize();
       final saved = SavedRoomsController();
       await saved
           .remember(const SavedRoom(code: 'ABCDEF', uid: 'host', hex: false));
       await tester.pumpWidget(ProviderScope(
-          overrides: [savedRoomsProvider.overrideWith((ref) => saved)],
+          overrides: [
+            savedRoomsProvider.overrideWith((ref) => saved),
+            accountProvider.overrideWith((ref) => account)
+          ],
           child: const MaterialApp(
               home: Scaffold(
                   body: SingleChildScrollView(child: SavedOnlineGames())))));

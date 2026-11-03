@@ -50,6 +50,7 @@ import 'move_feedback.dart';
 import '../providers/player_profile_provider.dart';
 import '../widgets/player_rating_label.dart';
 import '../widgets/match_chat.dart';
+import '../widgets/game_turn_mute.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, this.title, this.studyPanel, this.objective});
@@ -334,6 +335,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               : 'This ends the match for everyone without a winner or win rewards.',
         ),
         actions: [
+          if (match.room != null) GameTurnMute(code: match.room!.code),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Keep playing'),

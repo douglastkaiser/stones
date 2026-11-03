@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../widgets/turn_notification_settings.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -36,6 +37,8 @@ class SettingsScreen extends StatelessWidget {
                   const _SectionHeader(title: 'Account'),
                   const SizedBox(height: 12),
                   const AccountCard(),
+                  const SizedBox(height: 24),
+                  const TurnNotificationSettings(),
                   const SizedBox(height: 32),
                   ListTile(
                     contentPadding: EdgeInsets.zero,

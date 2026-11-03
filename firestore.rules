@@ -582,6 +582,77 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Navigation references are private and never confer authority over a room.
+    function indexedMember(data, format) {
+      return format == 'games' ? isPlayer(data) :
+        (data.host == request.auth.uid || request.auth.uid in data.owners.values());
+    }
+    function indexFormat(data) {
+      return data.get('unified', false) ? 'matches' :
+        (data.hex ? 'hexGames' : 'games');
+    }
+    match /playerGames/{uid}/rooms/{code} {
+      function owner() { return isAuthenticated() && request.auth.uid == uid; }
+      function shape() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['code','hex','unified','addedAt','archived','muted']) &&
+          d.code == code && d.hex is bool && d.get('unified', false) is bool &&
+          d.archived is bool && d.muted is bool && d.addedAt is timestamp &&
+          (d.get('unified', false) ? code.matches('^U[A-Z]{6}$') :
+           (d.hex ? code.matches('^H[A-Z]{6}$') : code.matches('^[A-Z]{6}$')));
+      }
+      allow get: if owner();
+      allow list: if owner() && request.query.limit <= 11;
+      allow create: if owner() && shape() &&
+        request.resource.data.addedAt == request.time &&
+        !request.resource.data.archived && !request.resource.data.muted &&
+        indexedMember(getAfter(/databases/$(database)/documents/$(indexFormat(request.resource.data))/$(code)).data,
+          indexFormat(request.resource.data));
+      allow update: if owner() && shape() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['archived','muted']);
+      allow delete: if false;
+    }
+    match /playerGames/{uid}/preferences/{key} {
+      allow get: if isAuthenticated() && request.auth.uid == uid && key == 'notifications';
+      allow create, update: if isAuthenticated() && request.auth.uid == uid &&
+        key == 'notifications' && request.resource.data.keys().hasOnly(['enabled']) &&
+        request.resource.data.enabled is bool;
+      allow list, delete: if false;
+    }
+    match /playerGames/{uid}/devices/{device} {
+      function owner() { return isAuthenticated() && request.auth.uid == uid; }
+      allow get, delete: if owner();
+      allow list: if owner() && request.query.limit <= 20;
+      allow create, update: if owner() &&
+        device.matches('^[a-zA-Z0-9_-]{24}$') &&
+        request.resource.data.keys().hasOnly(['token','updatedAt','enabled']) &&
+        request.resource.data.token is string && request.resource.data.token.size() >= 20 &&
+        request.resource.data.token.size() <= 4096 &&
+        request.resource.data.updatedAt == request.time && request.resource.data.enabled is bool;
+    }
+    match /turnNotificationJobs/{event} {
+      function validEvent() {
+        let d = request.resource.data;
+        let after = getAfter(/databases/$(database)/documents/$(d.format)/$(d.code)).data;
+        let before = get(/databases/$(database)/documents/$(d.format)/$(d.code)).data;
+        let ply = d.format == 'hexGames' ? after.ply : after.moves.size();
+        let revision = d.format == 'matches' ? after.get('revision',0) : 0;
+        return d.keys().hasOnly(['code','format','ply','revision','state','dueAt','createdAt']) &&
+          d.format in ['matches','hexGames','games'] &&
+          d.ply is int && d.ply >= 0 && d.ply == ply &&
+          d.revision is int && d.revision == revision &&
+          event == d.code + '_' + string(revision) + '_' + string(ply) &&
+          d.state == 'pending' && d.dueAt == request.time && d.createdAt == request.time &&
+          indexedMember(after, d.format) &&
+          (after.moves != before.moves || after.get('owners',{}) != before.get('owners',{}) ||
+           after.get('revision',0) != before.get('revision',0) ||
+           (d.format == 'games' && before.status == 'waiting' && after.status == 'playing'));
+      }
+      allow create: if isAuthenticated() && validEvent();
+      // Only the trusted sender can enumerate, claim, acknowledge or retry jobs.
+      allow read, update, delete: if false;
+    }
+
     // Preserve the existing production profile and achievement policies.
     match /users/{userId} {
       allow read: if isAuthenticated();

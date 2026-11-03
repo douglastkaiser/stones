@@ -1,5 +1,8 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../providers/saved_rooms_provider.dart';
+import '../services/account_game_repository.dart';
+import '../services/turn_notification_outbox.dart';
 import '../models/cosmetics.dart';
 import 'match_config.dart';
 import 'court_takeback.dart';
@@ -95,6 +98,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
       final created = await firestore.runTransaction<bool>((tx) async {
         final ref = _room(code);
         if ((await tx.get(ref)).exists) return false;
+        await indexJoinedRoom(tx, firestore, _pointer(room, uid));
         tx.set(ref, {
           ...room.toMap(),
           if (room.ready) 'startedAt': FieldValue.serverTimestamp(),
@@ -122,6 +126,7 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
           observedOwners = room.owners;
           room.replay();
           final joined = room.join(uid, style);
+          await indexJoinedRoom(tx, firestore, _pointer(joined, uid));
           if (!identical(joined, room)) {
             tx.update(ref, {
               'owners': joined.toMap()['owners'],
@@ -129,6 +134,9 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
               if (joined.ready && room.startedAt == null)
                 'startedAt': FieldValue.serverTimestamp()
             });
+            if (joined.ready && !room.ready) {
+              enqueueTurn(tx, firestore, _pointer(joined, uid), ply: 0);
+            }
           }
           return joined;
         });
@@ -199,6 +207,10 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
             'finishedAt': FieldValue.serverTimestamp(),
           if (clock != null) 'clock': clock
         });
+        if (!updated.replay().finished) {
+          enqueueTurn(tx, firestore, _pointer(updated, uid),
+              ply: updated.moves.length, revision: updated.revision);
+        }
       });
   @override
   Future<void> takeback(String code, String uid, int expectedRevision,
@@ -219,6 +231,10 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
             ? null
             : Timestamp.fromDate(updated.finishedAt!),
       });
+      if (updated.takeback == null && !updated.replay().finished) {
+        enqueueTurn(tx, firestore, _pointer(updated, uid),
+            ply: updated.moves.length, revision: updated.revision);
+      }
     });
   }
 
@@ -262,4 +278,10 @@ class FirestoreMatchRoomStore implements MatchRoomStore {
           'finishedAt': FieldValue.serverTimestamp()
         });
       });
+
+  SavedRoom _pointer(MatchRoom room, String uid) => SavedRoom(
+      code: room.code,
+      uid: uid,
+      hex: room.config.shape == BoardShape.hex,
+      unified: true);
 }

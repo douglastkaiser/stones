@@ -1,3 +1,4 @@
+import '../providers/account_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/tavern_theme.dart';
@@ -6,8 +7,10 @@ import '../widgets/room_qr_scanner.dart';
 
 /// Links and typed codes meet here. Joining always requires an explicit action.
 class JoinRoomScreen extends ConsumerStatefulWidget {
-  const JoinRoomScreen({super.key, this.invitation = ''});
+  const JoinRoomScreen(
+      {super.key, this.invitation = '', this.resumeOnly = false});
   final String invitation;
+  final bool resumeOnly;
   @override
   ConsumerState<JoinRoomScreen> createState() => _JoinRoomScreenState();
 }
@@ -16,6 +19,16 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   late final _code = TextEditingController(text: widget.invitation);
   bool _joining = false;
   String? _error;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.resumeOnly) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _join();
+      });
+    }
+  }
+
   @override
   void dispose() {
     _code.dispose();
@@ -30,7 +43,17 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
       _error = null;
     });
     try {
-      final screen = await loadInvitedRoom(ref, _code.text);
+      String? uid;
+      if (widget.resumeOnly) {
+        await ref.read(accountProvider.notifier).initialize();
+        if (!mounted) return;
+        uid = ref.read(accountProvider).identity?.uid;
+        if (uid == null) {
+          throw StateError(
+              'Sign into the original account to resume this game.');
+        }
+      }
+      final screen = await loadInvitedRoom(ref, _code.text, expectedUid: uid);
       if (!mounted || screen == null) return;
       await Navigator.push<void>(
           context, MaterialPageRoute(builder: (_) => screen));

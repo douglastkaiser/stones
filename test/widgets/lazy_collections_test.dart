@@ -1,3 +1,6 @@
+import 'package:stones/providers/account_provider.dart';
+import 'package:stones/services/account_service.dart';
+import '../support/fake_account_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,11 +16,17 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'online_rooms_v1': '[{"code":"ABCDEF","uid":"guest","hex":false}]',
     });
+    final account = AccountController(
+        FakeAccount()
+          ..current = const AccountIdentity(uid: 'guest', guest: true),
+        hasActiveRoom: () => false);
+    await account.initialize();
     var leading = false;
     Widget screen() => ProviderScope(
-            child: MaterialApp(
-                home: Scaffold(
-                    body: ConstrainedListView(maxWidth: 620, children: [
+        overrides: [accountProvider.overrideWith((ref) => account)],
+        child: MaterialApp(
+            home: Scaffold(
+                body: ConstrainedListView(maxWidth: 620, children: [
           if (leading) const SizedBox(height: 50),
           const SavedOnlineGames(key: ValueKey('saved-online-shortcuts')),
           for (var i = 0; i < 100; i++)
