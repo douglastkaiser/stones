@@ -1,0 +1,127 @@
+{
+  "recordedAtUtc": "2026-11-09T05:59:41.921537+00:00",
+  "source": "563b0f328e312b5872fdd2ca28e4e50b01b66a20",
+  "site": "https://www.douglastkaiser.com/stones/",
+  "ci": {
+    "url": "https://github.com/douglastkaiser/stones/actions/runs/41705756989",
+    "consecutiveSuccessfulAttempts": [
+      2,
+      3
+    ],
+    "attempt1": {
+      "conclusion": "failure",
+      "reason": "Chromium callback_storage_lost probe timed out; other jobs passed",
+      "flutterTestsPassed": 2091
+    },
+    "attempt2": {
+      "conclusion": "success",
+      "scope": "Failed Chromium recovery job rerun against the same artifact; no app or probe changes"
+    },
+    "attempt3": {
+      "conclusion": "success",
+      "scope": "Full clean CI attempt",
+      "flutterTestsPassed": 2091,
+      "senderUnitTestsPassed": 5,
+      "analysis": "passed",
+      "webBuild": "passed",
+      "androidCompile": "passed",
+      "playerJourneys": "passed",
+      "accountChecks": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "productionAuthRecovery": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ]
+    }
+  },
+  "firestore": {
+    "project": "stones-9a6a0",
+    "publishedOn": "2026-11-03",
+    "rulesSha256": "965d32b421de5f83c1f66724468dff631666debf45d8649538af73410cd0a69d",
+    "indexesSha256": "94d2585af1e3903abd500851524f8490054d311ea7cf96edd359475be7c3d209",
+    "newIndexStatesOn20261109": {
+      "rooms": "READY",
+      "turnNotificationJobs": "READY"
+    },
+    "authorizationRun": "https://github.com/douglastkaiser/stones/actions/runs/41705756995",
+    "authorizationTestsPassed": 164
+  },
+  "productionAccountApiSmoke": {
+    "performedOn": "2026-11-03",
+    "result": "passed",
+    "scope": "Two isolated anonymous REST clients, including a fresh-token session; not physical-device qualification",
+    "checks": [
+      "atomic host/index",
+      "private account list",
+      "atomic join/index",
+      "fresh-session discovery",
+      "confirmed move handoff",
+      "archive/restore/mute"
+    ],
+    "cleanup": "QA room ended, references archived and QA Auth identities removed; existing user data untouched"
+  },
+  "deployment": {
+    "url": "https://github.com/douglastkaiser/stones/actions/runs/42570037341",
+    "conclusion": "success",
+    "pagesRun": "https://github.com/douglastkaiser/stones/actions/runs/42570095012",
+    "pagesConclusion": "success",
+    "hostedLoginChecks": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "hostedLoginResult": "passed"
+  },
+  "hostedIntegrity": {
+    "base": "https://www.douglastkaiser.com/stones/",
+    "previewSource": "563b0f328e312b5872fdd2ca28e4e50b01b66a20",
+    "currentPair": [
+      "flutter_bootstrap.9aa8c841b68bda691e56.js",
+      "main.9f10cf27569ecd3b4ca5.dart.js"
+    ],
+    "retainedPairCount": 2,
+    "integrity": "passed",
+    "observations": [
+      {
+        "path": "",
+        "url": "https://www.douglastkaiser.com/stones/?baseline=1794203867395179867",
+        "bytes": 11852,
+        "transferMs": 622
+      },
+      {
+        "path": "startup-assets.json",
+        "url": "https://www.douglastkaiser.com/stones/startup-assets.json?baseline=1794203868017886818",
+        "bytes": 252,
+        "transferMs": 287
+      },
+      {
+        "path": "flutter_bootstrap.9aa8c841b68bda691e56.js",
+        "url": "https://www.douglastkaiser.com/stones/flutter_bootstrap.9aa8c841b68bda691e56.js",
+        "bytes": 13391,
+        "transferMs": 353
+      },
+      {
+        "path": "main.9f10cf27569ecd3b4ca5.dart.js",
+        "url": "https://www.douglastkaiser.com/stones/main.9f10cf27569ecd3b4ca5.dart.js",
+        "bytes": 4407420,
+        "transferMs": 486
+      }
+    ],
+    "timingScope": "HTTP transfer only; not browser startup, input or frame rate"
+  },
+  "limits": [
+    "Turn notifications remain disabled; no sender deployed or real push delivery qualified",
+    "Workers Free CPU/quota and dedicated sender authentication remain unqualified",
+    "Physical Android/iPhone and day-long device handoff remain unqualified",
+    "No Play Store release or native iOS release was submitted"
+  ],
+  "featureIds": [
+    "SAVE-03",
+    "PLAN-02",
+    "PLAN-05"
+  ]
+}

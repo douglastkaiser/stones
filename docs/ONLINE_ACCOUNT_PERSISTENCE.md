@@ -1,7 +1,29 @@
-# Account rooms and turn notifications — implementation candidate
+# Account rooms and turn notifications
 
-Baseline: main `2ce177a`, November 3, 2026. Local source changes; no backend,
-web or Play publication is established by this document.
+Baseline: main `2ce177a`, November 3, 2026. Account-room discovery is published
+on web from source `563b0f3`; notifications remain disabled. See the
+[publication record](qa/account-persistence-publication-2026-11-09.json).
+
+## Published account-room release — November 9, 2026
+
+Firestore rules and indexes were published on November 3; both new indexes were
+confirmed READY again on November 9. All 164 authorization trials passed locally
+and in CI. A production API smoke test verified atomic host/join registration,
+private lists, fresh-session discovery, move handoff and archive/restore/mute
+using isolated QA identities, subsequently removed after ending the QA room.
+
+CI passed 2,091 Flutter tests and strict analysis on full attempts 1 and 3.
+Attempt 1 failed one Chromium missing-callback-storage probe; its unchanged
+artifact/probe passed the failed-job rerun (attempt 2), followed by a clean full
+attempt 3. Successful attempts 2 and 3 satisfied the existing consecutive-success
+gate without modifying it. Sender tests, web/emulator/Android compilation,
+player journeys and the three-browser account/recovery matrix passed.
+
+[Deploy Main](https://github.com/douglastkaiser/stones/actions/runs/42570037341)
+published the qualified attempt-3 artifact. Pages publication and hosted login
+checks passed in Chromium, Firefox and WebKit; an independent live integrity check
+confirmed the selected source, asset fingerprints and two retained startup pairs.
+Android compilation does not constitute a Play release or physical-device check.
 
 My games adds owner-private `/playerGames/{uid}/rooms/{code}` references, ten
 per page, alongside existing local history and shortcuts. Create/join transactions
@@ -16,13 +38,14 @@ installation on iOS/iPadOS 16.4+ and sign-in in that installation. Android Force
 stop, OS permission and browser background restrictions can prevent delivery.
 Local games, completed local history and achievements are not cloud-synchronized.
 
-## Release gate and provisioning
+## Notification release gate and provisioning
 
 Notifications are deliberately disabled unless compiled with
 `STONES_TURN_ALERTS_ENABLED=true`; web also requires `STONES_PUSH_VAPID_KEY`.
-Do not enable this gate until the live checks below pass. The current environment
-has no configured Cloudflare or Firebase sender credentials. No successful live
-send, physical-device display or Workers Free CPU measurement is claimed.
+Do not enable this gate until the live checks below pass. A Cloudflare sender
+and its dedicated Firebase service-account credentials are not configured.
+No successful live push send, physical-device display or Workers Free CPU
+measurement is claimed.
 
 1. Publish and qualify the additive Firestore rules and composite indexes first.
 2. Provision a dedicated backend service account with Firestore data access and
@@ -55,27 +78,18 @@ states, delivery without a client and competing leases. Flutter source analysis,
 focused recovery tests and account-reference tests are recorded in the task
 handoff when complete. Unit tests do not validate deployed authorization.
 
-Still required before publication: Firestore emulator authorization trials for
-the new collections and compound transactions; full suite and release build;
-actual Cloudflare CPU/quota qualification; multi-device token/account switching;
-Android and desktop closed-window delivery; installed iPhone delivery; next-day
-recovery; revoked permissions, backend outage and quota exhaustion. No deployment
-or physical-device qualification is claimed. Native iOS remains unsupported.
+Remaining notification acceptance: actual Cloudflare CPU/quota qualification;
+sender authentication and live FCM delivery; multi-device token/account switching;
+Android and desktop closed-window delivery; installed iPhone delivery; revoked
+permissions, backend outages and quota exhaustion. Legacy same-code rematch event
+generation and service-worker cold-start/revocation still need qualification
+before enabling alerts. Physical Android/iPhone handoff and a day-long friend
+match remain unqualified. Native iOS remains unsupported.
 
-Final local checks (Flutter 3.47.7 / Dart 3.13.5, Linux): strict analysis
-passed with no issues; all 63 focused account/recovery/lazy-list tests passed
-serially; all five sender unit tests passed; release JavaScript/CanvasKit web
-build passed with the existing Cupertino font warning, with Wasm dry-run disabled.
-An earlier competing-build run exposed a one-second legacy Hex AI wait failure;
-the individual rerun and final serial run both passed without changing the AI
-or that wait. The final navigation UID guard was added after build compilation
-started and is covered by final analysis/tests, not a fresh artifact qualification.
-The five new Firestore emulator authorization trials subsequently passed,
-including atomic creation/rollback, owner isolation, immutable room references,
-transition-bound outbox writes and private device tokens/preferences. The full
-local Flutter suite is running during release preparation. Two legacy Hex
-recovery tests reproduced their one-second timing sensitivity under concurrent
-render/AI load; their wait bounds are now five seconds without altering AI or
-assertions. The exact committed source must pass the existing full CI and rules
-workflows, including two consecutive CI attempts, before manual Deploy Main.
-Sender unit tests now also run in CI. No device delivery is claimed.
+Local source checks initially passed 63 focused account/recovery/lazy-list tests,
+five sender tests, strict analysis and a release-web build. A resource-constrained
+local full-suite run was interrupted. Two legacy Hex recovery tests exposed
+one-second timing sensitivity under concurrent render/AI load; the committed
+five-second bounds preserve their assertions and AI behavior. Exact-source CI,
+backend and hosted verification above supersede the initial candidate-only
+artifact qualification. No real push delivery is claimed.
